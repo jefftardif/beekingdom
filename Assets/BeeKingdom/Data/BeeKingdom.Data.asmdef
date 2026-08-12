@@ -1,0 +1,17 @@
+{
+    "name": "BeeKingdom.Data",
+    "rootNamespace": "BeeKingdom.Data",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Config"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

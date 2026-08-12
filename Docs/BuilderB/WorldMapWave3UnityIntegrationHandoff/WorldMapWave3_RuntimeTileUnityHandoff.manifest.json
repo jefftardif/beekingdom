@@ -1,0 +1,2485 @@
+{
+  "claims": {
+    "aerial_flights_must_remain_world_space_and_route_independent": true,
+    "ground_route_logic": false,
+    "handoff_only": true,
+    "live_server": false,
+    "live_world_delivered": false,
+    "official_persistent_world": false,
+    "unity_integration_done": false,
+    "unity_validation_done": false
+  },
+  "future_unity_inventory": {
+    "copy_performed_by_builder_b": false,
+    "existing_step4c_assets_overwritten": false,
+    "root": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1",
+    "runtime_manifest_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/manifest.runtime.unity.json",
+    "runtime_tile_count": 25
+  },
+  "gates_before_integration": {
+    "builder_a_action": "DO_NOT_COPY_OR_SWITCH_PROVIDER_BEFORE_BOTH_GATES",
+    "builder_c_runtime_gutter_validation": "REQUIRED_PASS",
+    "qa_unity_integration_authorization": "REQUIRED_PASS"
+  },
+  "handoff_status": "prepared_not_integrated",
+  "mapping": {
+    "active_window": {
+      "columns": 5,
+      "radius_chunks": 2,
+      "rows": 5,
+      "steady_state_resident_tiles": 25,
+      "transition_hard_cap_tiles": 30
+    },
+    "center_world_chunk": {
+      "x": 32,
+      "y_down": 32
+    },
+    "column_axis": "column_increases_right_to_world_chunk_x_plus",
+    "horizontal_flip": false,
+    "macro_origin_world_chunk": {
+      "x": 30,
+      "y_down": 30
+    },
+    "macro_world_rect": {
+      "height": 2560,
+      "width": 2560,
+      "x": 15360,
+      "y_down": 15360
+    },
+    "out_of_bounds_policy": "missing_or_step4c_fallback_never_modulo_repeat",
+    "rotate_degrees": 0,
+    "row_axis": "row_increases_down_to_world_chunk_y_plus_and_IMGUI_screen_y_plus",
+    "runtime_uv_source_note": {
+      "rect_uses_pixel_boundaries": true,
+      "texture_local": true,
+      "v_flip_is_runtime_adapter_responsibility": true
+    },
+    "source_order": "row_major_R0C0_to_R4C4",
+    "source_origin": "top_left",
+    "transpose": false,
+    "vertical_flip": false
+  },
+  "master": {
+    "file": "master_5x5_2560.png",
+    "format": "PNG",
+    "height": 2560,
+    "mode": "RGB",
+    "pixel_sha256": "4d6daadc128c16912b8ed222f966d26c93aa300462edd4d2c38e8a97c98c7181",
+    "sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4",
+    "width": 2560
+  },
+  "mobile_memory_budget": {
+    "astc_6x6_rgb": {
+      "bytes": 2958400,
+      "mib": 2.8214
+    },
+    "astc_8x8_rgb": {
+      "bytes": 1690000,
+      "mib": 1.6117
+    },
+    "etc2_rgb4": {
+      "bytes": 3328200,
+      "mib": 3.174
+    },
+    "etc2_rgba8": {
+      "bytes": 6656400,
+      "mib": 6.348
+    },
+    "mipmap_multiplier_if_later_enabled": "approximately_1.3333_not_budgeted",
+    "policy": {
+      "active_visible_window_max": "5x5_25_tiles_steady_state",
+      "boundary_transition_hard_cap": "30_tiles_while_one_incoming_stripe_replaces_one_outgoing_stripe",
+      "never_resident_full_64x64": true,
+      "read_write_disabled_avoids_uncompressed_cpu_copy": true,
+      "release_outside_window": true
+    },
+    "raw_rgb24": {
+      "bytes": 19969200,
+      "mib": 19.0441
+    },
+    "raw_rgba32": {
+      "bytes": 26625600,
+      "mib": 25.3922
+    },
+    "runtime_png_disk": {
+      "bytes": 11800596,
+      "mib": 11.2539
+    },
+    "scope": "25_runtime_tiles_516x516_estimates_excluding_driver_and_Unity_metadata"
+  },
+  "recommended_unity_import": {
+    "alpha_is_transparency": false,
+    "alpha_source": "None_for_RGB_source",
+    "android_compatibility_fallback": {
+      "crunched_compression": false,
+      "format": "ETC2_RGB4",
+      "use_only_if_device_profile_requires_it": true
+    },
+    "android_primary": {
+      "compression_quality": "Best",
+      "crunched_compression": false,
+      "format": "ASTC_6x6_RGB",
+      "override": true
+    },
+    "aniso_level": 1,
+    "editor_orientation_validation_format": "RGB24_uncompressed",
+    "filter_mode": "Bilinear",
+    "generate_mip_maps": false,
+    "max_size": 1024,
+    "non_power_of_two": "None",
+    "read_write": false,
+    "sRGB": true,
+    "streaming_mipmaps": false,
+    "texture_shape": "2D",
+    "texture_type": "Default",
+    "wrap_u_v_w": "Clamp"
+  },
+  "renderer_contract": {
+    "do_not_draw_full_516_as_visible_content": true,
+    "do_not_pixel_snap_primary_art": true,
+    "draw_rule": "draw_512_world_unit_rect_with_inner_uv_only",
+    "inner_source_pixels_per_world_unit": 1,
+    "keep_hud_overlays_and_aerial_flights_in_separate_fixed_or_world_layers": true,
+    "observed_renderer": "Texture2D_IMGUI_GUI.DrawTextureWithTexCoords",
+    "pixels_per_unit": "not_applicable_for_current_IMGUI_renderer",
+    "raw_image": false,
+    "sprite_renderer": false,
+    "world_units_per_inner_tile": 512
+  },
+  "schema": "bee-kingdom.world-map-wave3-unity-integration-handoff.v1",
+  "source_bundle": {
+    "root": "artifacts/WorldMapWave3_RuntimeBundle_staging/run1",
+    "run1_file_count": 54,
+    "run1_run2_byte_identical": true,
+    "run1_tree_digest_sha256": "2176c7c5b81108e006014a1310095c9570d414963539bc0766dd4c023456fd2f",
+    "runtime_manifest": "runtime/manifest.runtime.json",
+    "runtime_manifest_sha256": "e9ee97486f59c6ec08f5afa9cc12ca5a60430079dd3edaa43a7ba305d9e4ce9a",
+    "runtime_tile_aggregate_sha256": "510a3e80ac933696b7bad3962cae531dfce9c88153d0bbb15bed347040568a21",
+    "version": "uib-wave3-continuous-v1"
+  },
+  "tiles": [
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 0
+      },
+      "column": 0,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R0C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C0",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 0,
+        "y": 0
+      },
+      "neighbors": {
+        "east_right": "R0C1",
+        "north_top": null,
+        "south_bottom": "R1C0",
+        "west_left": null
+      },
+      "order_index": 0,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 2
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": true,
+        "south_bottom": false,
+        "west_left": true
+      },
+      "row": 0,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 460738,
+        "pixel_sha256": "57d9df03edb798d76b04dc0a5b8cca9e371e7810ed0e10ec40f14e4ee0b83a3c",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "faeba366e9b0277ba5162faba928394ae094cfe0ce4cd02e2b9b25080fe21482",
+        "relative_to_bundle": "runtime/tiles/R0C0_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -2,
+        "y_down": -2
+      },
+      "world_chunk": {
+        "x": 30,
+        "y_down": 30
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15360,
+        "y_down": 15360
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 0
+      },
+      "column": 1,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R0C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C1",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 512,
+        "y": 0
+      },
+      "neighbors": {
+        "east_right": "R0C2",
+        "north_top": null,
+        "south_bottom": "R1C1",
+        "west_left": "R0C0"
+      },
+      "order_index": 1,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 2
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": true,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 0,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 479033,
+        "pixel_sha256": "20dc5963f858aab5f179359667e9eb53f7e6a3cdcbeb90fd95a648172a9885e1",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "608584362278229f922dd181b467cf5ce1319df06275764bd4c48323352caebf",
+        "relative_to_bundle": "runtime/tiles/R0C1_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -1,
+        "y_down": -2
+      },
+      "world_chunk": {
+        "x": 31,
+        "y_down": 30
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15872,
+        "y_down": 15360
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 0
+      },
+      "column": 2,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R0C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C2",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1024,
+        "y": 0
+      },
+      "neighbors": {
+        "east_right": "R0C3",
+        "north_top": null,
+        "south_bottom": "R1C2",
+        "west_left": "R0C1"
+      },
+      "order_index": 2,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 2
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": true,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 0,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 473877,
+        "pixel_sha256": "b80f8fb191fd1255ee61729adee6d4a6f2bcb8e8aecd29d2c993925b3c39f4ee",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "ff0cdb067e928af2ce1508024fce091ae64c3e3ffce2dd42dcaaea9e60097288",
+        "relative_to_bundle": "runtime/tiles/R0C2_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 0,
+        "y_down": -2
+      },
+      "world_chunk": {
+        "x": 32,
+        "y_down": 30
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16384,
+        "y_down": 15360
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 0
+      },
+      "column": 3,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R0C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C3",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1536,
+        "y": 0
+      },
+      "neighbors": {
+        "east_right": "R0C4",
+        "north_top": null,
+        "south_bottom": "R1C3",
+        "west_left": "R0C2"
+      },
+      "order_index": 3,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 2
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": true,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 0,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 501822,
+        "pixel_sha256": "ed5171c8cd7a2fe9095dd7f8e6f11b5c8e1b620ac93141f7c839ca3acec67510",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "c08653419309ead73787e2b8c274f8750f80e7653add243c36cd183f5b642d0d",
+        "relative_to_bundle": "runtime/tiles/R0C3_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 1,
+        "y_down": -2
+      },
+      "world_chunk": {
+        "x": 33,
+        "y_down": 30
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16896,
+        "y_down": 15360
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 0
+      },
+      "column": 4,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R0C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C4",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 2048,
+        "y": 0
+      },
+      "neighbors": {
+        "east_right": null,
+        "north_top": null,
+        "south_bottom": "R1C4",
+        "west_left": "R0C3"
+      },
+      "order_index": 4,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 2
+      },
+      "outer_clamp_sides": {
+        "east_right": true,
+        "north_top": true,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 0,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 474403,
+        "pixel_sha256": "fdc1344eccde8f0abe50561c6304c5c51c75d0fe3cbb563037fcb85ae706e512",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "c74f6d6817a2d5dfcc7019cbf20ff4a43c33371be3663275fbd5352f2a3c9722",
+        "relative_to_bundle": "runtime/tiles/R0C4_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 2,
+        "y_down": -2
+      },
+      "world_chunk": {
+        "x": 34,
+        "y_down": 30
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 17408,
+        "y_down": 15360
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 512
+      },
+      "column": 0,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R1C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C0",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 0,
+        "y": 512
+      },
+      "neighbors": {
+        "east_right": "R1C1",
+        "north_top": "R0C0",
+        "south_bottom": "R2C0",
+        "west_left": null
+      },
+      "order_index": 5,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": true
+      },
+      "row": 1,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 449249,
+        "pixel_sha256": "1679c1435892e5ee689020191e5b1814ad522cd54e355f9ad6882e89c3379199",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "b8c694ad466cdf5a2f98d6909d045847d4316bd56be0ad751b271c843e69cf9d",
+        "relative_to_bundle": "runtime/tiles/R1C0_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -2,
+        "y_down": -1
+      },
+      "world_chunk": {
+        "x": 30,
+        "y_down": 31
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15360,
+        "y_down": 15872
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 512
+      },
+      "column": 1,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R1C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C1",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 512,
+        "y": 512
+      },
+      "neighbors": {
+        "east_right": "R1C2",
+        "north_top": "R0C1",
+        "south_bottom": "R2C1",
+        "west_left": "R1C0"
+      },
+      "order_index": 6,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 1,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 458498,
+        "pixel_sha256": "e1ae5d66a38b55ed28e731857988b74b8f9324a3ce9252aad3c349660f8398ef",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "4b16a9c36c4bc927f4f3cbd7221fa8581257ddbf4468776628c53a1e3f59d6da",
+        "relative_to_bundle": "runtime/tiles/R1C1_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -1,
+        "y_down": -1
+      },
+      "world_chunk": {
+        "x": 31,
+        "y_down": 31
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15872,
+        "y_down": 15872
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 512
+      },
+      "column": 2,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R1C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C2",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1024,
+        "y": 512
+      },
+      "neighbors": {
+        "east_right": "R1C3",
+        "north_top": "R0C2",
+        "south_bottom": "R2C2",
+        "west_left": "R1C1"
+      },
+      "order_index": 7,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 1,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 491027,
+        "pixel_sha256": "1572338afb75f8b8c3a9c4645b30f28b78ecb867639bd327d65c2d9b1688f10e",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "74d40c7cb8463cf0ef9d759605c3d499b435b0b4751a3434a2526b04aa450124",
+        "relative_to_bundle": "runtime/tiles/R1C2_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 0,
+        "y_down": -1
+      },
+      "world_chunk": {
+        "x": 32,
+        "y_down": 31
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16384,
+        "y_down": 15872
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 512
+      },
+      "column": 3,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R1C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C3",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1536,
+        "y": 512
+      },
+      "neighbors": {
+        "east_right": "R1C4",
+        "north_top": "R0C3",
+        "south_bottom": "R2C3",
+        "west_left": "R1C2"
+      },
+      "order_index": 8,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 1,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 492093,
+        "pixel_sha256": "3bb6df7669c5a3cdda60a98252d94dcc1fe34619ad2df0222851146060b0fe62",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "cae08d7093ce6c04753065878e82ccd6d35251471f212ce8a0b6b0b4ea3cf21e",
+        "relative_to_bundle": "runtime/tiles/R1C3_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 1,
+        "y_down": -1
+      },
+      "world_chunk": {
+        "x": 33,
+        "y_down": 31
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16896,
+        "y_down": 15872
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 512
+      },
+      "column": 4,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R1C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C4",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 2048,
+        "y": 512
+      },
+      "neighbors": {
+        "east_right": null,
+        "north_top": "R0C4",
+        "south_bottom": "R2C4",
+        "west_left": "R1C3"
+      },
+      "order_index": 9,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": true,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 1,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 482457,
+        "pixel_sha256": "78575470e0c67226ab29949459ed86b69c9c679be6948dfb4517908e222c74a2",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "f3fb5144b5a7f31e002fc320794b36de2f2feb52ab7cda688709c53385ffa452",
+        "relative_to_bundle": "runtime/tiles/R1C4_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 2,
+        "y_down": -1
+      },
+      "world_chunk": {
+        "x": 34,
+        "y_down": 31
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 17408,
+        "y_down": 15872
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 1024
+      },
+      "column": 0,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R2C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C0",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 0,
+        "y": 1024
+      },
+      "neighbors": {
+        "east_right": "R2C1",
+        "north_top": "R1C0",
+        "south_bottom": "R3C0",
+        "west_left": null
+      },
+      "order_index": 10,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": true
+      },
+      "row": 2,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 464169,
+        "pixel_sha256": "047dbcd5e25cdc0e215edb4700ed610829a9fec0f92145c1505bd03b964c49a0",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "2406723a1c2f203a662acb068f9e9f773623f5b7e6206da7d479671dd41cf791",
+        "relative_to_bundle": "runtime/tiles/R2C0_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -2,
+        "y_down": 0
+      },
+      "world_chunk": {
+        "x": 30,
+        "y_down": 32
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15360,
+        "y_down": 16384
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 1024
+      },
+      "column": 1,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R2C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C1",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 512,
+        "y": 1024
+      },
+      "neighbors": {
+        "east_right": "R2C2",
+        "north_top": "R1C1",
+        "south_bottom": "R3C1",
+        "west_left": "R2C0"
+      },
+      "order_index": 11,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 2,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 473756,
+        "pixel_sha256": "779ab6021fdb7ede59d86c54849fe639b298e99d425300b4a70484ea94fa16e8",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "54bab1bb8fd8aa55ce950e0e31b505c35474a0ebf52bf2b1023cf783a1cf7486",
+        "relative_to_bundle": "runtime/tiles/R2C1_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -1,
+        "y_down": 0
+      },
+      "world_chunk": {
+        "x": 31,
+        "y_down": 32
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15872,
+        "y_down": 16384
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 1024
+      },
+      "column": 2,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R2C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C2",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1024,
+        "y": 1024
+      },
+      "neighbors": {
+        "east_right": "R2C3",
+        "north_top": "R1C2",
+        "south_bottom": "R3C2",
+        "west_left": "R2C1"
+      },
+      "order_index": 12,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 2,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 494045,
+        "pixel_sha256": "ccbdec093b167fbeabe21ed3259912cb5ade58f0221b6f2966831597dc65750c",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "4ed1009967bb8ca5a473a7bd4ad99360ac3712c4fa1e2addfd10cda6eb99bfd6",
+        "relative_to_bundle": "runtime/tiles/R2C2_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 0,
+        "y_down": 0
+      },
+      "world_chunk": {
+        "x": 32,
+        "y_down": 32
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16384,
+        "y_down": 16384
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 1024
+      },
+      "column": 3,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R2C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C3",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1536,
+        "y": 1024
+      },
+      "neighbors": {
+        "east_right": "R2C4",
+        "north_top": "R1C3",
+        "south_bottom": "R3C3",
+        "west_left": "R2C2"
+      },
+      "order_index": 13,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 2,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 507406,
+        "pixel_sha256": "53c15397940052f750198c6ec0fdb9b2f3a4ff0c3b4ca8d7f275efaa40bef15b",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "b88f0c3329cce4a38d44abe36efef5efd598dfdf8f0104b26937648c450cc77c",
+        "relative_to_bundle": "runtime/tiles/R2C3_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 1,
+        "y_down": 0
+      },
+      "world_chunk": {
+        "x": 33,
+        "y_down": 32
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16896,
+        "y_down": 16384
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 1024
+      },
+      "column": 4,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R2C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C4",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 2048,
+        "y": 1024
+      },
+      "neighbors": {
+        "east_right": null,
+        "north_top": "R1C4",
+        "south_bottom": "R3C4",
+        "west_left": "R2C3"
+      },
+      "order_index": 14,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": true,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 2,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 520171,
+        "pixel_sha256": "fce96c2af133bc3aded64625823aa4a106039305fc7ec93f9d1ddafd8f8c1091",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "42efee714a44b50790795359e8dc4c794d3e87760e4dcc21ce7fe269c240a036",
+        "relative_to_bundle": "runtime/tiles/R2C4_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 2,
+        "y_down": 0
+      },
+      "world_chunk": {
+        "x": 34,
+        "y_down": 32
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 17408,
+        "y_down": 16384
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 1536
+      },
+      "column": 0,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R3C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C0",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 0,
+        "y": 1536
+      },
+      "neighbors": {
+        "east_right": "R3C1",
+        "north_top": "R2C0",
+        "south_bottom": "R4C0",
+        "west_left": null
+      },
+      "order_index": 15,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": true
+      },
+      "row": 3,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 463261,
+        "pixel_sha256": "01e4e033a8be741e9a5e5aaa2592f8d79449b996289714969c1cdf26520e2ed2",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "9255f3b1004a63e0367480ccb6bbce69127e0c792b68b1b9f645fe6b4c54e93e",
+        "relative_to_bundle": "runtime/tiles/R3C0_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -2,
+        "y_down": 1
+      },
+      "world_chunk": {
+        "x": 30,
+        "y_down": 33
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15360,
+        "y_down": 16896
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 1536
+      },
+      "column": 1,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R3C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C1",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 512,
+        "y": 1536
+      },
+      "neighbors": {
+        "east_right": "R3C2",
+        "north_top": "R2C1",
+        "south_bottom": "R4C1",
+        "west_left": "R3C0"
+      },
+      "order_index": 16,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 3,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 478360,
+        "pixel_sha256": "3550159add2d1256f904d780e3a57c121efbb53810dbf530a8056ce91cca68ec",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "d9361fcbace0ba4cb5949abfebdb64c48fa2400ebc444cd48075d61ceb2b802b",
+        "relative_to_bundle": "runtime/tiles/R3C1_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -1,
+        "y_down": 1
+      },
+      "world_chunk": {
+        "x": 31,
+        "y_down": 33
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15872,
+        "y_down": 16896
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 1536
+      },
+      "column": 2,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R3C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C2",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1024,
+        "y": 1536
+      },
+      "neighbors": {
+        "east_right": "R3C3",
+        "north_top": "R2C2",
+        "south_bottom": "R4C2",
+        "west_left": "R3C1"
+      },
+      "order_index": 17,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 3,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 483926,
+        "pixel_sha256": "1ba0e8b6aecc4d293d17ece529b639998ae4544fd64b6bfc138f21adf85b6c85",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "8a21793aa7be1c186555b0f55073a83377c8d260fa589581352c942c9958db20",
+        "relative_to_bundle": "runtime/tiles/R3C2_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 0,
+        "y_down": 1
+      },
+      "world_chunk": {
+        "x": 32,
+        "y_down": 33
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16384,
+        "y_down": 16896
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 1536
+      },
+      "column": 3,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R3C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C3",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1536,
+        "y": 1536
+      },
+      "neighbors": {
+        "east_right": "R3C4",
+        "north_top": "R2C3",
+        "south_bottom": "R4C3",
+        "west_left": "R3C2"
+      },
+      "order_index": 18,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 3,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 503228,
+        "pixel_sha256": "113a4e5d2d21888ca424b24e7933f2e147c4cd39c7018907b44e5c25a85e0176",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "a094fc2d80dde0e1b466895f4c51f54c4dba1b10638e0b9db7e6a631e744e224",
+        "relative_to_bundle": "runtime/tiles/R3C3_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 1,
+        "y_down": 1
+      },
+      "world_chunk": {
+        "x": 33,
+        "y_down": 33
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16896,
+        "y_down": 16896
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 1536
+      },
+      "column": 4,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R3C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C4",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 2048,
+        "y": 1536
+      },
+      "neighbors": {
+        "east_right": null,
+        "north_top": "R2C4",
+        "south_bottom": "R4C4",
+        "west_left": "R3C3"
+      },
+      "order_index": 19,
+      "outer_clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": true,
+        "north_top": false,
+        "south_bottom": false,
+        "west_left": false
+      },
+      "row": 3,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 510740,
+        "pixel_sha256": "eadeba4d4895629c6f073d7e7444f8d40cd824cf0f7cdf545cabf6f23fbe4b22",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "19eb16d285205130809e8f28298a0ddee2d0dec377567203f0d69f1c60dde9cf",
+        "relative_to_bundle": "runtime/tiles/R3C4_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 2,
+        "y_down": 1
+      },
+      "world_chunk": {
+        "x": 34,
+        "y_down": 33
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 17408,
+        "y_down": 16896
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 2048
+      },
+      "column": 0,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R4C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C0",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 0,
+        "y": 2048
+      },
+      "neighbors": {
+        "east_right": "R4C1",
+        "north_top": "R3C0",
+        "south_bottom": null,
+        "west_left": null
+      },
+      "order_index": 20,
+      "outer_clamp_pixels": {
+        "bottom": 2,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": true,
+        "west_left": true
+      },
+      "row": 4,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 440713,
+        "pixel_sha256": "a4384eb74cb721861a82e17138b1b2f7239bf4e245dfe27d244c1b644e34f650",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "04ff1868df55e3197b79a030df09ecc177ab8f43cb92826832f5f092ee7d7f66",
+        "relative_to_bundle": "runtime/tiles/R4C0_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -2,
+        "y_down": 2
+      },
+      "world_chunk": {
+        "x": 30,
+        "y_down": 34
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15360,
+        "y_down": 17408
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 2048
+      },
+      "column": 1,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R4C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C1",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 512,
+        "y": 2048
+      },
+      "neighbors": {
+        "east_right": "R4C2",
+        "north_top": "R3C1",
+        "south_bottom": null,
+        "west_left": "R4C0"
+      },
+      "order_index": 21,
+      "outer_clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": true,
+        "west_left": false
+      },
+      "row": 4,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 433345,
+        "pixel_sha256": "13375c82cfca00a6494ba530cf0011c5c0f2213b5053d9ad3bca5acd94cd6f38",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "b279914641cd148429c4d139ec6a72260276aef5c7b7e0822bb38f3376bd09a2",
+        "relative_to_bundle": "runtime/tiles/R4C1_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": -1,
+        "y_down": 2
+      },
+      "world_chunk": {
+        "x": 31,
+        "y_down": 34
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 15872,
+        "y_down": 17408
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 2048
+      },
+      "column": 2,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R4C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C2",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1024,
+        "y": 2048
+      },
+      "neighbors": {
+        "east_right": "R4C3",
+        "north_top": "R3C2",
+        "south_bottom": null,
+        "west_left": "R4C1"
+      },
+      "order_index": 22,
+      "outer_clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": true,
+        "west_left": false
+      },
+      "row": 4,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 442446,
+        "pixel_sha256": "b0c663e9b561c03864e7371b0cd90af674bf6afede9fde46d3f32cff9485a7b1",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "ecce85f9395e52e429c9ad57844c29817b9717a1eaecfc05f824aca73bee4d16",
+        "relative_to_bundle": "runtime/tiles/R4C2_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 0,
+        "y_down": 2
+      },
+      "world_chunk": {
+        "x": 32,
+        "y_down": 34
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16384,
+        "y_down": 17408
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 2048
+      },
+      "column": 3,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R4C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C3",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 1536,
+        "y": 2048
+      },
+      "neighbors": {
+        "east_right": "R4C4",
+        "north_top": "R3C3",
+        "south_bottom": null,
+        "west_left": "R4C2"
+      },
+      "order_index": 23,
+      "outer_clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": false,
+        "north_top": false,
+        "south_bottom": true,
+        "west_left": false
+      },
+      "row": 4,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 417403,
+        "pixel_sha256": "8d40eba3d91f0ef8a33d594096a9c1d3bff798aeee71170150a9aeac4dae0829",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "869a1075a05ee3bc3e9e95a74db94267b4cb38f450c82f31b9afde4455fe52c7",
+        "relative_to_bundle": "runtime/tiles/R4C3_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 1,
+        "y_down": 2
+      },
+      "world_chunk": {
+        "x": 33,
+        "y_down": 34
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 16896,
+        "y_down": 17408
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 2048
+      },
+      "column": 4,
+      "future_unity_destination": "Assets/BeeKingdom/Playground/Resources/WorldMapWave3Runtime/UIB_ContinuousMaster5x5_v1/R4C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C4",
+      "inner_rect_pixels": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin_pixels": {
+        "x": 2048,
+        "y": 2048
+      },
+      "neighbors": {
+        "east_right": null,
+        "north_top": "R3C4",
+        "south_bottom": null,
+        "west_left": "R4C3"
+      },
+      "order_index": 24,
+      "outer_clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "outer_clamp_sides": {
+        "east_right": true,
+        "north_top": false,
+        "south_bottom": true,
+        "west_left": false
+      },
+      "row": 4,
+      "runtime_dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "source": {
+        "bytes": 404430,
+        "pixel_sha256": "925315d0d55925a2ad1c097d3ffe17be1d82f8d5780e4cd33b1708d660a9893e",
+        "png": {
+          "bit_depth": 8,
+          "color_mode": "RGB",
+          "color_type": 2,
+          "height": 516,
+          "width": 516
+        },
+        "png_sha256": "75ec84379a4544d5b8f8914bff0b4abc30f46bcb26142a20d31738462f84427b",
+        "relative_to_bundle": "runtime/tiles/R4C4_g2.png",
+        "source_master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4"
+      },
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      },
+      "window_offset_from_center": {
+        "x": 2,
+        "y_down": 2
+      },
+      "world_chunk": {
+        "x": 34,
+        "y_down": 34
+      },
+      "world_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 17408,
+        "y_down": 17408
+      }
+    }
+  ],
+  "unity_read_only_baseline": [
+    {
+      "access": "read_only_for_handoff",
+      "bytes": 84911,
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.cs",
+      "sha256": "3c823dac84bfb62f1049d36257efaac7005619e83c27d242d45442ec39319171"
+    },
+    {
+      "access": "read_only_for_handoff",
+      "bytes": 8073,
+      "path": "Assets/BeeKingdom/Playground/WorldMapWave4ManifestContentProvider.cs",
+      "sha256": "ddc0e12f398f8a7ffc2582e15ee99c99282f5da9f5d9bd1f551a4c3b8ac5732b"
+    },
+    {
+      "access": "read_only_for_handoff",
+      "bytes": 13856,
+      "path": "Assets/BeeKingdom/Playground/Editor/WorldMapMmoFullscreenFoundationSceneBuilder.cs",
+      "sha256": "8f352317cfebac8fec214624f7ac84a5d49d3c502fb153b72085d94b078f42dc"
+    }
+  ],
+  "uv_contract": {
+    "gutters_are_filter_support_only": true,
+    "inner_rect_pixels": {
+      "height": 512,
+      "width": 512,
+      "x": 2,
+      "y": 2
+    },
+    "texture_dimensions": {
+      "height": 516,
+      "width": 516
+    },
+    "u_max": 0.9961240310077519,
+    "u_min": 0.003875968992248062,
+    "uv_height": 0.9922480620155039,
+    "uv_width": 0.9922480620155039,
+    "v_max": 0.9961240310077519,
+    "v_min": 0.003875968992248062,
+    "visible_content_samples_gutters": false
+  },
+  "validated_pipeline_evidence": {
+    "canonical_reconstruction_different_pixels": 0,
+    "runtime_boundaries_checked": 40,
+    "runtime_boundaries_passed": 40,
+    "runtime_gutter_mismatch_pixels": 0,
+    "runtime_interior_mismatch_pixels": 0,
+    "uv_exact_tile_count": 25
+  }
+}

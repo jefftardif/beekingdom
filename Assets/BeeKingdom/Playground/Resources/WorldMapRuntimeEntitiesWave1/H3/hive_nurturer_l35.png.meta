@@ -1,0 +1,520 @@
+fileFormatVersion: 2
+guid: 3a948756fb5a99544bbfff8a7ca2978a
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5724742797648286605
+    second: hive_nurturer_l35_0
+  - first:
+      213: -4220822319903327767
+    second: hive_nurturer_l35_1
+  - first:
+      213: -1483204728409604135
+    second: hive_nurturer_l35_2
+  - first:
+      213: -4340204897885808780
+    second: hive_nurturer_l35_3
+  - first:
+      213: -3368320504882461479
+    second: hive_nurturer_l35_4
+  - first:
+      213: 7273514224417505754
+    second: hive_nurturer_l35_5
+  - first:
+      213: 9157524055805427181
+    second: hive_nurturer_l35_6
+  - first:
+      213: 9140033275602312073
+    second: hive_nurturer_l35_7
+  - first:
+      213: -3429367565183981732
+    second: hive_nurturer_l35_8
+  - first:
+      213: 5746963376382467677
+    second: hive_nurturer_l35_9
+  - first:
+      213: 4227470485687105317
+    second: hive_nurturer_l35_10
+  - first:
+      213: -4515926019468847781
+    second: hive_nurturer_l35_11
+  - first:
+      213: -4897884820808033163
+    second: hive_nurturer_l35_12
+  - first:
+      213: -8880822735329677165
+    second: hive_nurturer_l35_13
+  - first:
+      213: 8942051446515420601
+    second: hive_nurturer_l35_14
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: hive_nurturer_l35_0
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 409
+        width: 31
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 37ca2bba1c0ad80b0800000000000000
+      internalID: -5724742797648286605
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_1
+      rect:
+        serializedVersion: 2
+        x: 200
+        y: 412
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e93f128670ac65c0800000000000000
+      internalID: -4220822319903327767
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_2
+      rect:
+        serializedVersion: 2
+        x: 241
+        y: 410
+        width: 31
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9df37f968299a6be0800000000000000
+      internalID: -1483204728409604135
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_3
+      rect:
+        serializedVersion: 2
+        x: 241
+        y: 408
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4771b1904ae74c3c0800000000000000
+      internalID: -4340204897885808780
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_4
+      rect:
+        serializedVersion: 2
+        x: 284
+        y: 417
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d401d0d8525141d0800000000000000
+      internalID: -3368320504882461479
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_5
+      rect:
+        serializedVersion: 2
+        x: 334
+        y: 409
+        width: 31
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad1082f76a6b0f460800000000000000
+      internalID: 7273514224417505754
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_6
+      rect:
+        serializedVersion: 2
+        x: 388
+        y: 417
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ded70603c9f061f70800000000000000
+      internalID: 9157524055805427181
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_7
+      rect:
+        serializedVersion: 2
+        x: 407
+        y: 409
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 98b968396dbe7de70800000000000000
+      internalID: 9140033275602312073
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_8
+      rect:
+        serializedVersion: 2
+        x: 413
+        y: 415
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c5766f87e507860d0800000000000000
+      internalID: -3429367565183981732
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_9
+      rect:
+        serializedVersion: 2
+        x: 71
+        y: 63
+        width: 370
+        height: 346
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5ed47afdb051cf40800000000000000
+      internalID: 5746963376382467677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_10
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 404
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 527f3d5320efaaa30800000000000000
+      internalID: 4227470485687105317
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_11
+      rect:
+        serializedVersion: 2
+        x: 316
+        y: 396
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b559d9136353451c0800000000000000
+      internalID: -4515926019468847781
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_12
+      rect:
+        serializedVersion: 2
+        x: 379
+        y: 402
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57c95f0a4b7370cb0800000000000000
+      internalID: -4897884820808033163
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_13
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 313
+        width: 52
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 390367b56caf0c480800000000000000
+      internalID: -8880822735329677165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: hive_nurturer_l35_14
+      rect:
+        serializedVersion: 2
+        x: 398
+        y: 313
+        width: 49
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9bdc1d0e96c881c70800000000000000
+      internalID: 8942051446515420601
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      hive_nurturer_l35_0: -5724742797648286605
+      hive_nurturer_l35_1: -4220822319903327767
+      hive_nurturer_l35_10: 4227470485687105317
+      hive_nurturer_l35_11: -4515926019468847781
+      hive_nurturer_l35_12: -4897884820808033163
+      hive_nurturer_l35_13: -8880822735329677165
+      hive_nurturer_l35_14: 8942051446515420601
+      hive_nurturer_l35_2: -1483204728409604135
+      hive_nurturer_l35_3: -4340204897885808780
+      hive_nurturer_l35_4: -3368320504882461479
+      hive_nurturer_l35_5: 7273514224417505754
+      hive_nurturer_l35_6: 9157524055805427181
+      hive_nurturer_l35_7: 9140033275602312073
+      hive_nurturer_l35_8: -3429367565183981732
+      hive_nurturer_l35_9: 5746963376382467677
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

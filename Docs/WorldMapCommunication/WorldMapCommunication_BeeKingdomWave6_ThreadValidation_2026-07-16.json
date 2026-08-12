@@ -1,0 +1,31 @@
+{
+  "artifact": "WorldMapCommunication_BeeKingdomWave6_ThreadValidation",
+  "created_at_local": "2026-07-16",
+  "target_thread_name": "Créer serveur chat et messagerie",
+  "message_type": "THREAD_VALIDATION_FOR_COMMUNICATION_SYSTEM",
+  "thread_idle_status": "IMAGE_PRODUCTION_THREADS_IDLE_OR_UNAVAILABLE",
+  "do_not_wait_for_idle_threads": true,
+  "do_not_create_additional_agents": true,
+  "validated_state": {
+    "current_valid_direction": "V2Y_REDUCED_PICTORIAL_PREFLIGHT",
+    "v2y_reduced_preflight_created": true,
+    "v2y_mechanical_crops_pass": "8/8",
+    "v2y_perceptual_review": "PASS",
+    "v2y_anti_collage_review": "PASS",
+    "v2y_no_black_voids": "PASS"
+  },
+  "production_gates": {
+    "READY_FOR_NEXT_PRODUCTION_PASS": "YES",
+    "READY_FOR_FINAL_50X50": "NO",
+    "READY_FOR_QA_BUILDERC": "NO",
+    "READY_FOR_UNITY_HANDOFF": "NO"
+  },
+  "rejections": {
+    "DIRECT_UPSCALED_V2Y_TILES": "FAIL_TOO_BLURRY",
+    "V2Z_DETAIL_SYNTHESIS_SAMPLE": "FAIL_TOO_BLURRY",
+    "EXISTING_TILES_512": "FAIL_PATCHWORK_BLOCK_ARTIFACTS",
+    "EXISTING_TILES_512_CORRECTED_V2I": "FAIL_PATCHWORK_BLOCK_ARTIFACTS",
+    "OLD_GREEN_APLAT_WAVE6": "FORBIDDEN_FINAL_CANDIDATE"
+  },
+  "communication_instruction": "Record V2Y as reduced visual direction only. Next action is true high-resolution 50x50 production pass from V2Y. Do not announce QA, Builder-C, Unity handoff, or final 50x50 readiness."
+}

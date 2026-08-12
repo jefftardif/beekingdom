@@ -1,0 +1,309 @@
+﻿{
+    "packageName":  "BeeKingdom.Server.SERVER-056.20260713-204216.win-x64",
+    "createdAtUtc":  "2026-07-14T00:42:51.3140873Z",
+    "sourcePath":  "C:\\projets\\beekingdomgame-master\\Server\\artifacts\\SERVER-056\\publish-20260713-204216",
+    "runtime":  "win-x64",
+    "secretPolicy":  "No secrets are expected in this package. Verify before deployment.",
+    "files":  [
+                  {
+                      "path":  "appsettings.Development.json",
+                      "length":  1307,
+                      "sha256":  "f376e839a60ed423baafc48a5cda13ceaf09277cbd6b6b57fecc9d3b12006bed"
+                  },
+                  {
+                      "path":  "appsettings.json",
+                      "length":  4991,
+                      "sha256":  "72d9bc51e828eb72c0583672573e5461fdf6e1ffd51e8541e62444da7e1e73a4"
+                  },
+                  {
+                      "path":  "appsettings.Production.json",
+                      "length":  3755,
+                      "sha256":  "1a4d10ddb163b9f78b7f5e957a054fe46c0b58116535ac4d8b0233eeb5b4d098"
+                  },
+                  {
+                      "path":  "Azure.Core.dll",
+                      "length":  400936,
+                      "sha256":  "7f73a7723edebafce83e9fff428ec478c93cb0d36857b3bf9fe6d5a95857d359"
+                  },
+                  {
+                      "path":  "Azure.Identity.dll",
+                      "length":  342960,
+                      "sha256":  "0e3cf5c43e12c0f319ab58592fd6c438b0a5feda166cc540231dfa75c439d681"
+                  },
+                  {
+                      "path":  "BeeKingdom.Accounts.dll",
+                      "length":  50688,
+                      "sha256":  "b20542e29c887dd1e3f36c8d1323e155cabbfb1a2b317a18ba4abcc502067c10"
+                  },
+                  {
+                      "path":  "BeeKingdom.Accounts.pdb",
+                      "length":  31040,
+                      "sha256":  "64f4d50812d25b357366d16e12f91ff01e5c322d998410cc991db0456857dc17"
+                  },
+                  {
+                      "path":  "BeeKingdom.Authentication.dll",
+                      "length":  61440,
+                      "sha256":  "77040bbb8f59940c50a6a77165815c0d6ad52d64fc39377ba399cd8104671572"
+                  },
+                  {
+                      "path":  "BeeKingdom.Authentication.pdb",
+                      "length":  34824,
+                      "sha256":  "b61d299a96859ba54f16e3cf939d35688f946daf5202143abc9e7677eab12510"
+                  },
+                  {
+                      "path":  "BeeKingdom.Colony.dll",
+                      "length":  60416,
+                      "sha256":  "7c25e05b5fd11cca88b22088fd9ebc9673a4e9be2f4823b9821eba630d850c1c"
+                  },
+                  {
+                      "path":  "BeeKingdom.Colony.pdb",
+                      "length":  32284,
+                      "sha256":  "ef34a489036e01280e10b9c77319ae67aab883878bd2c9e2742196a68afe909f"
+                  },
+                  {
+                      "path":  "BeeKingdom.Database.dll",
+                      "length":  22528,
+                      "sha256":  "fc367e9169815bbe6835c48a62e59d43cb39edd155cf4608125406db510e448f"
+                  },
+                  {
+                      "path":  "BeeKingdom.Database.pdb",
+                      "length":  11232,
+                      "sha256":  "6e78ae06818f9ec7a10853ac79858454f82df66af0e1d290bbe3bc8d30f8d221"
+                  },
+                  {
+                      "path":  "BeeKingdom.Gateway.dll",
+                      "length":  40960,
+                      "sha256":  "428877a5b7550b9183b7852bfd9193d5dffccf57f503896f99aa56e45d43940d"
+                  },
+                  {
+                      "path":  "BeeKingdom.Gateway.pdb",
+                      "length":  30048,
+                      "sha256":  "6e0c00dcb72ee9cf3ca394b8457d22ee938a4fb9502d6442a9933f01c886e15c"
+                  },
+                  {
+                      "path":  "BeeKingdom.Infrastructure.dll",
+                      "length":  12288,
+                      "sha256":  "619b9185f9e3d3ababd92669cdee5290fa101576ee88e7d9e14929d859f3636a"
+                  },
+                  {
+                      "path":  "BeeKingdom.Infrastructure.pdb",
+                      "length":  22748,
+                      "sha256":  "6b66baf1dc60474b57c54c46fd23ea0e633e7fda8f4cf45fba1dc07de2c0a848"
+                  },
+                  {
+                      "path":  "BeeKingdom.Persistence.dll",
+                      "length":  29696,
+                      "sha256":  "0aff8e4a4ff0a6f2d3c8a5f6ef9537c2eb97a597d09673bb3d51f7eca19eb18a"
+                  },
+                  {
+                      "path":  "BeeKingdom.Persistence.pdb",
+                      "length":  27352,
+                      "sha256":  "52491dd6bc509efda2acb49e2866154eacafe0d0492ca41dee9ff37d5bb46dff"
+                  },
+                  {
+                      "path":  "BeeKingdom.Protocol.dll",
+                      "length":  143360,
+                      "sha256":  "13daee58db36a59d4e36e5c06133a82abd675143036e8edba145c89b041bed22"
+                  },
+                  {
+                      "path":  "BeeKingdom.Protocol.pdb",
+                      "length":  35012,
+                      "sha256":  "faa8937020453a8b751c0bf2360edb963aef81a96dc54bedf64f90316e3d9252"
+                  },
+                  {
+                      "path":  "BeeKingdom.Server.deps.json",
+                      "length":  21280,
+                      "sha256":  "e24b3ec1facf7d1bc7eb677773e2f0680d333e0bcfb605530ec2a68ae6017e3b"
+                  },
+                  {
+                      "path":  "BeeKingdom.Server.dll",
+                      "length":  109568,
+                      "sha256":  "c305eff876290901234da1ac894a53f5a47ecbce5969cfc3f2977a443fcc525f"
+                  },
+                  {
+                      "path":  "BeeKingdom.Server.exe",
+                      "length":  151552,
+                      "sha256":  "c0a997575f28f50fed87caa3459d9ec6ee12ab8527792e3a03b6602b9ac040a6"
+                  },
+                  {
+                      "path":  "BeeKingdom.Server.pdb",
+                      "length":  36408,
+                      "sha256":  "ec521f99e265531ae13bf46fdced507c017ae4f6a9eb61e17e1b011b385f4a7c"
+                  },
+                  {
+                      "path":  "BeeKingdom.Server.runtimeconfig.json",
+                      "length":  488,
+                      "sha256":  "2927e7d9a65748a82c4f265a0c9c1876a5ee233d9f5283881e0966e81ca94e14"
+                  },
+                  {
+                      "path":  "BeeKingdom.Server.staticwebassets.endpoints.json",
+                      "length":  53,
+                      "sha256":  "c1686417e8d5c31bba969f12b6f3d2b35e6609adb5ca42f212261a3a02771aac"
+                  },
+                  {
+                      "path":  "BeeKingdom.Shared.dll",
+                      "length":  424448,
+                      "sha256":  "593bb9158c4e9403e7df4a0d518562c1d8b6eb0343e723deac690a956c7e163b"
+                  },
+                  {
+                      "path":  "BeeKingdom.Shared.pdb",
+                      "length":  77380,
+                      "sha256":  "7ee2977e93d437631d9193be2405da4cad51a00e6ba75f4b2ba95b3ee5d3322f"
+                  },
+                  {
+                      "path":  "BeeKingdom.Simulation.dll",
+                      "length":  37376,
+                      "sha256":  "77871c8e205d01a7a8c4caa558ede6102bfd51bcfbb29d5677b85c003a898e91"
+                  },
+                  {
+                      "path":  "BeeKingdom.Simulation.pdb",
+                      "length":  29480,
+                      "sha256":  "0d3299bbad139f1c0f9d7e0b1c6e6ec8cae84f0dd3e179e7ec8ead4d1848be63"
+                  },
+                  {
+                      "path":  "de/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  270456,
+                      "sha256":  "d2fef31bba54ebd60934e1cf866a514fd2e130df8c748a0a34a08f7f1de20470"
+                  },
+                  {
+                      "path":  "es/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  262280,
+                      "sha256":  "53dcd44e7f596900d53b043b97a71ff8ed8037982aaf376c6baad8dcdd928cc2"
+                  },
+                  {
+                      "path":  "fr/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  271496,
+                      "sha256":  "30c6cc0612a34549768b2dc990ae94db45896bff18c82dceda101006ef9d90d3"
+                  },
+                  {
+                      "path":  "it/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  263832,
+                      "sha256":  "3c884c1b4f088afaf4175ddacdd820ce4ef36137377f86c7a08899d1e0536fd2"
+                  },
+                  {
+                      "path":  "ja/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  292880,
+                      "sha256":  "7c7805e842019d56b980c5cc1d4be8322eed6981be65af7e395082e4693af07b"
+                  },
+                  {
+                      "path":  "ko/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  270992,
+                      "sha256":  "55f003461e7a040785ae5d3fab4904665adec1f476ebf6ae5117a5e2b9a4142e"
+                  },
+                  {
+                      "path":  "Microsoft.Bcl.AsyncInterfaces.dll",
+                      "length":  14720,
+                      "sha256":  "11c0e8fc6419910ace4f55ddd2330f1373704f996c32ae4336c3f11d589d2c34"
+                  },
+                  {
+                      "path":  "Microsoft.Data.SqlClient.dll",
+                      "length":  2131064,
+                      "sha256":  "b0813bee5d78d2361bcf17d03c24f7b1a220d9359ea9b49ecd96fabd7522e3a8"
+                  },
+                  {
+                      "path":  "Microsoft.Data.SqlClient.SNI.dll",
+                      "length":  503728,
+                      "sha256":  "31e14dea08c9e6d215431d81fa8c51e477d4c13411a4b903caf9e00149392e46"
+                  },
+                  {
+                      "path":  "Microsoft.Identity.Client.dll",
+                      "length":  1005600,
+                      "sha256":  "01133b9431bf6b4dd061020bf7866e1f1e116760450907e05d18e167ff8a5bcf"
+                  },
+                  {
+                      "path":  "Microsoft.Identity.Client.Extensions.Msal.dll",
+                      "length":  66592,
+                      "sha256":  "d318486a4c742574f014e8c3ac85d0fc6d8ed330c23f1b3516ab7a092861315b"
+                  },
+                  {
+                      "path":  "Microsoft.IdentityModel.Abstractions.dll",
+                      "length":  18968,
+                      "sha256":  "f4694d23f05cc0263abbcb536d132e243bc9c175ae642387fa98652b880a4be0"
+                  },
+                  {
+                      "path":  "Microsoft.IdentityModel.JsonWebTokens.dll",
+                      "length":  112576,
+                      "sha256":  "58277455122589b39c20e94f403fca7d3abcf5488bd9d8702ac75d03770f49f8"
+                  },
+                  {
+                      "path":  "Microsoft.IdentityModel.Logging.dll",
+                      "length":  36792,
+                      "sha256":  "5de12f537fa96ec3d47e1dabcf348807da1400f0e0f5654c4b6903310d691c9a"
+                  },
+                  {
+                      "path":  "Microsoft.IdentityModel.Protocols.dll",
+                      "length":  39864,
+                      "sha256":  "ac1f9879b7077a6fa9893dab92cd7af7b20f2f761a983941d2d184912b826908"
+                  },
+                  {
+                      "path":  "Microsoft.IdentityModel.Protocols.OpenIdConnect.dll",
+                      "length":  114104,
+                      "sha256":  "034f43fec9ca10ff7d29640b2da7dd218850585827edaabd9737fae4af582520"
+                  },
+                  {
+                      "path":  "Microsoft.IdentityModel.Tokens.dll",
+                      "length":  993312,
+                      "sha256":  "929dd15f4a58930f21ec9eb95600775348ee63a059f6547a748607ede7521a4c"
+                  },
+                  {
+                      "path":  "Microsoft.SqlServer.Server.dll",
+                      "length":  23976,
+                      "sha256":  "a9dca1b42bc875f966b78b2c0880e62b838f0ed6567166d7f1f07ae4b76ec4bf"
+                  },
+                  {
+                      "path":  "pt-BR/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  258064,
+                      "sha256":  "f381f61ce83ceb6028af07bd97a508c8eee6a83ea2f8f0fd69f17a214cf70e8b"
+                  },
+                  {
+                      "path":  "ru/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  349320,
+                      "sha256":  "046fc5a3d5fedad457dc7426ff82cfb39926eef36edd27a03c0e74f8714138ce"
+                  },
+                  {
+                      "path":  "System.ClientModel.dll",
+                      "length":  28608,
+                      "sha256":  "a06523028979f420abc209be62a06b3038289932a9942b1ad3cee52af2cdbc0a"
+                  },
+                  {
+                      "path":  "System.Configuration.ConfigurationManager.dll",
+                      "length":  442632,
+                      "sha256":  "89d52b4a10b13bf98698847a4daf5be995226550b18f85808dbf4e80ba714676"
+                  },
+                  {
+                      "path":  "System.IdentityModel.Tokens.Jwt.dll",
+                      "length":  77344,
+                      "sha256":  "177d4c2d2a5891ef834c46990aa76b81ed7a198f70d78229f7374c0706ba0166"
+                  },
+                  {
+                      "path":  "System.Memory.Data.dll",
+                      "length":  21368,
+                      "sha256":  "293ca5d86358fb2ce00da02c63eefcb344689fc0c636b61c97c3f1b15a80aa51"
+                  },
+                  {
+                      "path":  "System.Runtime.Caching.dll",
+                      "length":  92936,
+                      "sha256":  "9c15309806a23f8aee13813b78c354b3d99fb57fd3cf1c2fb6e142c64a398960"
+                  },
+                  {
+                      "path":  "System.Security.Cryptography.ProtectedData.dll",
+                      "length":  36616,
+                      "sha256":  "5e04d6cff3b6fe9706908970cd594861f0c08b3824f7827b2331b5f4fcee1bd1"
+                  },
+                  {
+                      "path":  "web.config",
+                      "length":  484,
+                      "sha256":  "26335177ef4bae2f342d02fc38bffa29340450de69db9aec83fae3576c4446f7"
+                  },
+                  {
+                      "path":  "zh-Hans/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  228472,
+                      "sha256":  "33102097d54f6c555935c9bbf3ef02b6984313a8b0ba375e7ad0392936c8576e"
+                  },
+                  {
+                      "path":  "zh-Hant/Microsoft.Data.SqlClient.resources.dll",
+                      "length":  232056,
+                      "sha256":  "34083593a9db8facecb7f2d40dbe2ac769370f33b3dfa96e003561428be08618"
+                  }
+              ]
+}

@@ -1,0 +1,16 @@
+{
+    "name": "BeeKingdom.QA",
+    "rootNamespace": "BeeKingdom.QA",
+    "references": [
+        "BeeKingdom.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

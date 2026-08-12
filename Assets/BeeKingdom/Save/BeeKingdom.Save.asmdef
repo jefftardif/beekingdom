@@ -1,0 +1,17 @@
+{
+    "name": "BeeKingdom.Save",
+    "rootNamespace": "BeeKingdom.Save",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Services"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

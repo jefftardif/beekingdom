@@ -1,0 +1,260 @@
+{
+  "protocol_version": "step5a-shared-transform-v2-uia",
+  "evidence_scope": "local_demo",
+  "builder_handoff_id": null,
+  "captured_at_utc": null,
+  "unity_version": null,
+  "product_revision": null,
+  "canonical_scene": "Assets/Scenes/WorldMapMmoFullscreenFoundation.unity",
+  "normal_play_mode": null,
+  "normal_user_path_used": null,
+  "capture_generator_scene_used": false,
+  "orientation": null,
+  "resolution": {
+    "width": null,
+    "height": null,
+    "short_side_px": null
+  },
+  "uia_landmark_motion_reference": {
+    "required": true,
+    "report": {
+      "path": "Docs/UIA/WorldMapStep5ALandmarkMotionReference/UIA_WorldMapStep5A_LandmarkMotionReference_Report.md",
+      "sha256": "B1A2C4792284419FB5C14A1E73D22CB1C5A9785F9B813585774D3A4FB94B342B"
+    },
+    "annotated_master": {
+      "path": "Docs/UIA/WorldMapStep5ALandmarkMotionReference/UIA_WorldMapStep5A_MasterLandmarks_Annotated.png",
+      "sha256": "A9592DF5625BADDC5CB4169DC3044DB58396C2C41C285486ECE3D07CB4BA92CE",
+      "dimensions_px": [3280, 2560]
+    },
+    "pan_zoom_board": {
+      "path": "Docs/UIA/WorldMapStep5ALandmarkMotionReference/UIA_WorldMapStep5A_PanZoomReference.png",
+      "sha256": "A275B4C9092CA5E73AC01C15CDE39CD495CC8AF0F496F2E14E4E898F7BA86AAF",
+      "dimensions_px": [3000, 2000]
+    },
+    "landmark_contract": {
+      "path": "Docs/UIA/WorldMapStep5ALandmarkMotionReference/UIA_WorldMapStep5A_Landmarks.json",
+      "sha256": "5FD6B39AA20DAF155F693C5C3FA5912A3503749EE97E2E8E7E20CDB769AFEE1E"
+    },
+    "all_source_hashes_match": null,
+    "annotations_qa_only": true,
+    "annotations_runtime_allowed": false,
+    "raw_runtime_capture_unannotated": null,
+    "expected_landmark_ids": [
+      "L01", "L02", "L03", "L04", "L05", "L06", "L07",
+      "L08", "L09", "L10", "L11", "L12", "L13"
+    ],
+    "all_13_landmarks_identified": null,
+    "pan_pairs": [
+      {
+        "id": "PH01",
+        "landmarks": ["L05", "L06"],
+        "reference_zoom": 1.0,
+        "camera_delta_world_px": [300, 0],
+        "expected_screen_delta_px": [-300, 0],
+        "measured_terrain_delta_px": null,
+        "measured_entity_delta_px": null,
+        "terrain_entity_delta_error_px": null,
+        "hud_translation_px": null,
+        "hud_scale_ratio": null,
+        "continuous_motion_evidence": null,
+        "pass": null
+      },
+      {
+        "id": "PH02",
+        "landmarks": ["L10", "L12"],
+        "reference_zoom": 0.6,
+        "camera_delta_world_px": [220, 0],
+        "expected_screen_delta_px": [-132, 0],
+        "measured_terrain_delta_px": null,
+        "measured_entity_delta_px": null,
+        "terrain_entity_delta_error_px": null,
+        "hud_translation_px": null,
+        "hud_scale_ratio": null,
+        "continuous_motion_evidence": null,
+        "pass": null
+      },
+      {
+        "id": "PV01",
+        "landmarks": ["L05", "L08"],
+        "reference_zoom": 1.0,
+        "camera_delta_world_px": [0, 180],
+        "expected_screen_delta_px": [0, -180],
+        "measured_terrain_delta_px": null,
+        "measured_entity_delta_px": null,
+        "terrain_entity_delta_error_px": null,
+        "hud_translation_px": null,
+        "hud_scale_ratio": null,
+        "continuous_motion_evidence": null,
+        "pass": null
+      }
+    ],
+    "zoom_pivots": [
+      {
+        "id": "Z01",
+        "landmark": "L05",
+        "pivot_master_px": [807, 664],
+        "reference_factors": [0.75, 1.0, 1.5],
+        "terrain_anchor_error_px": null,
+        "entity_anchor_error_px": null,
+        "secondary_detail_scale_error": null,
+        "hud_translation_px": null,
+        "hud_scale_ratio": null,
+        "pass": null
+      },
+      {
+        "id": "Z02",
+        "landmark": "L09",
+        "pivot_master_px": [1424, 950],
+        "reference_factors": [0.75, 1.0, 1.5],
+        "terrain_anchor_error_px": null,
+        "entity_anchor_error_px": null,
+        "secondary_detail_scale_error": null,
+        "hud_translation_px": null,
+        "hud_scale_ratio": null,
+        "pass": null
+      },
+      {
+        "id": "Z03",
+        "landmark": "L11",
+        "pivot_master_px": [2248, 1304],
+        "reference_factors": [0.75, 1.0, 1.5],
+        "terrain_anchor_error_px": null,
+        "entity_anchor_error_px": null,
+        "secondary_detail_scale_error": null,
+        "hud_translation_px": null,
+        "hud_scale_ratio": null,
+        "pass": null
+      }
+    ],
+    "acceptance": {
+      "deterministic_anchor_error_px_max": 2,
+      "physical_capture_anchor_error_px_max": 3,
+      "hud_translation_error_px_max": 1,
+      "hud_scale_ratio_min": 0.995,
+      "hud_scale_ratio_max": 1.005,
+      "all_pan_pairs_required": true,
+      "all_zoom_pivots_required": true
+    }
+  },
+  "wave3": {
+    "master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4",
+    "source_bundle_tree_sha256": "2176c7c5b81108e006014a1310095c9570d414963539bc0766dd4c023456fd2f",
+    "expected_tile_count": 25,
+    "actual_tile_count": null,
+    "unique_tile_hash_count": null,
+    "tile_dimensions_px": [516, 516],
+    "world_interior_px": [512, 512],
+    "expected_tile_ids": [
+      "R0C0_g2", "R0C1_g2", "R0C2_g2", "R0C3_g2", "R0C4_g2",
+      "R1C0_g2", "R1C1_g2", "R1C2_g2", "R1C3_g2", "R1C4_g2",
+      "R2C0_g2", "R2C1_g2", "R2C2_g2", "R2C3_g2", "R2C4_g2",
+      "R3C0_g2", "R3C1_g2", "R3C2_g2", "R3C3_g2", "R3C4_g2",
+      "R4C0_g2", "R4C1_g2", "R4C2_g2", "R4C3_g2", "R4C4_g2"
+    ],
+    "all_hashes_match": null,
+    "interior_uv_min": 0.003875968992248062,
+    "interior_uv_max": 0.9961240310077519,
+    "wrap_mode": "Clamp",
+    "filter_mode": "Bilinear",
+    "mipmaps_enabled": false,
+    "modulo_used": false,
+    "repeat_used": false,
+    "internal_boundaries_checked": 40,
+    "visible_seam_count": null,
+    "visible_grid": null,
+    "visible_repetition": null
+  },
+  "camera_bounds": {
+    "art_region": "5x5",
+    "min_chunk": [30, 30],
+    "max_chunk": [34, 34],
+    "left_bound_proven": null,
+    "right_bound_proven": null,
+    "top_bound_proven": null,
+    "bottom_bound_proven": null,
+    "wrap_observed": null,
+    "world_64x64_art_complete": false
+  },
+  "pan": {
+    "zoom": 1.10,
+    "gesture_distance_px": null,
+    "minimum_terrain_displacement_px": null,
+    "terrain_anchor_before_px": null,
+    "terrain_anchor_mid_px": null,
+    "terrain_anchor_after_px": null,
+    "terrain_displacement_px": null,
+    "hive_displacement_px": null,
+    "resource_displacement_px": null,
+    "flight_source_displacement_px": null,
+    "flight_destination_displacement_px": null,
+    "max_entity_terrain_vector_error_px": null,
+    "terrain_motion_obvious": null,
+    "continuous_motion_observed": null,
+    "pass": null
+  },
+  "zoom": {
+    "start_zoom": 1.10,
+    "peak_zoom": 1.35,
+    "return_zoom": 1.10,
+    "pivot_px": null,
+    "terrain_pivot_error_px": null,
+    "hive_pivot_error_px": null,
+    "resource_pivot_error_px": null,
+    "flight_endpoint_error_px": null,
+    "max_scale_ratio_error_percent": null,
+    "return_alignment_error_px": null,
+    "pass": null
+  },
+  "fixed_ui": {
+    "hud_max_translation_px": null,
+    "hud_max_scale_error_percent": null,
+    "pan_triggered_from_ui": null,
+    "zoom_triggered_from_ui": null,
+    "overlap_or_crop": null,
+    "pass": null
+  },
+  "selection": {
+    "hive_selected_before_transform": null,
+    "hive_selected_after_transform": null,
+    "resource_selected_before_transform": null,
+    "resource_selected_after_transform": null,
+    "max_halo_alignment_error_px": null,
+    "max_hit_zone_alignment_error_px": null,
+    "pass": null
+  },
+  "flight": {
+    "active_flight_visible": null,
+    "air_only": null,
+    "road_graph_used": false,
+    "source_anchor_stable": null,
+    "destination_anchor_stable": null,
+    "jump_or_disappearance": null,
+    "pass": null
+  },
+  "artifacts": [
+    { "role": "pan_before", "path": null, "sha256": null },
+    { "role": "pan_mid", "path": null, "sha256": null },
+    { "role": "pan_after", "path": null, "sha256": null },
+    { "role": "zoom_start", "path": null, "sha256": null },
+    { "role": "zoom_peak", "path": null, "sha256": null },
+    { "role": "zoom_return", "path": null, "sha256": null },
+    { "role": "continuous_video_or_strip", "path": null, "sha256": null }
+  ],
+  "claims": {
+    "local_demo_only": true,
+    "server_live": false,
+    "official_persistence": false,
+    "official_world_complete": false,
+    "physical_device_proof": false
+  },
+  "results": {
+    "shared_transform": null,
+    "hud_fixed": null,
+    "wave3_integrity": null,
+    "camera_bounded": null,
+    "responsive": null,
+    "selection_alignment": null,
+    "air_only_flights": null,
+    "blocking_reason_ids": []
+  }
+}

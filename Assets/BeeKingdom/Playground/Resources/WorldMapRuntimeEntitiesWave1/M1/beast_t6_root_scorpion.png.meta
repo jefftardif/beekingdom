@@ -1,0 +1,468 @@
+fileFormatVersion: 2
+guid: 89fa405adc8463e4290e228c746dae94
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -9060753875050089808
+    second: beast_t6_root_scorpion_0
+  - first:
+      213: 4650126808291115633
+    second: beast_t6_root_scorpion_1
+  - first:
+      213: 8240879714769515997
+    second: beast_t6_root_scorpion_2
+  - first:
+      213: 3000737225411949409
+    second: beast_t6_root_scorpion_3
+  - first:
+      213: -8281120607728689909
+    second: beast_t6_root_scorpion_4
+  - first:
+      213: -365533961933052363
+    second: beast_t6_root_scorpion_5
+  - first:
+      213: 2593042423631016746
+    second: beast_t6_root_scorpion_6
+  - first:
+      213: 2547537978969526782
+    second: beast_t6_root_scorpion_7
+  - first:
+      213: -3976112081877781493
+    second: beast_t6_root_scorpion_8
+  - first:
+      213: 7675104361440537619
+    second: beast_t6_root_scorpion_9
+  - first:
+      213: 1273505702493966092
+    second: beast_t6_root_scorpion_10
+  - first:
+      213: 5109131718354341845
+    second: beast_t6_root_scorpion_11
+  - first:
+      213: -8577491371850520993
+    second: beast_t6_root_scorpion_12
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_0
+      rect:
+        serializedVersion: 2
+        x: 122
+        y: 377
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0b235684b5cb14280800000000000000
+      internalID: -9060753875050089808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_1
+      rect:
+        serializedVersion: 2
+        x: 219
+        y: 379
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17286b8d1b1988040800000000000000
+      internalID: 4650126808291115633
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_2
+      rect:
+        serializedVersion: 2
+        x: 259
+        y: 306
+        width: 121
+        height: 144
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd53f83407c7d5270800000000000000
+      internalID: 8240879714769515997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_3
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 369
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 16378f0ab92c4a920800000000000000
+      internalID: 3000737225411949409
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_4
+      rect:
+        serializedVersion: 2
+        x: 244
+        y: 363
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b0d1a2abeac831d80800000000000000
+      internalID: -8281120607728689909
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_5
+      rect:
+        serializedVersion: 2
+        x: 258
+        y: 363
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 536a3ad5ccc5deaf0800000000000000
+      internalID: -365533961933052363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_6
+      rect:
+        serializedVersion: 2
+        x: 392
+        y: 362
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a237b0488565cf320800000000000000
+      internalID: 2593042423631016746
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_7
+      rect:
+        serializedVersion: 2
+        x: 227
+        y: 358
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef19b406b4caa5320800000000000000
+      internalID: 2547537978969526782
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_8
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 333
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b04398cb02302d8c0800000000000000
+      internalID: -3976112081877781493
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_9
+      rect:
+        serializedVersion: 2
+        x: 172
+        y: 339
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 31ce6b590c2738a60800000000000000
+      internalID: 7675104361440537619
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_10
+      rect:
+        serializedVersion: 2
+        x: 209
+        y: 339
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c0f469860b66ca110800000000000000
+      internalID: 1273505702493966092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_11
+      rect:
+        serializedVersion: 2
+        x: 74
+        y: 65
+        width: 351
+        height: 271
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5df013f7a3847e640800000000000000
+      internalID: 5109131718354341845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t6_root_scorpion_12
+      rect:
+        serializedVersion: 2
+        x: 356
+        y: 262
+        width: 83
+        height: 74
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f562fd4fa01a6f880800000000000000
+      internalID: -8577491371850520993
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      beast_t6_root_scorpion_0: -9060753875050089808
+      beast_t6_root_scorpion_1: 4650126808291115633
+      beast_t6_root_scorpion_10: 1273505702493966092
+      beast_t6_root_scorpion_11: 5109131718354341845
+      beast_t6_root_scorpion_12: -8577491371850520993
+      beast_t6_root_scorpion_2: 8240879714769515997
+      beast_t6_root_scorpion_3: 3000737225411949409
+      beast_t6_root_scorpion_4: -8281120607728689909
+      beast_t6_root_scorpion_5: -365533961933052363
+      beast_t6_root_scorpion_6: 2593042423631016746
+      beast_t6_root_scorpion_7: 2547537978969526782
+      beast_t6_root_scorpion_8: -3976112081877781493
+      beast_t6_root_scorpion_9: 7675104361440537619
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

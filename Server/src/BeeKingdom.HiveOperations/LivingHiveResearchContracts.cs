@@ -1,0 +1,10 @@
+namespace BeeKingdom.HiveOperations;
+public sealed record ResearchEffects(int HoneyProductionBonusBps,int WaxCapacityBonusBps,int WaxProductionBonusBps,int PollenProductionBonusBps,int PollenCapacityBonusBps,int GlobalCapacityBonusBps);
+public sealed record ResearchOffer(string ResearchId,TimeSpan Duration,IReadOnlyDictionary<string,long> Costs,ResearchEffects Effects,IReadOnlyList<string> Prerequisites);
+public sealed record ResearchCompletedEntry(string ResearchId,DateTimeOffset CompletedAtUtc,ResearchEffects Effects);
+public sealed record ResearchActiveOperation(Guid OperationId,string ResearchId,DateTimeOffset StartedAtUtc,DateTimeOffset CompletesAtUtc,string Status);
+public sealed record ResearchReadSnapshot(Guid PlayerId,Guid HiveId,string ContractVersion,string CatalogVersion,long Revision,DateTimeOffset ServerTimeUtc,IReadOnlyDictionary<string,ResourceBalance> Balances,IReadOnlyList<ResearchCompletedEntry> Completed,IReadOnlyList<ResearchOffer> Offers,ResearchActiveOperation? ActiveOperation);
+public sealed record ResearchReceipt(Guid PlayerId,Guid HiveId,string IdempotencyKey,Guid OperationId,string ResearchId,long Revision,DateTimeOffset AcceptedAtUtc,string Code);
+public sealed record ResearchResponse(ResearchReceipt Receipt,ResearchReadSnapshot Snapshot);
+public sealed record ResearchMutationRequest(long ExpectedRevision,string IdempotencyKey);
+public sealed record ResearchCatalogEntry(IReadOnlyDictionary<string,long> Costs,TimeSpan Duration,ResearchEffects Effects,IReadOnlyList<string> Prerequisites);

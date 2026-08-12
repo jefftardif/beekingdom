@@ -1,0 +1,17 @@
+{
+    "name": "BeeKingdom.Config",
+    "rootNamespace": "BeeKingdom.Config",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Gameplay"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

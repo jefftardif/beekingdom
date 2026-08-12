@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00ab11b8e5c74674a80484717e0c9380, type: 3}
+  m_Name: NurseBee
+  m_EditorClassIdentifier: Assembly-CSharp::BeeKingdom.Core.Bees.BeeSO
+  beeName: Nurse Bee
+  beeId: nurse_bee
+  description: A hardworking bee that collects pollen.
+  icon: {fileID: 0}
+  maxHealth: 80
+  attackDamage: 1
+  attackSpeed: 0.1
+  moveSpeed: 4
+  defense: 5
+  canProduceResources: 1
+  producedResourceType: 3
+  productionRate: 0.2
+  recruitCost:
+  - resourceType: 0
+    amount: 200
+  - resourceType: 1
+    amount: 150
+  - resourceType: 2
+    amount: 50
+  upgradeCost: []
+  rarity: 2
+  requiredPlayerLevel: 7
+  isUnlockedByDefault: 0

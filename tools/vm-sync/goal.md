@@ -1,0 +1,9 @@
+Reprendre Bee Kingdom comme Architecte2 conformément à AGENTS.md.
+
+Transformer progressivement la scène Unity LivingHive en une expérience premium de jeu de stratégie mobile inspirée des enseignements documentés dans Docs/Benchmarks/AntLegion/AntLegion_BeeKingdom_FunctionalReference.md, mais entièrement transposée à l’univers, à l’identité et aux règles de Bee Kingdom.
+
+Conserver strictement la carte mondiale 50x50, toutes ses images de terrain et l’image de base actuelle de la ruche. Ne jamais les régénérer, les recadrer, les remplacer ou les retoucher. Améliorer uniquement les couches de présentation et de gameplay autour de ces fondations: interactions de bâtiments, collecte manuelle, animations d’abeilles, menus fonctionnels, tutoriel scénarisé, progression, files d’attente réelles, états persistants, récompenses et confort commercial non pay-to-win. Le chantier de chat et messagerie reste en pause.
+
+Commencer par synchroniser la copie locale, lire le plan LivingHive et identifier la prochaine tranche verticale inachevée ayant la plus grande valeur pour le joueur. Pour chaque tranche: inspecter l’architecture existante, implémenter une expérience fonctionnelle de bout en bout, vérifier les assemblages jeu et éditeur, exécuter les tests Unity pertinents, contrôler visuellement les formats mobile et paysage, documenter les décisions, puis synchroniser les changements vers l’ordinateur principal.
+
+Ne pas copier les textes, visuels, noms, paramètres propriétaires ou contenus d’Ant Legion. Utiliser cette référence uniquement pour comprendre les boucles, les attentes des joueurs et les irritants à dépasser. Continuer de façon autonome tant qu’une tranche utile et vérifiable peut être achevée sans toucher aux fondations protégées.

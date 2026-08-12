@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0,2268433">
+  <test-suite type="TestSuite" id="1000" name="BeeKingdom" fullname="BeeKingdom" runstate="Runnable" testcasecount="882" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.226843" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1148" name="Assembly-CSharp-Editor.dll" fullname="C:/projets/beekingdomgame-master/Library/ScriptAssemblies/Assembly-CSharp-Editor.dll" runstate="Runnable" testcasecount="126" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.190038" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="14292" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1149" name="BeeKingdom" fullname="BeeKingdom" runstate="Runnable" testcasecount="126" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.188283" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1150" name="Playground" fullname="BeeKingdom.Playground" runstate="Runnable" testcasecount="126" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.187001" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1151" name="Editor" fullname="BeeKingdom.Playground.Editor" runstate="Runnable" testcasecount="126" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.178136" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1001" name="LivingHiveChatLayoutTests" fullname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests" classname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.170801" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1004" name="DismissingOverlayDoesNotResetConfiguredChatRuntime" fullname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests.DismissingOverlayDoesNotResetConfiguredChatRuntime" methodname="DismissingOverlayDoesNotResetConfiguredChatRuntime" classname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests" runstate="Runnable" seed="2133726106" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.084689" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1003" name="Landscape1600x900PanelStaysAboveAccessibleChatBar" fullname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests.Landscape1600x900PanelStaysAboveAccessibleChatBar" methodname="Landscape1600x900PanelStaysAboveAccessibleChatBar" classname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests" runstate="Runnable" seed="953625197" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.016690" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1002" name="Portrait390x844PanelStaysBetweenHudAndRailAndConsumesInput" fullname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests.Portrait390x844PanelStaysBetweenHudAndRailAndConsumesInput" methodname="Portrait390x844PanelStaysBetweenHudAndRailAndConsumesInput" classname="BeeKingdom.Playground.Editor.LivingHiveChatLayoutTests" runstate="Runnable" seed="1040668183" result="Passed" start-time="2026-07-21 22:51:55Z" end-time="2026-07-21 22:51:55Z" duration="0.012918" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/tardi/AppData/LocalLow/BKD Honey Studio/BeeKingdom\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

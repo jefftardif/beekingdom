@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae217b76fe305e445bf9e2e2dcc2f6cb, type: 3}
+  m_Name: HoneyStorage
+  m_EditorClassIdentifier: Assembly-CSharp::BeeKingdom.Core.Buildings.BuildingSO
+  buildingId: honey_storage
+  buildingName: Honey Storage
+  buildingType: 1
+  description: Stores more honey for construction and recruitment.
+  icon: {fileID: 0}
+  emoji: H
+  requiredQueenLevel: 1
+  isUnlockedByDefault: 1
+  buildCost:
+  - resourceType: 0
+    amount: 75
+  - resourceType: 2
+    amount: 5
+  buildDuration: 12
+  canProduceResources: 0
+  producedResourceType: 0
+  productionRate: 0
+  isStorage: 1
+  storedResourceType: 0
+  storageCapacityBonus: 5000
+  maxLevel: 10
+  costMultiplierPerLevel: 1.5
+  durationMultiplierPerLevel: 1.2
+  productionIncreasePerLevel: 0
+  storageIncreasePerLevel: 2500

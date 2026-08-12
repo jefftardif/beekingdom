@@ -1,0 +1,71 @@
+namespace BeeKingdom.Protocol.Responses;
+
+public sealed record WorldRegistryReadinessResponse(
+    string Service,
+    DateTimeOffset ServerTimeUtc,
+    string Environment,
+    string GameServerId,
+    string DefaultWorldId,
+    string ShardName,
+    string ProductionTarget,
+    string RegistryStatus,
+    bool ReadOnly,
+    bool NonLive,
+    bool ProductionRouteProven,
+    bool WorldSelectionEnabled,
+    bool WorldCreationEnabled,
+    bool WorldTransferEnabled,
+    bool WorldMergeEnabled,
+    bool LivePopulationEnabled,
+    WorldCapacityPolicy CapacityPolicy,
+    IReadOnlyList<WorldRegistryEntry> Worlds,
+    WorldRegistryForbiddenClaims ForbiddenClaims,
+    IReadOnlyList<string> Blockers);
+
+public sealed record WorldCapacityPolicy(
+    int MinAccountsPerWorld,
+    int MaxAccountsPerWorld,
+    int MinActivePlayersPerWorld,
+    int MaxActivePlayersPerWorld,
+    int MinVeryActiveDailyPlayers,
+    int MaxVeryActiveDailyPlayers,
+    int MaxPlayersPerAlliance,
+    IReadOnlyList<string> SupportedWorldStatuses);
+
+public sealed record WorldRegistryEntry(
+    string WorldId,
+    string GameServerId,
+    string DisplayName,
+    string Status,
+    string Region,
+    string Locale,
+    bool Recommended,
+    bool Joinable,
+    bool Live,
+    int? Capacity,
+    int? Population,
+    int MinAccountsPerWorld,
+    int MaxAccountsPerWorld,
+    int MinActivePlayersPerWorld,
+    int MaxActivePlayersPerWorld,
+    int MinVeryActiveDailyPlayers,
+    int MaxVeryActiveDailyPlayers,
+    int MaxPlayersPerAlliance,
+    int? CreatedAccounts,
+    int? ActivePlayersEstimate,
+    int? VeryActiveDailyPlayersEstimate,
+    int? AllianceCount,
+    bool ServerRecommended,
+    bool ServerFull,
+    bool MockReadiness);
+
+public sealed record WorldRegistryForbiddenClaims(
+    bool LiveWorldSelection,
+    bool LivePopulation,
+    bool AutoWorldCreation,
+    bool WorldTransfer,
+    bool WorldMerge,
+    bool CrossServerGameplay,
+    bool Ranking,
+    bool Matchmaking,
+    bool OfficialProgression);

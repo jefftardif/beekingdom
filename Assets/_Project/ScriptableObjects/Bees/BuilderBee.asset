@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00ab11b8e5c74674a80484717e0c9380, type: 3}
+  m_Name: BuilderBee
+  m_EditorClassIdentifier: Assembly-CSharp::BeeKingdom.Core.Bees.BeeSO
+  beeName: Builder Bee
+  beeId: builder_bee
+  description: A skilled bee that produces wax for building structures.
+  icon: {fileID: 0}
+  maxHealth: 120
+  attackDamage: 3
+  attackSpeed: 0.3
+  moveSpeed: 4
+  defense: 8
+  canProduceResources: 1
+  producedResourceType: 2
+  productionRate: 0.5
+  recruitCost:
+  - resourceType: 0
+    amount: 150
+  - resourceType: 1
+    amount: 100
+  upgradeCost: []
+  rarity: 1
+  requiredPlayerLevel: 5
+  isUnlockedByDefault: 0

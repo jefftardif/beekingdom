@@ -1,0 +1,3229 @@
+{
+  "claims": {
+    "android_device_tested": false,
+    "live_server_claimed": false,
+    "live_world_claimed": false,
+    "post_import_static_audit_only": true,
+    "runtime_render_tested": false,
+    "unity_play_mode_tested": false
+  },
+  "completed_at_utc": "2026-07-14T14:35:07.780424+00:00",
+  "errors": [],
+  "manifest": {
+    "byte_and_json_identical": true,
+    "expected_sha256": "bde8c07b6430afe964e136256acfcc1f25854331476354bbb9eda9104e391911",
+    "imported_sha256": "bde8c07b6430afe964e136256acfcc1f25854331476354bbb9eda9104e391911",
+    "master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4",
+    "orientation": {
+      "horizontal_flip": false,
+      "order": "row_major_R0C0_to_R4C4",
+      "origin": "top_left",
+      "rotate_degrees": 0,
+      "transpose": false,
+      "vertical_flip": false
+    },
+    "payload_sha256": "bde8c07b6430afe964e136256acfcc1f25854331476354bbb9eda9104e391911",
+    "status": "PASS",
+    "tile_count": 25
+  },
+  "payload_inventory": {
+    "actual_png_count": 25,
+    "actual_png_names": [
+      "R0C0_g2.png",
+      "R0C1_g2.png",
+      "R0C2_g2.png",
+      "R0C3_g2.png",
+      "R0C4_g2.png",
+      "R1C0_g2.png",
+      "R1C1_g2.png",
+      "R1C2_g2.png",
+      "R1C3_g2.png",
+      "R1C4_g2.png",
+      "R2C0_g2.png",
+      "R2C1_g2.png",
+      "R2C2_g2.png",
+      "R2C3_g2.png",
+      "R2C4_g2.png",
+      "R3C0_g2.png",
+      "R3C1_g2.png",
+      "R3C2_g2.png",
+      "R3C3_g2.png",
+      "R3C4_g2.png",
+      "R4C0_g2.png",
+      "R4C1_g2.png",
+      "R4C2_g2.png",
+      "R4C3_g2.png",
+      "R4C4_g2.png"
+    ],
+    "exact_duplicate_pixel_hash_count": 0,
+    "exact_duplicate_png_hash_count": 0,
+    "expected_png_count": 25,
+    "expected_png_names": [
+      "R0C0_g2.png",
+      "R0C1_g2.png",
+      "R0C2_g2.png",
+      "R0C3_g2.png",
+      "R0C4_g2.png",
+      "R1C0_g2.png",
+      "R1C1_g2.png",
+      "R1C2_g2.png",
+      "R1C3_g2.png",
+      "R1C4_g2.png",
+      "R2C0_g2.png",
+      "R2C1_g2.png",
+      "R2C2_g2.png",
+      "R2C3_g2.png",
+      "R2C4_g2.png",
+      "R3C0_g2.png",
+      "R3C1_g2.png",
+      "R3C2_g2.png",
+      "R3C3_g2.png",
+      "R3C4_g2.png",
+      "R4C0_g2.png",
+      "R4C1_g2.png",
+      "R4C2_g2.png",
+      "R4C3_g2.png",
+      "R4C4_g2.png"
+    ],
+    "extra_png": [],
+    "missing_png": [],
+    "unique_tile_hashes": true
+  },
+  "pixel_validation": {
+    "internal_boundaries_undirected": 40,
+    "internal_gutter_sides_expected": 80,
+    "internal_gutter_sides_passed": 80,
+    "master_dimensions": {
+      "height": 2560,
+      "mode": "RGB",
+      "width": 2560
+    },
+    "master_ok": true,
+    "master_sha256": "d3cdc2dde9d56cac58be6833790b6fd8fc38ac157f72a01dcebd8117583a95b4",
+    "outer_clamp_sides_expected": 20,
+    "outer_clamp_sides_passed": 20,
+    "tiles": [
+      {
+        "column": 0,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "faeba366e9b0277ba5162faba928394ae094cfe0ce4cd02e2b9b25080fe21482",
+        "file": "R0C0_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R0C0",
+        "imported_png_sha256": "faeba366e9b0277ba5162faba928394ae094cfe0ce4cd02e2b9b25080fe21482",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 0,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "faeba366e9b0277ba5162faba928394ae094cfe0ce4cd02e2b9b25080fe21482",
+        "pixel_sha256": "57d9df03edb798d76b04dc0a5b8cca9e371e7810ed0e10ec40f14e4ee0b83a3c",
+        "row": 0,
+        "status": "PASS"
+      },
+      {
+        "column": 1,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "608584362278229f922dd181b467cf5ce1319df06275764bd4c48323352caebf",
+        "file": "R0C1_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R0C1",
+        "imported_png_sha256": "608584362278229f922dd181b467cf5ce1319df06275764bd4c48323352caebf",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 1,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "608584362278229f922dd181b467cf5ce1319df06275764bd4c48323352caebf",
+        "pixel_sha256": "20dc5963f858aab5f179359667e9eb53f7e6a3cdcbeb90fd95a648172a9885e1",
+        "row": 0,
+        "status": "PASS"
+      },
+      {
+        "column": 2,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "ff0cdb067e928af2ce1508024fce091ae64c3e3ffce2dd42dcaaea9e60097288",
+        "file": "R0C2_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R0C2",
+        "imported_png_sha256": "ff0cdb067e928af2ce1508024fce091ae64c3e3ffce2dd42dcaaea9e60097288",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 2,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "ff0cdb067e928af2ce1508024fce091ae64c3e3ffce2dd42dcaaea9e60097288",
+        "pixel_sha256": "b80f8fb191fd1255ee61729adee6d4a6f2bcb8e8aecd29d2c993925b3c39f4ee",
+        "row": 0,
+        "status": "PASS"
+      },
+      {
+        "column": 3,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "c08653419309ead73787e2b8c274f8750f80e7653add243c36cd183f5b642d0d",
+        "file": "R0C3_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R0C3",
+        "imported_png_sha256": "c08653419309ead73787e2b8c274f8750f80e7653add243c36cd183f5b642d0d",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 3,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "c08653419309ead73787e2b8c274f8750f80e7653add243c36cd183f5b642d0d",
+        "pixel_sha256": "ed5171c8cd7a2fe9095dd7f8e6f11b5c8e1b620ac93141f7c839ca3acec67510",
+        "row": 0,
+        "status": "PASS"
+      },
+      {
+        "column": 4,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "c74f6d6817a2d5dfcc7019cbf20ff4a43c33371be3663275fbd5352f2a3c9722",
+        "file": "R0C4_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "right"
+          }
+        ],
+        "id": "R0C4",
+        "imported_png_sha256": "c74f6d6817a2d5dfcc7019cbf20ff4a43c33371be3663275fbd5352f2a3c9722",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 4,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "c74f6d6817a2d5dfcc7019cbf20ff4a43c33371be3663275fbd5352f2a3c9722",
+        "pixel_sha256": "fdc1344eccde8f0abe50561c6304c5c51c75d0fe3cbb563037fcb85ae706e512",
+        "row": 0,
+        "status": "PASS"
+      },
+      {
+        "column": 0,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "b8c694ad466cdf5a2f98d6909d045847d4316bd56be0ad751b271c843e69cf9d",
+        "file": "R1C0_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R1C0",
+        "imported_png_sha256": "b8c694ad466cdf5a2f98d6909d045847d4316bd56be0ad751b271c843e69cf9d",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 5,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "b8c694ad466cdf5a2f98d6909d045847d4316bd56be0ad751b271c843e69cf9d",
+        "pixel_sha256": "1679c1435892e5ee689020191e5b1814ad522cd54e355f9ad6882e89c3379199",
+        "row": 1,
+        "status": "PASS"
+      },
+      {
+        "column": 1,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "4b16a9c36c4bc927f4f3cbd7221fa8581257ddbf4468776628c53a1e3f59d6da",
+        "file": "R1C1_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R1C1",
+        "imported_png_sha256": "4b16a9c36c4bc927f4f3cbd7221fa8581257ddbf4468776628c53a1e3f59d6da",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 6,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "4b16a9c36c4bc927f4f3cbd7221fa8581257ddbf4468776628c53a1e3f59d6da",
+        "pixel_sha256": "e1ae5d66a38b55ed28e731857988b74b8f9324a3ce9252aad3c349660f8398ef",
+        "row": 1,
+        "status": "PASS"
+      },
+      {
+        "column": 2,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "74d40c7cb8463cf0ef9d759605c3d499b435b0b4751a3434a2526b04aa450124",
+        "file": "R1C2_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R1C2",
+        "imported_png_sha256": "74d40c7cb8463cf0ef9d759605c3d499b435b0b4751a3434a2526b04aa450124",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 7,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "74d40c7cb8463cf0ef9d759605c3d499b435b0b4751a3434a2526b04aa450124",
+        "pixel_sha256": "1572338afb75f8b8c3a9c4645b30f28b78ecb867639bd327d65c2d9b1688f10e",
+        "row": 1,
+        "status": "PASS"
+      },
+      {
+        "column": 3,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "cae08d7093ce6c04753065878e82ccd6d35251471f212ce8a0b6b0b4ea3cf21e",
+        "file": "R1C3_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R1C3",
+        "imported_png_sha256": "cae08d7093ce6c04753065878e82ccd6d35251471f212ce8a0b6b0b4ea3cf21e",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 8,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "cae08d7093ce6c04753065878e82ccd6d35251471f212ce8a0b6b0b4ea3cf21e",
+        "pixel_sha256": "3bb6df7669c5a3cdda60a98252d94dcc1fe34619ad2df0222851146060b0fe62",
+        "row": 1,
+        "status": "PASS"
+      },
+      {
+        "column": 4,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "f3fb5144b5a7f31e002fc320794b36de2f2feb52ab7cda688709c53385ffa452",
+        "file": "R1C4_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "right"
+          }
+        ],
+        "id": "R1C4",
+        "imported_png_sha256": "f3fb5144b5a7f31e002fc320794b36de2f2feb52ab7cda688709c53385ffa452",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 9,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "f3fb5144b5a7f31e002fc320794b36de2f2feb52ab7cda688709c53385ffa452",
+        "pixel_sha256": "78575470e0c67226ab29949459ed86b69c9c679be6948dfb4517908e222c74a2",
+        "row": 1,
+        "status": "PASS"
+      },
+      {
+        "column": 0,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "2406723a1c2f203a662acb068f9e9f773623f5b7e6206da7d479671dd41cf791",
+        "file": "R2C0_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R2C0",
+        "imported_png_sha256": "2406723a1c2f203a662acb068f9e9f773623f5b7e6206da7d479671dd41cf791",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 10,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "2406723a1c2f203a662acb068f9e9f773623f5b7e6206da7d479671dd41cf791",
+        "pixel_sha256": "047dbcd5e25cdc0e215edb4700ed610829a9fec0f92145c1505bd03b964c49a0",
+        "row": 2,
+        "status": "PASS"
+      },
+      {
+        "column": 1,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "54bab1bb8fd8aa55ce950e0e31b505c35474a0ebf52bf2b1023cf783a1cf7486",
+        "file": "R2C1_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R2C1",
+        "imported_png_sha256": "54bab1bb8fd8aa55ce950e0e31b505c35474a0ebf52bf2b1023cf783a1cf7486",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 11,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "54bab1bb8fd8aa55ce950e0e31b505c35474a0ebf52bf2b1023cf783a1cf7486",
+        "pixel_sha256": "779ab6021fdb7ede59d86c54849fe639b298e99d425300b4a70484ea94fa16e8",
+        "row": 2,
+        "status": "PASS"
+      },
+      {
+        "column": 2,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "4ed1009967bb8ca5a473a7bd4ad99360ac3712c4fa1e2addfd10cda6eb99bfd6",
+        "file": "R2C2_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R2C2",
+        "imported_png_sha256": "4ed1009967bb8ca5a473a7bd4ad99360ac3712c4fa1e2addfd10cda6eb99bfd6",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 12,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "4ed1009967bb8ca5a473a7bd4ad99360ac3712c4fa1e2addfd10cda6eb99bfd6",
+        "pixel_sha256": "ccbdec093b167fbeabe21ed3259912cb5ade58f0221b6f2966831597dc65750c",
+        "row": 2,
+        "status": "PASS"
+      },
+      {
+        "column": 3,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "b88f0c3329cce4a38d44abe36efef5efd598dfdf8f0104b26937648c450cc77c",
+        "file": "R2C3_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R2C3",
+        "imported_png_sha256": "b88f0c3329cce4a38d44abe36efef5efd598dfdf8f0104b26937648c450cc77c",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 13,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "b88f0c3329cce4a38d44abe36efef5efd598dfdf8f0104b26937648c450cc77c",
+        "pixel_sha256": "53c15397940052f750198c6ec0fdb9b2f3a4ff0c3b4ca8d7f275efaa40bef15b",
+        "row": 2,
+        "status": "PASS"
+      },
+      {
+        "column": 4,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "42efee714a44b50790795359e8dc4c794d3e87760e4dcc21ce7fe269c240a036",
+        "file": "R2C4_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "right"
+          }
+        ],
+        "id": "R2C4",
+        "imported_png_sha256": "42efee714a44b50790795359e8dc4c794d3e87760e4dcc21ce7fe269c240a036",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 14,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "42efee714a44b50790795359e8dc4c794d3e87760e4dcc21ce7fe269c240a036",
+        "pixel_sha256": "fce96c2af133bc3aded64625823aa4a106039305fc7ec93f9d1ddafd8f8c1091",
+        "row": 2,
+        "status": "PASS"
+      },
+      {
+        "column": 0,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "9255f3b1004a63e0367480ccb6bbce69127e0c792b68b1b9f645fe6b4c54e93e",
+        "file": "R3C0_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R3C0",
+        "imported_png_sha256": "9255f3b1004a63e0367480ccb6bbce69127e0c792b68b1b9f645fe6b4c54e93e",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 15,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "9255f3b1004a63e0367480ccb6bbce69127e0c792b68b1b9f645fe6b4c54e93e",
+        "pixel_sha256": "01e4e033a8be741e9a5e5aaa2592f8d79449b996289714969c1cdf26520e2ed2",
+        "row": 3,
+        "status": "PASS"
+      },
+      {
+        "column": 1,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "d9361fcbace0ba4cb5949abfebdb64c48fa2400ebc444cd48075d61ceb2b802b",
+        "file": "R3C1_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R3C1",
+        "imported_png_sha256": "d9361fcbace0ba4cb5949abfebdb64c48fa2400ebc444cd48075d61ceb2b802b",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 16,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "d9361fcbace0ba4cb5949abfebdb64c48fa2400ebc444cd48075d61ceb2b802b",
+        "pixel_sha256": "3550159add2d1256f904d780e3a57c121efbb53810dbf530a8056ce91cca68ec",
+        "row": 3,
+        "status": "PASS"
+      },
+      {
+        "column": 2,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "8a21793aa7be1c186555b0f55073a83377c8d260fa589581352c942c9958db20",
+        "file": "R3C2_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R3C2",
+        "imported_png_sha256": "8a21793aa7be1c186555b0f55073a83377c8d260fa589581352c942c9958db20",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 17,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "8a21793aa7be1c186555b0f55073a83377c8d260fa589581352c942c9958db20",
+        "pixel_sha256": "1ba0e8b6aecc4d293d17ece529b639998ae4544fd64b6bfc138f21adf85b6c85",
+        "row": 3,
+        "status": "PASS"
+      },
+      {
+        "column": 3,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "a094fc2d80dde0e1b466895f4c51f54c4dba1b10638e0b9db7e6a631e744e224",
+        "file": "R3C3_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R3C3",
+        "imported_png_sha256": "a094fc2d80dde0e1b466895f4c51f54c4dba1b10638e0b9db7e6a631e744e224",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 18,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "a094fc2d80dde0e1b466895f4c51f54c4dba1b10638e0b9db7e6a631e744e224",
+        "pixel_sha256": "113a4e5d2d21888ca424b24e7933f2e147c4cd39c7018907b44e5c25a85e0176",
+        "row": 3,
+        "status": "PASS"
+      },
+      {
+        "column": 4,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "19eb16d285205130809e8f28298a0ddee2d0dec377567203f0d69f1c60dde9cf",
+        "file": "R3C4_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "right"
+          }
+        ],
+        "id": "R3C4",
+        "imported_png_sha256": "19eb16d285205130809e8f28298a0ddee2d0dec377567203f0d69f1c60dde9cf",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 19,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "19eb16d285205130809e8f28298a0ddee2d0dec377567203f0d69f1c60dde9cf",
+        "pixel_sha256": "eadeba4d4895629c6f073d7e7444f8d40cd824cf0f7cdf545cabf6f23fbe4b22",
+        "row": 3,
+        "status": "PASS"
+      },
+      {
+        "column": 0,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "04ff1868df55e3197b79a030df09ecc177ab8f43cb92826832f5f092ee7d7f66",
+        "file": "R4C0_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R4C0",
+        "imported_png_sha256": "04ff1868df55e3197b79a030df09ecc177ab8f43cb92826832f5f092ee7d7f66",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 20,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "04ff1868df55e3197b79a030df09ecc177ab8f43cb92826832f5f092ee7d7f66",
+        "pixel_sha256": "a4384eb74cb721861a82e17138b1b2f7239bf4e245dfe27d244c1b644e34f650",
+        "row": 4,
+        "status": "PASS"
+      },
+      {
+        "column": 1,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "b279914641cd148429c4d139ec6a72260276aef5c7b7e0822bb38f3376bd09a2",
+        "file": "R4C1_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R4C1",
+        "imported_png_sha256": "b279914641cd148429c4d139ec6a72260276aef5c7b7e0822bb38f3376bd09a2",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 21,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "b279914641cd148429c4d139ec6a72260276aef5c7b7e0822bb38f3376bd09a2",
+        "pixel_sha256": "13375c82cfca00a6494ba530cf0011c5c0f2213b5053d9ad3bca5acd94cd6f38",
+        "row": 4,
+        "status": "PASS"
+      },
+      {
+        "column": 2,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "ecce85f9395e52e429c9ad57844c29817b9717a1eaecfc05f824aca73bee4d16",
+        "file": "R4C2_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R4C2",
+        "imported_png_sha256": "ecce85f9395e52e429c9ad57844c29817b9717a1eaecfc05f824aca73bee4d16",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 22,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "ecce85f9395e52e429c9ad57844c29817b9717a1eaecfc05f824aca73bee4d16",
+        "pixel_sha256": "b0c663e9b561c03864e7371b0cd90af674bf6afede9fde46d3f32cff9485a7b1",
+        "row": 4,
+        "status": "PASS"
+      },
+      {
+        "column": 3,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "869a1075a05ee3bc3e9e95a74db94267b4cb38f450c82f31b9afde4455fe52c7",
+        "file": "R4C3_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "right"
+          }
+        ],
+        "id": "R4C3",
+        "imported_png_sha256": "869a1075a05ee3bc3e9e95a74db94267b4cb38f450c82f31b9afde4455fe52c7",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 23,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "869a1075a05ee3bc3e9e95a74db94267b4cb38f450c82f31b9afde4455fe52c7",
+        "pixel_sha256": "8d40eba3d91f0ef8a33d594096a9c1d3bff798aeee71170150a9aeac4dae0829",
+        "row": 4,
+        "status": "PASS"
+      },
+      {
+        "column": 4,
+        "dimensions": {
+          "height": 516,
+          "mode": "RGB",
+          "width": 516
+        },
+        "expected_png_sha256": "75ec84379a4544d5b8f8914bff0b4abc30f46bcb26142a20d31738462f84427b",
+        "file": "R4C4_g2.png",
+        "gutter_sides": [
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "top"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "bottom"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "true_master_neighbor_pixels",
+            "side": "left"
+          },
+          {
+            "mismatch_pixels": 0,
+            "provenance": "outer_edge_clamp",
+            "side": "right"
+          }
+        ],
+        "id": "R4C4",
+        "imported_png_sha256": "75ec84379a4544d5b8f8914bff0b4abc30f46bcb26142a20d31738462f84427b",
+        "inner_512_mismatch_pixels": 0,
+        "master_runtime_mismatch_pixels": 0,
+        "order_index": 24,
+        "payload_mismatch_pixels": 0,
+        "payload_png_sha256": "75ec84379a4544d5b8f8914bff0b4abc30f46bcb26142a20d31738462f84427b",
+        "pixel_sha256": "925315d0d55925a2ad1c097d3ffe17be1d82f8d5780e4cd33b1708d660a9893e",
+        "row": 4,
+        "status": "PASS"
+      }
+    ],
+    "total_inner_512_mismatch_pixels": 0,
+    "total_master_runtime_mismatch_pixels": 0,
+    "total_payload_mismatch_pixels": 0
+  },
+  "read_only_stability": {
+    "audit_write_root": "C:\\projets\\beekingdomgame-master\\Docs\\BuilderB\\WorldMapStep5APostImportAudit",
+    "protected_import_file_count_after": 52,
+    "protected_import_file_count_before": 52,
+    "protected_import_tree_after_sha256": "77245ad1ccf9d918a5d40f5495ccd1c19f20c7c58e7ce9ab556649aa47b948b3",
+    "protected_import_tree_before_sha256": "77245ad1ccf9d918a5d40f5495ccd1c19f20c7c58e7ce9ab556649aa47b948b3",
+    "stable": true,
+    "status": "PASS"
+  },
+  "schema": "bee-kingdom.world-map-step5a-post-import-audit.v1",
+  "scope": {
+    "assets_written": false,
+    "import_root_read_only": "C:\\projets\\beekingdomgame-master\\Assets\\BeeKingdom\\Playground\\Resources\\WorldMapWave3Runtime\\UIB_ContinuousMaster5x5_v1",
+    "output_written_outside_assets": "C:\\projets\\beekingdomgame-master\\Docs\\BuilderB\\WorldMapStep5APostImportAudit\\post_import_audit.result.json",
+    "payload_root": "C:\\projets\\beekingdomgame-master\\artifacts\\WorldMapWave3_UnityImportPayload_staging",
+    "png_sources_modified": false,
+    "source_reconstruction_read_only": "C:\\projets\\beekingdomgame-master\\artifacts\\WorldMapWave3_RuntimeBundle_staging\\run1\\canonical\\reconstruction.png",
+    "unity_launched": false
+  },
+  "started_at_utc": "2026-07-14T14:35:06.897792+00:00",
+  "status": "PASS",
+  "unity_import_settings": {
+    "android_override_count": 0,
+    "extra_meta": [],
+    "inactive_serialized_sprite_mode_count": 25,
+    "metas": [
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R0C0_g2.png.meta",
+        "guid": "121776d03c937ce4d9c9b3197e2e4706",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "80bbae9054a87eec3143ffc197a8422845f1cdf8f9b7cf258ff3d5d6beecee56"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R0C1_g2.png.meta",
+        "guid": "452544a50d837754ebc77fa1a8bf4698",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "e9179af07eb4f76c81e2e9ca2be119254b5a405c48f32d7a606c81ae61763578"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R0C2_g2.png.meta",
+        "guid": "652602f12b9213845b2d41cd8a252e98",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "3f39e20a6c522c074509b1859bb3f5c58cad94506571d69d32e294fae81a318f"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R0C3_g2.png.meta",
+        "guid": "64c5001e173bcfe4c9a7d5727f4a5d70",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "e3224f0fc74c00853a01fa814314750c31933a789c09d78f0c207e8976050c59"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R0C4_g2.png.meta",
+        "guid": "3a4e6c5a6180ee04db5e0fbf6a2f5c8d",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "486b1a725edd09c9422b981e1119345c7f3fa3dcb23ac318a85a68279b602b25"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R1C0_g2.png.meta",
+        "guid": "c674e8fa86122474595b282e4df1d935",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "ace127f45541611401418eaa33d092385444e8916a8041726c6374a883fb1a89"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R1C1_g2.png.meta",
+        "guid": "beb13db161a50f34c8b4608455a86e76",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "c8db3e6d33984690e948d7fb31c3fc84719e7b78e2cd985230ca4bb64cf26998"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R1C2_g2.png.meta",
+        "guid": "d4b32caaa5a35514f8330847c1b484f9",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "9a5c934e5c0ac05e2f03da94521c4366c908ef1841e7163b1d6a437ec2598363"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R1C3_g2.png.meta",
+        "guid": "2649d3cee6c2eed4f88d6290824fb699",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "d916d1efee44af34d7052e5db248594413383b84263bd039a537ef6fb03009ae"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R1C4_g2.png.meta",
+        "guid": "ace9a0258ab537740ac9f4da2c421640",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "9fa7ec6992bc6f762ecab99414b846a731460f68cdc9ff309d6b7066f020035f"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R2C0_g2.png.meta",
+        "guid": "466dd6a7ca4fd804daea03422b43c765",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "9aa41a6d890bf4ce2a42e7b0495f2c58a36610eb32c45699153ca0ba70ce6494"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R2C1_g2.png.meta",
+        "guid": "1182d56ee902dd94c9870f288130b185",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "5b63b76664222b6d24073cffa3799be17cb99ccf3c7b3f2e3a61d75f764b68fa"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R2C2_g2.png.meta",
+        "guid": "91a76f1042b1d2e4499d105832dd0712",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "80b45fae54e71e0ad63542d282b9ef0ee638f08e6a18f7d4f7de60104a3d78b3"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R2C3_g2.png.meta",
+        "guid": "ff37e826386a76e4e8daa42d8110fadb",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "3e4cc83535718445db9405cdd1242364681dd4c44662ea3a72b4a731ee83a4df"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R2C4_g2.png.meta",
+        "guid": "18a14d9902d2a1b49a4cafd44ffd09c3",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "f5c6a09eca260aa39279f88f754940dd0277de6208e533ea3b82bf6b3c9246a6"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R3C0_g2.png.meta",
+        "guid": "2a89743f8adb0e745a59f2ff99949366",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "035f7f8c5efe708b0f52fc769e0af056255b789eb2d1c857429021c74be18404"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R3C1_g2.png.meta",
+        "guid": "944a404f32a392d498c47a5b3659cd25",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "975b3c358935c8694fac12498c60cf38876a9bc803f1f73bc737ca573b1e09c4"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R3C2_g2.png.meta",
+        "guid": "739da1480a8cf4040a3eeaacd2209c80",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "094a8e1e93231c1d8f258abe772d7c47fbb0352212d4f3c55fe4548b1648cae2"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R3C3_g2.png.meta",
+        "guid": "2de8045c1f321a044b6079868432514f",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "9f1b522b3c56190de9697050e844e5313c1f28b4782ae01f84ea3df840d87db9"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R3C4_g2.png.meta",
+        "guid": "f506c2ad9a38b6448b0d9edff027021d",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "4f39de1ef5f09b6092eb925351ebd37369821260312cff2cfd5462a20e1a79a3"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R4C0_g2.png.meta",
+        "guid": "00611fcedd53c594f979ac1422a624f1",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "5f2378fc6c1bfa9df5f14136bbd5987bdc649895cc647a9e625522625f3a299e"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R4C1_g2.png.meta",
+        "guid": "0493097a61205f5408fe4b8f39b4eff8",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "35643eb6d5491996ff5229fa1188b38fe2e31f113aa09bea753c2feb9a07a3be"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R4C2_g2.png.meta",
+        "guid": "30772440c36b9984cac7a1ef183e3109",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "7fbb4f1e9549005b6b65c46d403d316af3ffee61d50f2d8d98e1f4d287ffc588"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R4C3_g2.png.meta",
+        "guid": "ad3bf0a063f7a6a43a40b324220f56a7",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "09023a5961991621d13fe34c0136cc374a1ceb4ecd53bbbade4f1c6cdf746236"
+      },
+      {
+        "android_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 2048,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "default_profile": {
+          "allows_alpha_splitting": 0,
+          "compression_quality": 50,
+          "crunched_compression": 0,
+          "max_texture_size": 1024,
+          "overridden": 0,
+          "resize_algorithm": 0,
+          "texture_compression": 1,
+          "texture_format": -1
+        },
+        "file": "R4C4_g2.png.meta",
+        "guid": "811d9300a1e6dc746a12e61845fb763f",
+        "observations": [
+          "spriteMode est serialise mais inactif: textureType=Default et aucune slice Sprite n'est declaree.",
+          "Le profil Android herite des reglages plateforme; ASTC 6x6 n'est pas verrouille par override."
+        ],
+        "platforms": {
+          "Android": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "DefaultTexturePlatform": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 1024,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          },
+          "Standalone": {
+            "allows_alpha_splitting": 0,
+            "compression_quality": 50,
+            "crunched_compression": 0,
+            "max_texture_size": 2048,
+            "overridden": 0,
+            "resize_algorithm": 0,
+            "texture_compression": 1,
+            "texture_format": -1
+          }
+        },
+        "required_mismatches": [],
+        "required_settings_pass": true,
+        "settings": {
+          "alpha_is_transparency": 0,
+          "alpha_usage": 0,
+          "aniso": 1,
+          "enable_mip_map": 0,
+          "filter_mode": 1,
+          "is_readable": 0,
+          "nPOT_scale": 0,
+          "sRGB_texture": 1,
+          "sprite_mode_serialized": 2,
+          "sprites_empty": true,
+          "streaming_mipmaps": 0,
+          "texture_shape": 1,
+          "texture_type": 0,
+          "wrap_u": 1,
+          "wrap_v": 1,
+          "wrap_w": 1
+        },
+        "sha256": "55877d6c0ecc3d8ac1e6d911a0564f5fc4a87e7f1aa1470940718091c2757119"
+      }
+    ],
+    "missing_meta": [],
+    "png_meta_actual": 25,
+    "png_meta_expected": 25,
+    "status": "PASS",
+    "unique_guid_count": 25
+  },
+  "verdicts": {
+    "POST_IMPORT_25_TILE_PAYLOAD": "PASS",
+    "READY_FOR_DEMO_SUPPORT": "YES",
+    "RUNTIME_GUTTERS_AND_HASHES": "PASS",
+    "UNITY_IMPORT_SETTINGS": "PASS"
+  },
+  "warnings": [
+    "Les 25 profils Android heritent des reglages plateforme; ASTC 6x6/max 1024 n'est pas explicitement verrouille. Ce point n'affecte pas les criteres import demandes (Clamp/Bilinear/mipmaps/NPOT/type Default).",
+    "25/25 metas conservent spriteMode=2 comme champ serialise inactif; textureType=0 (Default) et sprites=[] confirment un import non-Sprite."
+  ]
+}

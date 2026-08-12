@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3893dfd407e0441b8dd3b7ac6f26306f, type: 3}
+  m_Name: MobileAccountSessionRuntime
+  m_EditorClassIdentifier: BeeKingdom.Networking::BeeKingdom.Networking.MobileAccountSessionRuntimeConfiguration
+  officialAccountsEnabled: 1
+  officialGameplayEnabled: 1
+  baseUrl: https://chat.dravii.com
+  officialHiveId: 5b9f2835-5eda-4f02-9fa8-0f99794f7438
+  region: ca-east
+  timeoutSeconds: 20
+  allowInsecureLoopbackForDevelopment: 0
+  googleOAuthClientId: 209838375708-kfr4t9k99s620ndq602jkprddvu3mvsq.apps.googleusercontent.com

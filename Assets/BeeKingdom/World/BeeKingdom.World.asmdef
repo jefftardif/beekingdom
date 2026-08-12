@@ -1,0 +1,17 @@
+{
+    "name": "BeeKingdom.World",
+    "rootNamespace": "BeeKingdom.World",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Economy"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

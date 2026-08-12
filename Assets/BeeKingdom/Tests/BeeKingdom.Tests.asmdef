@@ -1,0 +1,38 @@
+{
+    "name": "BeeKingdom.Tests",
+    "rootNamespace": "BeeKingdom.Tests",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Services",
+        "BeeKingdom.Gameplay",
+        "BeeKingdom.Config",
+        "BeeKingdom.Data",
+        "BeeKingdom.Hive",
+        "BeeKingdom.Buildings",
+        "BeeKingdom.Chambers",
+        "BeeKingdom.Builders",
+        "BeeKingdom.Population",
+        "BeeKingdom.AI",
+        "BeeKingdom.Economy",
+        "BeeKingdom.World",
+        "BeeKingdom.Colony",
+        "BeeKingdom.QA",
+        "BeeKingdom.Networking",
+        "BeeKingdom.Save",
+        "BeeKingdom.WorldMap"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "noEngineReferences": false
+}

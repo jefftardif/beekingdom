@@ -1,0 +1,21 @@
+{
+    "name": "BeeKingdom.Gameplay",
+    "rootNamespace": "BeeKingdom.Gameplay",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Hive",
+        "BeeKingdom.AI",
+        "BeeKingdom.Economy",
+        "BeeKingdom.Localization",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

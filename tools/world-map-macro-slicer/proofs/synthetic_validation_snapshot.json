@@ -1,0 +1,51 @@
+{
+  "canonical": {
+    "pixel_alteration_count": 0,
+    "reconstruction_file_pixel_difference_count": 0,
+    "reconstruction_pixel_difference_count": 0,
+    "tile_count_actual": 25,
+    "tile_count_expected": 25
+  },
+  "claims": {
+    "art_pipeline_only": true,
+    "live_server": false,
+    "official_world_map": false,
+    "runtime_integration": false,
+    "scope": "local_demo_pipeline",
+    "unity_dependency": false
+  },
+  "issues": [],
+  "manifest_sha256": {
+    "canonical": "8effcf0f7df38c817858605f3ab81a35e5afa30dbb8dd96b622e7c2f633dfeca",
+    "runtime": "7d31e280814e74c3524529bf6365fc56218d31d481331b2fd450d3ac03f4a89a"
+  },
+  "runtime": {
+    "boundary_gutter_mismatch_pixel_count": 0,
+    "full_tile_mismatch_pixel_count": 0,
+    "gutter_mismatch_pixel_count": 0,
+    "interior_mismatch_pixel_count": 0,
+    "internal_boundaries_checked": 40,
+    "internal_boundaries_expected": 40,
+    "internal_boundaries_passed": 40,
+    "tile_count_actual": 25,
+    "tile_count_expected": 25
+  },
+  "schema": "bee-kingdom.world-map-macro-validation.v1",
+  "source": {
+    "file": "synthetic_macro_master.png",
+    "format": "PNG",
+    "height": 2560,
+    "mode": "RGB",
+    "pixel_sha256": "548e87ec3a0709e95c34ae51cb52886c2ac71971856714921b0eac9f52fc6efa",
+    "sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+    "width": 2560
+  },
+  "status": "PASS",
+  "tool_version": "1.0.0",
+  "verdicts": {
+    "CANONICAL_RECONSTRUCTION_PIXEL_IDENTICAL": "YES",
+    "READY_FOR_UIB_WAVE3_MASTER_INGEST": "YES",
+    "RUNTIME_GUTTERS_FROM_TRUE_NEIGHBORS": "YES",
+    "WORLD_MAP_MACRO_SLICER_WAVE3": "PASS"
+  }
+}

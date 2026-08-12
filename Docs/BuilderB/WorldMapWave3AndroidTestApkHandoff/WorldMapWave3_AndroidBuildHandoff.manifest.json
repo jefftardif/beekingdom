@@ -1,0 +1,191 @@
+{
+  "schema": "bee-kingdom.world-map-wave3-android-test-apk-handoff.v1",
+  "status": "prepared_no_build",
+  "build_allowed_now": false,
+  "current_gate_reason": "Three strict QA PASS receipts are not present in this handoff.",
+  "required_gates": [
+    {
+      "id": "QA_RUNTIME_STEP4D",
+      "required": "PASS",
+      "pass_with_reserves_accepted": false,
+      "current_observation": "PASS_WITH_RESERVES evidence exists, strict QA PASS not established here",
+      "evidence_required": "authoritative QA report path plus SHA-256"
+    },
+    {
+      "id": "QA_ART_BUNDLE_WAVE3",
+      "required": "PASS",
+      "pass_with_reserves_accepted": false,
+      "current_observation": "technical bundle validation exists, authoritative QA PASS not established here",
+      "evidence_required": "authoritative QA report path plus SHA-256"
+    },
+    {
+      "id": "QA_UNITY_INTEGRATION_WAVE3",
+      "required": "PASS",
+      "pass_with_reserves_accepted": false,
+      "current_observation": "integration not performed by Builder-B",
+      "evidence_required": "authoritative QA report path plus SHA-256"
+    }
+  ],
+  "build_contract": {
+    "unity_version": "6000.2.10f1",
+    "target": "Android APK",
+    "build_options": [
+      "Development",
+      "AllowDebugging"
+    ],
+    "connect_with_profiler": false,
+    "scenes_in_order": [
+      "Assets/Scenes/SandboxPlayground.unity",
+      "Assets/Scenes/WorldMapMmoFullscreenFoundation.unity"
+    ],
+    "scene_0_role": "splash_and_development_scene_selector",
+    "scene_1_role": "world_map_wave3_runtime",
+    "use_editor_build_settings_scene_array": false,
+    "package_id": "com.bkdhoneystudio.beekingdom",
+    "launchable_activity_expected": "com.unity3d.player.UnityPlayerGameActivity",
+    "development_menu_required": true,
+    "output_apk": "C:/projets/beekingdomgame-master/Builds/Android/BeeKingdom_WorldMapWave3_uib-wave3-continuous-v1_Development_001.apk",
+    "output_log": "C:/projets/beekingdomgame-master/Builds/Android/BeeKingdom_WorldMapWave3_uib-wave3-continuous-v1_Development_001.log",
+    "output_manifest": "C:/projets/beekingdomgame-master/Builds/Android/BeeKingdom_WorldMapWave3_uib-wave3-continuous-v1_Development_001.build-manifest.json",
+    "overwrite_allowed": false,
+    "if_any_output_exists": "NO_GO_issue_new_handoff_sequence_do_not_delete",
+    "signing": "Unity Android debug keystore only",
+    "custom_keystore": false,
+    "release_signing": false,
+    "secrets_required": false,
+    "expected_native_code_minimum": [
+      "arm64-v8a"
+    ],
+    "orientation": {
+      "default": "AutoRotation",
+      "portrait": true,
+      "portrait_upside_down": false,
+      "landscape_left": true,
+      "landscape_right": true,
+      "temporary_settings_must_be_restored": true
+    }
+  },
+  "current_prerequisite_snapshot": {
+    "observed_date": "2026-07-14",
+    "unity_exe": true,
+    "android_build_support": true,
+    "embedded_jdk": "OpenJDK 17.0.9",
+    "embedded_sdk_platforms": [
+      "android-34",
+      "android-35",
+      "android-36"
+    ],
+    "embedded_build_tools": "36.0.0",
+    "embedded_ndk": "27.2.12479018 r27c",
+    "embedded_gradle": "8.13 observed in last build log",
+    "adb": "36.0.0-13206524",
+    "free_disk_gib_observed": 463.19,
+    "minimum_free_disk_gib": 20,
+    "future_target_absent": true,
+    "device_availability": "not_checked",
+    "snapshot_is_not_future_build_authorization": true
+  },
+  "existing_build_scripts_assessment": [
+    {
+      "path": "Assets/Editor/WorldMapMmoAndroidBuild.cs",
+      "usable_for_wave3_contract": false,
+      "reasons": [
+        "deletes fixed Builds/Android/BeeKingdom.apk",
+        "includes only WorldMap scene",
+        "uses BuildOptions.None",
+        "writes Assets/Resources/InternalBuildInfo.txt"
+      ]
+    },
+    {
+      "path": "Assets/Editor/AndroidBuild.cs",
+      "usable_for_wave3_contract": false,
+      "reasons": [
+        "deletes fixed Builds/Android/BeeKingdom.apk",
+        "uses every enabled EditorBuildSettings scene",
+        "uses BuildOptions.None",
+        "writes Assets/Resources/InternalBuildInfo.txt"
+      ]
+    }
+  ],
+  "last_apk_history": {
+    "path": "C:/projets/beekingdomgame-master/Builds/Android/BeeKingdom.apk",
+    "bytes": 54716472,
+    "last_write_utc": "2026-07-13T23:46:41.2770961Z",
+    "sha256": "10456d141510ae2441e77f46903723a90593ce010611475f5daa1e2caa437696",
+    "package_id": "com.bkdhoneystudio.beekingdom",
+    "version_code": 1,
+    "version_name": "1.0",
+    "min_sdk": 23,
+    "target_sdk": 36,
+    "native_code_observed": [
+      "armeabi-v7a"
+    ],
+    "signer": "Android Debug",
+    "wave3_candidate": false,
+    "reuse_or_overwrite": false
+  },
+  "read_only_baseline": [
+    {
+      "path": "ProjectSettings/EditorBuildSettings.asset",
+      "sha256": "99ca20249dea8ce64f3461ff7f0b90710b2b2946ffc20c92e79a8ad82823d053"
+    },
+    {
+      "path": "ProjectSettings/ProjectSettings.asset",
+      "sha256": "0217395a84a78c44d0683a7ded5730b5d2d827352b8edc642089527f69c7efd6"
+    },
+    {
+      "path": "Assets/Editor/WorldMapMmoAndroidBuild.cs",
+      "sha256": "703190191314f967d5f08e7f75174bdeaa848b9841143ba19ec5e411b97bff5d"
+    },
+    {
+      "path": "Assets/Editor/AndroidBuild.cs",
+      "sha256": "22001f1ac6406abb653439987bcd922ff0c032f05dd1b836415ce0245ec80e4a"
+    },
+    {
+      "path": "Assets/Scenes/SandboxPlayground.unity",
+      "sha256": "a66131022001ea289408eac7deb6f7f2775597172dae4c0f4f80d8c0d8514d9c"
+    },
+    {
+      "path": "Assets/Scenes/WorldMapMmoFullscreenFoundation.unity",
+      "sha256": "8ad932bca0a3abc2a05cb93f6c126471f911210052be1ca5fa4e6e0d72a2c8ff"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/SplashDevelopmentSceneConfig.cs",
+      "sha256": "b641d2187481029eff72ff96ccd10c2180d5004532ce97b6fd5db5a148355d93"
+    }
+  ],
+  "smoke_contract": {
+    "device_branch": "install_and_launch_if_real_device_available",
+    "no_device_branch": "package_validation_plus_editor_playmode_and_build_report_only",
+    "physical_device_proof_default": "PENDING",
+    "required_checks": [
+      "splash development selector visible",
+      "WorldMap opens",
+      "phone portrait usable",
+      "tablet landscape usable",
+      "pan smooth",
+      "pinch zoom smooth",
+      "HUD fixed",
+      "aerial flights remain active",
+      "no grid or tile seam",
+      "no ground-route behavior"
+    ]
+  },
+  "claims": {
+    "handoff_only": true,
+    "apk_built": false,
+    "device_install_executed": false,
+    "physical_device_proof": "PENDING",
+    "release_candidate": false,
+    "production_publish": false,
+    "live_server": false,
+    "live_network_gameplay": false,
+    "official_persistence": false
+  },
+  "verdicts": {
+    "WORLD_MAP_WAVE3_ANDROID_TEST_APK_HANDOFF": "PASS",
+    "ANDROID_BUILD_PREREQUISITES_DOCUMENTED": "YES",
+    "NO_APK_BUILT_BEFORE_GATES": "YES",
+    "READY_FOR_ANDROID_BUILD_AFTER_UNITY_QA": "YES"
+  }
+}

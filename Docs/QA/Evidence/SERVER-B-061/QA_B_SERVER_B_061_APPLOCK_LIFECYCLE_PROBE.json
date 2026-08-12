@@ -1,0 +1,122 @@
+{
+  "proof_id": "QA-B-SERVER-B-061-SQL-APPLOCK-LIFECYCLE",
+  "generated_utc": "2026-07-14T03:32:59.0412449+00:00",
+  "scope": "LocalDB only; no producer-code mutation; no remote target",
+  "driver": {
+    "assembly": "Microsoft.Data.SqlClient",
+    "assembly_version": "5.0.0.0",
+    "informational_version": "5.2.2\u002Ba98592718693168af42ec4af3eb974d58497373e"
+  },
+  "distinct_sessions_success_release": {
+    "pooling_effective": true,
+    "owner_spid": 77,
+    "verifier_spid": 78,
+    "distinct_spids": true,
+    "owner_acquire_result": 0,
+    "verifier_while_held_result": -1,
+    "owner_release_result": 0,
+    "verifier_after_release_result": 0,
+    "verifier_after_release_wait_milliseconds": 0,
+    "verifier_after_release_release_result": 0,
+    "owner_connection_id": "5df40a5a-71f9-4cb4-800a-77f03aa12083",
+    "reused_owner_spid": 77,
+    "reused_owner_connection_id": "5df40a5a-71f9-4cb4-800a-77f03aa12083",
+    "same_physical_connection_reused": true,
+    "mode_after_close_and_pool_reuse": "NoLock",
+    "verifier_after_pool_reuse_result": 0,
+    "verifier_after_pool_reuse_release_result": 0,
+    "acquires_after_release": true,
+    "no_lock_after_close_and_pool_reuse": true,
+    "pass": true
+  },
+  "ambiguous_acquisition_eviction": {
+    "pooling_effective": true,
+    "owner_spid": 79,
+    "victim_spid": 77,
+    "verifier_spid": 78,
+    "all_spids_distinct": true,
+    "owner_acquire_result": 0,
+    "waiting_before_cancellation": true,
+    "observed_error": {
+      "type": "Microsoft.Data.SqlClient.SqlException",
+      "sql_error_number": 0,
+      "is_operation_sentinel": false
+    },
+    "owner_release_result": 0,
+    "victim_state_after_failure": "Closed",
+    "victim_connection_id": "91699e6b-bb7d-4982-ad0d-a99b656548d7",
+    "replacement_connection_id": "f2079abc-31bd-4d90-b5a4-b810d3aeeed1",
+    "replacement_spid": 77,
+    "discard_path_logged": true,
+    "pool_evicted": true,
+    "verifier_acquire_after_failure_result": 0,
+    "verifier_wait_milliseconds": 0,
+    "verifier_release_result": 0,
+    "pass": true
+  },
+  "ambiguous_release_primary_error": {
+    "operation_throws": false,
+    "pooling_effective": true,
+    "victim_spid": 77,
+    "verifier_spid": 78,
+    "distinct_spids": true,
+    "victim_connection_id": "aeb3bf52-f8b1-45ec-b38c-660f905b2ed5",
+    "victim_state_after_failure": "Closed",
+    "observed_error": {
+      "type": "System.InvalidOperationException",
+      "sql_error_number": null,
+      "is_operation_sentinel": false
+    },
+    "release_discard_path_logged": true,
+    "verifier_acquire_before_owner_pool_reuse_result": 0,
+    "verifier_wait_milliseconds": 0,
+    "verifier_release_result": 0,
+    "replacement_connection_id": "f22ce27e-d533-4f7b-b5d3-794d03f0722b",
+    "replacement_spid": 77,
+    "pool_evicted": true,
+    "release_error_propagated": true,
+    "operation_error_preserved": false,
+    "pass": true
+  },
+  "ambiguous_release_preserves_operation_error": {
+    "operation_throws": true,
+    "pooling_effective": true,
+    "victim_spid": 78,
+    "verifier_spid": 77,
+    "distinct_spids": true,
+    "victim_connection_id": "8aa02780-1d99-42ee-a26f-86f223c21047",
+    "victim_state_after_failure": "Closed",
+    "observed_error": {
+      "type": "Program\u002BProbeOperationException",
+      "sql_error_number": null,
+      "is_operation_sentinel": true
+    },
+    "release_discard_path_logged": true,
+    "verifier_acquire_before_owner_pool_reuse_result": 0,
+    "verifier_wait_milliseconds": 0,
+    "verifier_release_result": 0,
+    "replacement_connection_id": "4a2d81a7-379d-4794-aa89-3263285d371d",
+    "replacement_spid": 78,
+    "pool_evicted": true,
+    "release_error_propagated": false,
+    "operation_error_preserved": true,
+    "pass": true
+  },
+  "assessment": {
+    "same_resource_two_distinct_spids_confirmed": true,
+    "second_session_acquires_after_release": true,
+    "no_lock_after_close_and_pool_reuse": true,
+    "acquisition_failure_pool_evicted": true,
+    "release_failure_pool_evicted": true,
+    "release_error_propagated_when_primary": true,
+    "operation_error_preserved_when_release_also_fails": true,
+    "pass": true
+  },
+  "cleanup": {
+    "clear_all_pools_called": true,
+    "database_objects_created": 0,
+    "session_residue_count": 0,
+    "zero_session_residue": true
+  },
+  "completed": true
+}

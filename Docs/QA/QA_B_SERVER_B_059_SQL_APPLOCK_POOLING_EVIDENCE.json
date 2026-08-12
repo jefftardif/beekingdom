@@ -1,0 +1,218 @@
+{
+  "proof_id": "QA-B-SERVER-B-059-SQL-APPLOCK-POOLING",
+  "generated_utc": "2026-07-14T03:15:01.6797006+00:00",
+  "scope": "LocalDB disposable, local-only, no producer-code mutation, no remote target",
+  "localdb_data_source": "(localdb)\\MSSQLLocalDB",
+  "driver": {
+    "assembly": "Microsoft.Data.SqlClient",
+    "assembly_version": "5.0.0.0",
+    "informational_version": "5.2.2\u002Ba98592718693168af42ec4af3eb974d58497373e"
+  },
+  "pooling_default": {
+    "pooling_keyword_present_in_input": false,
+    "effective_pooling": true
+  },
+  "pooling_true_default_session_lock": {
+    "pooling_keyword_explicit": false,
+    "effective_pooling": true,
+    "initial_acquire_result": 0,
+    "initial_lock_mode": "Exclusive",
+    "first_spid": 77,
+    "reused_spid": 77,
+    "same_physical_session_reused": true,
+    "mode_after_close_and_pool_reuse": "NoLock",
+    "lock_present_after_close_and_pool_reuse": false,
+    "independent_pool_acquire_result_before_owner_reuse": -1,
+    "independent_pool_wait_before_owner_reuse_milliseconds": 1207,
+    "independent_pool_blocked_before_owner_reuse": true,
+    "competitor_release_before_owner_reuse_result": null,
+    "owner_release_after_reuse_if_still_held_result": null,
+    "independent_pool_acquire_result_after_owner_cleanup": 0,
+    "independent_pool_succeeds_after_owner_cleanup": true,
+    "independent_pool_release_after_owner_cleanup_result": 0
+  },
+  "pooling_false_session_lock": {
+    "effective_pooling": false,
+    "initial_acquire_result": 0,
+    "first_spid": 77,
+    "next_spid": 77,
+    "lock_mode_before_next_acquire": "NoLock",
+    "lock_absent_after_dispose": true,
+    "next_acquire_result": 0,
+    "next_acquire_wait_milliseconds": 0,
+    "new_session_acquires_immediately": true,
+    "release_result": 0
+  },
+  "pooling_true_explicit_release": {
+    "effective_pooling": true,
+    "initial_acquire_result": 0,
+    "explicit_release_result": 0,
+    "first_spid": 77,
+    "reused_spid": 77,
+    "same_physical_session_reused": true,
+    "mode_after_release_close_and_pool_reuse": "NoLock",
+    "lock_absent_after_explicit_release_and_pool_reuse": true,
+    "independent_pool_acquire_result": 0,
+    "independent_pool_wait_milliseconds": 0,
+    "independent_pool_acquires_immediately": true,
+    "independent_pool_release_result": 0
+  },
+  "migration_runner_cross_pool": {
+    "pooling_default_effective": true,
+    "owner_initial_apply": {
+      "success": true,
+      "elapsed_milliseconds": 138,
+      "exception_type": null,
+      "sql_error_number": null
+    },
+    "owner_creation_lock_after_runner_return": {
+      "spid": 77,
+      "mode": "NoLock",
+      "exclusive": false
+    },
+    "owner_migration_lock_after_runner_return": {
+      "spid": 79,
+      "mode": "NoLock",
+      "exclusive": false
+    },
+    "competitor_attempt_before_pool_clear": {
+      "success": true,
+      "elapsed_milliseconds": 10,
+      "exception_type": null,
+      "sql_error_number": null
+    },
+    "second_pool_blocked_on_creation_lock": false,
+    "competitor_attempt_after_only_owner_master_pool_clear": {
+      "success": true,
+      "elapsed_milliseconds": 2,
+      "exception_type": null,
+      "sql_error_number": null
+    },
+    "competitor_creation_lock_after_second_attempt": {
+      "spid": 81,
+      "mode": "NoLock",
+      "exclusive": false
+    },
+    "second_pool_passed_creation_stage": false,
+    "second_pool_blocked_on_migration_lock_after_creation_pool_cleared": false,
+    "retry_after_all_pools_cleared": {
+      "success": true,
+      "elapsed_milliseconds": 10,
+      "exception_type": null,
+      "sql_error_number": null
+    },
+    "retry_succeeds_after_all_pools_cleared": true
+  },
+  "migration_runner_concurrent_creation_trials": [
+    {
+      "trial": 1,
+      "pooling_default_effective": true,
+      "prewarmed_master_spids_distinct": true,
+      "attempts": [
+        {
+          "success": true,
+          "elapsed_milliseconds": 113,
+          "exception_type": null,
+          "sql_error_number": null
+        },
+        {
+          "success": true,
+          "elapsed_milliseconds": 114,
+          "exception_type": null,
+          "sql_error_number": null
+        }
+      ],
+      "success_count": 2,
+      "sql_51057_failure_count": 0,
+      "pooling_failure_observed": false,
+      "retry_after_pool_clear": {
+        "success": true,
+        "elapsed_milliseconds": 11,
+        "exception_type": null,
+        "sql_error_number": null
+      },
+      "retry_succeeds_after_pool_clear": true
+    },
+    {
+      "trial": 2,
+      "pooling_default_effective": true,
+      "prewarmed_master_spids_distinct": true,
+      "attempts": [
+        {
+          "success": true,
+          "elapsed_milliseconds": 105,
+          "exception_type": null,
+          "sql_error_number": null
+        },
+        {
+          "success": true,
+          "elapsed_milliseconds": 106,
+          "exception_type": null,
+          "sql_error_number": null
+        }
+      ],
+      "success_count": 2,
+      "sql_51057_failure_count": 0,
+      "pooling_failure_observed": false,
+      "retry_after_pool_clear": {
+        "success": true,
+        "elapsed_milliseconds": 11,
+        "exception_type": null,
+        "sql_error_number": null
+      },
+      "retry_succeeds_after_pool_clear": true
+    },
+    {
+      "trial": 3,
+      "pooling_default_effective": true,
+      "prewarmed_master_spids_distinct": true,
+      "attempts": [
+        {
+          "success": true,
+          "elapsed_milliseconds": 105,
+          "exception_type": null,
+          "sql_error_number": null
+        },
+        {
+          "success": true,
+          "elapsed_milliseconds": 105,
+          "exception_type": null,
+          "sql_error_number": null
+        }
+      ],
+      "success_count": 2,
+      "sql_51057_failure_count": 0,
+      "pooling_failure_observed": false,
+      "retry_after_pool_clear": {
+        "success": true,
+        "elapsed_milliseconds": 10,
+        "exception_type": null,
+        "sql_error_number": null
+      },
+      "retry_succeeds_after_pool_clear": true
+    }
+  ],
+  "blocker_assessment": {
+    "idle_pooled_session_lock_blocks_independent_pool_confirmed": true,
+    "pooling_false_and_explicit_release_controls_confirmed": true,
+    "current_runner_cross_pool_block_confirmed": false,
+    "current_runner_concurrent_creation_failure_reproduced_in_all_trials": false,
+    "confirmed_blocker_for_session_lock_without_explicit_release": true,
+    "confirmed_blocker": true
+  },
+  "cleanup": {
+    "database_names_registered": 4,
+    "database_residue_count": 0,
+    "zero_database_residue": true,
+    "database_file_paths_observed": 8,
+    "file_residue_count": 0,
+    "zero_file_residue": true,
+    "probe_session_residue_count": 0,
+    "zero_probe_sessions_after_pool_clear": true,
+    "clear_all_pools_called": true,
+    "cleanup_error_count": 0,
+    "cleanup_errors": []
+  },
+  "completed": true,
+  "cleanup_complete": true
+}

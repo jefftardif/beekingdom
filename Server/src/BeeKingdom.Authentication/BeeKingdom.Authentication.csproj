@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BeeKingdom.Shared\BeeKingdom.Shared.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Protocol\BeeKingdom.Protocol.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Infrastructure\BeeKingdom.Infrastructure.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Persistence\BeeKingdom.Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

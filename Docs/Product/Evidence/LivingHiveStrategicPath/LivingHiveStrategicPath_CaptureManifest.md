@@ -1,0 +1,34 @@
+﻿# LivingHive Strategic Path - manifeste de captures
+
+- Scene: `Assets/Scenes/LivingHive.unity`
+- Portrait: voie Nourriciere, francais, 390x844
+- Paysage: voie Scout, anglais, 1600x900
+- Essais tactiques: Nourriciere FR et Scout EN, reponse identitaire selectionnee
+- Doctrine de combat: Gardiennes > Lanceuses en FR; Wingrunners > Guardians en EN
+- Preparation d'escouade: composition mixte locale bornee a 12; controles -/+ et suggestion doctrinale; Soldats/Eclaireuses hors doctrine
+- Familles tactiques: `guardians,wingrunners,darters`; catalogue `phase4-combat-v1`
+- Cycle: `guardians>darters>wingrunners>guardians`; aucun coefficient ni victoire garantie
+- Cinq voies: `royal_guard,striker,nurturer,scout,alchemist`
+- Neutral selectable: `false`; unlock level: `10`
+- Tap: apercu en memoire seulement
+- Selection officielle et bonus: `false`; serveur requis
+- Essai: etat volatile en memoire, aucune persistance serveur ni mutation de gameplay
+- Doctrine: etat volatile en memoire, aucun combat simule ni mutation de gameplay
+- Preparation: brouillon volatile; aucune reservation locale, composition officielle, marche ou combat; serveur requis
+- Reservation officielle: contrat prepare et feature fermee; bouton mobile desactive tant que session/transport ne sont pas raccordes
+- Recrutement: file locale de Caserne, roster doctrinal separe; aucun effectif legacy converti
+- Appareil: rendu, langue et option inspectee seulement
+- Terrain 50x50, image de ruche et scenes modifies: `false`
+
+- `LivingHive_StrategicPath_Nurturer_FR_390x844.png`: `390x844`, locale `fr-CA`, SHA-256 `a58e8806ed798959f2d6baf3da31ad1ae6aa0e1bf9874dbb338c64fc7c610573`
+- `LivingHive_StrategicTrial_Nurturer_FR_390x844.png`: `390x844`, locale `fr-CA`, SHA-256 `27b9414b1dde1091e6491438599ed22e42208f0696b335b8673ef447e26f32bc`
+- `LivingHive_CombatDoctrine_GuardiansVsDarters_FR_390x844.png`: `390x844`, locale `fr-CA`, SHA-256 `981a800127cc1c657f82511635e57849509b883afec4931985940a601bf9509e`
+- `LivingHive_FormationReadiness_GuardiansVsDarters_FR_390x844.png`: `390x844`, locale `fr-CA`, SHA-256 `31832ba12109e0052bb63e4504f602b3175a276ffb5f84c0e6de03112f6f52fe`
+- `LivingHive_DoctrineRecruitment_Wingrunners_FR_390x844.png`: `390x844`, locale `fr-CA`, SHA-256 `601f8b1e46d95d74f72a606f8da8e8af46dba2e8054f59c7f6d0e998aab2b8f8`
+- `LivingHive_SquadComposition_Mixed_FR_390x844.png`: `390x844`, locale `fr-CA`, SHA-256 `c102bee442f1e54c0010f294b9ebe13dc84ffa32332e836d3e312247d644659f`
+- `LivingHive_StrategicPath_Scout_EN_1600x900.png`: `1600x900`, locale `en-US`, SHA-256 `f059a4b3499d62bfe93bbcbcb980fa67773c9b688bc537139f71761bab22fa42`
+- `LivingHive_StrategicTrial_Scout_EN_1600x900.png`: `1600x900`, locale `en-US`, SHA-256 `7410560ef55e7d587e13291e394638af10521dcd4a3f1e03574dd4654222ade7`
+- `LivingHive_CombatDoctrine_WingrunnersVsGuardians_EN_1600x900.png`: `1600x900`, locale `en-US`, SHA-256 `518bc05e605cf661a29521a9ad2653593ba4a7340f2765cea16de68f1578efea`
+- `LivingHive_FormationReadiness_GuardiansVsWingrunners_EN_1600x900.png`: `1600x900`, locale `en-US`, SHA-256 `30c19963376a5821a68540b0a4d082ddd939636f25900ca8415aef9ea8a1bb9f`
+- `LivingHive_DoctrineRecruitment_Darters_EN_1600x900.png`: `1600x900`, locale `en-US`, SHA-256 `cac12e28f67fed763fb2120cd4a3dc67cd6d5bf841b92d985b8453286977c83f`
+- `LivingHive_SquadComposition_Mixed_EN_1600x900.png`: `1600x900`, locale `en-US`, SHA-256 `bf61f7e97d9b5bb42a69da8c2d9f599c07c6225d21d91e96705ea2a11297873f`

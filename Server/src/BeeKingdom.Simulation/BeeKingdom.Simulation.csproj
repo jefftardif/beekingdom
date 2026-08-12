@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BeeKingdom.Shared\BeeKingdom.Shared.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Protocol\BeeKingdom.Protocol.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Infrastructure\BeeKingdom.Infrastructure.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Persistence\BeeKingdom.Persistence.csproj" />
+    <ProjectReference Include="..\BeeKingdom.Colony\BeeKingdom.Colony.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

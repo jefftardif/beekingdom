@@ -1,0 +1,4654 @@
+fileFormatVersion: 2
+guid: 9aaa1a1af07983943bdef0f976b655cb
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -8981341390546265697
+    second: ConstructionBees_SpriteSheet_0
+  - first:
+      213: -8888793436583915925
+    second: ConstructionBees_SpriteSheet_1
+  - first:
+      213: -8269802195148240800
+    second: ConstructionBees_SpriteSheet_2
+  - first:
+      213: 722899219334356998
+    second: ConstructionBees_SpriteSheet_3
+  - first:
+      213: 8684345952323291448
+    second: ConstructionBees_SpriteSheet_4
+  - first:
+      213: -1677812017976675287
+    second: ConstructionBees_SpriteSheet_5
+  - first:
+      213: -7477662747754473174
+    second: ConstructionBees_SpriteSheet_6
+  - first:
+      213: 1051974148264656884
+    second: ConstructionBees_SpriteSheet_7
+  - first:
+      213: 5317713904980118777
+    second: ConstructionBees_SpriteSheet_8
+  - first:
+      213: -1262304197929027309
+    second: ConstructionBees_SpriteSheet_9
+  - first:
+      213: 2036500610802129145
+    second: ConstructionBees_SpriteSheet_10
+  - first:
+      213: 4166030086567774471
+    second: ConstructionBees_SpriteSheet_11
+  - first:
+      213: 5796653140827521540
+    second: ConstructionBees_SpriteSheet_12
+  - first:
+      213: -7554440439050510178
+    second: ConstructionBees_SpriteSheet_13
+  - first:
+      213: 7809024224237207351
+    second: ConstructionBees_SpriteSheet_14
+  - first:
+      213: -3239121266089994802
+    second: ConstructionBees_SpriteSheet_15
+  - first:
+      213: 825395658239600846
+    second: ConstructionBees_SpriteSheet_16
+  - first:
+      213: -6007430893599380670
+    second: ConstructionBees_SpriteSheet_17
+  - first:
+      213: -6529158061211906319
+    second: ConstructionBees_SpriteSheet_18
+  - first:
+      213: 6482126987945559784
+    second: ConstructionBees_SpriteSheet_19
+  - first:
+      213: 5369055724141875365
+    second: ConstructionBees_SpriteSheet_20
+  - first:
+      213: 5855099938648169394
+    second: ConstructionBees_SpriteSheet_21
+  - first:
+      213: 7451356891651638314
+    second: ConstructionBees_SpriteSheet_22
+  - first:
+      213: 6305671105877831475
+    second: ConstructionBees_SpriteSheet_23
+  - first:
+      213: 338186548484518940
+    second: ConstructionBees_SpriteSheet_24
+  - first:
+      213: -836576932467550638
+    second: ConstructionBees_SpriteSheet_25
+  - first:
+      213: -6399893762492027598
+    second: ConstructionBees_SpriteSheet_26
+  - first:
+      213: 2203110752398510657
+    second: ConstructionBees_SpriteSheet_27
+  - first:
+      213: -3869692315060587746
+    second: ConstructionBees_SpriteSheet_28
+  - first:
+      213: 5526528580887153435
+    second: ConstructionBees_SpriteSheet_29
+  - first:
+      213: -3007398625010911694
+    second: ConstructionBees_SpriteSheet_30
+  - first:
+      213: -2716335042138318389
+    second: ConstructionBees_SpriteSheet_31
+  - first:
+      213: 8778767756009867286
+    second: ConstructionBees_SpriteSheet_32
+  - first:
+      213: -8811332982975282681
+    second: ConstructionBees_SpriteSheet_33
+  - first:
+      213: -1993096452169123603
+    second: ConstructionBees_SpriteSheet_34
+  - first:
+      213: -7482786959695117100
+    second: ConstructionBees_SpriteSheet_35
+  - first:
+      213: 2871265436475181416
+    second: ConstructionBees_SpriteSheet_36
+  - first:
+      213: -7009703279080408702
+    second: ConstructionBees_SpriteSheet_37
+  - first:
+      213: -7310483544338723782
+    second: ConstructionBees_SpriteSheet_38
+  - first:
+      213: -2331875724643402049
+    second: ConstructionBees_SpriteSheet_39
+  - first:
+      213: 5135148560167521664
+    second: ConstructionBees_SpriteSheet_40
+  - first:
+      213: 8010383733326149387
+    second: ConstructionBees_SpriteSheet_41
+  - first:
+      213: -2162644418382505269
+    second: ConstructionBees_SpriteSheet_42
+  - first:
+      213: 2842631193814613761
+    second: ConstructionBees_SpriteSheet_43
+  - first:
+      213: 1180232668706223655
+    second: ConstructionBees_SpriteSheet_44
+  - first:
+      213: -8897264488443871464
+    second: ConstructionBees_SpriteSheet_45
+  - first:
+      213: -4961502504988177254
+    second: ConstructionBees_SpriteSheet_46
+  - first:
+      213: -325415252845558441
+    second: ConstructionBees_SpriteSheet_47
+  - first:
+      213: -1886566838370578114
+    second: ConstructionBees_SpriteSheet_48
+  - first:
+      213: -287696415861773926
+    second: ConstructionBees_SpriteSheet_49
+  - first:
+      213: 5844100110384822288
+    second: ConstructionBees_SpriteSheet_50
+  - first:
+      213: 8725955470304657349
+    second: ConstructionBees_SpriteSheet_51
+  - first:
+      213: -737998464540218819
+    second: ConstructionBees_SpriteSheet_52
+  - first:
+      213: 1927115038710379940
+    second: ConstructionBees_SpriteSheet_53
+  - first:
+      213: 851828989055685886
+    second: ConstructionBees_SpriteSheet_54
+  - first:
+      213: -7274951155838738100
+    second: ConstructionBees_SpriteSheet_55
+  - first:
+      213: 8654466712941341364
+    second: ConstructionBees_SpriteSheet_56
+  - first:
+      213: -3861370398728777229
+    second: ConstructionBees_SpriteSheet_57
+  - first:
+      213: -8505054752539714101
+    second: ConstructionBees_SpriteSheet_58
+  - first:
+      213: -7788424315926725758
+    second: ConstructionBees_SpriteSheet_59
+  - first:
+      213: -5121385264256167288
+    second: ConstructionBees_SpriteSheet_60
+  - first:
+      213: 3621655824384948903
+    second: ConstructionBees_SpriteSheet_61
+  - first:
+      213: -475425708256296028
+    second: ConstructionBees_SpriteSheet_62
+  - first:
+      213: -1633072683877689603
+    second: ConstructionBees_SpriteSheet_63
+  - first:
+      213: 7010213371842263524
+    second: ConstructionBees_SpriteSheet_64
+  - first:
+      213: -885471552733937583
+    second: ConstructionBees_SpriteSheet_65
+  - first:
+      213: -7824661505123459412
+    second: ConstructionBees_SpriteSheet_66
+  - first:
+      213: 6372483757633886733
+    second: ConstructionBees_SpriteSheet_67
+  - first:
+      213: -5199267023610457999
+    second: ConstructionBees_SpriteSheet_68
+  - first:
+      213: -506094688721204358
+    second: ConstructionBees_SpriteSheet_69
+  - first:
+      213: -4538505676386103329
+    second: ConstructionBees_SpriteSheet_70
+  - first:
+      213: -4409803794466106521
+    second: ConstructionBees_SpriteSheet_71
+  - first:
+      213: -2175003114996114726
+    second: ConstructionBees_SpriteSheet_72
+  - first:
+      213: -5739311662748880977
+    second: ConstructionBees_SpriteSheet_73
+  - first:
+      213: -4643089862778596959
+    second: ConstructionBees_SpriteSheet_74
+  - first:
+      213: -4191381564674562974
+    second: ConstructionBees_SpriteSheet_75
+  - first:
+      213: -5187830193490203439
+    second: ConstructionBees_SpriteSheet_76
+  - first:
+      213: -4780895577413267300
+    second: ConstructionBees_SpriteSheet_77
+  - first:
+      213: 2021636842126074729
+    second: ConstructionBees_SpriteSheet_78
+  - first:
+      213: 5142409022157855663
+    second: ConstructionBees_SpriteSheet_79
+  - first:
+      213: -8332251476698704098
+    second: ConstructionBees_SpriteSheet_80
+  - first:
+      213: -3282689946578496977
+    second: ConstructionBees_SpriteSheet_81
+  - first:
+      213: -4651264289382225356
+    second: ConstructionBees_SpriteSheet_82
+  - first:
+      213: -234705271177538985
+    second: ConstructionBees_SpriteSheet_83
+  - first:
+      213: 1569376908118504480
+    second: ConstructionBees_SpriteSheet_84
+  - first:
+      213: -5391253912326839304
+    second: ConstructionBees_SpriteSheet_85
+  - first:
+      213: 8398042921140791897
+    second: ConstructionBees_SpriteSheet_86
+  - first:
+      213: 2902956014999374152
+    second: ConstructionBees_SpriteSheet_87
+  - first:
+      213: 6374590631137446261
+    second: ConstructionBees_SpriteSheet_88
+  - first:
+      213: -6813609987429641628
+    second: ConstructionBees_SpriteSheet_89
+  - first:
+      213: -388599998142144488
+    second: ConstructionBees_SpriteSheet_90
+  - first:
+      213: -4418496161240657787
+    second: ConstructionBees_SpriteSheet_91
+  - first:
+      213: 402390365508157680
+    second: ConstructionBees_SpriteSheet_92
+  - first:
+      213: 3692436912358685518
+    second: ConstructionBees_SpriteSheet_93
+  - first:
+      213: -6089966025602062309
+    second: ConstructionBees_SpriteSheet_94
+  - first:
+      213: 1058730656065647390
+    second: ConstructionBees_SpriteSheet_95
+  - first:
+      213: 6227484882274728647
+    second: ConstructionBees_SpriteSheet_96
+  - first:
+      213: -1634420097280774196
+    second: ConstructionBees_SpriteSheet_97
+  - first:
+      213: 2637823832629596011
+    second: ConstructionBees_SpriteSheet_98
+  - first:
+      213: -1851981668461822872
+    second: ConstructionBees_SpriteSheet_99
+  - first:
+      213: 8350330462103415365
+    second: ConstructionBees_SpriteSheet_100
+  - first:
+      213: -5701306505393972477
+    second: ConstructionBees_SpriteSheet_101
+  - first:
+      213: 4343023415355582834
+    second: ConstructionBees_SpriteSheet_102
+  - first:
+      213: 2270625522110180867
+    second: ConstructionBees_SpriteSheet_103
+  - first:
+      213: 5439014232418863715
+    second: ConstructionBees_SpriteSheet_104
+  - first:
+      213: -6846554820962195753
+    second: ConstructionBees_SpriteSheet_105
+  - first:
+      213: -6807283600988931221
+    second: ConstructionBees_SpriteSheet_106
+  - first:
+      213: 7939489442749086696
+    second: ConstructionBees_SpriteSheet_107
+  - first:
+      213: 960001198843853975
+    second: ConstructionBees_SpriteSheet_108
+  - first:
+      213: -5362256000987553975
+    second: ConstructionBees_SpriteSheet_109
+  - first:
+      213: 5153018116704518745
+    second: ConstructionBees_SpriteSheet_110
+  - first:
+      213: -646045118260802997
+    second: ConstructionBees_SpriteSheet_111
+  - first:
+      213: -7979273162861792402
+    second: ConstructionBees_SpriteSheet_112
+  - first:
+      213: 6278170726257347792
+    second: ConstructionBees_SpriteSheet_113
+  - first:
+      213: 3399683139916853204
+    second: ConstructionBees_SpriteSheet_114
+  - first:
+      213: 7370441225437636377
+    second: ConstructionBees_SpriteSheet_115
+  - first:
+      213: -5062769725813728089
+    second: ConstructionBees_SpriteSheet_116
+  - first:
+      213: 6357828985101543084
+    second: ConstructionBees_SpriteSheet_117
+  - first:
+      213: -947556880622935829
+    second: ConstructionBees_SpriteSheet_118
+  - first:
+      213: 2094957570494638719
+    second: ConstructionBees_SpriteSheet_119
+  - first:
+      213: 1108897349597624690
+    second: ConstructionBees_SpriteSheet_120
+  - first:
+      213: 8927927242040767716
+    second: ConstructionBees_SpriteSheet_121
+  - first:
+      213: 3597684078699148887
+    second: ConstructionBees_SpriteSheet_122
+  - first:
+      213: 6954423529508674269
+    second: ConstructionBees_SpriteSheet_123
+  - first:
+      213: 3779872845924780497
+    second: ConstructionBees_SpriteSheet_124
+  - first:
+      213: 7479143093748808545
+    second: ConstructionBees_SpriteSheet_125
+  - first:
+      213: 1247855008095858833
+    second: ConstructionBees_SpriteSheet_126
+  - first:
+      213: 2098317514670366862
+    second: ConstructionBees_SpriteSheet_127
+  - first:
+      213: -393226482355586740
+    second: ConstructionBees_SpriteSheet_128
+  - first:
+      213: -2847136370665030207
+    second: ConstructionBees_SpriteSheet_129
+  - first:
+      213: 4521612140419410598
+    second: ConstructionBees_SpriteSheet_130
+  - first:
+      213: -7177548215279549209
+    second: ConstructionBees_SpriteSheet_131
+  - first:
+      213: -4610380151643466165
+    second: ConstructionBees_SpriteSheet_132
+  - first:
+      213: 7994511493376972892
+    second: ConstructionBees_SpriteSheet_133
+  - first:
+      213: -920021424729366357
+    second: ConstructionBees_SpriteSheet_134
+  - first:
+      213: -6254851743283171909
+    second: ConstructionBees_SpriteSheet_135
+  - first:
+      213: 5884982168688676407
+    second: ConstructionBees_SpriteSheet_136
+  - first:
+      213: -1919752925602966308
+    second: ConstructionBees_SpriteSheet_137
+  - first:
+      213: 5517386212997805198
+    second: ConstructionBees_SpriteSheet_138
+  - first:
+      213: 3387823896098961347
+    second: ConstructionBees_SpriteSheet_139
+  - first:
+      213: -1756675135880456361
+    second: ConstructionBees_SpriteSheet_140
+  - first:
+      213: 788243672750908003
+    second: ConstructionBees_SpriteSheet_141
+  - first:
+      213: -5541741300520654309
+    second: ConstructionBees_SpriteSheet_142
+  - first:
+      213: -877175178107324786
+    second: ConstructionBees_SpriteSheet_143
+  - first:
+      213: 625186304869576035
+    second: ConstructionBees_SpriteSheet_144
+  - first:
+      213: -6133913816896311926
+    second: ConstructionBees_SpriteSheet_145
+  - first:
+      213: 7567513929170401344
+    second: ConstructionBees_SpriteSheet_146
+  - first:
+      213: 77658330258453444
+    second: ConstructionBees_SpriteSheet_147
+  - first:
+      213: -1800548305562970277
+    second: ConstructionBees_SpriteSheet_148
+  - first:
+      213: -9158612659950460304
+    second: ConstructionBees_SpriteSheet_149
+  - first:
+      213: 4799226654119194635
+    second: ConstructionBees_SpriteSheet_150
+  - first:
+      213: -3100642003245078437
+    second: ConstructionBees_SpriteSheet_151
+  - first:
+      213: 5420456195032014349
+    second: ConstructionBees_SpriteSheet_152
+  - first:
+      213: -6505414216317973161
+    second: ConstructionBees_SpriteSheet_153
+  - first:
+      213: -6443354650517282112
+    second: ConstructionBees_SpriteSheet_154
+  - first:
+      213: -4506684932282681921
+    second: ConstructionBees_SpriteSheet_155
+  - first:
+      213: -1271915891196775462
+    second: ConstructionBees_SpriteSheet_156
+  - first:
+      213: 5876073771191289614
+    second: ConstructionBees_SpriteSheet_157
+  - first:
+      213: 5164970665936958502
+    second: ConstructionBees_SpriteSheet_158
+  - first:
+      213: 178055722818829071
+    second: ConstructionBees_SpriteSheet_159
+  - first:
+      213: 8083038264882520846
+    second: ConstructionBees_SpriteSheet_160
+  - first:
+      213: 1851935112389499743
+    second: ConstructionBees_SpriteSheet_161
+  - first:
+      213: 1130515389212070989
+    second: ConstructionBees_SpriteSheet_162
+  - first:
+      213: -8625824196882990731
+    second: ConstructionBees_SpriteSheet_163
+  - first:
+      213: 7516733318962663014
+    second: ConstructionBees_SpriteSheet_164
+  - first:
+      213: -849915800772577522
+    second: ConstructionBees_SpriteSheet_165
+  - first:
+      213: 814963697025124033
+    second: ConstructionBees_SpriteSheet_166
+  - first:
+      213: 4700635706516481840
+    second: ConstructionBees_SpriteSheet_167
+  - first:
+      213: -1069303878087429890
+    second: ConstructionBees_SpriteSheet_168
+  - first:
+      213: 1227159981107480737
+    second: ConstructionBees_SpriteSheet_169
+  - first:
+      213: 5078090167739840933
+    second: ConstructionBees_SpriteSheet_170
+  - first:
+      213: 6595510544180640652
+    second: ConstructionBees_SpriteSheet_171
+  - first:
+      213: -306402100570615757
+    second: ConstructionBees_SpriteSheet_172
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 2
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_0
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 55
+        width: 25
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f991af9279ddb5380800000000000000
+      internalID: -8981341390546265697
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_1
+      rect:
+        serializedVersion: 2
+        x: 214
+        y: 58
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6e879ad679a4a480800000000000000
+      internalID: -8888793436583915925
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_2
+      rect:
+        serializedVersion: 2
+        x: 363
+        y: 61
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 068817308b2cb3d80800000000000000
+      internalID: -8269802195148240800
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_3
+      rect:
+        serializedVersion: 2
+        x: 509
+        y: 64
+        width: 28
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 600e4d88201480a00800000000000000
+      internalID: 722899219334356998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_4
+      rect:
+        serializedVersion: 2
+        x: 656
+        y: 67
+        width: 28
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 839c4dac1aef48870800000000000000
+      internalID: 8684345952323291448
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_5
+      rect:
+        serializedVersion: 2
+        x: 805
+        y: 71
+        width: 27
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9247e9cebd637b8e0800000000000000
+      internalID: -1677812017976675287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_6
+      rect:
+        serializedVersion: 2
+        x: 950
+        y: 74
+        width: 29
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a295ce969510a3890800000000000000
+      internalID: -7477662747754473174
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_7
+      rect:
+        serializedVersion: 2
+        x: 1099
+        y: 78
+        width: 25
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4ff753c0aec599e00800000000000000
+      internalID: 1051974148264656884
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_8
+      rect:
+        serializedVersion: 2
+        x: 1245
+        y: 82
+        width: 27
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9fcce734f905cc940800000000000000
+      internalID: 5317713904980118777
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_9
+      rect:
+        serializedVersion: 2
+        x: 1391
+        y: 85
+        width: 27
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 319b4fb15056b7ee0800000000000000
+      internalID: -1262304197929027309
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_10
+      rect:
+        serializedVersion: 2
+        x: 1540
+        y: 87
+        width: 27
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f81ab3048a134c10800000000000000
+      internalID: 2036500610802129145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_11
+      rect:
+        serializedVersion: 2
+        x: 1685
+        y: 88
+        width: 27
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 70946798a46b0d930800000000000000
+      internalID: 4166030086567774471
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_12
+      rect:
+        serializedVersion: 2
+        x: 1706
+        y: 62
+        width: 37
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4024d21d159d17050800000000000000
+      internalID: 5796653140827521540
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_13
+      rect:
+        serializedVersion: 2
+        x: 1832
+        y: 88
+        width: 27
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e906c81227c392790800000000000000
+      internalID: -7554440439050510178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_14
+      rect:
+        serializedVersion: 2
+        x: 1858
+        y: 65
+        width: 35
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 73f3410782a3f5c60800000000000000
+      internalID: 7809024224237207351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_15
+      rect:
+        serializedVersion: 2
+        x: 1979
+        y: 88
+        width: 26
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec5da4ebe545c03d0800000000000000
+      internalID: -3239121266089994802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_16
+      rect:
+        serializedVersion: 2
+        x: 2010
+        y: 66
+        width: 32
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec865806af4647b00800000000000000
+      internalID: 825395658239600846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_17
+      rect:
+        serializedVersion: 2
+        x: 2124
+        y: 87
+        width: 28
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24b2d465e6151aca0800000000000000
+      internalID: -6007430893599380670
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_18
+      rect:
+        serializedVersion: 2
+        x: 2163
+        y: 68
+        width: 29
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1fe06171655c365a0800000000000000
+      internalID: -6529158061211906319
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_19
+      rect:
+        serializedVersion: 2
+        x: 2269
+        y: 86
+        width: 31
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8e6c779d62425f950800000000000000
+      internalID: 6482126987945559784
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_20
+      rect:
+        serializedVersion: 2
+        x: 2317
+        y: 70
+        width: 27
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a011c01cb7b28a40800000000000000
+      internalID: 5369055724141875365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_21
+      rect:
+        serializedVersion: 2
+        x: 2414
+        y: 85
+        width: 33
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bb198f5f5e714150800000000000000
+      internalID: 5855099938648169394
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_22
+      rect:
+        serializedVersion: 2
+        x: 2470
+        y: 72
+        width: 27
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a240e8d2d99886760800000000000000
+      internalID: 7451356891651638314
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_23
+      rect:
+        serializedVersion: 2
+        x: 2561
+        y: 83
+        width: 35
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 33fea40467e328750800000000000000
+      internalID: 6305671105877831475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_24
+      rect:
+        serializedVersion: 2
+        x: 2624
+        y: 75
+        width: 26
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c143c32cfda71b400800000000000000
+      internalID: 338186548484518940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_25
+      rect:
+        serializedVersion: 2
+        x: 2709
+        y: 79
+        width: 36
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2565cf856b1e364f0800000000000000
+      internalID: -836576932467550638
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_26
+      rect:
+        serializedVersion: 2
+        x: 2777
+        y: 78
+        width: 29
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 23dac66f7820f27a0800000000000000
+      internalID: -6399893762492027598
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_27
+      rect:
+        serializedVersion: 2
+        x: 2858
+        y: 77
+        width: 36
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14a8e858e85039e10800000000000000
+      internalID: 2203110752398510657
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_28
+      rect:
+        serializedVersion: 2
+        x: 2931
+        y: 80
+        width: 25
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e1331ca87571c4ac0800000000000000
+      internalID: -3869692315060587746
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_29
+      rect:
+        serializedVersion: 2
+        x: 3007
+        y: 71
+        width: 36
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1b82d8a67c22bc40800000000000000
+      internalID: 5526528580887153435
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_30
+      rect:
+        serializedVersion: 2
+        x: 3085
+        y: 81
+        width: 25
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 236f93a62e29346d0800000000000000
+      internalID: -3007398625010911694
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_31
+      rect:
+        serializedVersion: 2
+        x: 3157
+        y: 68
+        width: 35
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc95662cba3ad4ad0800000000000000
+      internalID: -2716335042138318389
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_32
+      rect:
+        serializedVersion: 2
+        x: 3237
+        y: 82
+        width: 29
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6180f9e13c274d970800000000000000
+      internalID: 8778767756009867286
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_33
+      rect:
+        serializedVersion: 2
+        x: 3307
+        y: 64
+        width: 33
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7024310265bd7b580800000000000000
+      internalID: -8811332982975282681
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_34
+      rect:
+        serializedVersion: 2
+        x: 3390
+        y: 83
+        width: 28
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: de83e5d26591754e0800000000000000
+      internalID: -1993096452169123603
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_35
+      rect:
+        serializedVersion: 2
+        x: 3544
+        y: 84
+        width: 26
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d48279d7ecc72890800000000000000
+      internalID: -7482786959695117100
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_36
+      rect:
+        serializedVersion: 2
+        x: 3698
+        y: 84
+        width: 27
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 869c5fca3b8c8d720800000000000000
+      internalID: 2871265436475181416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_37
+      rect:
+        serializedVersion: 2
+        x: 3851
+        y: 84
+        width: 28
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2897585b10888be90800000000000000
+      internalID: -7009703279080408702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_38
+      rect:
+        serializedVersion: 2
+        x: 4002
+        y: 84
+        width: 32
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3c0a53f2f1fb8a90800000000000000
+      internalID: -7310483544338723782
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_39
+      rect:
+        serializedVersion: 2
+        x: 4153
+        y: 82
+        width: 35
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbef54c126383afd0800000000000000
+      internalID: -2331875724643402049
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_40
+      rect:
+        serializedVersion: 2
+        x: 4304
+        y: 81
+        width: 37
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08dc4a58866b34740800000000000000
+      internalID: 5135148560167521664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_41
+      rect:
+        serializedVersion: 2
+        x: 4455
+        y: 77
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b07f87b80999a2f60800000000000000
+      internalID: 8010383733326149387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_42
+      rect:
+        serializedVersion: 2
+        x: 4606
+        y: 72
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bca54d21c5ebcf1e0800000000000000
+      internalID: -2162644418382505269
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_43
+      rect:
+        serializedVersion: 2
+        x: 4758
+        y: 68
+        width: 37
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10fb3c6820e037720800000000000000
+      internalID: 2842631193814613761
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_44
+      rect:
+        serializedVersion: 2
+        x: 4910
+        y: 66
+        width: 35
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 726bb8aeb57016010800000000000000
+      internalID: 1180232668706223655
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_45
+      rect:
+        serializedVersion: 2
+        x: 5062
+        y: 61
+        width: 33
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81ffa956611968480800000000000000
+      internalID: -8897264488443871464
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_46
+      rect:
+        serializedVersion: 2
+        x: 6956
+        y: 62
+        width: 37
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9c08f542c3352bb0800000000000000
+      internalID: -4961502504988177254
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_47
+      rect:
+        serializedVersion: 2
+        x: 7108
+        y: 65
+        width: 35
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 75585a93d84eb7bf0800000000000000
+      internalID: -325415252845558441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_48
+      rect:
+        serializedVersion: 2
+        x: 7260
+        y: 66
+        width: 32
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e31d3e9b47191d5e0800000000000000
+      internalID: -1886566838370578114
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_49
+      rect:
+        serializedVersion: 2
+        x: 7413
+        y: 41
+        width: 42
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a99e76152a5e10cf0800000000000000
+      internalID: -287696415861773926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_50
+      rect:
+        serializedVersion: 2
+        x: 7567
+        y: 42
+        width: 34
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 018fe47461a6a1150800000000000000
+      internalID: 5844100110384822288
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_51
+      rect:
+        serializedVersion: 2
+        x: 7720
+        y: 43
+        width: 29
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5cfb265a442d81970800000000000000
+      internalID: 8725955470304657349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_52
+      rect:
+        serializedVersion: 2
+        x: 7869
+        y: 45
+        width: 31
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d3aeb4c7e4a12c5f0800000000000000
+      internalID: -737998464540218819
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_53
+      rect:
+        serializedVersion: 2
+        x: 8018
+        y: 48
+        width: 38
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4a535abdaec7eba10800000000000000
+      internalID: 1927115038710379940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_54
+      rect:
+        serializedVersion: 2
+        x: 8168
+        y: 51
+        width: 38
+        height: 63
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef45b0ec3fd42db00800000000000000
+      internalID: 851828989055685886
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_55
+      rect:
+        serializedVersion: 2
+        x: 8316
+        y: 55
+        width: 44
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c412ae5d77e2a0b90800000000000000
+      internalID: -7274951155838738100
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_56
+      rect:
+        serializedVersion: 2
+        x: 8464
+        y: 58
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4baaf414f97da1870800000000000000
+      internalID: 8654466712941341364
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_57
+      rect:
+        serializedVersion: 2
+        x: 8487
+        y: 82
+        width: 29
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f1109da418a96ac0800000000000000
+      internalID: -3861370398728777229
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_58
+      rect:
+        serializedVersion: 2
+        x: 8613
+        y: 61
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bcd5f97a3c9f7f980800000000000000
+      internalID: -8505054752539714101
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_59
+      rect:
+        serializedVersion: 2
+        x: 8640
+        y: 83
+        width: 28
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 28b3c297955f9e390800000000000000
+      internalID: -7788424315926725758
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_60
+      rect:
+        serializedVersion: 2
+        x: 8759
+        y: 64
+        width: 28
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88257168c3f2de8b0800000000000000
+      internalID: -5121385264256167288
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_61
+      rect:
+        serializedVersion: 2
+        x: 8794
+        y: 84
+        width: 26
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7aa703fa8c4b24230800000000000000
+      internalID: 3621655824384948903
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_62
+      rect:
+        serializedVersion: 2
+        x: 8906
+        y: 67
+        width: 28
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4a38b4656d2f669f0800000000000000
+      internalID: -475425708256296028
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_63
+      rect:
+        serializedVersion: 2
+        x: 8948
+        y: 84
+        width: 27
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df69311eb092659e0800000000000000
+      internalID: -1633072683877689603
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_64
+      rect:
+        serializedVersion: 2
+        x: 9055
+        y: 71
+        width: 27
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4e9f9548be7494160800000000000000
+      internalID: 7010213371842263524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_65
+      rect:
+        serializedVersion: 2
+        x: 9101
+        y: 84
+        width: 28
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1508490705c26b3f0800000000000000
+      internalID: -885471552733937583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_66
+      rect:
+        serializedVersion: 2
+        x: 9200
+        y: 74
+        width: 29
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cae517361d7396390800000000000000
+      internalID: -7824661505123459412
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_67
+      rect:
+        serializedVersion: 2
+        x: 9252
+        y: 84
+        width: 32
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d0ad6b6f63c9f6850800000000000000
+      internalID: 6372483757633886733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_68
+      rect:
+        serializedVersion: 2
+        x: 9349
+        y: 78
+        width: 25
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 170db4d503e78d7b0800000000000000
+      internalID: -5199267023610457999
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_69
+      rect:
+        serializedVersion: 2
+        x: 9403
+        y: 82
+        width: 35
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a7b8f00ef8df9f8f0800000000000000
+      internalID: -506094688721204358
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_70
+      rect:
+        serializedVersion: 2
+        x: 9495
+        y: 82
+        width: 27
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdf89e3222df301c0800000000000000
+      internalID: -4538505676386103329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_71
+      rect:
+        serializedVersion: 2
+        x: 9554
+        y: 81
+        width: 37
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7639da520da3dc2c0800000000000000
+      internalID: -4409803794466106521
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_72
+      rect:
+        serializedVersion: 2
+        x: 9641
+        y: 85
+        width: 27
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: adad949c036d0d1e0800000000000000
+      internalID: -2175003114996114726
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_73
+      rect:
+        serializedVersion: 2
+        x: 9705
+        y: 77
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fafa89e637ed950b0800000000000000
+      internalID: -5739311662748880977
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_74
+      rect:
+        serializedVersion: 2
+        x: 9790
+        y: 87
+        width: 27
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a15dd4be5e609fb0800000000000000
+      internalID: -4643089862778596959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_75
+      rect:
+        serializedVersion: 2
+        x: 9856
+        y: 72
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 264a37f7ca835d5c0800000000000000
+      internalID: -4191381564674562974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_76
+      rect:
+        serializedVersion: 2
+        x: 9935
+        y: 88
+        width: 27
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1dc68f1ecef1108b0800000000000000
+      internalID: -5187830193490203439
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_77
+      rect:
+        serializedVersion: 2
+        x: 10008
+        y: 68
+        width: 37
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c90db087dc8d6adb0800000000000000
+      internalID: -4780895577413267300
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_78
+      rect:
+        serializedVersion: 2
+        x: 10082
+        y: 88
+        width: 27
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 96364cf2ffb4e0c10800000000000000
+      internalID: 2021636842126074729
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_79
+      rect:
+        serializedVersion: 2
+        x: 10160
+        y: 66
+        width: 35
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fab9b7f82c18d5740800000000000000
+      internalID: 5142409022157855663
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_80
+      rect:
+        serializedVersion: 2
+        x: 10229
+        y: 88
+        width: 26
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e1756289d65ed5c80800000000000000
+      internalID: -8332251476698704098
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_81
+      rect:
+        serializedVersion: 2
+        x: 10312
+        y: 60
+        width: 33
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f225172d2ea8172d0800000000000000
+      internalID: -3282689946578496977
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_82
+      rect:
+        serializedVersion: 2
+        x: 10374
+        y: 87
+        width: 28
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 43aa9e2b5c3637fb0800000000000000
+      internalID: -4651264289382225356
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_83
+      rect:
+        serializedVersion: 2
+        x: 10519
+        y: 86
+        width: 31
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7521d84acc82ebcf0800000000000000
+      internalID: -234705271177538985
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_84
+      rect:
+        serializedVersion: 2
+        x: 10664
+        y: 85
+        width: 33
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 024ba17abfb87c510800000000000000
+      internalID: 1569376908118504480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_85
+      rect:
+        serializedVersion: 2
+        x: 10811
+        y: 83
+        width: 35
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8f3e2dd712b6e25b0800000000000000
+      internalID: -5391253912326839304
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_86
+      rect:
+        serializedVersion: 2
+        x: 10959
+        y: 79
+        width: 36
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 95aa413ca87db8470800000000000000
+      internalID: 8398042921140791897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_87
+      rect:
+        serializedVersion: 2
+        x: 11108
+        y: 77
+        width: 36
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8490f987d1f594820800000000000000
+      internalID: 2902956014999374152
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_88
+      rect:
+        serializedVersion: 2
+        x: 11257
+        y: 71
+        width: 36
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5790b7da768177850800000000000000
+      internalID: 6374590631137446261
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_89
+      rect:
+        serializedVersion: 2
+        x: 11407
+        y: 68
+        width: 35
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 462d33501d13171a0800000000000000
+      internalID: -6813609987429641628
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_90
+      rect:
+        serializedVersion: 2
+        x: 11557
+        y: 64
+        width: 33
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 810250f4c5a6b9af0800000000000000
+      internalID: -388599998142144488
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_91
+      rect:
+        serializedVersion: 2
+        x: 13416
+        y: 51
+        width: 27
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 580d2dbc6295ea2c0800000000000000
+      internalID: -4418496161240657787
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_92
+      rect:
+        serializedVersion: 2
+        x: 34
+        y: 31
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0f0472dc7e3959500800000000000000
+      internalID: 402390365508157680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_93
+      rect:
+        serializedVersion: 2
+        x: 187
+        y: 32
+        width: 27
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e4bfda4fecb2e3330800000000000000
+      internalID: 3692436912358685518
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_94
+      rect:
+        serializedVersion: 2
+        x: 339
+        y: 33
+        width: 27
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b18aacd6a281c7ba0800000000000000
+      internalID: -6089966025602062309
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_95
+      rect:
+        serializedVersion: 2
+        x: 493
+        y: 35
+        width: 27
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e13fb9b1ced51be00800000000000000
+      internalID: 1058730656065647390
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_96
+      rect:
+        serializedVersion: 2
+        x: 645
+        y: 37
+        width: 27
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7cab91c71887c6650800000000000000
+      internalID: 6227484882274728647
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_97
+      rect:
+        serializedVersion: 2
+        x: 797
+        y: 40
+        width: 27
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ccfe1dfb49f5159e0800000000000000
+      internalID: -1634420097280774196
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_98
+      rect:
+        serializedVersion: 2
+        x: 949
+        y: 43
+        width: 28
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6f42fbccce6b9420800000000000000
+      internalID: 2637823832629596011
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_99
+      rect:
+        serializedVersion: 2
+        x: 1101
+        y: 46
+        width: 30
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 86c3cc81c707c46e0800000000000000
+      internalID: -1851981668461822872
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_100
+      rect:
+        serializedVersion: 2
+        x: 1252
+        y: 51
+        width: 34
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 54a2cc6305552e370800000000000000
+      internalID: 8350330462103415365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_101
+      rect:
+        serializedVersion: 2
+        x: 1404
+        y: 55
+        width: 35
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30b5e5ea0f3e0e0b0800000000000000
+      internalID: -5701306505393972477
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_102
+      rect:
+        serializedVersion: 2
+        x: 1554
+        y: 57
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 279297339c4854c30800000000000000
+      internalID: 4343023415355582834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_103
+      rect:
+        serializedVersion: 2
+        x: 3456
+        y: 61
+        width: 33
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30e205fc1e1e28f10800000000000000
+      internalID: 2270625522110180867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_104
+      rect:
+        serializedVersion: 2
+        x: 3605
+        y: 57
+        width: 33
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36ace9390a24b7b40800000000000000
+      internalID: 5439014232418863715
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_105
+      rect:
+        serializedVersion: 2
+        x: 3753
+        y: 54
+        width: 36
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d66f493aa62cf0a0800000000000000
+      internalID: -6846554820962195753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_106
+      rect:
+        serializedVersion: 2
+        x: 3903
+        y: 50
+        width: 36
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6b76b5a1aba781a0800000000000000
+      internalID: -6807283600988931221
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_107
+      rect:
+        serializedVersion: 2
+        x: 4055
+        y: 48
+        width: 35
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ebf50d359bbe2e60800000000000000
+      internalID: 7939489442749086696
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_108
+      rect:
+        serializedVersion: 2
+        x: 4207
+        y: 45
+        width: 34
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 79c7909010c925d00800000000000000
+      internalID: 960001198843853975
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_109
+      rect:
+        serializedVersion: 2
+        x: 4361
+        y: 39
+        width: 31
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94f1e6ad3907595b0800000000000000
+      internalID: -5362256000987553975
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_110
+      rect:
+        serializedVersion: 2
+        x: 4516
+        y: 35
+        width: 28
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 952435fdca2338740800000000000000
+      internalID: 5153018116704518745
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_111
+      rect:
+        serializedVersion: 2
+        x: 4668
+        y: 32
+        width: 29
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4a80394369c807f0800000000000000
+      internalID: -646045118260802997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_112
+      rect:
+        serializedVersion: 2
+        x: 4823
+        y: 30
+        width: 28
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e63b0d9955de34190800000000000000
+      internalID: -7979273162861792402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_113
+      rect:
+        serializedVersion: 2
+        x: 4976
+        y: 30
+        width: 27
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0dc43d9230b802750800000000000000
+      internalID: 6278170726257347792
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_114
+      rect:
+        serializedVersion: 2
+        x: 5131
+        y: 30
+        width: 26
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4dfe0afadc91e2f20800000000000000
+      internalID: 3399683139916853204
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_115
+      rect:
+        serializedVersion: 2
+        x: 5214
+        y: 58
+        width: 31
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 917ea188e31194660800000000000000
+      internalID: 7370441225437636377
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_116
+      rect:
+        serializedVersion: 2
+        x: 5284
+        y: 31
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7ac554112cd6db9b0800000000000000
+      internalID: -5062769725813728089
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_117
+      rect:
+        serializedVersion: 2
+        x: 5364
+        y: 56
+        width: 32
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca6e8a7d6cb8b3850800000000000000
+      internalID: 6357828985101543084
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_118
+      rect:
+        serializedVersion: 2
+        x: 5437
+        y: 32
+        width: 27
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: be02ef5990a99d2f0800000000000000
+      internalID: -947556880622935829
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_119
+      rect:
+        serializedVersion: 2
+        x: 5513
+        y: 52
+        width: 33
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7a29d09fc8c21d10800000000000000
+      internalID: 2094957570494638719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_120
+      rect:
+        serializedVersion: 2
+        x: 5589
+        y: 33
+        width: 27
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2797327a348936f00800000000000000
+      internalID: 1108897349597624690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_121
+      rect:
+        serializedVersion: 2
+        x: 5661
+        y: 49
+        width: 34
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4e47f52468e56eb70800000000000000
+      internalID: 8927927242040767716
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_122
+      rect:
+        serializedVersion: 2
+        x: 5743
+        y: 35
+        width: 27
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 756f0f4bb9a8de130800000000000000
+      internalID: 3597684078699148887
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_123
+      rect:
+        serializedVersion: 2
+        x: 5810
+        y: 47
+        width: 32
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dda9bfd9a53138060800000000000000
+      internalID: 6954423529508674269
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_124
+      rect:
+        serializedVersion: 2
+        x: 5895
+        y: 37
+        width: 27
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d9cd75a35ec47430800000000000000
+      internalID: 3779872845924780497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_125
+      rect:
+        serializedVersion: 2
+        x: 5957
+        y: 42
+        width: 32
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 16bb63f74014bc760800000000000000
+      internalID: 7479143093748808545
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_126
+      rect:
+        serializedVersion: 2
+        x: 6047
+        y: 40
+        width: 27
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 190feb8b485415110800000000000000
+      internalID: 1247855008095858833
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_127
+      rect:
+        serializedVersion: 2
+        x: 6105
+        y: 38
+        width: 30
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e8068e789a8be1d10800000000000000
+      internalID: 2098317514670366862
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_128
+      rect:
+        serializedVersion: 2
+        x: 6199
+        y: 43
+        width: 28
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c493be2099afa8af0800000000000000
+      internalID: -393226482355586740
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_129
+      rect:
+        serializedVersion: 2
+        x: 6253
+        y: 35
+        width: 27
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1cd7a6f3e80fc78d0800000000000000
+      internalID: -2847136370665030207
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_130
+      rect:
+        serializedVersion: 2
+        x: 6351
+        y: 46
+        width: 30
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6aaeac1094effbe30800000000000000
+      internalID: 4521612140419410598
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_131
+      rect:
+        serializedVersion: 2
+        x: 6401
+        y: 33
+        width: 25
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7e4060e2de9346c90800000000000000
+      internalID: -7177548215279549209
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_132
+      rect:
+        serializedVersion: 2
+        x: 6502
+        y: 51
+        width: 34
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4697cdcda3a400c0800000000000000
+      internalID: -4610380151643466165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_133
+      rect:
+        serializedVersion: 2
+        x: 6547
+        y: 33
+        width: 26
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c581383b8d532fe60800000000000000
+      internalID: 7994511493376972892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_134
+      rect:
+        serializedVersion: 2
+        x: 6654
+        y: 55
+        width: 35
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba0e141836d6b33f0800000000000000
+      internalID: -920021424729366357
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_135
+      rect:
+        serializedVersion: 2
+        x: 6693
+        y: 34
+        width: 27
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bbdafd6aa7d4239a0800000000000000
+      internalID: -6254851743283171909
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_136
+      rect:
+        serializedVersion: 2
+        x: 6804
+        y: 57
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 73e423a3a18aba150800000000000000
+      internalID: 5884982168688676407
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_137
+      rect:
+        serializedVersion: 2
+        x: 6841
+        y: 35
+        width: 27
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cd41beca2eaab55e0800000000000000
+      internalID: -1919752925602966308
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_138
+      rect:
+        serializedVersion: 2
+        x: 6986
+        y: 37
+        width: 28
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e843f524781b19c40800000000000000
+      internalID: 5517386212997805198
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_139
+      rect:
+        serializedVersion: 2
+        x: 7134
+        y: 39
+        width: 27
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c7fe8052e7f30f20800000000000000
+      internalID: 3387823896098961347
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_140
+      rect:
+        serializedVersion: 2
+        x: 7280
+        y: 40
+        width: 27
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 757951c65490f97e0800000000000000
+      internalID: -1756675135880456361
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_141
+      rect:
+        serializedVersion: 2
+        x: 10464
+        y: 58
+        width: 31
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36264cea17760fa00800000000000000
+      internalID: 788243672750908003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_142
+      rect:
+        serializedVersion: 2
+        x: 10614
+        y: 55
+        width: 32
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1aea5906a7c713b0800000000000000
+      internalID: -5541741300520654309
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_143
+      rect:
+        serializedVersion: 2
+        x: 10763
+        y: 52
+        width: 32
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e867f1fa2d5a3d3f0800000000000000
+      internalID: -877175178107324786
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_144
+      rect:
+        serializedVersion: 2
+        x: 10911
+        y: 49
+        width: 33
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36da034c1ab1da800800000000000000
+      internalID: 625186304869576035
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_145
+      rect:
+        serializedVersion: 2
+        x: 11059
+        y: 46
+        width: 33
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a8de805e1e5ffdaa0800000000000000
+      internalID: -6133913816896311926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_146
+      rect:
+        serializedVersion: 2
+        x: 11207
+        y: 42
+        width: 32
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 048b50df2d5350960800000000000000
+      internalID: 7567513929170401344
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_147
+      rect:
+        serializedVersion: 2
+        x: 11354
+        y: 38
+        width: 31
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4c3b7e407d5e31100800000000000000
+      internalID: 77658330258453444
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_148
+      rect:
+        serializedVersion: 2
+        x: 11502
+        y: 35
+        width: 28
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b57dcf51bda2307e0800000000000000
+      internalID: -1800548305562970277
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_149
+      rect:
+        serializedVersion: 2
+        x: 11650
+        y: 33
+        width: 26
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 072e1486f4216e080800000000000000
+      internalID: -9158612659950460304
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_150
+      rect:
+        serializedVersion: 2
+        x: 11706
+        y: 61
+        width: 33
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b007c5be6374a9240800000000000000
+      internalID: 4799226654119194635
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_151
+      rect:
+        serializedVersion: 2
+        x: 11796
+        y: 33
+        width: 28
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b58ebe4a68e48f4d0800000000000000
+      internalID: -3100642003245078437
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_152
+      rect:
+        serializedVersion: 2
+        x: 11855
+        y: 57
+        width: 33
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d0ed279c034593b40800000000000000
+      internalID: 5420456195032014349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_153
+      rect:
+        serializedVersion: 2
+        x: 11943
+        y: 33
+        width: 27
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 75d4797cc3028b5a0800000000000000
+      internalID: -6505414216317973161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_154
+      rect:
+        serializedVersion: 2
+        x: 12003
+        y: 54
+        width: 36
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0c26e0e651b9496a0800000000000000
+      internalID: -6443354650517282112
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_155
+      rect:
+        serializedVersion: 2
+        x: 12088
+        y: 34
+        width: 28
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb57fa87ee90571c0800000000000000
+      internalID: -4506684932282681921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_156
+      rect:
+        serializedVersion: 2
+        x: 12153
+        y: 50
+        width: 36
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad3ba016c3f395ee0800000000000000
+      internalID: -1271915891196775462
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_157
+      rect:
+        serializedVersion: 2
+        x: 12237
+        y: 36
+        width: 27
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e07c8dd46f10c8150800000000000000
+      internalID: 5876073771191289614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_158
+      rect:
+        serializedVersion: 2
+        x: 12305
+        y: 48
+        width: 35
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6243c7a9479ada740800000000000000
+      internalID: 5164970665936958502
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_159
+      rect:
+        serializedVersion: 2
+        x: 12382
+        y: 38
+        width: 28
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0b77dc8cb4987200800000000000000
+      internalID: 178055722818829071
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_160
+      rect:
+        serializedVersion: 2
+        x: 12457
+        y: 45
+        width: 34
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e036634e978bc2070800000000000000
+      internalID: 8083038264882520846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_161
+      rect:
+        serializedVersion: 2
+        x: 12528
+        y: 40
+        width: 28
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5b9c093c2563b910800000000000000
+      internalID: 1851935112389499743
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_162
+      rect:
+        serializedVersion: 2
+        x: 12611
+        y: 39
+        width: 31
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d44191bb1c560bf00800000000000000
+      internalID: 1130515389212070989
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_163
+      rect:
+        serializedVersion: 2
+        x: 12678
+        y: 40
+        width: 26
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 579f1d1389aea4880800000000000000
+      internalID: -8625824196882990731
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_164
+      rect:
+        serializedVersion: 2
+        x: 12766
+        y: 35
+        width: 28
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 66ecc14d02dc05860800000000000000
+      internalID: 7516733318962663014
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_165
+      rect:
+        serializedVersion: 2
+        x: 12825
+        y: 41
+        width: 27
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e0775fd051e7434f0800000000000000
+      internalID: -849915800772577522
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_166
+      rect:
+        serializedVersion: 2
+        x: 12918
+        y: 32
+        width: 29
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c685022a255f4b00800000000000000
+      internalID: 814963697025124033
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_167
+      rect:
+        serializedVersion: 2
+        x: 12972
+        y: 43
+        width: 27
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 037ae6125430c3140800000000000000
+      internalID: 4700635706516481840
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_168
+      rect:
+        serializedVersion: 2
+        x: 13073
+        y: 30
+        width: 28
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef0b6adc9c11921f0800000000000000
+      internalID: -1069303878087429890
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_169
+      rect:
+        serializedVersion: 2
+        x: 13121
+        y: 45
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a88c74408fb70110800000000000000
+      internalID: 1227159981107480737
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_170
+      rect:
+        serializedVersion: 2
+        x: 13226
+        y: 30
+        width: 27
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a979894a10097640800000000000000
+      internalID: 5078090167739840933
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_171
+      rect:
+        serializedVersion: 2
+        x: 13269
+        y: 48
+        width: 26
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8bfa3a35e5f78b50800000000000000
+      internalID: 6595510544180640652
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ConstructionBees_SpriteSheet_172
+      rect:
+        serializedVersion: 2
+        x: 13381
+        y: 30
+        width: 26
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3301e05b9e07fbbf0800000000000000
+      internalID: -306402100570615757
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      ConstructionBees_SpriteSheet_0: -8981341390546265697
+      ConstructionBees_SpriteSheet_1: -8888793436583915925
+      ConstructionBees_SpriteSheet_10: 2036500610802129145
+      ConstructionBees_SpriteSheet_100: 8350330462103415365
+      ConstructionBees_SpriteSheet_101: -5701306505393972477
+      ConstructionBees_SpriteSheet_102: 4343023415355582834
+      ConstructionBees_SpriteSheet_103: 2270625522110180867
+      ConstructionBees_SpriteSheet_104: 5439014232418863715
+      ConstructionBees_SpriteSheet_105: -6846554820962195753
+      ConstructionBees_SpriteSheet_106: -6807283600988931221
+      ConstructionBees_SpriteSheet_107: 7939489442749086696
+      ConstructionBees_SpriteSheet_108: 960001198843853975
+      ConstructionBees_SpriteSheet_109: -5362256000987553975
+      ConstructionBees_SpriteSheet_11: 4166030086567774471
+      ConstructionBees_SpriteSheet_110: 5153018116704518745
+      ConstructionBees_SpriteSheet_111: -646045118260802997
+      ConstructionBees_SpriteSheet_112: -7979273162861792402
+      ConstructionBees_SpriteSheet_113: 6278170726257347792
+      ConstructionBees_SpriteSheet_114: 3399683139916853204
+      ConstructionBees_SpriteSheet_115: 7370441225437636377
+      ConstructionBees_SpriteSheet_116: -5062769725813728089
+      ConstructionBees_SpriteSheet_117: 6357828985101543084
+      ConstructionBees_SpriteSheet_118: -947556880622935829
+      ConstructionBees_SpriteSheet_119: 2094957570494638719
+      ConstructionBees_SpriteSheet_12: 5796653140827521540
+      ConstructionBees_SpriteSheet_120: 1108897349597624690
+      ConstructionBees_SpriteSheet_121: 8927927242040767716
+      ConstructionBees_SpriteSheet_122: 3597684078699148887
+      ConstructionBees_SpriteSheet_123: 6954423529508674269
+      ConstructionBees_SpriteSheet_124: 3779872845924780497
+      ConstructionBees_SpriteSheet_125: 7479143093748808545
+      ConstructionBees_SpriteSheet_126: 1247855008095858833
+      ConstructionBees_SpriteSheet_127: 2098317514670366862
+      ConstructionBees_SpriteSheet_128: -393226482355586740
+      ConstructionBees_SpriteSheet_129: -2847136370665030207
+      ConstructionBees_SpriteSheet_13: -7554440439050510178
+      ConstructionBees_SpriteSheet_130: 4521612140419410598
+      ConstructionBees_SpriteSheet_131: -7177548215279549209
+      ConstructionBees_SpriteSheet_132: -4610380151643466165
+      ConstructionBees_SpriteSheet_133: 7994511493376972892
+      ConstructionBees_SpriteSheet_134: -920021424729366357
+      ConstructionBees_SpriteSheet_135: -6254851743283171909
+      ConstructionBees_SpriteSheet_136: 5884982168688676407
+      ConstructionBees_SpriteSheet_137: -1919752925602966308
+      ConstructionBees_SpriteSheet_138: 5517386212997805198
+      ConstructionBees_SpriteSheet_139: 3387823896098961347
+      ConstructionBees_SpriteSheet_14: 7809024224237207351
+      ConstructionBees_SpriteSheet_140: -1756675135880456361
+      ConstructionBees_SpriteSheet_141: 788243672750908003
+      ConstructionBees_SpriteSheet_142: -5541741300520654309
+      ConstructionBees_SpriteSheet_143: -877175178107324786
+      ConstructionBees_SpriteSheet_144: 625186304869576035
+      ConstructionBees_SpriteSheet_145: -6133913816896311926
+      ConstructionBees_SpriteSheet_146: 7567513929170401344
+      ConstructionBees_SpriteSheet_147: 77658330258453444
+      ConstructionBees_SpriteSheet_148: -1800548305562970277
+      ConstructionBees_SpriteSheet_149: -9158612659950460304
+      ConstructionBees_SpriteSheet_15: -3239121266089994802
+      ConstructionBees_SpriteSheet_150: 4799226654119194635
+      ConstructionBees_SpriteSheet_151: -3100642003245078437
+      ConstructionBees_SpriteSheet_152: 5420456195032014349
+      ConstructionBees_SpriteSheet_153: -6505414216317973161
+      ConstructionBees_SpriteSheet_154: -6443354650517282112
+      ConstructionBees_SpriteSheet_155: -4506684932282681921
+      ConstructionBees_SpriteSheet_156: -1271915891196775462
+      ConstructionBees_SpriteSheet_157: 5876073771191289614
+      ConstructionBees_SpriteSheet_158: 5164970665936958502
+      ConstructionBees_SpriteSheet_159: 178055722818829071
+      ConstructionBees_SpriteSheet_16: 825395658239600846
+      ConstructionBees_SpriteSheet_160: 8083038264882520846
+      ConstructionBees_SpriteSheet_161: 1851935112389499743
+      ConstructionBees_SpriteSheet_162: 1130515389212070989
+      ConstructionBees_SpriteSheet_163: -8625824196882990731
+      ConstructionBees_SpriteSheet_164: 7516733318962663014
+      ConstructionBees_SpriteSheet_165: -849915800772577522
+      ConstructionBees_SpriteSheet_166: 814963697025124033
+      ConstructionBees_SpriteSheet_167: 4700635706516481840
+      ConstructionBees_SpriteSheet_168: -1069303878087429890
+      ConstructionBees_SpriteSheet_169: 1227159981107480737
+      ConstructionBees_SpriteSheet_17: -6007430893599380670
+      ConstructionBees_SpriteSheet_170: 5078090167739840933
+      ConstructionBees_SpriteSheet_171: 6595510544180640652
+      ConstructionBees_SpriteSheet_172: -306402100570615757
+      ConstructionBees_SpriteSheet_18: -6529158061211906319
+      ConstructionBees_SpriteSheet_19: 6482126987945559784
+      ConstructionBees_SpriteSheet_2: -8269802195148240800
+      ConstructionBees_SpriteSheet_20: 5369055724141875365
+      ConstructionBees_SpriteSheet_21: 5855099938648169394
+      ConstructionBees_SpriteSheet_22: 7451356891651638314
+      ConstructionBees_SpriteSheet_23: 6305671105877831475
+      ConstructionBees_SpriteSheet_24: 338186548484518940
+      ConstructionBees_SpriteSheet_25: -836576932467550638
+      ConstructionBees_SpriteSheet_26: -6399893762492027598
+      ConstructionBees_SpriteSheet_27: 2203110752398510657
+      ConstructionBees_SpriteSheet_28: -3869692315060587746
+      ConstructionBees_SpriteSheet_29: 5526528580887153435
+      ConstructionBees_SpriteSheet_3: 722899219334356998
+      ConstructionBees_SpriteSheet_30: -3007398625010911694
+      ConstructionBees_SpriteSheet_31: -2716335042138318389
+      ConstructionBees_SpriteSheet_32: 8778767756009867286
+      ConstructionBees_SpriteSheet_33: -8811332982975282681
+      ConstructionBees_SpriteSheet_34: -1993096452169123603
+      ConstructionBees_SpriteSheet_35: -7482786959695117100
+      ConstructionBees_SpriteSheet_36: 2871265436475181416
+      ConstructionBees_SpriteSheet_37: -7009703279080408702
+      ConstructionBees_SpriteSheet_38: -7310483544338723782
+      ConstructionBees_SpriteSheet_39: -2331875724643402049
+      ConstructionBees_SpriteSheet_4: 8684345952323291448
+      ConstructionBees_SpriteSheet_40: 5135148560167521664
+      ConstructionBees_SpriteSheet_41: 8010383733326149387
+      ConstructionBees_SpriteSheet_42: -2162644418382505269
+      ConstructionBees_SpriteSheet_43: 2842631193814613761
+      ConstructionBees_SpriteSheet_44: 1180232668706223655
+      ConstructionBees_SpriteSheet_45: -8897264488443871464
+      ConstructionBees_SpriteSheet_46: -4961502504988177254
+      ConstructionBees_SpriteSheet_47: -325415252845558441
+      ConstructionBees_SpriteSheet_48: -1886566838370578114
+      ConstructionBees_SpriteSheet_49: -287696415861773926
+      ConstructionBees_SpriteSheet_5: -1677812017976675287
+      ConstructionBees_SpriteSheet_50: 5844100110384822288
+      ConstructionBees_SpriteSheet_51: 8725955470304657349
+      ConstructionBees_SpriteSheet_52: -737998464540218819
+      ConstructionBees_SpriteSheet_53: 1927115038710379940
+      ConstructionBees_SpriteSheet_54: 851828989055685886
+      ConstructionBees_SpriteSheet_55: -7274951155838738100
+      ConstructionBees_SpriteSheet_56: 8654466712941341364
+      ConstructionBees_SpriteSheet_57: -3861370398728777229
+      ConstructionBees_SpriteSheet_58: -8505054752539714101
+      ConstructionBees_SpriteSheet_59: -7788424315926725758
+      ConstructionBees_SpriteSheet_6: -7477662747754473174
+      ConstructionBees_SpriteSheet_60: -5121385264256167288
+      ConstructionBees_SpriteSheet_61: 3621655824384948903
+      ConstructionBees_SpriteSheet_62: -475425708256296028
+      ConstructionBees_SpriteSheet_63: -1633072683877689603
+      ConstructionBees_SpriteSheet_64: 7010213371842263524
+      ConstructionBees_SpriteSheet_65: -885471552733937583
+      ConstructionBees_SpriteSheet_66: -7824661505123459412
+      ConstructionBees_SpriteSheet_67: 6372483757633886733
+      ConstructionBees_SpriteSheet_68: -5199267023610457999
+      ConstructionBees_SpriteSheet_69: -506094688721204358
+      ConstructionBees_SpriteSheet_7: 1051974148264656884
+      ConstructionBees_SpriteSheet_70: -4538505676386103329
+      ConstructionBees_SpriteSheet_71: -4409803794466106521
+      ConstructionBees_SpriteSheet_72: -2175003114996114726
+      ConstructionBees_SpriteSheet_73: -5739311662748880977
+      ConstructionBees_SpriteSheet_74: -4643089862778596959
+      ConstructionBees_SpriteSheet_75: -4191381564674562974
+      ConstructionBees_SpriteSheet_76: -5187830193490203439
+      ConstructionBees_SpriteSheet_77: -4780895577413267300
+      ConstructionBees_SpriteSheet_78: 2021636842126074729
+      ConstructionBees_SpriteSheet_79: 5142409022157855663
+      ConstructionBees_SpriteSheet_8: 5317713904980118777
+      ConstructionBees_SpriteSheet_80: -8332251476698704098
+      ConstructionBees_SpriteSheet_81: -3282689946578496977
+      ConstructionBees_SpriteSheet_82: -4651264289382225356
+      ConstructionBees_SpriteSheet_83: -234705271177538985
+      ConstructionBees_SpriteSheet_84: 1569376908118504480
+      ConstructionBees_SpriteSheet_85: -5391253912326839304
+      ConstructionBees_SpriteSheet_86: 8398042921140791897
+      ConstructionBees_SpriteSheet_87: 2902956014999374152
+      ConstructionBees_SpriteSheet_88: 6374590631137446261
+      ConstructionBees_SpriteSheet_89: -6813609987429641628
+      ConstructionBees_SpriteSheet_9: -1262304197929027309
+      ConstructionBees_SpriteSheet_90: -388599998142144488
+      ConstructionBees_SpriteSheet_91: -4418496161240657787
+      ConstructionBees_SpriteSheet_92: 402390365508157680
+      ConstructionBees_SpriteSheet_93: 3692436912358685518
+      ConstructionBees_SpriteSheet_94: -6089966025602062309
+      ConstructionBees_SpriteSheet_95: 1058730656065647390
+      ConstructionBees_SpriteSheet_96: 6227484882274728647
+      ConstructionBees_SpriteSheet_97: -1634420097280774196
+      ConstructionBees_SpriteSheet_98: 2637823832629596011
+      ConstructionBees_SpriteSheet_99: -1851981668461822872
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

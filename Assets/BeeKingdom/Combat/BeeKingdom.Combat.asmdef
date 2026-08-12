@@ -1,0 +1,16 @@
+{
+    "name": "BeeKingdom.Combat",
+    "rootNamespace": "BeeKingdom.Combat",
+    "references": [
+        "BeeKingdom.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

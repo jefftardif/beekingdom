@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae217b76fe305e445bf9e2e2dcc2f6cb, type: 3}
+  m_Name: WaxWorkshop
+  m_EditorClassIdentifier: Assembly-CSharp::BeeKingdom.Core.Buildings.BuildingSO
+  buildingId: wax_workshop
+  buildingName: Wax Workshop
+  buildingType: 7
+  description: Produces wax used for buildings and hive upgrades.
+  icon: {fileID: 0}
+  emoji: W
+  requiredQueenLevel: 1
+  isUnlockedByDefault: 1
+  buildCost:
+  - resourceType: 0
+    amount: 250
+  - resourceType: 1
+    amount: 60
+  buildDuration: 20
+  canProduceResources: 1
+  producedResourceType: 2
+  productionRate: 1
+  isStorage: 0
+  storedResourceType: 2
+  storageCapacityBonus: 0
+  maxLevel: 10
+  costMultiplierPerLevel: 1.5
+  durationMultiplierPerLevel: 1.2
+  productionIncreasePerLevel: 1
+  storageIncreasePerLevel: 0

@@ -1,0 +1,468 @@
+fileFormatVersion: 2
+guid: 65ae09a735a146b45b3ffebf42f896f0
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -7167049105750573785
+    second: beast_t3_jumping_spider_0
+  - first:
+      213: 4867584403245286000
+    second: beast_t3_jumping_spider_1
+  - first:
+      213: -1167236006659146996
+    second: beast_t3_jumping_spider_2
+  - first:
+      213: -3098846119668438719
+    second: beast_t3_jumping_spider_3
+  - first:
+      213: 2760425334876740526
+    second: beast_t3_jumping_spider_4
+  - first:
+      213: 8448217490817942934
+    second: beast_t3_jumping_spider_5
+  - first:
+      213: -5628068399854250721
+    second: beast_t3_jumping_spider_6
+  - first:
+      213: -8809478038873343639
+    second: beast_t3_jumping_spider_7
+  - first:
+      213: -8955824974580287190
+    second: beast_t3_jumping_spider_8
+  - first:
+      213: -962309510993217460
+    second: beast_t3_jumping_spider_9
+  - first:
+      213: -3494128434241911649
+    second: beast_t3_jumping_spider_10
+  - first:
+      213: 812723190339954520
+    second: beast_t3_jumping_spider_11
+  - first:
+      213: 1507259658631149573
+    second: beast_t3_jumping_spider_12
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_0
+      rect:
+        serializedVersion: 2
+        x: 125
+        y: 381
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72db4fb9fc6898c90800000000000000
+      internalID: -7167049105750573785
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_1
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 382
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 072caa5a9322d8340800000000000000
+      internalID: 4867584403245286000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_2
+      rect:
+        serializedVersion: 2
+        x: 201
+        y: 376
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c0b390649052dcfe0800000000000000
+      internalID: -1167236006659146996
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_3
+      rect:
+        serializedVersion: 2
+        x: 260
+        y: 380
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 149a09f5fdfaef4d0800000000000000
+      internalID: -3098846119668438719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_4
+      rect:
+        serializedVersion: 2
+        x: 329
+        y: 378
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eab115a77300f4620800000000000000
+      internalID: 2760425334876740526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_5
+      rect:
+        serializedVersion: 2
+        x: 116
+        y: 365
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 695027d1c091e3570800000000000000
+      internalID: 8448217490817942934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_6
+      rect:
+        serializedVersion: 2
+        x: 301
+        y: 371
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f15161feb9515e1b0800000000000000
+      internalID: -5628068399854250721
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_7
+      rect:
+        serializedVersion: 2
+        x: 313
+        y: 356
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9697954f5627eb580800000000000000
+      internalID: -8809478038873343639
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_8
+      rect:
+        serializedVersion: 2
+        x: 335
+        y: 363
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a29f197b2a486b380800000000000000
+      internalID: -8955824974580287190
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_9
+      rect:
+        serializedVersion: 2
+        x: 353
+        y: 363
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c48f449299035a2f0800000000000000
+      internalID: -962309510993217460
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_10
+      rect:
+        serializedVersion: 2
+        x: 90
+        y: 67
+        width: 333
+        height: 284
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f944b65a3bc528fc0800000000000000
+      internalID: -3494128434241911649
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_11
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 346
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8576fe48f6f574b00800000000000000
+      internalID: 812723190339954520
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: beast_t3_jumping_spider_12
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 348
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5087cf87cacdae410800000000000000
+      internalID: 1507259658631149573
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      beast_t3_jumping_spider_0: -7167049105750573785
+      beast_t3_jumping_spider_1: 4867584403245286000
+      beast_t3_jumping_spider_10: -3494128434241911649
+      beast_t3_jumping_spider_11: 812723190339954520
+      beast_t3_jumping_spider_12: 1507259658631149573
+      beast_t3_jumping_spider_2: -1167236006659146996
+      beast_t3_jumping_spider_3: -3098846119668438719
+      beast_t3_jumping_spider_4: 2760425334876740526
+      beast_t3_jumping_spider_5: 8448217490817942934
+      beast_t3_jumping_spider_6: -5628068399854250721
+      beast_t3_jumping_spider_7: -8809478038873343639
+      beast_t3_jumping_spider_8: -8955824974580287190
+      beast_t3_jumping_spider_9: -962309510993217460
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

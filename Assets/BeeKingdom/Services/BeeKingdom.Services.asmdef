@@ -1,0 +1,18 @@
+{
+    "name": "BeeKingdom.Services",
+    "rootNamespace": "BeeKingdom.Services",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Config",
+        "BeeKingdom.Data"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

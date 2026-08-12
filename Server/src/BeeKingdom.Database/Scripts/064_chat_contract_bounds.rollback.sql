@@ -1,0 +1,10 @@
+IF EXISTS (SELECT 1 FROM dbo.ChatMessages WHERE LEN(Body)>1000 OR LEN(ClientRequestId)>128) THROW 51064, 'Rollback blocked: ChatMessages data exceeds legacy bounds.', 1;
+IF EXISTS (SELECT 1 FROM dbo.ChatMessageTranslations WHERE LEN(TargetLocale)>16 OR LEN(ModelVersion)>64 OR LEN(TranslatedText)>2000) THROW 51064, 'Rollback blocked: translation data exceeds legacy bounds.', 1;
+ALTER TABLE dbo.ChatMessages ALTER COLUMN Body nvarchar(1000) NOT NULL;
+ALTER TABLE dbo.ChatMessages ALTER COLUMN ClientRequestId nvarchar(128) NOT NULL;
+ALTER TABLE dbo.ChatOutboxReceipts ALTER COLUMN ClientRequestId nvarchar(128) NOT NULL;
+ALTER TABLE dbo.ChatConversationCreationReceipts ALTER COLUMN ClientRequestId nvarchar(128) NOT NULL;
+ALTER TABLE dbo.ChatModerationReportReceipts ALTER COLUMN ClientRequestId nvarchar(128) NOT NULL;
+ALTER TABLE dbo.ChatMessageTranslations ALTER COLUMN TargetLocale nvarchar(16) NOT NULL;
+ALTER TABLE dbo.ChatMessageTranslations ALTER COLUMN ModelVersion nvarchar(64) NOT NULL;
+ALTER TABLE dbo.ChatMessageTranslations ALTER COLUMN TranslatedText nvarchar(2000) NOT NULL;

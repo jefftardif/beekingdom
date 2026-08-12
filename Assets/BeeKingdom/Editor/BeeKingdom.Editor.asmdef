@@ -1,0 +1,20 @@
+{
+    "name": "BeeKingdom.Editor",
+    "rootNamespace": "BeeKingdom.Editor",
+    "references": [
+        "BeeKingdom.Core",
+        "BeeKingdom.Services",
+        "BeeKingdom.WorldMap"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

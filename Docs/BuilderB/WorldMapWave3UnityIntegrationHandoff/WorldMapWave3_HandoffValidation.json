@@ -1,0 +1,455 @@
+{
+  "checks": [
+    {
+      "check": "master_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "runtime_tile_count_25",
+      "status": "PASS"
+    },
+    {
+      "check": "row_major_order_R0C0_to_R4C4",
+      "status": "PASS"
+    },
+    {
+      "check": "future_destinations_unique",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C0_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C0_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C0_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C0_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C1_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C1_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C1_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C1_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C2_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C2_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C2_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C2_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C3_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C3_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C3_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C3_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C4_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C4_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C4_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R0C4_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C0_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C0_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C0_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C0_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C1_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C1_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C1_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C1_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C2_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C2_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C2_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C2_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C3_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C3_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C3_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C3_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C4_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C4_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C4_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R1C4_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C0_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C0_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C0_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C0_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C1_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C1_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C1_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C1_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C2_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C2_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C2_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C2_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C3_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C3_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C3_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C3_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C4_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C4_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C4_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R2C4_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C0_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C0_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C0_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C0_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C1_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C1_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C1_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C1_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C2_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C2_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C2_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C2_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C3_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C3_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C3_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C3_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C4_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C4_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C4_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R3C4_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C0_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C0_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C0_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C0_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C1_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C1_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C1_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C1_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C2_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C2_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C2_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C2_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C3_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C3_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C3_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C3_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C4_source_exists",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C4_sha256_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C4_dimensions_516",
+      "status": "PASS"
+    },
+    {
+      "check": "R4C4_inner_uv_exact",
+      "status": "PASS"
+    },
+    {
+      "check": "unity_source_exists:Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.cs",
+      "status": "PASS"
+    },
+    {
+      "check": "unity_source_unchanged:Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.cs",
+      "status": "PASS"
+    },
+    {
+      "check": "unity_source_exists:Assets/BeeKingdom/Playground/WorldMapWave4ManifestContentProvider.cs",
+      "status": "PASS"
+    },
+    {
+      "check": "unity_source_unchanged:Assets/BeeKingdom/Playground/WorldMapWave4ManifestContentProvider.cs",
+      "status": "PASS"
+    },
+    {
+      "check": "unity_source_exists:Assets/BeeKingdom/Playground/Editor/WorldMapMmoFullscreenFoundationSceneBuilder.cs",
+      "status": "PASS"
+    },
+    {
+      "check": "unity_source_unchanged:Assets/BeeKingdom/Playground/Editor/WorldMapMmoFullscreenFoundationSceneBuilder.cs",
+      "status": "PASS"
+    }
+  ],
+  "checks_failed": 0,
+  "checks_passed": 110,
+  "claims": {
+    "handoff_validated": true,
+    "unity_integration_done": false,
+    "unity_product_files_modified_by_builder_b": false,
+    "unity_runtime_validation_done": false
+  },
+  "manifest_sha256": "bde8c07b6430afe964e136256acfcc1f25854331476354bbb9eda9104e391911",
+  "schema": "bee-kingdom.world-map-wave3-handoff-validation.v1",
+  "status": "PASS"
+}

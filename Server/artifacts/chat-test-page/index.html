@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bee Kingdom - Test Chat</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Segoe UI, system-ui, sans-serif;
+      background: #121512;
+      color: #f3f7ef;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background: #121512;
+    }
+    header, footer {
+      padding: 14px 16px;
+      background: #1b2119;
+      border-bottom: 1px solid #30382c;
+    }
+    footer {
+      border-top: 1px solid #30382c;
+      border-bottom: 0;
+      color: #b7c5ae;
+      font-size: 13px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+    main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: 14px;
+      max-width: 860px;
+      width: min(100%, 860px);
+      box-sizing: border-box;
+      margin: 0 auto;
+    }
+    .panel {
+      border: 1px solid #30382c;
+      background: #181d16;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .accounts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    button {
+      border: 1px solid #52623f;
+      background: #26351f;
+      color: #f3f7ef;
+      border-radius: 6px;
+      padding: 11px 12px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 10px;
+      color: #d5dfcb;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .messages {
+      min-height: 360px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .message {
+      max-width: 78%;
+      padding: 9px 11px;
+      border-radius: 8px;
+      background: #253021;
+      border: 1px solid #3a4732;
+      align-self: flex-start;
+      overflow-wrap: anywhere;
+    }
+    .message.mine {
+      align-self: flex-end;
+      background: #314124;
+      border-color: #58723f;
+    }
+    .meta {
+      display: block;
+      color: #bdc8b3;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    input {
+      min-width: 0;
+      border: 1px solid #3b4635;
+      border-radius: 6px;
+      background: #0f130e;
+      color: #f3f7ef;
+      padding: 12px;
+      font-size: 15px;
+    }
+    @media (max-width: 560px) {
+      .accounts {
+        grid-template-columns: 1fr;
+      }
+      .message {
+        max-width: 92%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bee Kingdom - Chat test</h1>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="accounts">
+        <button id="parentBtn">Entrer comme Parent</button>
+        <button id="childBtn">Entrer comme Fils</button>
+      </div>
+      <div id="status" class="status">Choisis un compte pour commencer.</div>
+    </section>
+
+    <section id="messages" class="panel messages" aria-live="polite"></section>
+
+    <section class="panel composer">
+      <input id="messageInput" maxlength="500" placeholder="Message..." disabled>
+      <button id="sendBtn" disabled>Envoyer</button>
+    </section>
+  </main>
+  <footer>
+    Page de test temporaire. Le chat utilise l'API live de Bee Kingdom sur chat.dravii.com.
+  </footer>
+
+  <script>
+    const apiBase = location.origin;
+    const gameServerId = "00000000-0000-0000-0000-000000000001";
+    const worldId = "00000000-0000-0000-0000-000000000101";
+    const accounts = {
+      parent: {
+        label: "Parent",
+        email: "parent.chat.test@dravii.com",
+        password: "BeeChat-Parent-2026!",
+        otherPlayerId: "7bd4d987-ab1b-423f-bada-2cbf4db98634"
+      },
+      child: {
+        label: "Fils",
+        email: "fils.chat.test@dravii.com",
+        password: "BeeChat-Fils-2026!",
+        otherPlayerId: "6239a736-786a-401a-8b43-883249f4a5cc"
+      }
+    };
+
+    let current = null;
+    let token = null;
+    let playerId = null;
+    let conversationId = null;
+    let lastSequence = 0;
+    let pollHandle = null;
+
+    const statusEl = document.getElementById("status");
+    const messagesEl = document.getElementById("messages");
+    const inputEl = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    document.getElementById("parentBtn").addEventListener("click", () => start("parent"));
+    document.getElementById("childBtn").addEventListener("click", () => start("child"));
+    sendBtn.addEventListener("click", sendMessage);
+    inputEl.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    async function start(kind) {
+      setBusy(true);
+      current = accounts[kind];
+      statusEl.textContent = `Connexion ${current.label}...`;
+      messagesEl.innerHTML = "";
+      lastSequence = 0;
+      try {
+        await login();
+        await ensurePrivateConversation();
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        statusEl.textContent = `${current.label} connecte. Conversation prete.`;
+        await pollMessages();
+        clearInterval(pollHandle);
+        pollHandle = setInterval(pollMessages, 2000);
+      } catch (error) {
+        statusEl.textContent = `Erreur: ${error.message}`;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function login() {
+      const payload = {
+        email: current.email,
+        password: current.password,
+        clientVersion: "1.0.0",
+        ipAddress: "127.0.0.1",
+        deviceIdentifier: `web-chat-${current.label.toLowerCase()}`,
+        region: "prod-chat"
+      };
+      const result = await postJson("/auth/login", payload, null);
+      if (!result.succeeded || !result.tokens?.accessToken) {
+        throw new Error(result.errorMessage || result.errorCode || "login_failed");
+      }
+      token = result.tokens.accessToken;
+      playerId = result.playerId?.value || result.playerId;
+    }
+
+    async function ensurePrivateConversation() {
+      const payload = {
+        channelType: "Private",
+        gameServerId,
+        worldId,
+        audienceKey: null,
+        title: "Test Parent / Fils",
+        participantIds: [current.otherPlayerId],
+        clientRequestId: `web_private_${current.label.toLowerCase()}`
+      };
+      const result = await postJson("/chat/v1/conversations", payload, token);
+      conversationId = result.conversation.conversationId;
+    }
+
+    async function sendMessage() {
+      if (!conversationId || !token) return;
+      const body = inputEl.value.trim();
+      if (!body) return;
+      inputEl.value = "";
+      sendBtn.disabled = true;
+      try {
+        await postJson(`/chat/v1/conversations/${conversationId}/messages`, {
+          clientRequestId: `web_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          body,
+          contentParts: [{ kind: "text", text: body }],
+          mentions: [],
+          emoji: [],
+          replyToMessageId: null,
+          clientCreatedAt: new Date().toISOString()
+        }, token);
+        await pollMessages();
+      } catch (error) {
+        statusEl.textContent = `Envoi impossible: ${error.message}`;
+      } finally {
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    async function pollMessages() {
+      if (!conversationId || !token) return;
+      const response = await fetch(`${apiBase}/chat/v1/conversations/${conversationId}/messages?afterSequence=${lastSequence}&limit=50`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        throw new Error(`messages_${response.status}`);
+      }
+      const page = await response.json();
+      for (const message of page.items || []) {
+        appendMessage(message);
+        lastSequence = Math.max(lastSequence, message.sequence || 0);
+      }
+    }
+
+    async function postJson(path, payload, bearer) {
+      const headers = { "Content-Type": "application/json" };
+      if (bearer) headers.Authorization = `Bearer ${bearer}`;
+      const response = await fetch(`${apiBase}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+      const text = await response.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+      if (!response.ok) {
+        throw new Error(data.detail || data.title || data.errorMessage || `${path}_${response.status}`);
+      }
+      return data;
+    }
+
+    function appendMessage(message) {
+      const item = document.createElement("div");
+      const sender = (message.senderPlayerId?.value || message.senderPlayerId || "").toLowerCase();
+      const mine = sender === String(playerId).toLowerCase();
+      item.className = mine ? "message mine" : "message";
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = `${mine ? current.label : "Autre"} - #${message.sequence}`;
+      const body = document.createElement("div");
+      body.textContent = message.body;
+      item.append(meta, body);
+      messagesEl.appendChild(item);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setBusy(busy) {
+      document.getElementById("parentBtn").disabled = busy;
+      document.getElementById("childBtn").disabled = busy;
+    }
+  </script>
+</body>
+</html>

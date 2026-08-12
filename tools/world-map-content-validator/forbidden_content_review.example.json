@@ -1,0 +1,43 @@
+{
+  "schema": "bee-kingdom.world-map-forbidden-content-review.v1",
+  "inspector": "Nom du relecteur",
+  "inspected_at_utc": "2026-01-01T00:00:00Z",
+  "source_artifact": "C:\\chemin\\atlas_master_5x5_2560.png",
+  "categories": {
+    "ground_routes": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "Routes ou chemins terrestres peints."
+    },
+    "player_hives": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "Ruches ou structures joueur peintes."
+    },
+    "runtime_resources": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "Ressources collectables ou marqueurs runtime peints."
+    },
+    "troops": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "Troupes, essaims ou unites peints."
+    },
+    "painted_flight_paths": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "Trajectoires, arcs ou lignes de vol peints."
+    },
+    "ui_or_text": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "UI, texte, badges ou marqueurs peints."
+    },
+    "painted_tile_boundaries": {
+      "status": "NOT_REVIEWED",
+      "affected_tiles": [],
+      "note": "Frontieres, grille ou coutures artificielles peintes."
+    }
+  }
+}

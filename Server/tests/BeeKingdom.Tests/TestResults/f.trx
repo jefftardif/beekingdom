@@ -1,0 +1,591 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="b0b2645b-9fc1-43af-b360-08c6f79afb08" name="Utilisateur@DESKTOP-D3D29K7 2026-08-09 18:37:38" runUser="DESKTOP-D3D29K7\Utilisateur" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-09T18:37:38.9913131-04:00" queuing="2026-08-09T18:37:38.9913136-04:00" start="2026-08-09T18:37:37.1187484-04:00" finish="2026-08-09T18:37:41.5347665-04:00" />
+  <TestSettings name="default" id="f5a5458f-4e13-4db1-95cf-c10ceb972d1a">
+    <Deployment runDeploymentRoot="Utilisateur_DESKTOP-D3D29K7_2026-08-09_18_37_38" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="994a5e95-f2ff-463e-8a1f-241dd5a0edd1" testId="c6506742-8823-7951-9bf6-2b957301ec70" testName="Enabled_launch_claim_applies_real_losses_credits_partial_reward_and_replays" computerName="DESKTOP-D3D29K7" duration="00:00:00.4047930" startTime="2026-08-09T18:37:38.6343728-04:00" endTime="2026-08-09T18:37:39.0391648-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="994a5e95-f2ff-463e-8a1f-241dd5a0edd1">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="7e37a078-178f-455a-bdcd-8e2eb2873c04" testId="38a2c63f-ff9a-20b2-77fa-fa914d6ceaa4" testName="Both_settings_keep_feature_closed" computerName="DESKTOP-D3D29K7" duration="00:00:00.1517740" startTime="2026-08-09T18:37:39.8919014-04:00" endTime="2026-08-09T18:37:40.0436750-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7e37a078-178f-455a-bdcd-8e2eb2873c04">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="81eec7de-b1d6-4263-8d94-749029514543" testId="71609ae3-418d-9c21-3961-284c4a167ec6" testName="DisabledOptionsFailClosed" computerName="DESKTOP-D3D29K7" duration="00:00:00.0030360" startTime="2026-08-09T18:37:37.6549611-04:00" endTime="2026-08-09T18:37:37.6579967-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="81eec7de-b1d6-4263-8d94-749029514543" />
+    <UnitTestResult executionId="a597a8ff-8aa9-4af9-8df8-7d81c668bffa" testId="71091919-1121-0cc6-03c5-3790654856f3" testName="BusyAndIdempotencyConflictDoNotMutate" computerName="DESKTOP-D3D29K7" duration="00:00:00.0244279" startTime="2026-08-09T18:37:37.6247764-04:00" endTime="2026-08-09T18:37:37.6491603-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a597a8ff-8aa9-4af9-8df8-7d81c668bffa" />
+    <UnitTestResult executionId="f7224a74-61b5-4605-abed-42817d180241" testId="4eda5775-090e-6b70-a083-95b18cdb5850" testName="Enabled_claim_http_exposes_authoritative_receipt_and_exact_replay" computerName="DESKTOP-D3D29K7" duration="00:00:00.3135230" startTime="2026-08-09T18:37:40.2976827-04:00" endTime="2026-08-09T18:37:40.6112054-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f7224a74-61b5-4605-abed-42817d180241">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b7823319-0324-4144-bd54-5b70790b0fb2" testId="2bf46136-dc34-2a92-acd9-e006acae7fb8" testName="StartUsesServerCatalogAndDebitsAtomically" computerName="DESKTOP-D3D29K7" duration="00:00:00.0011030" startTime="2026-08-09T18:37:37.6580120-04:00" endTime="2026-08-09T18:37:37.6591148-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b7823319-0324-4144-bd54-5b70790b0fb2" />
+    <UnitTestResult executionId="0e010ae9-b3fa-411b-9c41-37d5f1cf3fd0" testId="4e60f733-e7c3-b34a-8cf6-ea760c1f3a70" testName="Enabled_contract_rejects_missing_auth_and_invalid_requests" computerName="DESKTOP-D3D29K7" duration="00:00:00.2908790" startTime="2026-08-09T18:37:38.3434552-04:00" endTime="2026-08-09T18:37:38.6343337-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0e010ae9-b3fa-411b-9c41-37d5f1cf3fd0">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6a21e939-db64-4110-82bf-a0362c9bcc76" testId="6578b664-6182-0fb7-6d55-23b081009d69" testName="Default_closed_flag_returns_game_unavailable_for_all_routes" computerName="DESKTOP-D3D29K7" duration="00:00:00.3358620" startTime="2026-08-09T18:37:38.0075528-04:00" endTime="2026-08-09T18:37:38.3434140-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6a21e939-db64-4110-82bf-a0362c9bcc76">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="21a49a50-e4f8-4200-88a3-16928fcd1caa" testId="73dbd18c-c324-be1d-c917-37db26637fec" testName="Default_closed_flag_returns_game_unavailable_for_all_routes" computerName="DESKTOP-D3D29K7" duration="00:00:00.2539510" startTime="2026-08-09T18:37:40.0437059-04:00" endTime="2026-08-09T18:37:40.2976552-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="21a49a50-e4f8-4200-88a3-16928fcd1caa">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="0627c3e0-3e10-4c7a-af0f-e4efaf5e4f30" testId="5a0c9c10-ae45-e292-275a-1682d638d09e" testName="CompleteRequiresServerTimeAndRaisesLevel" computerName="DESKTOP-D3D29K7" duration="00:00:00.0048750" startTime="2026-08-09T18:37:37.6500458-04:00" endTime="2026-08-09T18:37:37.6549198-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0627c3e0-3e10-4c7a-af0f-e4efaf5e4f30" />
+    <UnitTestResult executionId="f489c324-ef8a-438d-bf50-02fc139870b9" testId="e40932f6-52ba-35d7-05f0-110a944414c4" testName="Enabled_contract_rejects_missing_auth_and_invalid_requests" computerName="DESKTOP-D3D29K7" duration="00:00:00.2653910" startTime="2026-08-09T18:37:40.6112320-04:00" endTime="2026-08-09T18:37:40.8766226-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f489c324-ef8a-438d-bf50-02fc139870b9">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="09f2663d-a89b-40e2-b692-e40c1f8a5c03" testId="5705c430-9f50-91c3-d0ce-76ce8d9261de" testName="Both_settings_keep_feature_closed" computerName="DESKTOP-D3D29K7" duration="00:00:00.3465490" startTime="2026-08-09T18:37:37.6609811-04:00" endTime="2026-08-09T18:37:38.0075298-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="09f2663d-a89b-40e2-b692-e40c1f8a5c03">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="238b0c11-910d-465b-ba7d-002d5d21a6b0" testId="c500979c-8907-e635-a393-db1affa8f0d6" testName="Enabled_launch_claim_replay_and_release_guard" computerName="DESKTOP-D3D29K7" duration="00:00:00.3225550" startTime="2026-08-09T18:37:40.8766583-04:00" endTime="2026-08-09T18:37:41.1992125-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="238b0c11-910d-465b-ba7d-002d5d21a6b0">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+        <ErrorInfo>
+          <Message>  Expected: 3&#xD;
+  But was:  0&#xD;
+</Message>
+          <StackTrace>   at BeeKingdom.Tests.HivePerimeterSortieEndpointTests.Enabled_launch_claim_replay_and_release_guard() in C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\HivePerimeterSortieEndpointTests.cs:line 50&#xD;
+   at BeeKingdom.Tests.HivePerimeterSortieEndpointTests.Enabled_launch_claim_replay_and_release_guard() in C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\HivePerimeterSortieEndpointTests.cs:line 50&#xD;
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()&#xD;
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)&#xD;
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)&#xD;
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)&#xD;
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)&#xD;
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.&lt;&gt;c__DisplayClass4_0.&lt;PerformWork&gt;b__0()&#xD;
+   at NUnit.Framework.Internal.ContextUtils.&lt;&gt;c__DisplayClass1_0`1.&lt;DoIsolated&gt;b__0(Object _)&#xD;
+
+1)    at BeeKingdom.Tests.HivePerimeterSortieEndpointTests.Enabled_launch_claim_replay_and_release_guard() in C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\HivePerimeterSortieEndpointTests.cs:line 50&#xD;
+
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="8f9bb8a1-5ba2-4949-b496-fc306e0b1109" testId="dd0c9cb3-5831-62e2-bfb5-1c524a79315a" testName="Enabled_recall_returns_squad_without_loss_reward_and_squad_release_is_blocked_while_active" computerName="DESKTOP-D3D29K7" duration="00:00:00.2832690" startTime="2026-08-09T18:37:39.3237783-04:00" endTime="2026-08-09T18:37:39.6070465-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8f9bb8a1-5ba2-4949-b496-fc306e0b1109">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2a450d48-0d74-45fc-adda-f9ec8cc00676" testId="e6b4ad25-14c4-e71b-95d3-dcda156f7ebe" testName="Enabled_second_concurrent_launch_needs_a_purchased_slot" computerName="DESKTOP-D3D29K7" duration="00:00:00.2845990" startTime="2026-08-09T18:37:39.6070697-04:00" endTime="2026-08-09T18:37:39.8916680-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a450d48-0d74-45fc-adda-f9ec8cc00676">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="5c73498c-88a0-4f4e-ad4c-68a90eefb415" testId="ee78070c-616c-a25d-1527-5408bc958020" testName="Enabled_recall_capacity_and_conflicts" computerName="DESKTOP-D3D29K7" duration="00:00:00.2800849" startTime="2026-08-09T18:37:41.1992842-04:00" endTime="2026-08-09T18:37:41.4793687-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5c73498c-88a0-4f4e-ad4c-68a90eefb415">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="555826dc-3848-48aa-bb4a-9c66acda8431" testId="183557ad-6a25-e7c9-ce2c-c581f5f80f60" testName="Enabled_launch_is_rejected_when_underpowered_with_zero_mutation" computerName="DESKTOP-D3D29K7" duration="00:00:00.2845450" startTime="2026-08-09T18:37:39.0391931-04:00" endTime="2026-08-09T18:37:39.3237371-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="555826dc-3848-48aa-bb4a-9c66acda8431">
+      <Output>
+        <StdOut>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Enabled_claim_http_exposes_authoritative_receipt_and_exact_replay" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="4eda5775-090e-6b70-a083-95b18cdb5850">
+      <Execution id="f7224a74-61b5-4605-abed-42817d180241" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.HivePerimeterSortieEndpointTests" name="Enabled_claim_http_exposes_authoritative_receipt_and_exact_replay" />
+    </UnitTest>
+    <UnitTest name="StartUsesServerCatalogAndDebitsAtomically" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="2bf46136-dc34-2a92-acd9-e006acae7fb8">
+      <Execution id="b7823319-0324-4144-bd54-5b70790b0fb2" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.BuildingUpgradeServiceTests" name="StartUsesServerCatalogAndDebitsAtomically" />
+    </UnitTest>
+    <UnitTest name="Both_settings_keep_feature_closed" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="38a2c63f-ff9a-20b2-77fa-fa914d6ceaa4">
+      <Execution id="7e37a078-178f-455a-bdcd-8e2eb2873c04" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.HivePerimeterSortieEndpointTests" name="Both_settings_keep_feature_closed" />
+    </UnitTest>
+    <UnitTest name="Enabled_launch_claim_replay_and_release_guard" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="c500979c-8907-e635-a393-db1affa8f0d6">
+      <Execution id="238b0c11-910d-465b-ba7d-002d5d21a6b0" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.HivePerimeterSortieEndpointTests" name="Enabled_launch_claim_replay_and_release_guard" />
+    </UnitTest>
+    <UnitTest name="Enabled_recall_capacity_and_conflicts" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="ee78070c-616c-a25d-1527-5408bc958020">
+      <Execution id="5c73498c-88a0-4f4e-ad4c-68a90eefb415" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.HivePerimeterSortieEndpointTests" name="Enabled_recall_capacity_and_conflicts" />
+    </UnitTest>
+    <UnitTest name="Enabled_contract_rejects_missing_auth_and_invalid_requests" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="e40932f6-52ba-35d7-05f0-110a944414c4">
+      <Execution id="f489c324-ef8a-438d-bf50-02fc139870b9" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.HivePerimeterSortieEndpointTests" name="Enabled_contract_rejects_missing_auth_and_invalid_requests" />
+    </UnitTest>
+    <UnitTest name="Default_closed_flag_returns_game_unavailable_for_all_routes" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="73dbd18c-c324-be1d-c917-37db26637fec">
+      <Execution id="21a49a50-e4f8-4200-88a3-16928fcd1caa" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.HivePerimeterSortieEndpointTests" name="Default_closed_flag_returns_game_unavailable_for_all_routes" />
+    </UnitTest>
+    <UnitTest name="BusyAndIdempotencyConflictDoNotMutate" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="71091919-1121-0cc6-03c5-3790654856f3">
+      <Execution id="a597a8ff-8aa9-4af9-8df8-7d81c668bffa" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.BuildingUpgradeServiceTests" name="BusyAndIdempotencyConflictDoNotMutate" />
+    </UnitTest>
+    <UnitTest name="Both_settings_keep_feature_closed" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="5705c430-9f50-91c3-d0ce-76ce8d9261de">
+      <Execution id="09f2663d-a89b-40e2-b692-e40c1f8a5c03" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Both_settings_keep_feature_closed" />
+    </UnitTest>
+    <UnitTest name="Enabled_contract_rejects_missing_auth_and_invalid_requests" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="4e60f733-e7c3-b34a-8cf6-ea760c1f3a70">
+      <Execution id="0e010ae9-b3fa-411b-9c41-37d5f1cf3fd0" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Enabled_contract_rejects_missing_auth_and_invalid_requests" />
+    </UnitTest>
+    <UnitTest name="Enabled_second_concurrent_launch_needs_a_purchased_slot" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="e6b4ad25-14c4-e71b-95d3-dcda156f7ebe">
+      <Execution id="2a450d48-0d74-45fc-adda-f9ec8cc00676" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Enabled_second_concurrent_launch_needs_a_purchased_slot" />
+    </UnitTest>
+    <UnitTest name="Enabled_recall_returns_squad_without_loss_reward_and_squad_release_is_blocked_while_active" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="dd0c9cb3-5831-62e2-bfb5-1c524a79315a">
+      <Execution id="8f9bb8a1-5ba2-4949-b496-fc306e0b1109" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Enabled_recall_returns_squad_without_loss_reward_and_squad_release_is_blocked_while_active" />
+    </UnitTest>
+    <UnitTest name="Default_closed_flag_returns_game_unavailable_for_all_routes" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="6578b664-6182-0fb7-6d55-23b081009d69">
+      <Execution id="6a21e939-db64-4110-82bf-a0362c9bcc76" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Default_closed_flag_returns_game_unavailable_for_all_routes" />
+    </UnitTest>
+    <UnitTest name="Enabled_launch_claim_applies_real_losses_credits_partial_reward_and_replays" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="c6506742-8823-7951-9bf6-2b957301ec70">
+      <Execution id="994a5e95-f2ff-463e-8a1f-241dd5a0edd1" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Enabled_launch_claim_applies_real_losses_credits_partial_reward_and_replays" />
+    </UnitTest>
+    <UnitTest name="CompleteRequiresServerTimeAndRaisesLevel" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="5a0c9c10-ae45-e292-275a-1682d638d09e">
+      <Execution id="0627c3e0-3e10-4c7a-af0f-e4efaf5e4f30" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.BuildingUpgradeServiceTests" name="CompleteRequiresServerTimeAndRaisesLevel" />
+    </UnitTest>
+    <UnitTest name="DisabledOptionsFailClosed" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="71609ae3-418d-9c21-3961-284c4a167ec6">
+      <Execution id="81eec7de-b1d6-4263-8d94-749029514543" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.BuildingUpgradeServiceTests" name="DisabledOptionsFailClosed" />
+    </UnitTest>
+    <UnitTest name="Enabled_launch_is_rejected_when_underpowered_with_zero_mutation" storage="c:\projets\beekingdomgame-master\server\tests\beekingdom.tests\bin\debug\net8.0\beekingdom.tests.dll" id="183557ad-6a25-e7c9-ce2c-c581f5f80f60">
+      <Execution id="555826dc-3848-48aa-bb4a-9c66acda8431" />
+      <TestMethod codeBase="C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="BeeKingdom.Tests.CombatPatrolEndpointTests" name="Enabled_launch_is_rejected_when_underpowered_with_zero_mutation" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="c6506742-8823-7951-9bf6-2b957301ec70" executionId="994a5e95-f2ff-463e-8a1f-241dd5a0edd1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="38a2c63f-ff9a-20b2-77fa-fa914d6ceaa4" executionId="7e37a078-178f-455a-bdcd-8e2eb2873c04" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="71609ae3-418d-9c21-3961-284c4a167ec6" executionId="81eec7de-b1d6-4263-8d94-749029514543" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="71091919-1121-0cc6-03c5-3790654856f3" executionId="a597a8ff-8aa9-4af9-8df8-7d81c668bffa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4eda5775-090e-6b70-a083-95b18cdb5850" executionId="f7224a74-61b5-4605-abed-42817d180241" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2bf46136-dc34-2a92-acd9-e006acae7fb8" executionId="b7823319-0324-4144-bd54-5b70790b0fb2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4e60f733-e7c3-b34a-8cf6-ea760c1f3a70" executionId="0e010ae9-b3fa-411b-9c41-37d5f1cf3fd0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6578b664-6182-0fb7-6d55-23b081009d69" executionId="6a21e939-db64-4110-82bf-a0362c9bcc76" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="73dbd18c-c324-be1d-c917-37db26637fec" executionId="21a49a50-e4f8-4200-88a3-16928fcd1caa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5a0c9c10-ae45-e292-275a-1682d638d09e" executionId="0627c3e0-3e10-4c7a-af0f-e4efaf5e4f30" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e40932f6-52ba-35d7-05f0-110a944414c4" executionId="f489c324-ef8a-438d-bf50-02fc139870b9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5705c430-9f50-91c3-d0ce-76ce8d9261de" executionId="09f2663d-a89b-40e2-b692-e40c1f8a5c03" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c500979c-8907-e635-a393-db1affa8f0d6" executionId="238b0c11-910d-465b-ba7d-002d5d21a6b0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dd0c9cb3-5831-62e2-bfb5-1c524a79315a" executionId="8f9bb8a1-5ba2-4949-b496-fc306e0b1109" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e6b4ad25-14c4-e71b-95d3-dcda156f7ebe" executionId="2a450d48-0d74-45fc-adda-f9ec8cc00676" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ee78070c-616c-a25d-1527-5408bc958020" executionId="5c73498c-88a0-4f4e-ad4c-68a90eefb415" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="183557ad-6a25-e7c9-ce2c-c581f5f80f60" executionId="555826dc-3848-48aa-bb4a-9c66acda8431" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Les résultats ne figurent pas dans une liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Tous les résultats chargés" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="17" executed="17" passed="16" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.5.0.0: Test execution started&#xD;
+Running selected tests in C:\projets\beekingdomgame-master\Server\tests\BeeKingdom.Tests\bin\Debug\net8.0\BeeKingdom.Tests.dll&#xD;
+   NUnit3TestExecutor discovered 17 of 17 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+NUnit Adapter 4.5.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:38.0088712-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:38.3443019-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:38.6351988-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:39.0399630-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:39.3245028-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:39.6077915-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:39.8923189-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:40.0444549-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:40.2986491-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:40.6119256-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:40.8774507-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:41.2005588-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+      <RunInfo computerName="DESKTOP-D3D29K7" outcome="Warning" timestamp="2026-08-09T18:37:41.4800911-04:00">
+        <Text>dbug: Microsoft.Extensions.Hosting.Internal.Host[1]&#xD;
+      Hosting starting&#xD;
+info: BeeKingdom.Infrastructure.Background.ServerHeartbeatWorker[0]&#xD;
+      Bee Kingdom background workers are disabled.&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[2]&#xD;
+      Hosting started&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[3]&#xD;
+      Hosting stopping&#xD;
+dbug: Microsoft.Extensions.Hosting.Internal.Host[4]&#xD;
+      Hosting stopped&#xD;
+</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

@@ -1,0 +1,253 @@
+{
+  "evidenceId": "SERVER-062-WORLD-MAP-CHUNK-CONTRACT-WAVE1",
+  "worldId": "00000000000000000000000000000001",
+  "gameServerId": "00000000000000000000000000000002",
+  "centerChunkX": 0,
+  "centerChunkY": 0,
+  "radius": 2,
+  "worldMinChunkX": 0,
+  "worldMaxChunkX": 2,
+  "worldMinChunkY": 0,
+  "worldMaxChunkY": 2,
+  "seed": "bee-kingdom-world-map-readiness-seed",
+  "artisticRevision": "art-revision-readiness-001",
+  "contractName": "world-map-chunk-readiness-v1",
+  "readOnly": true,
+  "nonLive": true,
+  "officialEndpoint": false,
+  "mutationAllowed": false,
+  "chunks": [
+    {
+      "chunkX": 0,
+      "chunkY": 0,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:0:0",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 1,
+      "chunkY": 0,
+      "origin": {
+        "x": 256,
+        "y": 0
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:1:0",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 2,
+      "chunkY": 0,
+      "origin": {
+        "x": 512,
+        "y": 0
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:2:0",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 0,
+      "chunkY": 1,
+      "origin": {
+        "x": 0,
+        "y": 256
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:0:1",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 1,
+      "chunkY": 1,
+      "origin": {
+        "x": 256,
+        "y": 256
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:1:1",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 2,
+      "chunkY": 1,
+      "origin": {
+        "x": 512,
+        "y": 256
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:2:1",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 0,
+      "chunkY": 2,
+      "origin": {
+        "x": 0,
+        "y": 512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:0:2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 1,
+      "chunkY": 2,
+      "origin": {
+        "x": 256,
+        "y": 512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:1:2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 2,
+      "chunkY": 2,
+      "origin": {
+        "x": 512,
+        "y": 512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:2:2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    }
+  ],
+  "cache": {
+    "eTag": "W/\u002206948970e15cf1d8bdb8246318ded665b7c20b0375770b4ea442a08dfe689aa1\u0022",
+    "manifestHash": "d9038abfee2eb1150d4e04986fa3a8e8cf879811398c04d102ba80c5f85c754a",
+    "artisticRevision": "art-revision-readiness-001",
+    "cacheControl": "private, max-age=60",
+    "invalidationKey": "world:00000000000000000000000000000001:map:art-revision-readiness-001",
+    "generatedAtUtc": "1970-01-01T00:00:00+00:00",
+    "expiresAtUtc": "1970-01-01T00:01:00+00:00"
+  },
+  "overlays": {
+    "hives": [
+      {
+        "hiveMarkerId": "hive-readiness-001",
+        "position": {
+          "x": 7,
+          "y": 11
+        },
+        "powerBand": "preview_band",
+        "serverAuthoritative": false,
+        "live": false
+      }
+    ],
+    "resources": [
+      {
+        "resourceNodeId": "resource-readiness-001",
+        "position": {
+          "x": 19,
+          "y": 23
+        },
+        "resourceKind": "nectar",
+        "richnessBand": "preview_band",
+        "serverAuthoritative": false,
+        "live": false
+      }
+    ],
+    "flights": [
+      {
+        "flightId": "flight-readiness-001",
+        "origin": {
+          "x": 3,
+          "y": 5
+        },
+        "destination": {
+          "x": 285,
+          "y": 31
+        },
+        "kind": "gather",
+        "state": "previewOnly",
+        "airOnly": true,
+        "roadGraphUsed": false,
+        "serverAuthoritative": false,
+        "live": false
+      }
+    ],
+    "paintedIntoBackground": false,
+    "serverAuthoritative": false,
+    "live": false,
+    "overlayRevision": "overlay-readiness-001",
+    "overlayHash": "4b37971dfde47f8ba1130dd0dadb4eca7cd8709cc89b6c924720b546e84d80f3"
+  },
+  "pagination": {
+    "deterministicOrdering": true,
+    "pageSize": 9,
+    "nextPageToken": null,
+    "deltaToken": "delta:W/\u002206948970e15cf1d8bdb8246318ded665b7c20b0375770b4ea442a08dfe689aa1\u0022",
+    "snapshotRevision": 1,
+    "sinceRevisionApplied": null
+  },
+  "guardrails": {
+    "payloadBudgetBytes": 98304,
+    "estimatedPayloadBytes": 7552,
+    "maxRadius": 2,
+    "maxWindowChunks": 25,
+    "requiresOverlaysSeparateFromBackground": true,
+    "requiresAirOnlyFlights": true,
+    "requiresNoRoadGraph": true,
+    "errorCodes": [
+      "RadiusOutOfRange",
+      "InvalidWorldBounds",
+      "PayloadBudgetExceeded",
+      "UnknownWorld",
+      "UnknownChunk",
+      "ManifestRevisionMismatch",
+      "DeltaTokenInvalid",
+      "AuthRequiredFuture",
+      "OverlayContractViolation"
+    ]
+  },
+  "nonClaims": {
+    "officialEndpointLive": false,
+    "officialPersistenceLive": false,
+    "officialPlayerData": false,
+    "officialProgression": false,
+    "serverAuthorityActive": false,
+    "unityConnected": false,
+    "sqlBacked": false,
+    "stagingOrProductionTouched": false
+  },
+  "errors": [],
+  "preparatoryFeatures": {
+    "ifNoneMatchPassive": true,
+    "deltaPageTokenPassive": true,
+    "contractVersionNegotiationPassive": true,
+    "futureErrorCodesPassive": true
+  },
+  "contractVersion": "1.0.0"
+}

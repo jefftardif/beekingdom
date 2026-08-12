@@ -1,0 +1,12 @@
+Bee Kingdom APK tablette de test / build interne
+Build UTC: 2026-07-15T21:38:15Z
+Entry scene: Assets/Scenes/WorldMapMmoFullscreenFoundation.unity
+Contains world map MMO fullscreen foundation: true
+Default orientation for APK: AutoRotation
+Allowed portrait in APK: true
+Allowed landscape in APK: true
+Server live claim: false
+Official server progression: false
+Official save/economy/army persistence: false
+Scenes:
+- Assets/Scenes/WorldMapMmoFullscreenFoundation.unity

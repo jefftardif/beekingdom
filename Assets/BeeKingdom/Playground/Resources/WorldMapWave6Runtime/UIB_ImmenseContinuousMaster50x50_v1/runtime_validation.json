@@ -1,0 +1,12 @@
+{
+  "inner_pixel_mismatch_count": 0,
+  "monolithic_master_imported": false,
+  "neighbor_gutter_mismatch_count": 0,
+  "runtime_manifest_sha256": "1cba34b261e02461726ed573da991c10abc8d7d871ebb00d7a8b737f8a0e18ab",
+  "schema": "bee-kingdom.world-map.wave6-unity-runtime-bundle-validation.v1",
+  "source_master_sha256": "03793053993cf71af0ed1997fbb8a00c695ca32f31ddd512b28625002c033203",
+  "source_png_modified": false,
+  "status": "PASS",
+  "tile_count": 2500,
+  "wave5_modified": false
+}

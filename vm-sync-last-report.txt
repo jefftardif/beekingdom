@@ -1,0 +1,29 @@
+﻿Bee Kingdom VM Sync - Sync
+Date UTC: 2026-07-22T02:57:51.0531476Z
+Copies VM vers ordinateur: 0
+Copies ordinateur vers VM: 7
+Suppressions appliquees: 0
+Suppressions en attente: 4
+Conflits bloques: 0
+
+[VmToHost]
+
+[HostToVm]
+tools/vm-sync/Appliquer-Resolution-Conflits-VM.cmd
+tools/vm-sync/Appliquer-Resolution-Conflits-VM.ps1
+tools/vm-sync/BeeKingdom-VmSync.ps1
+tools/vm-sync/Exporter-Conflits-VM.cmd
+tools/vm-sync/Exporter-Conflits-VM.ps1
+tools/vm-sync/README_FR.md
+tools/vm-sync/vm-sync-last-report.txt
+
+[Deletions]
+
+[PendingDeletions]
+ordinateur <- suppression VM: Assets/Resources/PerformanceTestRunInfo.json
+ordinateur <- suppression VM: Assets/Resources/PerformanceTestRunInfo.json.meta
+ordinateur <- suppression VM: Assets/Resources/PerformanceTestRunSettings.json
+ordinateur <- suppression VM: Assets/Resources/PerformanceTestRunSettings.json.meta
+
+[Conflicts]
+

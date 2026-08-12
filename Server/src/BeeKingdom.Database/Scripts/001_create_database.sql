@@ -1,0 +1,4 @@
+IF DB_ID(N'BeeKingdom') IS NULL
+BEGIN
+    CREATE DATABASE [BeeKingdom];
+END

@@ -1,0 +1,77 @@
+{
+  "schema": "bee-kingdom.world-map-perceptual-continuity-review.v1",
+  "inspector": "Nom du relecteur",
+  "inspected_at_utc": "2026-01-01T00:00:00Z",
+  "signature": {
+    "reviewer": "Nom du relecteur",
+    "role": "Builder-C",
+    "signed_at_utc": "2026-01-01T00:00:00Z",
+    "decision": "PASS"
+  },
+  "source_artifacts": [
+    "perceptual_mosaic_100.png",
+    "perceptual_mosaic_73.png",
+    "perceptual_mosaic_50.png",
+    "perceptual_mosaic_25.png",
+    "perceptual_contrast_enhanced.png",
+    "perceptual_pan_horizontal.png",
+    "perceptual_pan_vertical.png"
+  ],
+  "categories": {
+    "grid_lines_visible": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Lignes horizontales ou verticales de grille visibles."
+    },
+    "central_square_visible": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Carre central reconnaissable."
+    },
+    "outer_ring_visible": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Anneau peripherique reconnaissable."
+    },
+    "checkerboard_visible": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Damier ou alternance de cellules reconnaissable."
+    },
+    "blurred_bands_visible": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Bandes floues ou lissees aux futures limites."
+    },
+    "mirrored_motifs_visible": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Motifs miroirs reconnaissables."
+    },
+    "repeated_tile_motifs": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Motifs repetes ou copies entre tuiles."
+    },
+    "river_discontinuity": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Ruptures de rivieres ou d'eau aux limites."
+    },
+    "relief_discontinuity": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Ruptures de relief ou de cretes aux limites."
+    },
+    "forest_discontinuity": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Ruptures de forets ou de vegetation aux limites."
+    },
+    "biome_boundary_rectilinear": {
+      "status": "NOT_REVIEWED",
+      "affected_boundaries": [],
+      "note": "Frontieres de biome rectilignes liees aux fichiers."
+    }
+  }
+}

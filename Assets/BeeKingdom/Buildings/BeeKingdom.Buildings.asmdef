@@ -1,0 +1,16 @@
+{
+    "name": "BeeKingdom.Buildings",
+    "rootNamespace": "BeeKingdom.Buildings",
+    "references": [
+        "BeeKingdom.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

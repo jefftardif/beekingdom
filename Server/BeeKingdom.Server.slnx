@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BeeKingdom.Accounts/BeeKingdom.Accounts.csproj" />
+    <Project Path="src/BeeKingdom.Admin/BeeKingdom.Admin.csproj" />
+    <Project Path="src/BeeKingdom.Authentication/BeeKingdom.Authentication.csproj" />
+    <Project Path="src/BeeKingdom.Chat/BeeKingdom.Chat.csproj" />
+    <Project Path="src/BeeKingdom.Colony/BeeKingdom.Colony.csproj" />
+    <Project Path="src/BeeKingdom.Database/BeeKingdom.Database.csproj" />
+    <Project Path="src/BeeKingdom.Gateway/BeeKingdom.Gateway.csproj" />
+    <Project Path="src/BeeKingdom.Infrastructure/BeeKingdom.Infrastructure.csproj" />
+    <Project Path="src/BeeKingdom.HiveOperations/BeeKingdom.HiveOperations.csproj" />
+    <Project Path="src/BeeKingdom.Persistence/BeeKingdom.Persistence.csproj" />
+    <Project Path="src/BeeKingdom.Protocol/BeeKingdom.Protocol.csproj" />
+    <Project Path="src/BeeKingdom.Server/BeeKingdom.Server.csproj" />
+    <Project Path="src/BeeKingdom.Shared/BeeKingdom.Shared.csproj" />
+    <Project Path="src/BeeKingdom.Simulation/BeeKingdom.Simulation.csproj" />
+    <Project Path="src/BeeKingdom.Tools/BeeKingdom.Tools.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BeeKingdom.Tests/BeeKingdom.Tests.csproj" />
+    <Project Path="tests/BeeKingdom.HiveOperations.Tests/BeeKingdom.HiveOperations.Tests.csproj" />
+  </Folder>
+</Solution>

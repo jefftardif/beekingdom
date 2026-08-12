@@ -1,0 +1,112 @@
+{
+  "schema": "bee-kingdom.world-map-click-zones.v1",
+  "status": "builder-b-prep-sample",
+  "integrationState": "ready-for-builder-a-review",
+  "sourceAsset": {
+    "id": "mmo-world-map-concept-2026",
+    "path": "C:/projets/beekingdom/carte.png",
+    "pixelWidth": 1536,
+    "pixelHeight": 1024,
+    "coordinateSpace": "asset-normalized",
+    "origin": "top-left"
+  },
+  "frames": {
+    "fullImage": { "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0 },
+    "worldContentFrameDraft": { "x": 0.147, "y": 0.0, "width": 0.853, "height": 1.0 },
+    "safeWorldInteractionFrameDraft": { "x": 0.147, "y": 0.04, "width": 0.853, "height": 0.86 }
+  },
+  "hudReservedRegions": [
+    { "id": "left-overview-panel", "rect": { "x": 0.0, "y": 0.0, "width": 0.147, "height": 1.0 } },
+    { "id": "top-resource-bar", "rect": { "x": 0.147, "y": 0.0, "width": 0.853, "height": 0.041 } },
+    { "id": "bottom-nav-bar", "rect": { "x": 0.262, "y": 0.900, "width": 0.552, "height": 0.100 } },
+    { "id": "right-legend-panel", "rect": { "x": 0.882, "y": 0.203, "width": 0.109, "height": 0.340 } },
+    { "id": "minimap-panel", "rect": { "x": 0.804, "y": 0.723, "width": 0.191, "height": 0.270 } },
+    { "id": "search-bar", "rect": { "x": 0.852, "y": 0.054, "width": 0.140, "height": 0.037 } }
+  ],
+  "hitTestPolicy": {
+    "priorityOrder": ["hive", "hostileNest", "wonder", "pointOfInterest", "resourceField", "hostileZone", "route", "allianceTerritory", "neutralZone", "territory"],
+    "tapRadiusNormalized": {
+      "hive": 0.020,
+      "resourceField": 0.018,
+      "wonder": 0.020,
+      "route": 0.010
+    },
+    "polygonTolerancePixels": 3,
+    "selectionHalo": "screen-space-stroke",
+    "emptyTapBehavior": "clear-selection"
+  },
+  "hives": [
+    { "id": "goldenheart-hive", "name": "Goldenheart Hive", "tag": "YOU", "ownership": "player", "position": { "x": 0.448, "y": 0.390 }, "tapRadius": 0.030, "territoryId": "territory-goldenheart" },
+    { "id": "stonepeak-hive", "name": "Stonepeak Hive", "tag": "ROC", "ownership": "neutral", "position": { "x": 0.221, "y": 0.146 }, "tapRadius": 0.024, "territoryId": "territory-stonepeak" },
+    { "id": "northern-hive", "name": "Northern Hive", "tag": "NEO", "ownership": "ally", "position": { "x": 0.389, "y": 0.089 }, "tapRadius": 0.024, "territoryId": "territory-northern" },
+    { "id": "sunblossom-hive", "name": "Sunblossom Hive", "tag": "BLO", "ownership": "ally", "position": { "x": 0.496, "y": 0.188 }, "tapRadius": 0.024, "territoryId": "territory-sunblossom" },
+    { "id": "frostwing-hive", "name": "Frostwing Hive", "tag": "FRO", "ownership": "neutral", "position": { "x": 0.667, "y": 0.093 }, "tapRadius": 0.024, "territoryId": "territory-frostwing" },
+    { "id": "amberfall-hive", "name": "Amberfall Hive", "tag": "AMB", "ownership": "ally", "position": { "x": 0.221, "y": 0.387 }, "tapRadius": 0.024, "territoryId": "territory-amberfall" },
+    { "id": "silverstream-hive", "name": "Silverstream Hive", "tag": "SIL", "ownership": "neutral", "position": { "x": 0.646, "y": 0.341 }, "tapRadius": 0.024, "territoryId": "territory-silverstream" },
+    { "id": "whispering-hive", "name": "Whispering Hive", "tag": "WSP", "ownership": "neutral", "position": { "x": 0.219, "y": 0.729 }, "tapRadius": 0.024, "territoryId": "territory-whispering" },
+    { "id": "meadowgard-hive", "name": "Meadowgard Hive", "tag": "MEW", "ownership": "ally", "position": { "x": 0.443, "y": 0.625 }, "tapRadius": 0.024, "territoryId": "territory-meadowgard" },
+    { "id": "thornwatch-hive", "name": "Thornwatch Hive", "tag": "THR", "ownership": "hostile", "position": { "x": 0.676, "y": 0.646 }, "tapRadius": 0.024, "territoryId": "territory-thornwatch" },
+    { "id": "crimson-nest", "name": "Crimson Nest", "tag": "CRN", "ownership": "hostile", "position": { "x": 0.849, "y": 0.607 }, "tapRadius": 0.028, "territoryId": "territory-crimson" }
+  ],
+  "allianceTerritories": [
+    { "id": "alliance-northern-sunblossom", "name": "Northern Sunblossom Alliance", "allianceTag": "NEO-BLO", "territoryIds": ["territory-northern", "territory-sunblossom"], "state": "ally", "polygon": [{"x":0.318,"y":0.040},{"x":0.620,"y":0.040},{"x":0.665,"y":0.300},{"x":0.548,"y":0.366},{"x":0.430,"y":0.248},{"x":0.330,"y":0.210}] },
+    { "id": "alliance-amber-meadow", "name": "Amber Meadow Alliance", "allianceTag": "AMB-MEW", "territoryIds": ["territory-amberfall", "territory-meadowgard"], "state": "ally", "polygon": [{"x":0.148,"y":0.300},{"x":0.356,"y":0.548},{"x":0.610,"y":0.555},{"x":0.620,"y":0.780},{"x":0.430,"y":0.858},{"x":0.250,"y":0.635},{"x":0.150,"y":0.560}] }
+  ],
+  "territories": [
+    { "id": "territory-goldenheart", "name": "Goldenheart Core", "ownerHiveId": "goldenheart-hive", "state": "player", "polygon": [{"x":0.320,"y":0.300},{"x":0.430,"y":0.250},{"x":0.548,"y":0.306},{"x":0.600,"y":0.468},{"x":0.496,"y":0.572},{"x":0.356,"y":0.548},{"x":0.288,"y":0.420}] },
+    { "id": "territory-stonepeak", "name": "Stonepeak Ridge", "ownerHiveId": "stonepeak-hive", "state": "neutral", "polygon": [{"x":0.148,"y":0.060},{"x":0.268,"y":0.044},{"x":0.357,"y":0.140},{"x":0.330,"y":0.262},{"x":0.210,"y":0.304},{"x":0.150,"y":0.226}] },
+    { "id": "territory-northern", "name": "Northern Grove", "ownerHiveId": "northern-hive", "state": "ally", "polygon": [{"x":0.318,"y":0.040},{"x":0.498,"y":0.030},{"x":0.538,"y":0.170},{"x":0.430,"y":0.248},{"x":0.330,"y":0.210}] },
+    { "id": "territory-sunblossom", "name": "Sunblossom Vale", "ownerHiveId": "sunblossom-hive", "state": "ally", "polygon": [{"x":0.475,"y":0.150},{"x":0.620,"y":0.132},{"x":0.665,"y":0.300},{"x":0.548,"y":0.366},{"x":0.430,"y":0.250}] },
+    { "id": "territory-frostwing", "name": "Frostwing Peaks", "ownerHiveId": "frostwing-hive", "state": "neutral", "polygon": [{"x":0.620,"y":0.040},{"x":0.852,"y":0.030},{"x":0.885,"y":0.260},{"x":0.748,"y":0.365},{"x":0.640,"y":0.300}] },
+    { "id": "territory-amberfall", "name": "Amberfall Wilds", "ownerHiveId": "amberfall-hive", "state": "ally", "polygon": [{"x":0.148,"y":0.300},{"x":0.288,"y":0.296},{"x":0.356,"y":0.548},{"x":0.250,"y":0.635},{"x":0.150,"y":0.560}] },
+    { "id": "territory-silverstream", "name": "Silverstream Falls", "ownerHiveId": "silverstream-hive", "state": "neutral", "polygon": [{"x":0.600,"y":0.300},{"x":0.770,"y":0.330},{"x":0.780,"y":0.548},{"x":0.610,"y":0.555},{"x":0.548,"y":0.366}] },
+    { "id": "territory-whispering", "name": "Whispering Lowlands", "ownerHiveId": "whispering-hive", "state": "neutral", "polygon": [{"x":0.148,"y":0.620},{"x":0.296,"y":0.598},{"x":0.390,"y":0.820},{"x":0.282,"y":0.900},{"x":0.148,"y":0.842}] },
+    { "id": "territory-meadowgard", "name": "Meadowgard Basin", "ownerHiveId": "meadowgard-hive", "state": "ally", "polygon": [{"x":0.356,"y":0.548},{"x":0.496,"y":0.572},{"x":0.610,"y":0.555},{"x":0.620,"y":0.780},{"x":0.430,"y":0.858},{"x":0.296,"y":0.598}] },
+    { "id": "territory-thornwatch", "name": "Thornwatch Front", "ownerHiveId": "thornwatch-hive", "state": "hostile", "polygon": [{"x":0.610,"y":0.555},{"x":0.780,"y":0.548},{"x":0.840,"y":0.710},{"x":0.720,"y":0.875},{"x":0.620,"y":0.780}] },
+    { "id": "territory-crimson", "name": "Crimson Coast", "ownerHiveId": "crimson-nest", "state": "hostile", "polygon": [{"x":0.780,"y":0.548},{"x":0.990,"y":0.530},{"x":0.990,"y":0.750},{"x":0.840,"y":0.820},{"x":0.840,"y":0.710}] }
+  ],
+  "routes": [
+    { "id": "route-goldenheart-northern", "name": "Goldenheart to Northern", "routeType": "flight-path", "points": [{"x":0.448,"y":0.390},{"x":0.430,"y":0.300},{"x":0.389,"y":0.089}] },
+    { "id": "route-goldenheart-amberfall", "name": "Goldenheart to Amberfall", "routeType": "flight-path", "points": [{"x":0.448,"y":0.390},{"x":0.330,"y":0.420},{"x":0.221,"y":0.387}] },
+    { "id": "route-goldenheart-meadowgard", "name": "Goldenheart to Meadowgard", "routeType": "flight-path", "points": [{"x":0.448,"y":0.390},{"x":0.470,"y":0.500},{"x":0.443,"y":0.625}] },
+    { "id": "route-meadowgard-thornwatch", "name": "Meadowgard to Thornwatch", "routeType": "frontier-path", "points": [{"x":0.443,"y":0.625},{"x":0.560,"y":0.630},{"x":0.676,"y":0.646}] },
+    { "id": "route-thornwatch-crimson", "name": "Thornwatch to Crimson", "routeType": "hostile-path", "points": [{"x":0.676,"y":0.646},{"x":0.760,"y":0.626},{"x":0.849,"y":0.607}] }
+  ],
+  "resources": [
+    { "id": "resource-north-pollen-field", "name": "North Pollen Field", "resourceType": "pollen", "position": {"x":0.540,"y":0.170}, "tapRadius": 0.022 },
+    { "id": "resource-central-flower-field", "name": "Central Flower Field", "resourceType": "pollen", "position": {"x":0.512,"y":0.548}, "tapRadius": 0.026 },
+    { "id": "resource-silverstream-waterfall", "name": "Silverstream Waterfall Nectar", "resourceType": "nectar", "position": {"x":0.710,"y":0.382}, "tapRadius": 0.025 },
+    { "id": "resource-whispering-royal-grove", "name": "Whispering Royal Grove", "resourceType": "royal-jelly", "position": {"x":0.302,"y":0.786}, "tapRadius": 0.026 },
+    { "id": "resource-crimson-propolis-vein", "name": "Crimson Propolis Vein", "resourceType": "propolis", "position": {"x":0.758,"y":0.720}, "tapRadius": 0.026 }
+  ],
+  "wonders": [
+    { "id": "wonder-goldenheart-tree", "name": "Goldenheart Wonder", "wonderType": "capital-wonder", "position": {"x":0.470,"y":0.442}, "tapRadius": 0.034 },
+    { "id": "wonder-frost-spire", "name": "Frost Spire", "wonderType": "regional-wonder", "position": {"x":0.704,"y":0.168}, "tapRadius": 0.026 },
+    { "id": "wonder-whispering-monolith", "name": "Whispering Monolith", "wonderType": "regional-wonder", "position": {"x":0.256,"y":0.820}, "tapRadius": 0.026 }
+  ],
+  "hostileNests": [
+    { "id": "nest-crimson-primary", "name": "Crimson Nest", "nestType": "major-hostile-nest", "position": {"x":0.849,"y":0.607}, "tapRadius": 0.032, "hostileZoneId": "hostile-crimson-blight" },
+    { "id": "nest-thornwatch-brood", "name": "Thornwatch Brood Outpost", "nestType": "frontier-hostile-nest", "position": {"x":0.725,"y":0.735}, "tapRadius": 0.026, "hostileZoneId": "hostile-crimson-blight" }
+  ],
+  "hostileZones": [
+    { "id": "hostile-crimson-blight", "name": "Crimson Blight", "threatLevel": "high", "polygon": [{"x":0.626,"y":0.530},{"x":0.840,"y":0.520},{"x":0.982,"y":0.585},{"x":0.932,"y":0.762},{"x":0.736,"y":0.856},{"x":0.630,"y":0.742}] },
+    { "id": "hostile-north-ravine", "name": "Northern Ravine Threat", "threatLevel": "medium", "polygon": [{"x":0.820,"y":0.050},{"x":0.995,"y":0.030},{"x":0.995,"y":0.255},{"x":0.882,"y":0.308},{"x":0.822,"y":0.205}] }
+  ],
+  "neutralZones": [
+    { "id": "neutral-frost-silver-pass", "name": "Frost Silver Pass", "neutralType": "mountain-pass", "polygon": [{"x":0.620,"y":0.260},{"x":0.770,"y":0.330},{"x":0.748,"y":0.450},{"x":0.610,"y":0.430},{"x":0.548,"y":0.366}] },
+    { "id": "neutral-whispering-water", "name": "Whispering Water Crossing", "neutralType": "water-crossing", "polygon": [{"x":0.276,"y":0.760},{"x":0.392,"y":0.770},{"x":0.430,"y":0.858},{"x":0.330,"y":0.928},{"x":0.238,"y":0.874}] },
+    { "id": "neutral-stonepeak-lake", "name": "Stonepeak Lake Basin", "neutralType": "lake-basin", "polygon": [{"x":0.290,"y":0.224},{"x":0.392,"y":0.232},{"x":0.430,"y":0.300},{"x":0.330,"y":0.360},{"x":0.240,"y":0.318}] }
+  ],
+  "pointsOfInterest": [
+    { "id": "poi-central-lake", "name": "Central Lake", "poiType": "navigation-landmark", "position": {"x":0.355,"y":0.270}, "tapRadius": 0.020 },
+    { "id": "poi-silver-waterfalls", "name": "Silverstream Waterfalls", "poiType": "navigation-landmark", "position": {"x":0.742,"y":0.395}, "tapRadius": 0.022 },
+    { "id": "poi-flower-sea", "name": "Flower Sea", "poiType": "visual-landmark", "position": {"x":0.584,"y":0.610}, "tapRadius": 0.022 },
+    { "id": "poi-southern-docks", "name": "Southern Docks", "poiType": "future-route-node", "position": {"x":0.350,"y":0.870}, "tapRadius": 0.020 },
+    { "id": "poi-crimson-coast", "name": "Crimson Coast", "poiType": "threat-landmark", "position": {"x":0.918,"y":0.642}, "tapRadius": 0.022 }
+  ],
+  "builderBNotes": [
+    "All coordinates are draft and normalized over the full 1536x1024 carte.png asset.",
+    "The concept image includes HUD; future integration should split map content, HUD, legend and minimap into separate layers.",
+    "No object in this JSON is official server state. It is preparation data for Builder-A review only."
+  ]
+}

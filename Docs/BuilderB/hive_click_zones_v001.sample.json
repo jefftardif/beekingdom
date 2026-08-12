@@ -1,0 +1,350 @@
+{
+  "schema": "bee-kingdom.hive-click-zones.v1",
+  "status": "builder-b-draft-complete",
+  "integrationState": "ready-for-builder-a-review",
+  "refinementPass": "builder-b-pass-03-coordinate-probe-and-mask-prep",
+  "handoffReadiness": {
+    "zoneCountExpected": 14,
+    "zoneCountProvided": 14,
+    "officialNamesAligned": true,
+    "normalizedPointsProvided": true,
+    "maskFilesAuthoritative": false,
+    "runtimeBindingAllowed": false
+  },
+  "sourceOfTruthNote": "Draft Builder-B data aligned to the 14 official zone ids and names observed in the existing reference-backed hive surface. Not wired to runtime.",
+  "asset": {
+    "id": "premium-hive-background-unity-ready-2048x3072",
+    "path": "Assets/Art/UI/Backgrounds/HiveBackground_UnityReady_2048x3072.png",
+    "pixelWidth": 2048,
+    "pixelHeight": 3072,
+    "contentFrameNormalized": {
+      "x": 0.0,
+      "y": 0.0,
+      "width": 1.0,
+      "height": 1.0
+    }
+  },
+  "coordinateSystem": {
+    "space": "asset-normalized",
+    "origin": "top-left",
+    "xRange": [0.0, 1.0],
+    "yRange": [0.0, 1.0],
+    "winding": "clockwise-preferred",
+    "pixelConversion": {
+      "xPixels": "round(point.x * asset.pixelWidth)",
+      "yPixels": "round(point.y * asset.pixelHeight)"
+    }
+  },
+  "hitTestPolicy": {
+    "primary": "alpha-mask",
+    "fallback": "fine-polygon",
+    "minimumTouchTargetDp": 44,
+    "mobilePortraitExpansionNormalized": 0.006,
+    "tabletLandscapeExpansionNormalized": 0.004,
+    "visualBoundaryTolerancePixels": 3,
+    "overlapResolution": "highestPriorityThenSmallestArea"
+  },
+  "maskPlan": {
+    "root": "Docs/BuilderB/Masks/HiveZones/v001",
+    "sourceSize": "2048x3072",
+    "naming": "mask_hive_zone_{order}_{id}_2048x3072.png",
+    "format": "8-bit PNG alpha or grayscale",
+    "clickableThreshold": 0.5,
+    "contourPreviewNaming": "contour_hive_zone_{order}_{id}_2048x3072.png",
+    "authoringStatus": "planned-only-no-authoritative-masks-yet",
+    "futureFiles": [
+      "mask_hive_zone_01_nursery_cluster_2048x3072.png",
+      "mask_hive_zone_02_honey_storage_2048x3072.png",
+      "mask_hive_zone_03_guard_post_2048x3072.png",
+      "mask_hive_zone_04_defense_growth_2048x3072.png",
+      "mask_hive_zone_05_genetics_garden_2048x3072.png",
+      "mask_hive_zone_06_research_node_2048x3072.png",
+      "mask_hive_zone_07_warehouse_cells_2048x3072.png",
+      "mask_hive_zone_08_wax_workshop_2048x3072.png",
+      "mask_hive_zone_09_infirmary_grove_2048x3072.png",
+      "mask_hive_zone_10_academy_canopy_2048x3072.png",
+      "mask_hive_zone_11_hive_bank_2048x3072.png",
+      "mask_hive_zone_12_administration_core_2048x3072.png",
+      "mask_hive_zone_13_archives_honeyfall_2048x3072.png",
+      "mask_hive_zone_14_alliance_future_hall_2048x3072.png"
+    ]
+  },
+  "zones": [
+    {
+      "id": "nursery_cluster",
+      "officialOrder": 1,
+      "officialName": "Nurserie",
+      "displayKey": "zone.hive.nurseryCluster",
+      "type": "room",
+      "priority": 82,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_01_nursery_cluster_2048x3072.png",
+      "polygon": [
+        {"x": 0.392, "y": 0.221},
+        {"x": 0.470, "y": 0.208},
+        {"x": 0.548, "y": 0.231},
+        {"x": 0.570, "y": 0.291},
+        {"x": 0.528, "y": 0.336},
+        {"x": 0.440, "y": 0.332},
+        {"x": 0.382, "y": 0.286}
+      ]
+    },
+    {
+      "id": "honey_storage",
+      "officialOrder": 2,
+      "officialName": "Reserve miel",
+      "displayKey": "zone.hive.honeyStorage",
+      "type": "resource-zone",
+      "priority": 88,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_02_honey_storage_2048x3072.png",
+      "polygon": [
+        {"x": 0.384, "y": 0.267},
+        {"x": 0.618, "y": 0.267},
+        {"x": 0.716, "y": 0.321},
+        {"x": 0.694, "y": 0.372},
+        {"x": 0.610, "y": 0.391},
+        {"x": 0.390, "y": 0.391},
+        {"x": 0.306, "y": 0.372},
+        {"x": 0.286, "y": 0.321}
+      ]
+    },
+    {
+      "id": "guard_post",
+      "officialOrder": 3,
+      "officialName": "Caserne",
+      "displayKey": "zone.hive.guardPost",
+      "type": "server-future-zone",
+      "priority": 77,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_03_guard_post_2048x3072.png",
+      "polygon": [
+        {"x": 0.711, "y": 0.394},
+        {"x": 0.804, "y": 0.358},
+        {"x": 0.925, "y": 0.392},
+        {"x": 0.925, "y": 0.463},
+        {"x": 0.821, "y": 0.510},
+        {"x": 0.711, "y": 0.472}
+      ]
+    },
+    {
+      "id": "defense_growth",
+      "officialOrder": 4,
+      "officialName": "Defense",
+      "displayKey": "zone.hive.defenseGrowth",
+      "type": "future-zone",
+      "priority": 68,
+      "recommendedRuntimeShape": "fine-polygon-then-alpha-mask",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_04_defense_growth_2048x3072.png",
+      "polygon": [
+        {"x": 0.818, "y": 0.511},
+        {"x": 0.921, "y": 0.474},
+        {"x": 0.981, "y": 0.506},
+        {"x": 0.980, "y": 0.570},
+        {"x": 0.915, "y": 0.611},
+        {"x": 0.818, "y": 0.581}
+      ]
+    },
+    {
+      "id": "genetics_garden",
+      "officialOrder": 5,
+      "officialName": "Genetique",
+      "displayKey": "zone.hive.geneticsGarden",
+      "type": "future-zone",
+      "priority": 72,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_05_genetics_garden_2048x3072.png",
+      "polygon": [
+        {"x": 0.724, "y": 0.470},
+        {"x": 0.820, "y": 0.432},
+        {"x": 0.914, "y": 0.470},
+        {"x": 0.914, "y": 0.532},
+        {"x": 0.819, "y": 0.573},
+        {"x": 0.724, "y": 0.535}
+      ]
+    },
+    {
+      "id": "research_node",
+      "officialOrder": 6,
+      "officialName": "Recherche",
+      "displayKey": "zone.hive.researchNode",
+      "type": "locked-zone",
+      "priority": 74,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_06_research_node_2048x3072.png",
+      "polygon": [
+        {"x": 0.624, "y": 0.535},
+        {"x": 0.721, "y": 0.498},
+        {"x": 0.818, "y": 0.535},
+        {"x": 0.818, "y": 0.598},
+        {"x": 0.721, "y": 0.638},
+        {"x": 0.624, "y": 0.599}
+      ]
+    },
+    {
+      "id": "warehouse_cells",
+      "officialOrder": 7,
+      "officialName": "Entrepot",
+      "displayKey": "zone.hive.warehouseCells",
+      "type": "resource-zone",
+      "priority": 80,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_07_warehouse_cells_2048x3072.png",
+      "polygon": [
+        {"x": 0.078, "y": 0.348},
+        {"x": 0.156, "y": 0.321},
+        {"x": 0.286, "y": 0.354},
+        {"x": 0.286, "y": 0.429},
+        {"x": 0.187, "y": 0.478},
+        {"x": 0.078, "y": 0.437}
+      ]
+    },
+    {
+      "id": "wax_workshop",
+      "officialOrder": 8,
+      "officialName": "Transformation",
+      "displayKey": "zone.hive.waxWorkshop",
+      "type": "production-zone",
+      "priority": 83,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_08_wax_workshop_2048x3072.png",
+      "polygon": [
+        {"x": 0.286, "y": 0.429},
+        {"x": 0.384, "y": 0.393},
+        {"x": 0.502, "y": 0.431},
+        {"x": 0.501, "y": 0.500},
+        {"x": 0.395, "y": 0.548},
+        {"x": 0.286, "y": 0.506}
+      ]
+    },
+    {
+      "id": "infirmary_grove",
+      "officialOrder": 9,
+      "officialName": "Infirmerie",
+      "displayKey": "zone.hive.infirmaryGrove",
+      "type": "support-zone",
+      "priority": 71,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_09_infirmary_grove_2048x3072.png",
+      "polygon": [
+        {"x": 0.074, "y": 0.474},
+        {"x": 0.178, "y": 0.434},
+        {"x": 0.286, "y": 0.474},
+        {"x": 0.286, "y": 0.535},
+        {"x": 0.177, "y": 0.575},
+        {"x": 0.074, "y": 0.535}
+      ]
+    },
+    {
+      "id": "academy_canopy",
+      "officialOrder": 10,
+      "officialName": "Academie",
+      "displayKey": "zone.hive.academyCanopy",
+      "type": "future-zone",
+      "priority": 69,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_10_academy_canopy_2048x3072.png",
+      "polygon": [
+        {"x": 0.736, "y": 0.322},
+        {"x": 0.820, "y": 0.291},
+        {"x": 0.923, "y": 0.330},
+        {"x": 0.925, "y": 0.392},
+        {"x": 0.804, "y": 0.358},
+        {"x": 0.711, "y": 0.394},
+        {"x": 0.711, "y": 0.352}
+      ]
+    },
+    {
+      "id": "hive_bank",
+      "officialOrder": 11,
+      "officialName": "Banque",
+      "displayKey": "zone.hive.hiveBank",
+      "type": "server-future-zone",
+      "priority": 73,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_11_hive_bank_2048x3072.png",
+      "polygon": [
+        {"x": 0.286, "y": 0.622},
+        {"x": 0.390, "y": 0.585},
+        {"x": 0.501, "y": 0.625},
+        {"x": 0.501, "y": 0.686},
+        {"x": 0.391, "y": 0.724},
+        {"x": 0.286, "y": 0.686}
+      ]
+    },
+    {
+      "id": "administration_core",
+      "officialOrder": 12,
+      "officialName": "Administration",
+      "displayKey": "zone.hive.administrationCore",
+      "type": "core-zone",
+      "priority": 100,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_12_administration_core_2048x3072.png",
+      "polygon": [
+        {"x": 0.343, "y": 0.429},
+        {"x": 0.500, "y": 0.386},
+        {"x": 0.659, "y": 0.429},
+        {"x": 0.657, "y": 0.504},
+        {"x": 0.501, "y": 0.546},
+        {"x": 0.344, "y": 0.504}
+      ]
+    },
+    {
+      "id": "archives_honeyfall",
+      "officialOrder": 13,
+      "officialName": "Archives",
+      "displayKey": "zone.hive.archivesHoneyfall",
+      "type": "future-zone",
+      "priority": 66,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_13_archives_honeyfall_2048x3072.png",
+      "polygon": [
+        {"x": 0.075, "y": 0.562},
+        {"x": 0.174, "y": 0.521},
+        {"x": 0.281, "y": 0.562},
+        {"x": 0.281, "y": 0.622},
+        {"x": 0.178, "y": 0.652},
+        {"x": 0.075, "y": 0.623}
+      ]
+    },
+    {
+      "id": "alliance_future_hall",
+      "officialOrder": 14,
+      "officialName": "Centre alliance",
+      "displayKey": "zone.hive.allianceFutureHall",
+      "type": "server-future-zone",
+      "priority": 78,
+      "recommendedRuntimeShape": "alpha-mask-with-polygon-fallback",
+      "sampleQuality": "draft-from-visual-reference",
+      "mask": "Masks/HiveZones/v001/mask_hive_zone_14_alliance_future_hall_2048x3072.png",
+      "polygon": [
+        {"x": 0.500, "y": 0.625},
+        {"x": 0.611, "y": 0.585},
+        {"x": 0.722, "y": 0.625},
+        {"x": 0.722, "y": 0.686},
+        {"x": 0.612, "y": 0.724},
+        {"x": 0.501, "y": 0.686}
+      ]
+    }
+  ],
+  "builderBNotes": [
+    "These points are a handoff draft, not official gameplay data.",
+    "The 14 zone ids and names match the official reference zone set: Nurserie, Reserve miel, Caserne, Defense, Genetique, Recherche, Entrepot, Transformation, Infirmerie, Academie, Banque, Administration, Archives, Centre alliance.",
+    "Builder-A should replace draft polygons with traced final polygons or generated alpha masks after art sign-off.",
+    "Do not bind these ids to official runtime actions until Architect approval."
+  ]
+}

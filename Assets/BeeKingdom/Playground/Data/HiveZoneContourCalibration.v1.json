@@ -1,0 +1,36 @@
+{
+  "schema": "bee-hive-contour-calibration-v1",
+  "coordinateSpace": "reference_hive_art_pixels_1672x941",
+  "sourceArt": "UI031 / reference-backed hive player view",
+  "runtimeOwner": "Builder-A",
+  "scope": "playable_hive_only",
+  "nonClaims": {
+    "worldMapRuntimeTouched": false,
+    "bee881Implemented": false,
+    "officialServerLive": false
+  },
+  "rules": {
+    "visualContour": "drawn player-facing selected/hover outline; follows visible wax borders",
+    "tactileHitbox": "invisible expanded polygon for touch comfort",
+    "transform": "same reference hive art rect as background; alignment preserved after local pan/zoom",
+    "priority": "higher runtime priority wins when tactile hitboxes overlap",
+    "organicPass": "BEE-1022 replaces technical yellow polygons on priority zones with dense smoothed wax-boundary polylines inspired by the user's pale blue Paint reference",
+    "pixelPerfectFinalClaim": false
+  },
+  "zones": [
+    { "id": "administration_core", "label": "Administration", "band": "P0", "priority": 145, "visualPointCount": 128, "tactilePaddingArtPixels": 14, "organicWaxBoundary": true },
+    { "id": "honey_storage", "label": "Reserve miel", "band": "P0", "priority": 138, "visualPointCount": 112, "tactilePaddingArtPixels": 13, "organicWaxBoundary": true },
+    { "id": "research_node", "label": "Recherche", "band": "P0", "priority": 136, "visualPointCount": 112, "tactilePaddingArtPixels": 13, "organicWaxBoundary": true },
+    { "id": "wax_workshop", "label": "Transformation", "band": "P0", "priority": 137, "visualPointCount": 112, "tactilePaddingArtPixels": 13, "organicWaxBoundary": true },
+    { "id": "guard_post", "label": "Caserne", "band": "P0", "priority": 134, "visualPointCount": 112, "tactilePaddingArtPixels": 14, "organicWaxBoundary": true },
+    { "id": "alliance_future_hall", "label": "Centre alliance", "band": "P0", "priority": 131, "visualPointCount": 14, "tactilePaddingArtPixels": 18 },
+    { "id": "nursery_cluster", "label": "Nurserie", "band": "P1", "priority": 125, "visualPointCount": 112, "tactilePaddingArtPixels": 14, "organicWaxBoundary": true },
+    { "id": "warehouse_cells", "label": "Entrepot", "band": "P1", "priority": 123, "visualPointCount": 112, "tactilePaddingArtPixels": 13, "organicWaxBoundary": true },
+    { "id": "genetics_garden", "label": "Genetique", "band": "P1", "priority": 122, "visualPointCount": 112, "tactilePaddingArtPixels": 13, "organicWaxBoundary": true },
+    { "id": "defense_growth", "label": "Defense", "band": "P1", "priority": 116, "visualPointCount": 12, "tactilePaddingArtPixels": 16 },
+    { "id": "infirmary_grove", "label": "Infirmerie", "band": "P2", "priority": 104, "visualPointCount": 14, "tactilePaddingArtPixels": 18 },
+    { "id": "academy_canopy", "label": "Academie", "band": "P2", "priority": 102, "visualPointCount": 14, "tactilePaddingArtPixels": 17 },
+    { "id": "hive_bank", "label": "Banque", "band": "P2", "priority": 103, "visualPointCount": 12, "tactilePaddingArtPixels": 18 },
+    { "id": "archives_honeyfall", "label": "Archives", "band": "P2", "priority": 100, "visualPointCount": 14, "tactilePaddingArtPixels": 18 }
+  ]
+}

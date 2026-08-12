@@ -1,0 +1,477 @@
+{
+  "evidenceId": "SERVER-062-WORLD-MAP-CHUNK-CONTRACT-WAVE1",
+  "worldId": "00000000000000000000000000000001",
+  "gameServerId": "00000000000000000000000000000002",
+  "centerChunkX": 10,
+  "centerChunkY": -4,
+  "radius": 2,
+  "worldMinChunkX": -1024,
+  "worldMaxChunkX": 1024,
+  "worldMinChunkY": -1024,
+  "worldMaxChunkY": 1024,
+  "seed": "bee-kingdom-world-map-readiness-seed",
+  "artisticRevision": "art-revision-readiness-001",
+  "contractName": "world-map-chunk-readiness-v1",
+  "readOnly": true,
+  "nonLive": true,
+  "officialEndpoint": false,
+  "mutationAllowed": false,
+  "chunks": [
+    {
+      "chunkX": 8,
+      "chunkY": -6,
+      "origin": {
+        "x": 2048,
+        "y": -1536
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:8:-6",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 9,
+      "chunkY": -6,
+      "origin": {
+        "x": 2304,
+        "y": -1536
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:9:-6",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 10,
+      "chunkY": -6,
+      "origin": {
+        "x": 2560,
+        "y": -1536
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:10:-6",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 11,
+      "chunkY": -6,
+      "origin": {
+        "x": 2816,
+        "y": -1536
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:11:-6",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 12,
+      "chunkY": -6,
+      "origin": {
+        "x": 3072,
+        "y": -1536
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:12:-6",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 8,
+      "chunkY": -5,
+      "origin": {
+        "x": 2048,
+        "y": -1280
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:8:-5",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 9,
+      "chunkY": -5,
+      "origin": {
+        "x": 2304,
+        "y": -1280
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:9:-5",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 10,
+      "chunkY": -5,
+      "origin": {
+        "x": 2560,
+        "y": -1280
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:10:-5",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 11,
+      "chunkY": -5,
+      "origin": {
+        "x": 2816,
+        "y": -1280
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:11:-5",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 12,
+      "chunkY": -5,
+      "origin": {
+        "x": 3072,
+        "y": -1280
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:12:-5",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 8,
+      "chunkY": -4,
+      "origin": {
+        "x": 2048,
+        "y": -1024
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:8:-4",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 9,
+      "chunkY": -4,
+      "origin": {
+        "x": 2304,
+        "y": -1024
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:9:-4",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 10,
+      "chunkY": -4,
+      "origin": {
+        "x": 2560,
+        "y": -1024
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:10:-4",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 11,
+      "chunkY": -4,
+      "origin": {
+        "x": 2816,
+        "y": -1024
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:11:-4",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 12,
+      "chunkY": -4,
+      "origin": {
+        "x": 3072,
+        "y": -1024
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:12:-4",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 8,
+      "chunkY": -3,
+      "origin": {
+        "x": 2048,
+        "y": -768
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:8:-3",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 9,
+      "chunkY": -3,
+      "origin": {
+        "x": 2304,
+        "y": -768
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:9:-3",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 10,
+      "chunkY": -3,
+      "origin": {
+        "x": 2560,
+        "y": -768
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:10:-3",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 11,
+      "chunkY": -3,
+      "origin": {
+        "x": 2816,
+        "y": -768
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:11:-3",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 12,
+      "chunkY": -3,
+      "origin": {
+        "x": 3072,
+        "y": -768
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:12:-3",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 8,
+      "chunkY": -2,
+      "origin": {
+        "x": 2048,
+        "y": -512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:8:-2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 9,
+      "chunkY": -2,
+      "origin": {
+        "x": 2304,
+        "y": -512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:9:-2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 10,
+      "chunkY": -2,
+      "origin": {
+        "x": 2560,
+        "y": -512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:10:-2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 11,
+      "chunkY": -2,
+      "origin": {
+        "x": 2816,
+        "y": -512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:11:-2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    },
+    {
+      "chunkX": 12,
+      "chunkY": -2,
+      "origin": {
+        "x": 3072,
+        "y": -512
+      },
+      "width": 256,
+      "height": 256,
+      "backgroundLayerKey": "bg:art-revision-readiness-001:12:-2",
+      "seamContinuityRequired": true,
+      "containsPaintedOverlays": false,
+      "revision": 1
+    }
+  ],
+  "cache": {
+    "eTag": "W/\u0022ac2b6a99deb6456e95fed31fd40e0417c87bd88eed336644419abc4fbef92d72\u0022",
+    "manifestHash": "a6e46a84bc24cb94111c09a1a3ea44aced10323575f6a2dad47497b477b55fa1",
+    "artisticRevision": "art-revision-readiness-001",
+    "cacheControl": "private, max-age=60",
+    "invalidationKey": "world:00000000000000000000000000000001:map:art-revision-readiness-001",
+    "generatedAtUtc": "1970-01-01T00:00:00+00:00",
+    "expiresAtUtc": "1970-01-01T00:01:00+00:00"
+  },
+  "overlays": {
+    "hives": [
+      {
+        "hiveMarkerId": "hive-readiness-001",
+        "position": {
+          "x": 2567,
+          "y": -1013
+        },
+        "powerBand": "preview_band",
+        "serverAuthoritative": false,
+        "live": false
+      }
+    ],
+    "resources": [
+      {
+        "resourceNodeId": "resource-readiness-001",
+        "position": {
+          "x": 2579,
+          "y": -1001
+        },
+        "resourceKind": "nectar",
+        "richnessBand": "preview_band",
+        "serverAuthoritative": false,
+        "live": false
+      }
+    ],
+    "flights": [
+      {
+        "flightId": "flight-readiness-001",
+        "origin": {
+          "x": 2563,
+          "y": -1019
+        },
+        "destination": {
+          "x": 2845,
+          "y": -993
+        },
+        "kind": "gather",
+        "state": "previewOnly",
+        "airOnly": true,
+        "roadGraphUsed": false,
+        "serverAuthoritative": false,
+        "live": false
+      }
+    ],
+    "paintedIntoBackground": false,
+    "serverAuthoritative": false,
+    "live": false,
+    "overlayRevision": "overlay-readiness-001",
+    "overlayHash": "3b959d7e6403e3a8d0b9e4815224419805b99e241188ed49baa5f01fddf9ae67"
+  },
+  "pagination": {
+    "deterministicOrdering": true,
+    "pageSize": 25,
+    "nextPageToken": null,
+    "deltaToken": "delta:W/\u0022ac2b6a99deb6456e95fed31fd40e0417c87bd88eed336644419abc4fbef92d72\u0022",
+    "snapshotRevision": 1,
+    "sinceRevisionApplied": null
+  },
+  "guardrails": {
+    "payloadBudgetBytes": 98304,
+    "estimatedPayloadBytes": 15744,
+    "maxRadius": 2,
+    "maxWindowChunks": 25,
+    "requiresOverlaysSeparateFromBackground": true,
+    "requiresAirOnlyFlights": true,
+    "requiresNoRoadGraph": true,
+    "errorCodes": [
+      "RadiusOutOfRange",
+      "InvalidWorldBounds",
+      "PayloadBudgetExceeded",
+      "UnknownWorld",
+      "UnknownChunk",
+      "ManifestRevisionMismatch",
+      "DeltaTokenInvalid",
+      "AuthRequiredFuture",
+      "OverlayContractViolation"
+    ]
+  },
+  "nonClaims": {
+    "officialEndpointLive": false,
+    "officialPersistenceLive": false,
+    "officialPlayerData": false,
+    "officialProgression": false,
+    "serverAuthorityActive": false,
+    "unityConnected": false,
+    "sqlBacked": false,
+    "stagingOrProductionTouched": false
+  },
+  "errors": [],
+  "preparatoryFeatures": {
+    "ifNoneMatchPassive": true,
+    "deltaPageTokenPassive": true,
+    "contractVersionNegotiationPassive": true,
+    "futureErrorCodesPassive": true
+  },
+  "contractVersion": "1.0.0"
+}

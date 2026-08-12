@@ -1,0 +1,5 @@
+[
+  {"name":"100 bees","bees":100,"ticks":600,"averageMs":0.314,"maxMs":2.711,"aiBrains":150,"assignments":5,"errors":0},
+  {"name":"500 bees","bees":500,"ticks":300,"averageMs":6.331,"maxMs":17.923,"aiBrains":750,"assignments":5,"errors":0},
+  {"name":"multiple colonies","bees":300,"ticks":400,"averageMs":0.637,"maxMs":5.241,"aiBrains":450,"assignments":10,"errors":0}
+]

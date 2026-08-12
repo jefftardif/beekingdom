@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Builder-B Hive Click Zone Overlay</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, sans-serif;
+      background: #10100c;
+      color: #f6edc8;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+    }
+
+    main {
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: #dfd29b;
+      line-height: 1.45;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 0 0 16px;
+    }
+
+    button,
+    select,
+    input::file-selector-button {
+      border: 1px solid #8b7429;
+      background: #2d260f;
+      color: #fff2b0;
+      padding: 8px 10px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button[aria-pressed="true"] {
+      background: #69510d;
+      border-color: #ffd24a;
+    }
+
+    .stage {
+      position: relative;
+      width: min(100%, 760px);
+      margin: 0 auto;
+      border: 1px solid #6d5a20;
+      background: #000;
+    }
+
+    .stage img,
+    .stage svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 2 / 3;
+    }
+
+    .stage svg {
+      position: absolute;
+      inset: 0;
+    }
+
+    .zone {
+      fill: rgba(0, 230, 255, 0.16);
+      stroke: #00e6ff;
+      stroke-width: 0.003;
+      vector-effect: non-scaling-stroke;
+      cursor: pointer;
+    }
+
+    .zone:hover {
+      fill: rgba(255, 224, 81, 0.24);
+      stroke: #ffe051;
+    }
+
+    .zone.selected {
+      fill: rgba(255, 224, 81, 0.28);
+      stroke: #fff36a;
+      stroke-width: 0.005;
+      filter: drop-shadow(0 0 10px rgba(255, 232, 87, 0.95));
+    }
+
+    .halo {
+      fill: none;
+      stroke: rgba(255, 244, 135, 0.95);
+      stroke-width: 0.016;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+      filter: drop-shadow(0 0 14px rgba(255, 218, 64, 0.9));
+      pointer-events: none;
+    }
+
+    .point {
+      fill: #fff36a;
+      stroke: #1b1400;
+      stroke-width: 0.002;
+      vector-effect: non-scaling-stroke;
+      pointer-events: none;
+    }
+
+    .label {
+      fill: #fff7b8;
+      stroke: #201500;
+      stroke-width: 0.003;
+      paint-order: stroke;
+      font-size: 0.018px;
+      font-weight: 700;
+      pointer-events: none;
+    }
+
+    .panel {
+      width: min(100%, 760px);
+      margin: 14px auto 0;
+      padding: 12px;
+      border: 1px solid #5d4a1b;
+      color: #f7e8a8;
+      background: #1b170c;
+      box-sizing: border-box;
+      min-height: 48px;
+    }
+
+    .coordinateReadout {
+      width: min(100%, 760px);
+      margin: 8px auto 0;
+      color: #d8c982;
+      font-size: 13px;
+      font-family: Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Builder-B Hive Click Zone Overlay</h1>
+    <p>Prototype visuel autonome. Il charge les zones depuis le JSON Builder-B et ne constitue pas une integration runtime.</p>
+    <div class="toolbar">
+      <button id="reload" type="button">Charger JSON</button>
+      <select id="zoneSelect" aria-label="Selection zone"></select>
+      <button id="previousZone" type="button">Precedente</button>
+      <button id="nextZone" type="button">Suivante</button>
+      <button id="togglePoints" type="button" aria-pressed="true">Points</button>
+      <button id="toggleLabels" type="button" aria-pressed="true">Labels</button>
+      <input id="fileInput" type="file" accept="application/json,.json">
+    </div>
+    <div class="stage">
+      <img src="../../Assets/Art/UI/Backgrounds/HiveBackground_UnityReady_2048x3072.png" alt="Premium hive background">
+      <svg id="overlay" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </div>
+    <div class="panel" id="panel">Aucune zone selectionnee.</div>
+    <div class="coordinateReadout" id="coordinateReadout">x=-- y=--</div>
+  </main>
+
+  <script>
+    const jsonPath = "hive_click_zones_v001.sample.json";
+    const overlay = document.getElementById("overlay");
+    const panel = document.getElementById("panel");
+    const reload = document.getElementById("reload");
+    const fileInput = document.getElementById("fileInput");
+    const stage = document.querySelector(".stage");
+    const coordinateReadout = document.getElementById("coordinateReadout");
+    const zoneSelect = document.getElementById("zoneSelect");
+    const previousZone = document.getElementById("previousZone");
+    const nextZone = document.getElementById("nextZone");
+    const togglePoints = document.getElementById("togglePoints");
+    const toggleLabels = document.getElementById("toggleLabels");
+
+    let zones = [];
+    let selectedId = null;
+    let showPoints = true;
+    let showLabels = true;
+
+    reload.addEventListener("click", loadDefaultJson);
+    fileInput.addEventListener("change", loadChosenJson);
+    zoneSelect.addEventListener("change", () => {
+      selectedId = zoneSelect.value;
+      render();
+      updatePanel();
+    });
+    previousZone.addEventListener("click", () => stepZone(-1));
+    nextZone.addEventListener("click", () => stepZone(1));
+    togglePoints.addEventListener("click", () => {
+      showPoints = !showPoints;
+      togglePoints.setAttribute("aria-pressed", String(showPoints));
+      render();
+    });
+    toggleLabels.addEventListener("click", () => {
+      showLabels = !showLabels;
+      toggleLabels.setAttribute("aria-pressed", String(showLabels));
+      render();
+    });
+    stage.addEventListener("pointermove", updateCoordinateReadout);
+    stage.addEventListener("pointerdown", updateCoordinateReadout);
+
+    loadDefaultJson();
+
+    async function loadDefaultJson() {
+      panel.textContent = "Chargement du JSON...";
+      try {
+        const response = await fetch(jsonPath, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        setZones(payload);
+      } catch (error) {
+        panel.textContent = "Chargement direct bloque par le navigateur. Utiliser le selecteur de fichier pour ouvrir hive_click_zones_v001.sample.json.";
+      }
+    }
+
+    function loadChosenJson(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          setZones(JSON.parse(reader.result));
+        } catch (error) {
+          panel.textContent = "JSON invalide.";
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function setZones(payload) {
+      zones = Array.isArray(payload.zones) ? payload.zones : [];
+      selectedId = zones[0]?.id ?? null;
+      populateZoneSelect();
+      render();
+      updatePanel();
+    }
+
+    function render() {
+      overlay.replaceChildren();
+
+      for (const zone of zones) {
+        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        polygon.setAttribute("class", `zone${zone.id === selectedId ? " selected" : ""}`);
+        polygon.setAttribute("points", toPoints(zone.polygon));
+        polygon.addEventListener("click", () => {
+          selectedId = zone.id;
+          render();
+          updatePanel();
+        });
+        overlay.appendChild(polygon);
+
+        if (zone.id === selectedId) {
+          const halo = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          halo.setAttribute("class", "halo");
+          halo.setAttribute("points", toPoints(zone.polygon));
+          overlay.appendChild(halo);
+        }
+
+        if (showPoints) {
+          for (const pointData of zone.polygon) {
+            const point = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            point.setAttribute("class", "point");
+            point.setAttribute("cx", pointData.x);
+            point.setAttribute("cy", pointData.y);
+            point.setAttribute("r", 0.004);
+            overlay.appendChild(point);
+          }
+        }
+
+        if (showLabels) {
+          const center = centroid(zone.polygon);
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("class", "label");
+          text.setAttribute("x", center.x);
+          text.setAttribute("y", center.y);
+          text.setAttribute("text-anchor", "middle");
+          text.textContent = `${zone.officialOrder}. ${zone.officialName}`;
+          overlay.appendChild(text);
+        }
+      }
+    }
+
+    function populateZoneSelect() {
+      zoneSelect.replaceChildren();
+      for (const zone of zones) {
+        const option = document.createElement("option");
+        option.value = zone.id;
+        option.textContent = `${zone.officialOrder}. ${zone.officialName}`;
+        zoneSelect.appendChild(option);
+      }
+      zoneSelect.value = selectedId || "";
+    }
+
+    function stepZone(direction) {
+      if (zones.length === 0) return;
+      const currentIndex = Math.max(0, zones.findIndex(zone => zone.id === selectedId));
+      const nextIndex = (currentIndex + direction + zones.length) % zones.length;
+      selectedId = zones[nextIndex].id;
+      render();
+      updatePanel();
+    }
+
+    function updatePanel() {
+      const zone = zones.find(item => item.id === selectedId);
+      if (!zone) {
+        panel.textContent = "Aucune zone selectionnee.";
+        return;
+      }
+      zoneSelect.value = zone.id;
+      panel.textContent = `${zone.officialOrder}. ${zone.officialName} | id=${zone.id} | shape=${zone.recommendedRuntimeShape} | mask=${zone.mask}`;
+    }
+
+    function toPoints(points) {
+      return points.map(point => `${point.x},${point.y}`).join(" ");
+    }
+
+    function centroid(points) {
+      const sum = points.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
+      return { x: sum.x / points.length, y: sum.y / points.length };
+    }
+
+    function updateCoordinateReadout(event) {
+      const rect = stage.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width;
+      const y = (event.clientY - rect.top) / rect.height;
+      const clampedX = Math.min(1, Math.max(0, x));
+      const clampedY = Math.min(1, Math.max(0, y));
+      const px = Math.round(clampedX * 2048);
+      const py = Math.round(clampedY * 3072);
+      coordinateReadout.textContent = `asset-normalized x=${clampedX.toFixed(4)} y=${clampedY.toFixed(4)} | pixels ${px},${py}`;
+    }
+  </script>
+</body>
+</html>

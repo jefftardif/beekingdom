@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00ab11b8e5c74674a80484717e0c9380, type: 3}
+  m_Name: DefenderBee
+  m_EditorClassIdentifier: Assembly-CSharp::BeeKingdom.Core.Bees.BeeSO
+  beeName: Defender Bee
+  beeId: defender_bee
+  description: A fierce warrior bee that protects the hive from enemies.
+  icon: {fileID: 0}
+  maxHealth: 200
+  attackDamage: 25
+  attackSpeed: 1.5
+  moveSpeed: 6
+  defense: 15
+  canProduceResources: 0
+  producedResourceType: 1
+  productionRate: 5
+  recruitCost:
+  - resourceType: 0
+    amount: 100
+  - resourceType: 1
+    amount: 50
+  upgradeCost: []
+  rarity: 1
+  requiredPlayerLevel: 3
+  isUnlockedByDefault: 0

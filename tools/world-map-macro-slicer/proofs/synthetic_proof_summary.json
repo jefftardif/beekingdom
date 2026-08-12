@@ -1,0 +1,26 @@
+{
+  "canonical_reconstruction_pixel_difference_count": 0,
+  "determinism_mismatch_files": [],
+  "features": {
+    "diagonal_river_family": true,
+    "global_gradients": true,
+    "high_frequency_relief": true,
+    "internal_boundaries_exercised": 40
+  },
+  "output_file_count_each_run": 54,
+  "run1_run2_byte_identical": true,
+  "runtime_boundary_gutter_mismatch_pixel_count": 0,
+  "runtime_gutter_mismatch_pixel_count": 0,
+  "runtime_internal_boundaries_checked": 40,
+  "runtime_internal_boundaries_passed": 40,
+  "schema": "bee-kingdom.world-map-macro-synthetic-proof.v1",
+  "source_png_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+  "tree_digest_run1": "9a1daeffd7fef148989299e9947c47d1e49a4dbc71c0f4fb09d91339d87d9db0",
+  "tree_digest_run2": "9a1daeffd7fef148989299e9947c47d1e49a4dbc71c0f4fb09d91339d87d9db0",
+  "verdicts": {
+    "CANONICAL_RECONSTRUCTION_PIXEL_IDENTICAL": "YES",
+    "READY_FOR_UIB_WAVE3_MASTER_INGEST": "YES",
+    "RUNTIME_GUTTERS_FROM_TRUE_NEIGHBORS": "YES",
+    "WORLD_MAP_MACRO_SLICER_WAVE3": "PASS"
+  }
+}

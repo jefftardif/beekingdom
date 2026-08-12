@@ -1,0 +1,62 @@
+{
+  "manifest_id": "WorldMapLargeWorldChunksStep3Manifest",
+  "scope": "local_demo_lab_only",
+  "world": {
+    "world_id": "BK-DEMO-WORLD-STEP3",
+    "seed": 738921,
+    "chunk_size_world_units": 512,
+    "world_chunks": {
+      "x": 64,
+      "y": 64
+    },
+    "sector_size_chunks": 4,
+    "coordinate_model": {
+      "world_id": "string",
+      "sector_id": "S{sector_x}_{sector_y}",
+      "chunk_id": "C{chunk_x}_{chunk_y}",
+      "tile_coord": {
+        "chunk_x": "int",
+        "chunk_y": "int"
+      },
+      "world_coord": {
+        "x": "float",
+        "y": "float"
+      }
+    }
+  },
+  "runtime_loading": {
+    "active_neighborhood": "5x5 chunks around camera, minimum 3x3 requirement exceeded",
+    "activation": "recompute active chunk ids when camera crosses chunk neighborhood boundary",
+    "deactivation": "entities outside active chunk ids are not rendered as active markers",
+    "visual_proxy": "carte.png is sampled per active chunk only as temporary visual proxy",
+    "final_tiles_future": "replace proxy sampling with tile asset references per chunk or sector"
+  },
+  "placement_rules": {
+    "min_hive_distance_world_units": 300,
+    "min_hive_resource_distance_world_units": 105,
+    "max_hives_per_chunk_demo": 2,
+    "max_resources_per_chunk_demo": 3,
+    "deterministic": true,
+    "official_server_placement": false
+  },
+  "entity_kinds": {
+    "hive_roles": ["player", "ally", "neutral"],
+    "hive_maturity": ["beginning", "mid", "advanced", "capital"],
+    "resources": ["nectar", "pollen", "wax", "propolis", "royal_jelly_demo"]
+  },
+  "flight_rules": {
+    "movement_type": "aerial_arc_swarm_trail",
+    "origin": "world_coord",
+    "destination": "world_coord",
+    "uses_ground_routes": false,
+    "uses_painted_roads": false,
+    "states": ["En vol", "Collecte", "Retour", "Termine"]
+  },
+  "non_claims": {
+    "server_live": false,
+    "official_collection": false,
+    "official_economy": false,
+    "persistent_economy": false,
+    "official_world_map_final_art": false
+  }
+}

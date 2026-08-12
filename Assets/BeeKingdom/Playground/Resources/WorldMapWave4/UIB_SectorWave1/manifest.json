@@ -1,0 +1,389 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "lot":  "UIB_SectorWave1",
+    "status":  "production-pilot",
+    "worldClaim":  "Pilote 3 x 3 uniquement; ne represente pas le monde complet.",
+    "referenceImage":  "C:\\projets\\beekingdom\\carte.png",
+    "sourceMethod":  "Generation atlas maitre continu avec image_gen integre, redimensionnement bicubique haute qualite et decoupe deterministe 3 x 3.",
+    "noRoadDirective":  true,
+    "generatedUtc":  "2026-07-14T01:19:53.2481348Z",
+    "atlas":  {
+                  "file":  "atlas_master_1536.png",
+                  "width":  1536,
+                  "height":  1536,
+                  "hash":  {
+                               "algorithm":  "SHA-256",
+                               "value":  "533dad1bbaa138fa12880d44bd5e4da22f41f564524c87ae512d1f030e4154bd"
+                           }
+              },
+    "contactSheet":  {
+                         "file":  "contact_sheet_3x3.png",
+                         "width":  1536,
+                         "height":  1536,
+                         "hash":  {
+                                      "algorithm":  "SHA-256",
+                                      "value":  "533dad1bbaa138fa12880d44bd5e4da22f41f564524c87ae512d1f030e4154bd"
+                                  }
+                     },
+    "qaSeamGrid":  {
+                       "file":  "qa_seam_grid_3x3.png",
+                       "width":  1536,
+                       "height":  1536,
+                       "hash":  {
+                                    "algorithm":  "SHA-256",
+                                    "value":  "855e3a4fd52533d2f984fd83e8aa3ffa04b74a30f8ed7aa67ae0d7edb1f7da0f"
+                                },
+                       "note":  "Lignes cyan et noires reservees au controle QA; absentes des secteurs."
+                   },
+    "generatedSource":  {
+                            "file":  "source_master_generated_1254.png",
+                            "width":  1254,
+                            "height":  1254,
+                            "hash":  {
+                                         "algorithm":  "SHA-256",
+                                         "value":  "b494fd354ab39e48dee4ea1297e8b1aad6f154eb4948b71d7537775d688bd641"
+                                     }
+                        },
+    "grid":  {
+                 "rows":  3,
+                 "columns":  3,
+                 "tileWidth":  512,
+                 "tileHeight":  512,
+                 "order":  [
+                               [
+                                   "NW",
+                                   "N",
+                                   "NE"
+                               ],
+                               [
+                                   "W",
+                                   "C",
+                                   "E"
+                               ],
+                               [
+                                   "SW",
+                                   "S",
+                                   "SE"
+                               ]
+                           ]
+             },
+    "sectors":  [
+                    {
+                        "id":  "NW",
+                        "row":  0,
+                        "column":  0,
+                        "file":  "sector_NW.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  null,
+                                          "E":  "N",
+                                          "S":  "W",
+                                          "W":  null
+                                      },
+                        "dominantBiome":  "Foret montagneuse et riviere alpine",
+                        "estimatedFreeZones":  {
+                                                   "count":  1,
+                                                   "estimatedCoveragePercent":  8,
+                                                   "note":  "Petite clairiere forestiere au sud-ouest"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "e059189c8ca21d529381ead57e18ebc1aebae4d040f36d7e63d3f80bbda27b35"
+                                 }
+                    },
+                    {
+                        "id":  "N",
+                        "row":  0,
+                        "column":  1,
+                        "file":  "sector_N.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  null,
+                                          "E":  "NE",
+                                          "S":  "C",
+                                          "W":  "NW"
+                                      },
+                        "dominantBiome":  "Vallee alpine fleurie et reseau aquatique",
+                        "estimatedFreeZones":  {
+                                                   "count":  2,
+                                                   "estimatedCoveragePercent":  18,
+                                                   "note":  "Plateaux herbeux au nord et au sud-est"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "35140ea85cb051e4d4a0aa10220d1328c6100c009984012ff67da811880ff02f"
+                                 }
+                    },
+                    {
+                        "id":  "NE",
+                        "row":  0,
+                        "column":  2,
+                        "file":  "sector_NE.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  null,
+                                          "E":  null,
+                                          "S":  "E",
+                                          "W":  "N"
+                                      },
+                        "dominantBiome":  "Massif montagneux et prairie altitude",
+                        "estimatedFreeZones":  {
+                                                   "count":  2,
+                                                   "estimatedCoveragePercent":  22,
+                                                   "note":  "Clairieres altitude au nord-est et au sud-ouest"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "db12ced4e4ac0aa0a61aed5921333df57b7e7f7d162638582061b9bcc21672e2"
+                                 }
+                    },
+                    {
+                        "id":  "W",
+                        "row":  1,
+                        "column":  0,
+                        "file":  "sector_W.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  "NW",
+                                          "E":  "C",
+                                          "S":  "SW",
+                                          "W":  null
+                                      },
+                        "dominantBiome":  "Grand lac forestier et vallees rocheuses",
+                        "estimatedFreeZones":  {
+                                                   "count":  1,
+                                                   "estimatedCoveragePercent":  10,
+                                                   "note":  "Rive herbeuse exploitable au sud-ouest"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "7f84fcfef8ca326e8f3c71198854746e96cefd5f22a705310a1fb96c76093f10"
+                                 }
+                    },
+                    {
+                        "id":  "C",
+                        "row":  1,
+                        "column":  1,
+                        "file":  "sector_C.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  "N",
+                                          "E":  "E",
+                                          "S":  "S",
+                                          "W":  "W"
+                                      },
+                        "dominantBiome":  "Plaine pollinique centrale et riviere",
+                        "estimatedFreeZones":  {
+                                                   "count":  2,
+                                                   "estimatedCoveragePercent":  35,
+                                                   "note":  "Deux vastes clairieres centrales separees par les fleurs"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "b0dda80aecfbf47980a4a49fbeb613a5db15a5fbc48087e54590f326eb1645c9"
+                                 }
+                    },
+                    {
+                        "id":  "E",
+                        "row":  1,
+                        "column":  2,
+                        "file":  "sector_E.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  "NE",
+                                          "E":  null,
+                                          "S":  "SE",
+                                          "W":  "C"
+                                      },
+                        "dominantBiome":  "Transition rocheuse cristalline",
+                        "estimatedFreeZones":  {
+                                                   "count":  1,
+                                                   "estimatedCoveragePercent":  16,
+                                                   "note":  "Plateau vert central entre cretes et cristaux"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "5413a0a20f4aa82b33a7eda1d56b4e22b5a9c048fccaaa94e3fd3f9314a83f5a"
+                                 }
+                    },
+                    {
+                        "id":  "SW",
+                        "row":  2,
+                        "column":  0,
+                        "file":  "sector_SW.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  "W",
+                                          "E":  "S",
+                                          "S":  null,
+                                          "W":  null
+                                      },
+                        "dominantBiome":  "Foret de coniferes et riviere en cascades",
+                        "estimatedFreeZones":  {
+                                                   "count":  1,
+                                                   "estimatedCoveragePercent":  12,
+                                                   "note":  "Clairiere herbeuse a ouest"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "e1707befbd26eba9e21fb32cfde37240ff769ddb4c0cbd5e9582b27e51afa917"
+                                 }
+                    },
+                    {
+                        "id":  "S",
+                        "row":  2,
+                        "column":  1,
+                        "file":  "sector_S.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  "C",
+                                          "E":  "SE",
+                                          "S":  null,
+                                          "W":  "SW"
+                                      },
+                        "dominantBiome":  "Prairie florale riche en pollen",
+                        "estimatedFreeZones":  {
+                                                   "count":  3,
+                                                   "estimatedCoveragePercent":  38,
+                                                   "note":  "Trois zones ouvertes parmi les bouquets floraux"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "8852ce9eaa3f5642b1e5de3d02dfaac6ffe814b1641474427ca586a360b0924d"
+                                 }
+                    },
+                    {
+                        "id":  "SE",
+                        "row":  2,
+                        "column":  2,
+                        "file":  "sector_SE.png",
+                        "width":  512,
+                        "height":  512,
+                        "neighbors":  {
+                                          "N":  "E",
+                                          "E":  null,
+                                          "S":  null,
+                                          "W":  "S"
+                                      },
+                        "dominantBiome":  "Montagnes cristallines, eau et lisiere fleurie",
+                        "estimatedFreeZones":  {
+                                                   "count":  1,
+                                                   "estimatedCoveragePercent":  12,
+                                                   "note":  "Zone herbeuse au sud-centre"
+                                               },
+                        "hash":  {
+                                     "algorithm":  "SHA-256",
+                                     "value":  "482bb6484408c525d9a25aee7d49469378a7283be3ec7635af3f8d4152fd5451"
+                                 }
+                    }
+                ],
+    "verification":  {
+                         "nineReadablePngFiles":  true,
+                         "identicalTileDimensions":  true,
+                         "exactNineTileAreaCoverage":  true,
+                         "reconstructedContactEqualsMasterBySha256":  true,
+                         "noHoles":  true,
+                         "adjacentSeamMetrics":  [
+                                                     {
+                                                         "seam":  "NW|N",
+                                                         "orientation":  "vertical",
+                                                         "meanAbsoluteChannelDelta":  12.467,
+                                                         "maxChannelDelta":  92,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "N|NE",
+                                                         "orientation":  "vertical",
+                                                         "meanAbsoluteChannelDelta":  20.797,
+                                                         "maxChannelDelta":  117,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "W|C",
+                                                         "orientation":  "vertical",
+                                                         "meanAbsoluteChannelDelta":  11.064,
+                                                         "maxChannelDelta":  121,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "C|E",
+                                                         "orientation":  "vertical",
+                                                         "meanAbsoluteChannelDelta":  14.538,
+                                                         "maxChannelDelta":  110,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "SW|S",
+                                                         "orientation":  "vertical",
+                                                         "meanAbsoluteChannelDelta":  14.761,
+                                                         "maxChannelDelta":  106,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "S|SE",
+                                                         "orientation":  "vertical",
+                                                         "meanAbsoluteChannelDelta":  13.037,
+                                                         "maxChannelDelta":  80,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "NW/W",
+                                                         "orientation":  "horizontal",
+                                                         "meanAbsoluteChannelDelta":  8.721,
+                                                         "maxChannelDelta":  83,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "N/C",
+                                                         "orientation":  "horizontal",
+                                                         "meanAbsoluteChannelDelta":  12.793,
+                                                         "maxChannelDelta":  110,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "NE/E",
+                                                         "orientation":  "horizontal",
+                                                         "meanAbsoluteChannelDelta":  12.961,
+                                                         "maxChannelDelta":  98,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "W/SW",
+                                                         "orientation":  "horizontal",
+                                                         "meanAbsoluteChannelDelta":  13.158,
+                                                         "maxChannelDelta":  89,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "C/S",
+                                                         "orientation":  "horizontal",
+                                                         "meanAbsoluteChannelDelta":  15.842,
+                                                         "maxChannelDelta":  83,
+                                                         "samples":  1536
+                                                     },
+                                                     {
+                                                         "seam":  "E/SE",
+                                                         "orientation":  "horizontal",
+                                                         "meanAbsoluteChannelDelta":  15.128,
+                                                         "maxChannelDelta":  97,
+                                                         "samples":  1536
+                                                     }
+                                                 ],
+                         "maximumMeanAbsoluteChannelDelta":  20.797,
+                         "visualInspection":  {
+                                                  "noRoadsObserved":  true,
+                                                  "noTextOrUiObserved":  true,
+                                                  "noBuildingsOrPlayerHivesObserved":  true,
+                                                  "noArtificialSectorBordersObserved":  true,
+                                                  "transitionsNotHiddenByOpaqueFog":  true
+                                              }
+                     }
+}

@@ -1,0 +1,1420 @@
+{
+  "claims": {
+    "art_pipeline_only": true,
+    "live_server": false,
+    "official_world_map": false,
+    "runtime_integration": false,
+    "scope": "local_demo_pipeline",
+    "unity_dependency": false
+  },
+  "grid": {
+    "columns": 5,
+    "order": "row_major_R0C0_to_R4C4",
+    "rows": 5
+  },
+  "gutter": {
+    "outer_edge_policy": "clamp_master_edge_only",
+    "pixels_each_side": 2,
+    "runtime_height": 516,
+    "runtime_width": 516,
+    "source_for_internal_sides": "true_adjacent_master_pixels",
+    "stretching": false
+  },
+  "schema": "bee-kingdom.world-map-macro-runtime-gutter.v1",
+  "source": {
+    "file": "synthetic_macro_master.png",
+    "format": "PNG",
+    "height": 2560,
+    "mode": "RGB",
+    "pixel_sha256": "548e87ec3a0709e95c34ae51cb52886c2ac71971856714921b0eac9f52fc6efa",
+    "sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+    "width": 2560
+  },
+  "tile_count": 25,
+  "tile_order": [
+    "R0C0",
+    "R0C1",
+    "R0C2",
+    "R0C3",
+    "R0C4",
+    "R1C0",
+    "R1C1",
+    "R1C2",
+    "R1C3",
+    "R1C4",
+    "R2C0",
+    "R2C1",
+    "R2C2",
+    "R2C3",
+    "R2C4",
+    "R3C0",
+    "R3C1",
+    "R3C2",
+    "R3C3",
+    "R3C4",
+    "R4C0",
+    "R4C1",
+    "R4C2",
+    "R4C3",
+    "R4C4"
+  ],
+  "tiles": [
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 0
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 2
+      },
+      "column": 0,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R0C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C0",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 0,
+        "y": 0
+      },
+      "order_index": 0,
+      "pixel_sha256": "368bd5ba62903f8a3882fd1297d2551afee5904b0fd4c312c20c37f188ecc0f0",
+      "png_sha256": "ee4cd17d1fb3a6ca90a2744eba27ace54aa050d07cd7fb39a3c8b9ffb8ae00fb",
+      "row": 0,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 0
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 2
+      },
+      "column": 1,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R0C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C1",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 512,
+        "y": 0
+      },
+      "order_index": 1,
+      "pixel_sha256": "b0986205b4c9adb53f94e3a074ab9cb49c9e9bfcc272e8d2e1d0ed0db0130309",
+      "png_sha256": "6a5676c3d7f0481caa92019304ec1a7e2f4e7c11930b444d1288ee832cb36769",
+      "row": 0,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 0
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 2
+      },
+      "column": 2,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R0C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C2",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1024,
+        "y": 0
+      },
+      "order_index": 2,
+      "pixel_sha256": "8496bb22e55f66d0b49146c580ce0bc201215cf36cf8c171f98a8324ba315415",
+      "png_sha256": "dd90b34e5ca450dfac13102dc068f13021981de95e9ec23856aad5ced5aa821f",
+      "row": 0,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 0
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 2
+      },
+      "column": 3,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R0C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C3",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1536,
+        "y": 0
+      },
+      "order_index": 3,
+      "pixel_sha256": "56acf49bf206b9cc26d8a822cfd7b3eda418129adfd59ee9551def4e547e1d3e",
+      "png_sha256": "ec192fae2764fba9b0b441871140410955220f6f9531d8a58a337cf1870c65c9",
+      "row": 0,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 0
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 2
+      },
+      "column": 4,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R0C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "outer_edge_clamp"
+      },
+      "id": "R0C4",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 2048,
+        "y": 0
+      },
+      "order_index": 4,
+      "pixel_sha256": "7aea4348bd01ce8ec0e1a42c683f4f54f4584b486d70ead971d5ebb03acaf290",
+      "png_sha256": "9d61ce425d2a845cb72ea8c70cb42993e692ca3704fa9c79386bd09bf5a9bb17",
+      "row": 0,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": -2
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 512
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "column": 0,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R1C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C0",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 0,
+        "y": 512
+      },
+      "order_index": 5,
+      "pixel_sha256": "e7ae509d5c30abf81b53c7d8cd0ecfed79c07c5f39b63fe1a67cc83883d41a72",
+      "png_sha256": "64e059059c2302f322c6dc6f96669cea68867d5365edcbe08cb9b1b483c45570",
+      "row": 1,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 512
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 1,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R1C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C1",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 512,
+        "y": 512
+      },
+      "order_index": 6,
+      "pixel_sha256": "e363d90e3ee2607589e93d7daf8818d0588d0ad4e1b921ffce45a74cc490b9e2",
+      "png_sha256": "08557ff9f96371bb32d718392b00eaae3de69b457a2e7ceb2efa7b30b013a350",
+      "row": 1,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 512
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 2,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R1C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C2",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1024,
+        "y": 512
+      },
+      "order_index": 7,
+      "pixel_sha256": "f5d06749bdf5dc26c1f04136d3b217cc9b7458d3e7da757507e180ed310db411",
+      "png_sha256": "2574dc53e04098ff98ffead24949a6e3e172d6e62c3e62a7854046e7994d63e5",
+      "row": 1,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 512
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 3,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R1C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C3",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1536,
+        "y": 512
+      },
+      "order_index": 8,
+      "pixel_sha256": "c8020641ff3398f3930a962820c85a29247ee54a2f7821f77c6f1e26c46f3753",
+      "png_sha256": "b8bacc3ebb9011c4cf6fd38914643fb66a43aeedaf6a91dea709c2328a56f1ea",
+      "row": 1,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 512
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "column": 4,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R1C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R1C4",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 2048,
+        "y": 512
+      },
+      "order_index": 9,
+      "pixel_sha256": "f0c170e7f853a79e1443ed6b577f358200147d5fc632344b2e4015bb41c38554",
+      "png_sha256": "59ff83faab7f141a72382bc613a062104ac0c4af1aded3de20e9681accd02f93",
+      "row": 1,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 510
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 1024
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "column": 0,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R2C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C0",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 0,
+        "y": 1024
+      },
+      "order_index": 10,
+      "pixel_sha256": "1e1be3daea2778d31b6375601b508263e26a07290f9967eeaf97092b82e4c03e",
+      "png_sha256": "2c2c93914f104579cb3c31b51a581161705c3c32dbaa27a4b976891456204666",
+      "row": 2,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 1024
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 1,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R2C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C1",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 512,
+        "y": 1024
+      },
+      "order_index": 11,
+      "pixel_sha256": "9ac9d563629e826da86b602abcaf882de226cb51026396432affb0bbd1b42c43",
+      "png_sha256": "348bf64a7f7189cb43cbc3991b14b066cf53b4c4ca28a019becc698bc4e8ea20",
+      "row": 2,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 1024
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 2,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R2C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C2",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1024,
+        "y": 1024
+      },
+      "order_index": 12,
+      "pixel_sha256": "1021530e71117c134347e5fecadc1c7c0bdcb5281773ef66c434d733357b1e62",
+      "png_sha256": "257035361065ba70d04c068b3ab6ed79c31f0450f0ecdf09da87be54c677a1b7",
+      "row": 2,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 1024
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 3,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R2C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C3",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1536,
+        "y": 1024
+      },
+      "order_index": 13,
+      "pixel_sha256": "89b248c4d410673dd284c22a1c6f6a72f917a22261040952dea34150a1a91a6f",
+      "png_sha256": "79dd55b0e097e6f87e78b9e9517af8616838b942ba9bfb91e4f77c4b90a92911",
+      "row": 2,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 1024
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "column": 4,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R2C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R2C4",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 2048,
+        "y": 1024
+      },
+      "order_index": 14,
+      "pixel_sha256": "20eab0e2271000c6a728ab2e61ffd55219b435ef14ad79bf51e1589d7918f11a",
+      "png_sha256": "aaaa83837ad64f4919cf1db7d04b1b4033985c7bb81d1b99f52d0d36ea142438",
+      "row": 2,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 1022
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 1536
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "column": 0,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R3C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C0",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 0,
+        "y": 1536
+      },
+      "order_index": 15,
+      "pixel_sha256": "7971debb379e8fe01f2586dc82f3979f47d7876ed2f5ddbb318e4d8f56a42ca6",
+      "png_sha256": "183bfe70860638ba1e23675ac0e6af4734d6f28f2a70fd94e62f9a8f8919b4a9",
+      "row": 3,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 1536
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 1,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R3C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C1",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 512,
+        "y": 1536
+      },
+      "order_index": 16,
+      "pixel_sha256": "a196c38fca530093b584b74dfd853be3d8b33c44a565fce530e9ff7decdf9f83",
+      "png_sha256": "2cb3ed00e084e89fa681e698ef401b56b5e184aa98d7ae99cbf1fc5b9e99b730",
+      "row": 3,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 1536
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 2,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R3C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C2",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1024,
+        "y": 1536
+      },
+      "order_index": 17,
+      "pixel_sha256": "5ad415fdd638847d8dcd77d8530d994e6aa9bfa4fd24c518feff377961ba7c95",
+      "png_sha256": "4ceee930fe670ec80c51a5de7c83cfc339a2edf1c4315f74a7301f334136866c",
+      "row": 3,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 1536
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 3,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R3C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C3",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1536,
+        "y": 1536
+      },
+      "order_index": 18,
+      "pixel_sha256": "a50cfa722ca7fdeff5d0bed23a9f6945eeed6a27c137419496c958496bd29858",
+      "png_sha256": "85aa07f2c12ab690998686547a9f1b9bb0c3ab98a2aaf445704e6065bfe13bb9",
+      "row": 3,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 1536
+      },
+      "clamp_pixels": {
+        "bottom": 0,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "column": 4,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R3C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "true_master_neighbor_pixels",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R3C4",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 2048,
+        "y": 1536
+      },
+      "order_index": 19,
+      "pixel_sha256": "d9858ef446e3e0c0582179abdd3744a58cf7643e4a061ea8e5ba6d88f116125a",
+      "png_sha256": "723d0216784734ede9eff4d5b1466a7cb3b799c0d31c4f65147ea9a4c64e0344",
+      "row": 3,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 1534
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 0,
+        "y": 2048
+      },
+      "clamp_pixels": {
+        "bottom": 2,
+        "left": 2,
+        "right": 0,
+        "top": 0
+      },
+      "column": 0,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R4C0_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "outer_edge_clamp",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C0",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 0,
+        "y": 2048
+      },
+      "order_index": 20,
+      "pixel_sha256": "177d509954f16d709496448ac51252f8ecd049004ad299a8ac410b7b76dc334b",
+      "png_sha256": "6ff27ae5bfbf46c4d5c0872baee1741b6c451b092c4b74d61978aecf30433b16",
+      "row": 4,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": -2,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 512,
+        "y": 2048
+      },
+      "clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 1,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R4C1_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C1",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 512,
+        "y": 2048
+      },
+      "order_index": 21,
+      "pixel_sha256": "8d1b02d496395137338b5488814ba9c843e2baa820cde90297aeb53d073f4e09",
+      "png_sha256": "6837696b6ae2dbfd5314c13e7d103d9b1d6d13928a27117e189cc42c1ba078f7",
+      "row": 4,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 510,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1024,
+        "y": 2048
+      },
+      "clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 2,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R4C2_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C2",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1024,
+        "y": 2048
+      },
+      "order_index": 22,
+      "pixel_sha256": "0c14ba1369506ed5a5586d766436b45b6894780018ec4a8ddac8718ce1bff9fa",
+      "png_sha256": "93569c3f7e0c1045fd9e4fa262adb2ec23abbcedf02653cafb5960f7e45051a6",
+      "row": 4,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1022,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 1536,
+        "y": 2048
+      },
+      "clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "column": 3,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R4C3_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "true_master_neighbor_pixels",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C3",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 1536,
+        "y": 2048
+      },
+      "order_index": 23,
+      "pixel_sha256": "abdd469f5ae8e1e088592e04259d6d9e05e761dc8ceb7c117ffce7c930f15971",
+      "png_sha256": "a71b657989913432269c076f200d2ee7b904f6abf8bd2a45befc7e12c286751c",
+      "row": 4,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 1534,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    },
+    {
+      "canonical_crop": {
+        "height": 512,
+        "width": 512,
+        "x": 2048,
+        "y": 2048
+      },
+      "clamp_pixels": {
+        "bottom": 2,
+        "left": 0,
+        "right": 2,
+        "top": 0
+      },
+      "column": 4,
+      "dimensions": {
+        "height": 516,
+        "width": 516
+      },
+      "file": "tiles/R4C4_g2.png",
+      "gutter_provenance": {
+        "bottom": "outer_edge_clamp",
+        "left": "true_master_neighbor_pixels",
+        "right": "outer_edge_clamp",
+        "top": "true_master_neighbor_pixels"
+      },
+      "id": "R4C4",
+      "inner_rect": {
+        "height": 512,
+        "width": 512,
+        "x": 2,
+        "y": 2
+      },
+      "macro_origin": {
+        "x": 2048,
+        "y": 2048
+      },
+      "order_index": 24,
+      "pixel_sha256": "50f958e04721344ea1646a1f027cb58931256fbb9056493427560f2ab601faaa",
+      "png_sha256": "60ad2e532b197c9de735e59667e3a4f83cc963cdfa1341992e1eb1d5951085d4",
+      "row": 4,
+      "source_master_sha256": "bca92c45f47fb680723c845928fca26cc899b808c6e7c18515eb58978634e639",
+      "source_window_unclamped": {
+        "height": 516,
+        "width": 516,
+        "x": 2046,
+        "y": 2046
+      },
+      "uv_inner_normalized": {
+        "u_max": 0.9961240310077519,
+        "u_min": 0.003875968992248062,
+        "v_max": 0.9961240310077519,
+        "v_min": 0.003875968992248062
+      }
+    }
+  ],
+  "tool_version": "1.0.0",
+  "uv_convention": {
+    "rect_uses_pixel_boundaries": true,
+    "texture_local": true,
+    "v_flip_is_runtime_adapter_responsibility": true
+  },
+  "version": "synthetic-wave3-proof"
+}
