@@ -3,8 +3,125 @@
         {
             "buildingId": "BUILDING_13",
             "buildingType": "ROYAL_PALACE",
-            "X": -29.380271911621095,
-            "TerrainY": 30.55406951904297,
+            "X": 5.132254600524902,
+            "TerrainY": 39.33601379394531,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_01",
+            "buildingType": "NURSERY",
+            "X": -22.15520477294922,
+            "TerrainY": 33.71181869506836,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_02",
+            "buildingType": "BARRACK",
+            "X": 18.006662368774415,
+            "TerrainY": 24.412128448486329,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_03",
+            "buildingType": "HONEY_RESERVE",
+            "X": 18.45439910888672,
+            "TerrainY": 38.885826110839847,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.38398703932762148
+        },
+        {
+            "buildingId": "BUILDING_04",
+            "buildingType": "DEFENSE",
+            "X": 28.079898834228517,
+            "TerrainY": 17.873836517333986,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.3983624577522278
+        },
+        {
+            "buildingId": "BUILDING_05",
+            "buildingType": "GENETICS",
+            "X": 1.6155219078063965,
+            "TerrainY": 17.451858520507814,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.4891289174556732
+        },
+        {
+            "buildingId": "BUILDING_06",
+            "buildingType": "RESEARCH",
+            "X": 0.28231382369995119,
+            "TerrainY": 27.97328758239746,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_07",
+            "buildingType": "WAREHOUSE",
+            "X": 9.910566329956055,
+            "TerrainY": 4.992589950561523,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.42479637265205386
+        },
+        {
+            "buildingId": "BUILDING_08",
+            "buildingType": "TRANSFORMATION",
+            "X": -9.826493263244629,
+            "TerrainY": 23.704715728759767,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.30367282032966616
+        },
+        {
+            "buildingId": "BUILDING_09",
+            "buildingType": "INFIRMARY",
+            "X": -29.141559600830079,
+            "TerrainY": 26.01203727722168,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_10",
+            "buildingType": "ALLIANCE_CENTER",
+            "X": 33.107120513916019,
+            "TerrainY": 7.214393138885498,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.28009557723999026
+        },
+        {
+            "buildingId": "BUILDING_11",
+            "buildingType": "ACADEMY",
+            "X": -30.988811492919923,
+            "TerrainY": 25.172012329101564,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_12",
+            "buildingType": "BANK",
+            "X": -35.53858947753906,
+            "TerrainY": 32.043052673339847,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_14",
+            "buildingType": "CHAMPION_HALL",
+            "X": -10.012432098388672,
+            "TerrainY": 37.92326736450195,
             "Z": 29.950000762939454,
             "Rotation": 0.0,
             "Scale": 0.27000001072883608
