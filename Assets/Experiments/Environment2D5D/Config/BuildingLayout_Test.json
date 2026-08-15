@@ -1,0 +1,286 @@
+{
+  "version": 1,
+  "scene": "Environment2D5D_SpatialV3",
+  "layout": [
+    {
+      "id": "BUILDING_01",
+      "placeholder": "BUILDING_PLACEHOLDER_01",
+      "buildingType": "NURSERY",
+      "position": {
+        "x": 18.81,
+        "y": 40.64,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_02",
+      "placeholder": "BUILDING_PLACEHOLDER_02",
+      "buildingType": "BARRACK",
+      "position": {
+        "x": 1.71,
+        "y": 12.23,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_03",
+      "placeholder": "BUILDING_PLACEHOLDER_03",
+      "buildingType": "HONEY_RESERVE",
+      "position": {
+        "x": 16.15,
+        "y": 23.72,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_04",
+      "placeholder": "BUILDING_PLACEHOLDER_04",
+      "buildingType": "DEFENSE",
+      "position": {
+        "x": 8.86,
+        "y": 6.02,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_05",
+      "placeholder": "BUILDING_PLACEHOLDER_05",
+      "buildingType": "GENETICS",
+      "position": {
+        "x": 16.74,
+        "y": 14.03,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_06",
+      "placeholder": "BUILDING_PLACEHOLDER_06",
+      "buildingType": "RESEARCH",
+      "position": {
+        "x": 4.79,
+        "y": 27.6,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_07",
+      "placeholder": "BUILDING_PLACEHOLDER_07",
+      "buildingType": "WAREHOUSE",
+      "position": {
+        "x": -3.51,
+        "y": 33.75,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_08",
+      "placeholder": "BUILDING_PLACEHOLDER_08",
+      "buildingType": "TRANSFORMATION",
+      "position": {
+        "x": 20.95,
+        "y": 30.1,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_09",
+      "placeholder": "BUILDING_PLACEHOLDER_09",
+      "buildingType": "INFIRMARY",
+      "position": {
+        "x": -9.67,
+        "y": 38.77,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_10",
+      "placeholder": "BUILDING_PLACEHOLDER_10",
+      "buildingType": "ALLIANCE_CENTER",
+      "position": {
+        "x": 37.56,
+        "y": 10.85,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_11",
+      "placeholder": "BUILDING_PLACEHOLDER_11",
+      "buildingType": "ACADEMY",
+      "position": {
+        "x": -10.66,
+        "y": 22.68,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_12",
+      "placeholder": "BUILDING_PLACEHOLDER_12",
+      "buildingType": "BANK",
+      "position": {
+        "x": -9.1,
+        "y": 10.79,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_13",
+      "placeholder": "BUILDING_PLACEHOLDER_13",
+      "buildingType": "ROYAL_PALACE",
+      "position": {
+        "x": 1.83,
+        "y": 39.13,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    },
+    {
+      "id": "BUILDING_14",
+      "placeholder": "BUILDING_PLACEHOLDER_14",
+      "buildingType": "CHAMPION_HALL",
+      "position": {
+        "x": 14.21,
+        "y": 37.92,
+        "z": 29.95
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.27,
+        "y": 0.27,
+        "z": 0.27
+      }
+    }
+  ]
+}

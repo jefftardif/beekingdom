@@ -1,0 +1,13 @@
+{
+    "placements": [
+        {
+            "buildingId": "BUILDING_13",
+            "buildingType": "ROYAL_PALACE",
+            "X": -29.380271911621095,
+            "TerrainY": 30.55406951904297,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        }
+    ]
+}

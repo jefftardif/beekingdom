@@ -1,12 +1,12 @@
 ﻿<Solution>
   <Project Path="BeeKingdom.World.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="BeeKingdom.Gameplay.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="BeeKingdom.Colony.csproj" />
   <Project Path="BeeKingdom.Services.csproj" />
   <Project Path="BeeKingdom.Tests.csproj" />
   <Project Path="BeeKingdom.Hive.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="BeeKingdom.Data.csproj" />
   <Project Path="BeeKingdom.Config.csproj" />
   <Project Path="BeeKingdom.Core.csproj" />
