@@ -11,6 +11,7 @@ namespace BeeKingdom.Playground.Editor
     {
         private const string MainDemoScenePath = "Assets/Scenes/SandboxPlayground.unity";
         private const string LivingHiveScenePath = "Assets/Scenes/LivingHive.unity";
+        private const string Environment2D5DScenesFolder = "Assets/Experiments/Environment2D5D/";
         private const string Wave5Premium25x25ScenePath = "Assets/Scenes/WorldMapWave5Premium25x25Test.unity";
         private const string Wave6V3ECandidateScenePath = "Assets/Scenes/WorldMapWave6V3ECandidate.unity";
         private const string Wave6V2INativeAuditPreviewScenePath = "Assets/Scenes/WorldMapWave6V2INativeAuditPreview.unity";
@@ -26,6 +27,7 @@ namespace BeeKingdom.Playground.Editor
         static PlaygroundPlayModeStartScene()
         {
             EditorApplication.delayCall += ConfigurePlayModeStartScene;
+            EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChangedInEditMode;
         }
 
         [MenuItem("Bee Kingdom/Playground/Open Main Demo Scene")]
@@ -294,6 +296,12 @@ namespace BeeKingdom.Playground.Editor
         public static void ConfigurePlayModeStartScene()
         {
             string activeScenePath = SceneManager.GetActiveScene().path;
+            if (IsEnvironment2D5DScene(activeScenePath))
+            {
+                ClearPlayModeStartScene();
+                return;
+            }
+
             string currentStartScenePath = AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene);
             bool activeSceneIsLivingHive = activeScenePath == LivingHiveScenePath;
             bool currentStartSceneIsLivingHive = currentStartScenePath == LivingHiveScenePath;
@@ -393,6 +401,28 @@ namespace BeeKingdom.Playground.Editor
             bool currentStartSceneIsWave5 = currentStartScenePath == Wave5Premium25x25ScenePath;
             bool wave5Mode = SplashDevelopmentSceneConfig.IsWave5PremiumMapModeEnabled();
             ConfigurePlayModeStartScene(activeSceneIsWave5 || currentStartSceneIsWave5 || wave5Mode ? Wave5Premium25x25ScenePath : MainDemoScenePath);
+        }
+
+        private static void OnActiveSceneChangedInEditMode(Scene previousScene, Scene nextScene)
+        {
+            if (IsEnvironment2D5DScene(nextScene.path))
+            {
+                ClearPlayModeStartScene();
+            }
+        }
+
+        private static bool IsEnvironment2D5DScene(string scenePath)
+        {
+            return !string.IsNullOrEmpty(scenePath)
+                && scenePath.StartsWith(Environment2D5DScenesFolder, System.StringComparison.Ordinal);
+        }
+
+        private static void ClearPlayModeStartScene()
+        {
+            if (EditorSceneManager.playModeStartScene != null)
+            {
+                EditorSceneManager.playModeStartScene = null;
+            }
         }
 
         private static bool IsLegacyWave6Scene(string scenePath)

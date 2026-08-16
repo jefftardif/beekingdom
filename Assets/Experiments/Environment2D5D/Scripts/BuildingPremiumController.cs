@@ -17,6 +17,10 @@ namespace BeeKingdom.Experiments.Environment2D5D
         public AnchorMarker buildingAnchor;
         public Transform visualRoot;
 
+        [Header("Runtime visibility")]
+        [Tooltip("Afficher la boîte debug 'BUILDING TEST' en mode Play (défaut: cachée au runtime).")]
+        public bool showInPlay = false;
+
         [Header("Controls")]
         public float minHeightScale = 0.6f;
         public float maxHeightScale = 1.6f;
@@ -68,6 +72,9 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void OnGUI()
         {
+            // Boîte de debug de développement : invisible au runtime sauf showInPlay.
+            if (Application.isPlaying && !showInPlay) return;
+
             if (_boxStyle == null)
             {
                 _boxStyle = new GUIStyle(GUI.skin.box);

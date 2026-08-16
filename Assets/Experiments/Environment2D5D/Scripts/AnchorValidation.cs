@@ -30,6 +30,10 @@ namespace BeeKingdom.Experiments.Environment2D5D
         public float stepDuration = 1.4f;
         public float settleFrames = 3f;
 
+        [Header("Runtime visibility")]
+        [Tooltip("Activer ce harnais de validation en mode Play (vol caméra auto). Par défaut désactivé au runtime afin de laisser la scène de jeu stable.")]
+        public bool showInPlay = false;
+
         [Header("Tolerances")]
         [Tooltip("Max allowed anchor displacement in world units (FAIL above this).")]
         public float worldTolerance = 0.001f;
@@ -91,6 +95,8 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void LateUpdate()
         {
+            if (Application.isPlaying && !showInPlay) return;
+
             if (_firstFrame)
             {
                 _firstFrame = false;
@@ -104,6 +110,8 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void Update()
         {
+            if (Application.isPlaying && !showInPlay) return;
+
             Keyboard kb = Keyboard.current;
             if (kb != null && kb.vKey.wasPressedThisFrame && !_running && _initialized)
             {
@@ -291,6 +299,8 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void OnGUI()
         {
+            if (Application.isPlaying && !showInPlay) return;
+
             // HUD hidden by default so the frontal backdrop stays fully visible; X toggles it.
             if (!_initialized || !_showHud) return;
 

@@ -19,7 +19,9 @@
         "BeeKingdom.QA",
         "BeeKingdom.Networking",
         "BeeKingdom.Save",
-        "BeeKingdom.WorldMap"
+        "BeeKingdom.WorldMap",
+        "BeeKingdom.LivingHiveMenu",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

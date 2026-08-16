@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 9d13dff4aac135b429f3a55825cab471
+guid: e5c079c126bb8f743b37f2a82fe3d07d
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8129206677162890045
-    second: honey_banner_1080x120_0
+      213: 9125305639612135431
+    second: DEFENSE_001_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -55,7 +55,7 @@ TextureImporter:
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
-  alphaIsTransparency: 0
+  alphaIsTransparency: 1
   spriteTessellationDetail: -1
   textureType: 8
   textureShape: 1
@@ -75,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: honey_banner_1080x120_0
+      name: DEFENSE_001_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1080
-        height: 120
+        width: 1254
+        height: 1254
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3cce8f5f8914f2f80800000000000000
-      internalID: -8129206677162890045
+      spriteID: 70833fb912993ae70800000000000000
+      internalID: 9125305639612135431
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      honey_banner_1080x120_0: -8129206677162890045
+      DEFENSE_001_0: 9125305639612135431
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -19,6 +19,7 @@
   <Project Path="BeeKingdom.Population.csproj" />
   <Project Path="BeeKingdom.UI.csproj" />
   <Project Path="BeeKingdom.Chambers.csproj" />
+  <Project Path="BeeKingdom.LivingHiveMenu.csproj" />
   <Project Path="BeeKingdom.AI.csproj" />
   <Project Path="BeeKingdom.QA.csproj" />
   <Project Path="BeeKingdom.Builders.csproj" />

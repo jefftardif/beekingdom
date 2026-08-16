@@ -100,15 +100,6 @@
             "Scale": 0.28009557723999026
         },
         {
-            "buildingId": "BUILDING_11",
-            "buildingType": "ACADEMY",
-            "X": -30.988811492919923,
-            "TerrainY": 25.172012329101564,
-            "Z": 29.950000762939454,
-            "Rotation": 0.0,
-            "Scale": 0.27000001072883608
-        },
-        {
             "buildingId": "BUILDING_12",
             "buildingType": "BANK",
             "X": -35.53858947753906,
@@ -122,6 +113,15 @@
             "buildingType": "CHAMPION_HALL",
             "X": -10.012432098388672,
             "TerrainY": 37.92326736450195,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.27000001072883608
+        },
+        {
+            "buildingId": "BUILDING_11",
+            "buildingType": "ACADEMY",
+            "X": -1.8148365020751954,
+            "TerrainY": 34.78340530395508,
             "Z": 29.950000762939454,
             "Rotation": 0.0,
             "Scale": 0.27000001072883608

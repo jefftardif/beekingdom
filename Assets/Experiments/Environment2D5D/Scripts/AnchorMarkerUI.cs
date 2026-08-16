@@ -6,6 +6,10 @@ namespace BeeKingdom.Experiments.Environment2D5D
 {
     public class AnchorMarkerUI : MonoBehaviour
     {
+        [Header("Runtime visibility")]
+        [Tooltip("Afficher cet outil de développement en mode Play (défaut: caché au runtime). L'outil reste pleinement utilisable dans le workflow éditeur via ce flag.")]
+        public bool showInPlay = false;
+
         [Header("References")]
         public BuildingPerspectiveCamera cameraController;
         public AnchorMarker[] markers;
@@ -34,6 +38,10 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void Awake()
         {
+            // Outil de développement : par défaut invisible au runtime (Play/build).
+            // Un développeur peut le réafficher en play en cochant showInPlay dans l'éditeur.
+            if (Application.isPlaying && !showInPlay) return;
+
             if (markers != null && markers.Length > 0)
             {
                 markers[0].SetSelected(true);
@@ -43,6 +51,8 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void Update()
         {
+            if (Application.isPlaying && !showInPlay) return;
+
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
 
