@@ -49,6 +49,22 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             SceneView.duringSceneGui += OnSceneGUI;
         }
 
+        private static void EnsureOverviewBuilt()
+        {
+            // The interactive placement session owns the scene while it's active: it
+            // already destroys the Overview when it activates (see
+            // BuildingPlacementSession.Activate), but SceneView repaints on virtually
+            // every mouse move, so without this guard the very next repaint would call
+            // EnsureOverviewBuilt() again, see _built == false, and immediately rebuild
+            // the whole static Overview (including a frozen, non-draggable duplicate of
+            // whichever building is being dragged) right on top of the session's preview.
+            if (BuildingPlacementSession.Active) return;
+            if (!_built)
+            {
+                BuildOverview();
+            }
+        }
+
         [MenuItem(ShowAllPath, false, 2001)]
         public static void ShowAllBuildings()
         {
@@ -164,6 +180,7 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
 
         private static void OnSceneGUI(SceneView view)
         {
+            EnsureOverviewBuilt();
             if (!_built || !_showLabels || _items.Count == 0) return;
 
             if (_labelStyle == null)
@@ -289,6 +306,17 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
         public static void DestroyOverview()
         {
             if (_root) Object.DestroyImmediate(_root);
+            else
+            {
+                // A domain reload (script recompile) wipes the static _root reference to
+                // null even though the scene GameObject survives (Unity only clears
+                // static fields on reload, it doesn't destroy DontSave scene objects), so
+                // without this a recompile while the Overview is showing would orphan it:
+                // the next BuildOverview() would create a second, duplicate
+                // "BUILDING_PLACEMENT_OVERVIEW" instead of replacing the old one.
+                GameObject stale = GameObject.Find(RootName);
+                if (stale) Object.DestroyImmediate(stale);
+            }
             _root = null;
             _items.Clear();
             _built = false;

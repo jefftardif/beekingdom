@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0,3730279">
+  <test-suite type="TestSuite" id="1000" name="BeeKingdom" fullname="BeeKingdom" runstate="Runnable" testcasecount="1394" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.373028" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="2621" name="BeeKingdom.Tests.dll" fullname="C:/projets/beekingdomgame-master/Library/ScriptAssemblies/BeeKingdom.Tests.dll" runstate="Runnable" testcasecount="1063" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.358104" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="37708" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="2622" name="BeeKingdom" fullname="BeeKingdom" runstate="Runnable" testcasecount="1063" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.350956" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="2623" name="Tests" fullname="BeeKingdom.Tests" runstate="Runnable" testcasecount="1063" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.344113" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="2624" name="Editor" fullname="BeeKingdom.Tests.Editor" runstate="Runnable" testcasecount="966" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.336698" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="2625" name="Interaction" fullname="BeeKingdom.Tests.Editor.Interaction" runstate="Runnable" testcasecount="87" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.327683" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2601" name="LivingHiveMenuPortTests" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.325730" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2614" name="CanvasBuildCreatesRailAndOverlayPanels" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.CanvasBuildCreatesRailAndOverlayPanels" methodname="CanvasBuildCreatesRailAndOverlayPanels" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="865889707" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.239229" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2609" name="ChatToggleOpensChatAndClosesMenu" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.ChatToggleOpensChatAndClosesMenu" methodname="ChatToggleOpensChatAndClosesMenu" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="338774182" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000816" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2615" name="ClickingQuestsOpensQuestPanel" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.ClickingQuestsOpensQuestPanel" methodname="ClickingQuestsOpensQuestPanel" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1633594710" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.031705" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2613" name="DefaultsAreAllStock" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.DefaultsAreAllStock" methodname="DefaultsAreAllStock" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="355681750" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.001307" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2602" name="LandscapeRailHasExactlyTenLivingHiveEntries" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.LandscapeRailHasExactlyTenLivingHiveEntries" methodname="LandscapeRailHasExactlyTenLivingHiveEntries" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1666521332" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.001938" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2611" name="MoreClickWhenSettingsOpenClosesPanel" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.MoreClickWhenSettingsOpenClosesPanel" methodname="MoreClickWhenSettingsOpenClosesPanel" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="624174358" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000188" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2617" name="MoreRowSettingsOpensSettingsPanel" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.MoreRowSettingsOpensSettingsPanel" methodname="MoreRowSettingsOpensSettingsPanel" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1256737164" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.006327" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2610" name="MoreShowsActiveWhenSettingsOpen" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.MoreShowsActiveWhenSettingsOpen" methodname="MoreShowsActiveWhenSettingsOpen" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="81070659" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000339" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2604" name="NavIconIdMatchesMonolithMapping" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.NavIconIdMatchesMonolithMapping" methodname="NavIconIdMatchesMonolithMapping" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1327435013" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000222" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2603" name="PortraitRailHasExactlyFiveLivingHiveEntries" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.PortraitRailHasExactlyFiveLivingHiveEntries" methodname="PortraitRailHasExactlyFiveLivingHiveEntries" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="796921802" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000291" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2606" name="PortraitRailOneValidColumnLayout" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.PortraitRailOneValidColumnLayout" methodname="PortraitRailOneValidColumnLayout" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="531658830" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.001005" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2605" name="PortraitRailRectsMatchMonolithExactGeometry" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.PortraitRailRectsMatchMonolithExactGeometry" methodname="PortraitRailRectsMatchMonolithExactGeometry" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="885947459" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000203" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2619" name="RailBackdropSitsFullWidthAtBottomOfCanvas" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.RailBackdropSitsFullWidthAtBottomOfCanvas" methodname="RailBackdropSitsFullWidthAtBottomOfCanvas" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="92918247" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.009069" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2618" name="RailForProofMatchesMonolithFullWidthBottomBar" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.RailForProofMatchesMonolithFullWidthBottomBar" methodname="RailForProofMatchesMonolithFullWidthBottomBar" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="2039486650" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.000432" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2620" name="RailHasNoCanvasScaler" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.RailHasNoCanvasScaler" methodname="RailHasNoCanvasScaler" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="933357570" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.006981" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2612" name="SettingsRoundTripPersistsThroughPlayerPrefs" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.SettingsRoundTripPersistsThroughPlayerPrefs" methodname="SettingsRoundTripPersistsThroughPlayerPrefs" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1389111994" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:35Z" duration="0.002875" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2616" name="SurfaceSwitchShowsWorldMapOverlay" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.SurfaceSwitchShowsWorldMapOverlay" methodname="SurfaceSwitchShowsWorldMapOverlay" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="603418959" result="Passed" start-time="2026-08-16 01:09:35Z" end-time="2026-08-16 01:09:36Z" duration="0.007009" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2608" name="SurfaceSwitchTogglesWorldAndClosesMenu" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.SurfaceSwitchTogglesWorldAndClosesMenu" methodname="SurfaceSwitchTogglesWorldAndClosesMenu" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1899340915" result="Passed" start-time="2026-08-16 01:09:36Z" end-time="2026-08-16 01:09:36Z" duration="0.000349" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2607" name="ToggleEntryOpensAndClosesMenu" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.ToggleEntryOpensAndClosesMenu" methodname="ToggleEntryOpensAndClosesMenu" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="118713329" result="Passed" start-time="2026-08-16 01:09:36Z" end-time="2026-08-16 01:09:36Z" duration="0.000204" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[<color=#ff6b6b>fail:</color> [21:09:36:0094] <color=#B4FF32>[AI]</color> <color=#58D68D><b>TestResultCollector</b></color> Test run finished, but the pending MCP request id was missing. The test results cannot be delivered to the client.
+Saving results to: C:/Users/Utilisateur/AppData/LocalLow/BKD Honey Studio/BeeKingdom\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

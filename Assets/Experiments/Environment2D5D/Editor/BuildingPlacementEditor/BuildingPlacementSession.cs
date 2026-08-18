@@ -14,6 +14,17 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
         TopLeft = 3
     }
 
+    // Edge-midpoint handles: drag Left/Right to change only scaleX (width), drag Top/
+    // Bottom to change only scaleY (height) — a deliberate one-axis deform, unlike the
+    // corner handles which always affect both axes (proportionally or freely).
+    public enum EdgeIndex
+    {
+        Left = 0,
+        Right = 1,
+        Top = 2,
+        Bottom = 3
+    }
+
     public static class BuildingPlacementSession
     {
         private const int MaxUndo = 64;
@@ -55,6 +66,15 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
 
         public static void Activate()
         {
+            // Symmetric with BuildOverview(), which deactivates this session when the
+            // read-only Overview builds: if the Overview's static "BUILDING_PLACEMENT_
+            // OVERVIEW" copies are left in the scene while this interactive session
+            // starts, the two coexist and the session's own preview (the one the drag
+            // handles actually move) gets visually lost among the Overview's frozen
+            // duplicates, e.g. dragging Royal Palace here has no visible effect because
+            // the Overview's separate, un-moving Royal Palace copy is still rendered.
+            BuildingPlacementOverview.DestroyOverview();
+
             if (_record == null)
             {
                 LoadBuilding(_currentIndex);
@@ -123,7 +143,14 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
 
             PushUndoIfNeeded(commitUndo, _record.Clone());
 
-            if (_groundAnchor)
+            // GroundSurfaceResolver's curve is calibrated for the single sloped-ground
+            // SpatialV3 building test, not for HiveMap layouts where each hex compartment
+            // has its own independently authored TerrainY (not a function of X). Following
+            // that curve while dragging in a HiveMap context snaps buildings to wildly
+            // wrong heights, so Ground Anchor only recomputes terrainY outside HiveMap
+            // (UseOfficialLayoutFallback == true); in HiveMap context, dragging X leaves
+            // the already-loaded TerrainY untouched.
+            if (_groundAnchor && BuildingPlacementLayoutIO.UseOfficialLayoutFallback)
             {
                 _record.x = newX;
                 _record.terrainY = GroundSurfaceResolver.TerrainYFromX(newX);
@@ -208,6 +235,48 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             PushUndoIfNeeded(commitUndo, _record.Clone());
             _record.scaleX = Mathf.Clamp(newX, MinScale, MaxScale);
             _record.scaleY = Mathf.Clamp(newY, MinScale, MaxScale);
+            BuildingPlacementPreview.UpdateTransform(_record);
+            NotifyChanged();
+        }
+
+        // Single-axis deform via an edge-midpoint handle: Left/Right only ever touch
+        // scaleX, Top/Bottom only ever touch scaleY. Uses the SAME corner-offset-at-
+        // scale-1 math as ResizeFree/ResizeProportional (offset -> absolute scale from
+        // pointer distance), just reading only the axis that edge controls.
+        public static void ResizeEdge(EdgeIndex edge, Vector3 pointerWorld, bool commitUndo)
+        {
+            if (_record == null) return;
+
+            Vector3 gcp = new Vector3(_record.x, _record.terrainY, _record.z);
+            Vector3[] offsets = BuildingPlacementPreview.GetCornerOffsetsAtScaleOne();
+            if (offsets == null) return;
+
+            bool horizontal = edge == EdgeIndex.Left || edge == EdgeIndex.Right;
+            CornerIndex referenceCorner = edge == EdgeIndex.Left ? CornerIndex.TopLeft
+                : edge == EdgeIndex.Right ? CornerIndex.TopRight
+                : edge == EdgeIndex.Top ? CornerIndex.TopLeft
+                : CornerIndex.BottomLeft;
+            Vector3 o1 = offsets[(int)referenceCorner];
+
+            PushUndoIfNeeded(commitUndo, _record.Clone());
+
+            if (horizontal)
+            {
+                if (Mathf.Abs(o1.x) > 0.0001f)
+                {
+                    float dx = pointerWorld.x - gcp.x;
+                    _record.scaleX = Mathf.Clamp(dx / o1.x, MinScale, MaxScale);
+                }
+            }
+            else
+            {
+                if (Mathf.Abs(o1.y) > 0.0001f)
+                {
+                    float dy = pointerWorld.y - gcp.y;
+                    _record.scaleY = Mathf.Clamp(dy / o1.y, MinScale, MaxScale);
+                }
+            }
+
             BuildingPlacementPreview.UpdateTransform(_record);
             NotifyChanged();
         }

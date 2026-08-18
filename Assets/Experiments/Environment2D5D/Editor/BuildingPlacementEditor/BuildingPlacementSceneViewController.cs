@@ -14,11 +14,13 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
         {
             None,
             Move,
-            Resize
+            Resize,
+            ResizeEdge
         }
 
         private static Interaction _interaction;
         private static CornerIndex _corner;
+        private static EdgeIndex _edge;
         private static float _startScaleX;
         private static float _startScaleY;
         private static bool _dragging;
@@ -34,6 +36,21 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             SceneView.duringSceneGui += OnSceneGUI;
             Selection.selectionChanged += OnSelectionChanged;
             EditorApplication.hierarchyChanged += OnHierarchyChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        // Both the read-only Overview ("BUILDING_PLACEMENT_OVERVIEW", HideFlags.DontSave)
+        // and the interactive session's preview are plain scene GameObjects created by
+        // editor tooling — Unity doesn't destroy DontSave objects on its own, and without
+        // a domain/scene reload on Play (common project setting), they carry straight into
+        // Play mode and render alongside BuildingRuntimeViewBootstrap's own runtime-spawned
+        // buildings, doubling every building on screen. Cleared right before Play actually
+        // starts so nothing from the editor tool leaks into the game view.
+        private static void OnPlayModeStateChanged(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.ExitingEditMode) return;
+            BuildingPlacementSession.Deactivate();
+            BuildingPlacementOverview.DestroyOverview();
         }
 
         public static bool IsInteracting
@@ -67,6 +84,7 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             DrawBuildingOutline(record);
             DrawGcpVisual(record);
             DrawHandles(record);
+            DrawEdgeHandles(record);
             DrawInfoLabel(record);
 
             HandleInteractionInput(view, record);
@@ -116,6 +134,19 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
                     {
                         _interaction = Interaction.Resize;
                         _corner = (CornerIndex)cornerIndex;
+                        _startScaleX = record.scaleX;
+                        _startScaleY = record.scaleY;
+                        _dragging = false;
+                        e.Use();
+                        view.Repaint();
+                        return;
+                    }
+
+                    int edgeIndex = HitTestEdge(record);
+                    if (edgeIndex >= 0)
+                    {
+                        _interaction = Interaction.ResizeEdge;
+                        _edge = (EdgeIndex)edgeIndex;
                         _startScaleX = record.scaleX;
                         _startScaleY = record.scaleY;
                         _dragging = false;
@@ -187,6 +218,21 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
                             {
                                 BuildingPlacementSession.ResizeFree(_corner, wp, _startScaleX, _startScaleY, false);
                             }
+                            break;
+
+                        case Interaction.ResizeEdge:
+                            if (!_dragging)
+                            {
+                                Vector3 e0 = BuildingPlacementPreview.GetEdgeMidpointWorldPosition(record, _edge);
+                                if ((wp - e0).sqrMagnitude < MinDragDistance * MinDragDistance) return;
+                                _dragging = true;
+                                BuildingPlacementSession.PushUndo(record.Clone());
+                            }
+
+                            // Edge handles are always a deliberate one-axis deform:
+                            // Shift/Proportional don't apply here (that toggle governs the
+                            // corner handles, which affect both axes at once).
+                            BuildingPlacementSession.ResizeEdge(_edge, wp, false);
                             break;
                     }
 
@@ -270,6 +316,22 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             return -1;
         }
 
+        private static int HitTestEdge(BuildingPlacementRecord record)
+        {
+            Vector2 mouse = Event.current.mousePosition;
+            for (int i = 0; i < 4; i++)
+            {
+                EdgeIndex edge = (EdgeIndex)i;
+                Vector3 world = BuildingPlacementPreview.GetEdgeMidpointWorldPosition(record, edge);
+                Vector2 gui = HandleUtility.WorldToGUIPoint(world);
+                if ((gui - mouse).sqrMagnitude <= HandleScreenRadius * HandleScreenRadius)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         private static bool HitTestBuilding(BuildingPlacementRecord record, SceneView view)
         {
             Vector3[] corners = BuildingPlacementPreview.GetCornerWorldPositions(record);
@@ -330,6 +392,40 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
                         corners[i] + new Vector3(size, -size, 0f),
                         corners[i] + new Vector3(size, size, 0f),
                         corners[i] + new Vector3(-size, size, 0f)
+                    },
+                    fill,
+                    border);
+            }
+        }
+
+        // Edge-midpoint handles: a distinct color/shape from the corner squares so it
+        // reads as "drag this to stretch one axis only" — a bar elongated ALONG the edge
+        // (thin the way you'd drag it), the same visual convention as Figma/Photoshop
+        // edge handles.
+        private static void DrawEdgeHandles(BuildingPlacementRecord record)
+        {
+            Color fill = new Color(0.45f, 0.9f, 0.55f, 0.9f);
+            Color border = new Color(0f, 0.25f, 0.1f, 1f);
+
+            for (int i = 0; i < 4; i++)
+            {
+                EdgeIndex edge = (EdgeIndex)i;
+                Vector3 mid = BuildingPlacementPreview.GetEdgeMidpointWorldPosition(record, edge);
+                float size = HandleUtility.GetHandleSize(mid) * 0.14f;
+                bool vertical = edge == EdgeIndex.Left || edge == EdgeIndex.Right;
+                float halfLong = size * 1.4f;
+                float halfShort = size * 0.5f;
+                float hx = vertical ? halfShort : halfLong;
+                float hy = vertical ? halfLong : halfShort;
+
+                Handles.color = fill;
+                Handles.DrawSolidRectangleWithOutline(
+                    new[]
+                    {
+                        mid + new Vector3(-hx, -hy, 0f),
+                        mid + new Vector3(hx, -hy, 0f),
+                        mid + new Vector3(hx, hy, 0f),
+                        mid + new Vector3(-hx, hy, 0f)
                     },
                     fill,
                     border);

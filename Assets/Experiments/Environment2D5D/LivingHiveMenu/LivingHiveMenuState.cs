@@ -27,6 +27,8 @@ namespace BeeKingdom.LivingHiveMenu
         private bool musicEnabled = true;
         private bool reducedMotionEnabled;
         private bool economyModeEnabled;
+        private bool activitiesOpen;
+        private bool communicationOpen;
 
         public enum SurfaceBoundary
         {
@@ -48,6 +50,8 @@ namespace BeeKingdom.LivingHiveMenu
 
         public string ActiveMenuId => activeMenuId;
         public bool ChatOpen => chatOpen;
+        public bool ActivitiesOpen => activitiesOpen;
+        public bool CommunicationOpen => communicationOpen;
         public string CurrentLocale => currentLocale;
         public bool SoundEnabled => soundEnabled;
         public bool MusicEnabled => musicEnabled;
@@ -99,10 +103,12 @@ namespace BeeKingdom.LivingHiveMenu
             return PlayerPrefs.GetInt(key, fallback ? 1 : 0) == 1;
         }
 
-        private void ResetToDefaultsForProof()
+        public void ResetToDefaultsForProof()
         {
             activeMenuId = string.Empty;
             chatOpen = false;
+            activitiesOpen = false;
+            communicationOpen = false;
             SurfaceMode = SurfaceBoundary.Hive;
             currentLocale = "fr-CA";
             soundEnabled = true;
@@ -121,16 +127,31 @@ namespace BeeKingdom.LivingHiveMenu
                 return;
             }
 
-            if (LivingHiveMenuSpec.IsChat(itemId))
+            if (LivingHiveMenuSpec.IsActivities(itemId))
             {
-                chatOpen = !chatOpen;
-                activeMenuId = string.Empty;
+                activitiesOpen = !activitiesOpen;
+                activeMenuId = activitiesOpen ? LivingHiveMenuSpec.ActivitiesId : string.Empty;
+                return;
+            }
+
+            if (LivingHiveMenuSpec.IsCommunication(itemId))
+            {
+                communicationOpen = !communicationOpen;
+                activeMenuId = communicationOpen ? LivingHiveMenuSpec.CommunicationId : string.Empty;
                 return;
             }
 
             if (LivingHiveMenuSpec.IsMore(itemId) && activeMenuId == LivingHiveMenuSpec.SettingsId)
             {
                 CloseActiveMenuPanel();
+                return;
+            }
+
+            if (LivingHiveMenuSpec.IsBag(itemId))
+            {
+                activeMenuId = string.Equals(activeMenuId, LivingHiveMenuSpec.BagId, StringComparison.Ordinal)
+                    ? string.Empty
+                    : LivingHiveMenuSpec.BagId;
                 return;
             }
 
@@ -159,6 +180,8 @@ namespace BeeKingdom.LivingHiveMenu
         public void CloseActiveMenuPanel()
         {
             activeMenuId = string.Empty;
+            activitiesOpen = false;
+            communicationOpen = false;
         }
 
         public void OpenMenu(string menuId)

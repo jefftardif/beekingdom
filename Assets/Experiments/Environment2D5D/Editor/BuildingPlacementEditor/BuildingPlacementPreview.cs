@@ -33,6 +33,11 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
         public static void Build(BuildingCatalogEntry entry)
         {
             if (entry == null) return;
+            // Destroy() also finds-and-removes any stale scene GameObject even when the
+            // static _root reference was wiped by a domain reload (recompile) — without
+            // that, every recompile while the session is active would orphan the old
+            // preview here and create a second, un-managed "BUILDING_PLACEMENT_EDITOR_
+            // PREVIEW" that never gets resized/moved again.
             Destroy();
 
             _recordEntry = entry;
@@ -129,6 +134,20 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             };
         }
 
+        public static Vector3 GetEdgeMidpointWorldPosition(BuildingPlacementRecord record, EdgeIndex edge)
+        {
+            Vector3[] corners = GetCornerWorldPositions(record);
+            if (corners == null) return Vector3.zero;
+
+            switch (edge)
+            {
+                case EdgeIndex.Left: return (corners[(int)CornerIndex.BottomLeft] + corners[(int)CornerIndex.TopLeft]) * 0.5f;
+                case EdgeIndex.Right: return (corners[(int)CornerIndex.BottomRight] + corners[(int)CornerIndex.TopRight]) * 0.5f;
+                case EdgeIndex.Top: return (corners[(int)CornerIndex.TopRight] + corners[(int)CornerIndex.TopLeft]) * 0.5f;
+                default: return (corners[(int)CornerIndex.BottomLeft] + corners[(int)CornerIndex.BottomRight]) * 0.5f;
+            }
+        }
+
         public static Vector3 GetGroundLineLeft(BuildingPlacementRecord record)
         {
             return new Vector3(record.x - 0.6f, record.terrainY, record.z);
@@ -148,6 +167,14 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
         public static void Destroy()
         {
             if (_root) Object.DestroyImmediate(_root);
+            else
+            {
+                // Same stale-reference gap as in Build(): after a domain reload, _root is
+                // null even if the scene GameObject still exists, so callers like
+                // DeletePreview() need this to actually remove what's visible.
+                GameObject stale = GameObject.Find(RootName);
+                if (stale) Object.DestroyImmediate(stale);
+            }
             _root = null;
             _visual = null;
             if (_material) Object.DestroyImmediate(_material);

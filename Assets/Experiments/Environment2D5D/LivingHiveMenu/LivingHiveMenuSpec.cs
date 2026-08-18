@@ -27,56 +27,40 @@ namespace BeeKingdom.LivingHiveMenu
 
     public sealed class LivingHiveMenuSpec
     {
-        // Miroir exact de DrawBottomRail (paysage : 10 entrées, ordre identique).
+        // Nouvelle architecture à 5 boutons (identique pour portrait et paysage).
+        // Ordre : CARTE, ACTIVITÉS, COMMUNICATION, SAC, PLUS.
         public static readonly LivingHiveMenuEntry[] LandscapeEntries =
         {
             new LivingHiveMenuEntry("SurfaceSwitch", "Carte", "world"),
-            new LivingHiveMenuEntry("Quests", "Quetes", "quests"),
-            new LivingHiveMenuEntry("Champions", "Championnes", "queen"),
-            new LivingHiveMenuEntry("MilestoneEvent", "Evenement", "quests"),
-            new LivingHiveMenuEntry("Bestiary", "Bestiaire", "quests"),
+            new LivingHiveMenuEntry("Activities", "Activites", "quests"),
+            new LivingHiveMenuEntry("Communication", "Communication", "messages"),
             new LivingHiveMenuEntry("Bag", "Sac", "inventory"),
-            new LivingHiveMenuEntry("Mail", "Mail", "inbox"),
-            new LivingHiveMenuEntry("Chat", "Chat", "messages"),
-            new LivingHiveMenuEntry("Alliance", "Alliance", "alliance"),
             new LivingHiveMenuEntry("More", "Plus", "more")
         };
 
-        // Miroir exact de DrawPortraitBottomRail (portrait : 5 entrées, ordre identique).
+        // Miroir identique en portrait : 5 boutons, même ordre.
         public static readonly LivingHiveMenuEntry[] PortraitEntries =
         {
-            new LivingHiveMenuEntry("Chat", "Chat", "messages"),
             new LivingHiveMenuEntry("SurfaceSwitch", "Carte", "world"),
-            new LivingHiveMenuEntry("Quests", "Quetes", "quests"),
-            new LivingHiveMenuEntry("Alliance", "Alliance", "alliance"),
+            new LivingHiveMenuEntry("Activities", "Activites", "quests"),
+            new LivingHiveMenuEntry("Communication", "Communication", "messages"),
+            new LivingHiveMenuEntry("Bag", "Sac", "inventory"),
             new LivingHiveMenuEntry("More", "Plus", "more")
         };
 
         // Entrées du "Plus" (MoreMenuPanel) : ordre et libellés conformes au monolithe.
         public static readonly string[] MoreMenuEntries =
         {
-            "Courrier",
-            "Amis",
-            "Bestiaire",
-            "Evenement",
-            "Championnes",
-            "Sac & stocks",
-            "Recherche",
-            "Missions",
             "Parametres",
-            "Accelerations"
+            "Aide",
+            "Support"
         };
 
         // Identifiants de menus ouverts par le rail (état actif).
         public const string SurfaceSwitchId = "SurfaceSwitch";
-        public const string QuestsId = "Quests";
-        public const string ChampionsId = "Champions";
-        public const string MilestoneEventId = "MilestoneEvent";
-        public const string BestiaryId = "Bestiary";
+        public const string ActivitiesId = "Activities";
+        public const string CommunicationId = "Communication";
         public const string BagId = "Bag";
-        public const string MailId = "Mail";
-        public const string ChatId = "Chat";
-        public const string AllianceId = "Alliance";
         public const string MoreId = "More";
         public const string SettingsId = "Settings";
 
@@ -85,29 +69,19 @@ namespace BeeKingdom.LivingHiveMenu
             return string.Equals(itemId, SurfaceSwitchId, StringComparison.Ordinal);
         }
 
-        public static bool IsChat(string itemId)
+        public static bool IsActivities(string itemId)
         {
-            return string.Equals(itemId, ChatId, StringComparison.Ordinal);
+            return string.Equals(itemId, ActivitiesId, StringComparison.Ordinal);
         }
 
-        public static bool IsChampions(string itemId)
+        public static bool IsCommunication(string itemId)
         {
-            return string.Equals(itemId, ChampionsId, StringComparison.Ordinal);
+            return string.Equals(itemId, CommunicationId, StringComparison.Ordinal);
         }
 
-        public static bool IsMilestoneEvent(string itemId)
+        public static bool IsBag(string itemId)
         {
-            return string.Equals(itemId, MilestoneEventId, StringComparison.Ordinal);
-        }
-
-        public static bool IsBestiary(string itemId)
-        {
-            return string.Equals(itemId, BestiaryId, StringComparison.Ordinal);
-        }
-
-        public static bool IsMail(string itemId)
-        {
-            return string.Equals(itemId, MailId, StringComparison.Ordinal);
+            return string.Equals(itemId, BagId, StringComparison.Ordinal);
         }
 
         public static bool IsMore(string itemId)
@@ -115,14 +89,9 @@ namespace BeeKingdom.LivingHiveMenu
             return string.Equals(itemId, MoreId, StringComparison.Ordinal);
         }
 
-        public static bool IsAlliance(string itemId)
+        public static bool IsSettings(string itemId)
         {
-            return string.Equals(itemId, AllianceId, StringComparison.Ordinal);
-        }
-
-        public static bool IsBag(string itemId)
-        {
-            return string.Equals(itemId, BagId, StringComparison.Ordinal);
+            return string.Equals(itemId, SettingsId, StringComparison.Ordinal);
         }
 
         // Miroir de NavIconId du monolithe : id logique -> clé d'icône.

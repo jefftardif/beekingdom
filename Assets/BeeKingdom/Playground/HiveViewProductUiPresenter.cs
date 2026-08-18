@@ -3212,6 +3212,142 @@ private static string courierToast = string.Empty;
             }
         }
 
+        // --- External host bridge (Environment2D5D HiveMap integration) ---
+        // Minimal public entry points so a scene outside this monolith's own SpatialV3
+        // flow can reuse the mini-chat / full "CHAT ROYAL" screen widgets (EnsureChatData
+        // is hardcoded local demo data, not server-backed; DrawPremiumPanel/DrawChatScreen
+        // are self-contained IMGUI drawing) WITHOUT calling EnsureSceneObjects(), which
+        // builds an entire second 3D hex-grid hive scene these widgets don't need. Verified
+        // by reading EnsureChatData, MiniChatFloatingShouldRender, DrawPremiumPanel and
+        // DrawChatScreen: none of them touch `root`/the hex cells/anything EnsureSceneObjects
+        // creates.
+        //
+        // DrawInternal() ALSO never calls EnsureSceneObjects() (confirmed: that method has
+        // exactly one call site, LivingHiveDemoBootstrap.Start(), outside this file
+        // entirely) and returns immediately after drawing the splash/login gate while
+        // splashAuthGateState != EnteredHive. So Draw(fps, compact) itself is safe to call
+        // for the splash/login flow too, as long as the caller stops calling it once
+        // EnteredHive (to avoid it proceeding into the full hive-view UI, which HiveMap has
+        // its own uGUI replacement for).
+        public static bool HasEnteredHiveForExternalHost => splashAuthGateState == SplashAuthGateState.EnteredHive;
+
+        // Entering the hive (via the splash's "Jouer en demo locale"/login flow)
+        // auto-starts a guided onboarding tutorial (e.g. "DefenseWelcome"), which blocks
+        // MiniChatFloatingShouldRender (and presumably other overlays) until completed.
+        // HiveMap doesn't reuse the monolith's tutorial UI, so there's no way for the
+        // player to actually advance/dismiss it here — this skips it outright so the
+        // reused widgets (mini-chat, etc.) aren't silently blocked forever.
+        public static void SkipGuidedTutorialForExternalHost()
+        {
+            guidedCollectionTutorialStep = GuidedCollectionTutorialStep.Inactive;
+        }
+
+        public static bool CommunicationOverlayOpenForExternalHost => communicationPanelOpen;
+
+        // EnsureStyles() touches GUI.skin, which throws outside an OnGUI call — this can
+        // be invoked from a uGUI Button's onClick (EventSystem.Update, not OnGUI), so it
+        // must stay style-free. DrawCommunicationOverlayForExternalHost (called from the
+        // real OnGUI every frame) already calls EnsureStyles() before drawing.
+        public static void ToggleCommunicationOverlayForExternalHost()
+        {
+            ToggleMiniChat();
+        }
+
+        public static void CloseCommunicationOverlayForExternalHost()
+        {
+            courierScreenOpen = false;
+            CloseChatScreen();
+            CloseMiniChat();
+        }
+
+        // MAIL tab inside the Communication overlay: HiveMap's 5-button menu merged the
+        // old SandboxPlayground rail's separate "Mail" button (-> OpenCourierScreen /
+        // DrawCourierScreen, the "COURRIER" screen) into the same Communication button as
+        // chat, so the switch between the two now happens as a tab inside this overlay
+        // instead of via two different rail buttons. Same EnsureSceneObjects()-free
+        // guarantee as the rest of this bridge region.
+        public static bool MailOverlayOpenForExternalHost => courierScreenOpen;
+
+        public static void OpenMailOverlayForExternalHost()
+        {
+            if (!communicationPanelOpen) OpenMiniChat();
+            CloseChatScreen();
+            OpenCourierScreen();
+        }
+
+        private static void SwitchToChatFromMailForExternalHost()
+        {
+            courierScreenOpen = false;
+            OpenChatScreen();
+        }
+
+        public static void DrawCommunicationOverlayForExternalHost(bool compact)
+        {
+            if (!communicationPanelOpen) return;
+            EnsureStyles();
+            if (courierScreenOpen) DrawCourierScreen(compact);
+            else if (chatScreenOpen) DrawChatScreen(compact);
+            else DrawMiniChatFloating(compact, false);
+            if (chatScreenOpen || courierScreenOpen) DrawCommunicationTabBarForExternalHost(compact);
+        }
+
+        private static void DrawCommunicationTabBarForExternalHost(bool compact)
+        {
+            bool onMail = courierScreenOpen;
+            float tabWidth = compact ? 84f : 100f;
+            float tabHeight = 30f;
+            Rect chatTab = new Rect((Screen.width - tabWidth * 2f) / 2f, 44f, tabWidth, tabHeight);
+            Rect mailTab = new Rect(chatTab.x + tabWidth, chatTab.y, tabWidth, tabHeight);
+
+            DrawPremiumPanel(chatTab, onMail ? new Color(0.05f, 0.04f, 0.025f, 0.90f) : new Color(1f, 0.60f, 0.14f, 0.95f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
+            GUI.Label(chatTab, "CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, fontStyle = FontStyle.Bold });
+            if (GUI.Button(chatTab, string.Empty, GUIStyle.none) && onMail)
+            {
+                AudioManager.Instance?.PlayUIClick();
+                SwitchToChatFromMailForExternalHost();
+            }
+
+            DrawPremiumPanel(mailTab, onMail ? new Color(1f, 0.60f, 0.14f, 0.95f) : new Color(0.05f, 0.04f, 0.025f, 0.90f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
+            GUI.Label(mailTab, "MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, fontStyle = FontStyle.Bold });
+            if (GUI.Button(mailTab, string.Empty, GUIStyle.none) && !onMail)
+            {
+                AudioManager.Instance?.PlayUIClick();
+                OpenMailOverlayForExternalHost();
+            }
+        }
+
+        // Alliance headquarters screen (rail's old "Alliance" button in the 10-item
+        // landscape rail — HiveMap's building-click trigger reuses it instead). Same
+        // EnsureSceneObjects()-free guarantee as Communication above (that method has
+        // exactly one call site in the whole file, outside it entirely, so nothing
+        // DrawAllianceHeadquartersScreen calls can reach it either).
+        public static bool AllianceOverlayOpenForExternalHost => activeHiveMenu == HiveMenuMode.Alliance;
+
+        public static void OpenAllianceOverlayForExternalHost()
+        {
+            ActivateHiveMenu(HiveMenuMode.Alliance, "Menu alliance");
+        }
+
+        public static void CloseAllianceOverlayForExternalHost()
+        {
+            activeMainMenuId = string.Empty;
+            activeHiveMenu = HiveMenuMode.Hive;
+            detailPanelClosed = true;
+        }
+
+        public static void ToggleAllianceOverlayForExternalHost()
+        {
+            if (AllianceOverlayOpenForExternalHost) CloseAllianceOverlayForExternalHost();
+            else OpenAllianceOverlayForExternalHost();
+        }
+
+        public static void DrawAllianceOverlayForExternalHost(bool compact)
+        {
+            if (!AllianceOverlayOpenForExternalHost) return;
+            EnsureStyles();
+            DrawAllianceHeadquartersScreen(compact);
+        }
+
         public static void Draw(float fps, bool compact)
         {
             bool previousGuiEnabled = GUI.enabled;

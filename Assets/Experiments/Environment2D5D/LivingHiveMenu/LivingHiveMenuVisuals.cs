@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace BeeKingdom.LivingHiveMenu
@@ -62,8 +63,26 @@ namespace BeeKingdom.LivingHiveMenu
 
         public static Sprite IconSprite(string iconId)
         {
+            if (string.Equals(iconId, "world", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(iconId, "map", StringComparison.OrdinalIgnoreCase))
+            {
+                string iconKey = "icon-world-map";
+                return GetSimpleSprite(iconKey, () => LoadWorldMapIcon());
+            }
+
             string key = "icon-" + (string.IsNullOrEmpty(iconId) ? "future" : iconId);
             return GetSimpleSprite(key, () => CreateIconTexture(iconId));
+        }
+
+        private static Texture2D LoadWorldMapIcon()
+        {
+            string path = "Assets/Experiments/Environment2D5D/LivingHiveMenu/Icons/world-map.png";
+            Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { hideFlags = HideFlags.HideAndDontSave };
+            byte[] bytes = System.IO.File.ReadAllBytes(path);
+            ImageConversion.LoadImage(tex, bytes);
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            return tex;
         }
 
         // ==================== Cache / fabrique de Sprite ====================

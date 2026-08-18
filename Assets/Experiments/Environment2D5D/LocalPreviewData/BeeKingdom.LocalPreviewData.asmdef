@@ -1,0 +1,14 @@
+{
+    "name": "BeeKingdom.LocalPreviewData",
+    "rootNamespace": "BeeKingdom.Playground",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

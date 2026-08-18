@@ -258,8 +258,13 @@ namespace BeeKingdom.Tests.Editor.Interaction
         }
 
         [Test]
-        public void SurfaceSwitchShowsWorldMapOverlay()
+        public void SurfaceSwitchNoLongerOpensLocalOverlay()
         {
+            // CARTE now performs a real scene switch to the world map (see
+            // LivingHiveMenuCanvas.OpenWorldMap), not the old local "Carte" overlay/state
+            // toggle this test used to verify. There is no Play context in EditMode to load
+            // a scene into, so OpenWorldMap no-ops here; this asserts the click no longer
+            // falls back to the local overlay either.
             var root = new GameObject("MenuTest");
             try
             {
@@ -267,10 +272,6 @@ namespace BeeKingdom.Tests.Editor.Interaction
                 canvas.Build();
 
                 Assert.That(canvas.PanelShown("Carte"), Is.False);
-                canvas.SimulateEntryClick("SurfaceSwitch");
-                Assert.That(canvas.PanelShown("Carte"), Is.True);
-                Assert.That(canvas.State.SurfaceMode, Is.EqualTo(LivingHiveMenuState.SurfaceBoundary.World));
-
                 canvas.SimulateEntryClick("SurfaceSwitch");
                 Assert.That(canvas.PanelShown("Carte"), Is.False);
                 Assert.That(canvas.State.SurfaceMode, Is.EqualTo(LivingHiveMenuState.SurfaceBoundary.Hive));

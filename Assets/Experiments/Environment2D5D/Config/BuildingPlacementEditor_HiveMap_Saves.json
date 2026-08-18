@@ -1,0 +1,130 @@
+{
+    "placements": [
+        {
+            "buildingId": "BUILDING_13",
+            "buildingType": "ROYAL_PALACE",
+            "X": -1.9822125434875489,
+            "TerrainY": 54.59978103637695,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.7158979177474976
+        },
+        {
+            "buildingId": "BUILDING_04",
+            "buildingType": "DEFENSE",
+            "X": -0.35921216011047366,
+            "TerrainY": 23.63688087463379,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.5598369240760803
+        },
+        {
+            "buildingId": "BUILDING_03",
+            "buildingType": "HONEY_RESERVE",
+            "X": 31.725234985351564,
+            "TerrainY": 65.85726928710938,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.8412182927131653
+        },
+        {
+            "buildingId": "BUILDING_08",
+            "buildingType": "TRANSFORMATION",
+            "X": 29.873872756958009,
+            "TerrainY": 33.582035064697269,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 1.0426832437515259
+        },
+        {
+            "buildingId": "BUILDING_09",
+            "buildingType": "INFIRMARY",
+            "X": 15.614900588989258,
+            "TerrainY": 23.142581939697267,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.8749659657478333
+        },
+        {
+            "buildingId": "BUILDING_02",
+            "buildingType": "BARRACK",
+            "X": -31.985275268554689,
+            "TerrainY": 67.23429870605469,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.667894721031189
+        },
+        {
+            "buildingId": "BUILDING_01",
+            "buildingType": "NURSERY",
+            "X": -34.70827865600586,
+            "TerrainY": 51.33325958251953,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.8735449314117432
+        },
+        {
+            "buildingId": "BUILDING_05",
+            "buildingType": "GENETICS",
+            "X": -17.282827377319337,
+            "TerrainY": 24.267154693603517,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 1.4335081577301026
+        },
+        {
+            "buildingId": "BUILDING_12",
+            "buildingType": "BANK",
+            "X": -31.44729232788086,
+            "TerrainY": 35.27803421020508,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 1.0067030191421509
+        },
+        {
+            "buildingId": "BUILDING_07",
+            "buildingType": "WAREHOUSE",
+            "X": 18.476276397705079,
+            "TerrainY": 76.41114807128906,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.6748371720314026
+        },
+        {
+            "buildingId": "BUILDING_06",
+            "buildingType": "RESEARCH",
+            "X": 33.250831604003909,
+            "TerrainY": 51.83199691772461,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.6065431833267212
+        },
+        {
+            "buildingId": "BUILDING_10",
+            "buildingType": "ALLIANCE_CENTER",
+            "X": 35.493263244628909,
+            "TerrainY": 12.049467086791993,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.6661690473556519
+        },
+        {
+            "buildingId": "BUILDING_11",
+            "buildingType": "ACADEMY",
+            "X": 0.16305065155029298,
+            "TerrainY": 84.98712158203125,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.7844993472099304
+        },
+        {
+            "buildingId": "BUILDING_14",
+            "buildingType": "CHAMPION_HALL",
+            "X": -17.973617553710939,
+            "TerrainY": 76.0171890258789,
+            "Z": 29.950000762939454,
+            "Rotation": 0.0,
+            "Scale": 0.6945756077766419
+        }
+    ]
+}

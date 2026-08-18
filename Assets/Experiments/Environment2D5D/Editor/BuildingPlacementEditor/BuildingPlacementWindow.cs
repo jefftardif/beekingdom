@@ -13,7 +13,7 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
         private GUIStyle _sectionStyle;
         private GUIStyle _hintStyle;
 
-        [MenuItem("BeeKingdom/Building Placement Editor")]
+        [MenuItem("BeeKingdom/Building Placement Editor/Open Window")]
         public static void Open()
         {
             BuildingPlacementWindow win = GetWindow<BuildingPlacementWindow>(false, "Building Placement Editor");
@@ -154,6 +154,7 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             GUILayout.Label(
                 "  Click building  = select & drag to move\n" +
                 "  Drag corner     = resize (Proportional keeps aspect)\n" +
+                "  Drag edge (green) = resize width only (left/right) or height only (top/bottom)\n" +
                 "  Shift + resize  = keep proportional while resizing\n" +
                 "  Esc             = cancel current operation\n" +
                 "  Ctrl+Z          = undo last change\n" +

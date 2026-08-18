@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="87" result="Passed" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3,7395343">
+  <test-suite type="TestSuite" id="1000" name="BeeKingdom" fullname="BeeKingdom" runstate="Runnable" testcasecount="1394" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3.739534" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="2621" name="BeeKingdom.Tests.dll" fullname="C:/projets/beekingdomgame-master/Library/ScriptAssemblies/BeeKingdom.Tests.dll" runstate="Runnable" testcasecount="1063" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3.723644" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="3520" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="2622" name="BeeKingdom" fullname="BeeKingdom" runstate="Runnable" testcasecount="1063" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3.716275" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="2623" name="Tests" fullname="BeeKingdom.Tests" runstate="Runnable" testcasecount="1063" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3.709303" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="2624" name="Editor" fullname="BeeKingdom.Tests.Editor" runstate="Runnable" testcasecount="966" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3.701764" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="2625" name="Interaction" fullname="BeeKingdom.Tests.Editor.Interaction" runstate="Runnable" testcasecount="87" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:44Z" duration="3.690395" total="87" passed="87" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2525" name="BuildingCatalogTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.029836" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2529" name="ArchivesMapsToChampionHall" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.ArchivesMapsToChampionHall" methodname="ArchivesMapsToChampionHall" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="115745166" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.010729" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2526" name="CatalogHasFourteenDefinitions" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.CatalogHasFourteenDefinitions" methodname="CatalogHasFourteenDefinitions" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="1444620028" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000974" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2527" name="EveryBuildingTypeResolvable" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.EveryBuildingTypeResolvable" methodname="EveryBuildingTypeResolvable" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="1477503508" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.001446" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2528" name="EveryLegacyKeyResolvable" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.EveryLegacyKeyResolvable" methodname="EveryLegacyKeyResolvable" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="1956847881" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000180" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2530" name="FutureBuildingsAreMarkedFuture" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.FutureBuildingsAreMarkedFuture" methodname="FutureBuildingsAreMarkedFuture" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="169881248" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000958" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2531" name="FutureBuildingsHaveNoFakeCapabilities" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.FutureBuildingsHaveNoFakeCapabilities" methodname="FutureBuildingsHaveNoFakeCapabilities" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="641313858" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000207" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2533" name="HoneyReserveProducesHoney" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.HoneyReserveProducesHoney" methodname="HoneyReserveProducesHoney" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="1009583432" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000192" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2537" name="MetadataExposed" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.MetadataExposed" methodname="MetadataExposed" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="893751835" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000261" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2538" name="MetadataLookupByLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.MetadataLookupByLegacyKey" methodname="MetadataLookupByLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="630276014" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000172" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2536" name="ResearchHasResearchCapability" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.ResearchHasResearchCapability" methodname="ResearchHasResearchCapability" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="475992674" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000077" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2534" name="TransformationProducesWax" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.TransformationProducesWax" methodname="TransformationProducesWax" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="289489042" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000075" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2539" name="TryGetByBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.TryGetByBuildingType" methodname="TryGetByBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="791540868" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000174" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2540" name="TryGetByLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.TryGetByLegacyKey" methodname="TryGetByLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="718540860" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000163" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2532" name="UpgradeableBuildingsAreUpgradable" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.UpgradeableBuildingsAreUpgradable" methodname="UpgradeableBuildingsAreUpgradable" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="495647340" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000113" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2535" name="WarehouseProducesPollen" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests.WarehouseProducesPollen" methodname="WarehouseProducesPollen" classname="BeeKingdom.Tests.Editor.Interaction.BuildingCatalogTests" runstate="Runnable" seed="150313229" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000076" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2541" name="BuildingInteractionBootstrapTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.015041" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2545" name="FutureBuildingsPreserveFutureStateFromSidecar" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests.FutureBuildingsPreserveFutureStateFromSidecar" methodname="FutureBuildingsPreserveFutureStateFromSidecar" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests" runstate="Runnable" seed="120091327" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.009669" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2543" name="MaterializedZonesAreIdentifiableByBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests.MaterializedZonesAreIdentifiableByBuildingType" methodname="MaterializedZonesAreIdentifiableByBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests" runstate="Runnable" seed="1470002613" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.001850" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2544" name="MaterializedZonesMapLegacyKeys" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests.MaterializedZonesMapLegacyKeys" methodname="MaterializedZonesMapLegacyKeys" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests" runstate="Runnable" seed="196340985" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000976" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2542" name="MaterializeFromRealSidecarRegistersFourteen" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests.MaterializeFromRealSidecarRegistersFourteen" methodname="MaterializeFromRealSidecarRegistersFourteen" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionBootstrapTests" runstate="Runnable" seed="1808773944" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000788" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2546" name="BuildingInteractionRegistryTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.006445" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2554" name="ComponentResolvesDefinition" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.ComponentResolvesDefinition" methodname="ComponentResolvesDefinition" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="2018356462" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000930" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2553" name="CountTracksRegistrations" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.CountTracksRegistrations" methodname="CountTracksRegistrations" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="692924904" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000308" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2549" name="GetByBuildingTypeAndLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.GetByBuildingTypeAndLegacyKey" methodname="GetByBuildingTypeAndLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="27015536" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000241" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2547" name="RegisterAndGetByGameObject" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.RegisterAndGetByGameObject" methodname="RegisterAndGetByGameObject" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="1924377770" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000178" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2552" name="RegisterThrowsForUnknownType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.RegisterThrowsForUnknownType" methodname="RegisterThrowsForUnknownType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="1767207507" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.002022" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2548" name="TryGetBuildingHitAndMiss" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.TryGetBuildingHitAndMiss" methodname="TryGetBuildingHitAndMiss" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="2061888182" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000272" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2550" name="UnregisterRemoves" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.UnregisterRemoves" methodname="UnregisterRemoves" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="2014060795" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000518" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2551" name="UnregisterUnknownReturnsFalse" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests.UnregisterUnknownReturnsFalse" methodname="UnregisterUnknownReturnsFalse" classname="BeeKingdom.Tests.Editor.Interaction.BuildingInteractionRegistryTests" runstate="Runnable" seed="211552755" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000211" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2555" name="BuildingMappingTableTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.005703" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2557" name="AllMappingsAreResolved" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.AllMappingsAreResolved" methodname="AllMappingsAreResolved" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="207581747" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000727" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2568" name="ChampionHallIsArchivesHoneyfall" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ChampionHallIsArchivesHoneyfall" methodname="ChampionHallIsArchivesHoneyfall" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1665149076" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000096" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2560" name="EveryBuildingTypeHasMapping" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.EveryBuildingTypeHasMapping" methodname="EveryBuildingTypeHasMapping" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1830297784" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000173" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2561" name="EveryLegacyKeyHasMapping" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.EveryLegacyKeyHasMapping" methodname="EveryLegacyKeyHasMapping" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1483440054" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000153" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2556" name="HasExactlyFourteenEntries" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.HasExactlyFourteenEntries" methodname="HasExactlyFourteenEntries" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1623909170" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000076" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2562" name="LookupByBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.LookupByBuildingType" methodname="LookupByBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="158844899" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000070" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2563" name="LookupByLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.LookupByLegacyKey" methodname="LookupByLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="10568977" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000064" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2558" name="NoDuplicateBuildingTypes" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.NoDuplicateBuildingTypes" methodname="NoDuplicateBuildingTypes" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1226393816" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000211" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2559" name="NoDuplicateLegacyKeys" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.NoDuplicateLegacyKeys" methodname="NoDuplicateLegacyKeys" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1819556930" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000133" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2567" name="ToBuildingTypeConversion" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ToBuildingTypeConversion" methodname="ToBuildingTypeConversion" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="331469767" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000091" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2566" name="ToLegacyKeyConversion" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ToLegacyKeyConversion" methodname="ToLegacyKeyConversion" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1714614474" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000245" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2564" name="TryLookupByBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.TryLookupByBuildingType" methodname="TryLookupByBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1552531933" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000192" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2565" name="TryLookupByLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.TryLookupByLegacyKey" methodname="TryLookupByLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="877740216" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000191" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2570" name="ValidateRejectsDuplicateBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ValidateRejectsDuplicateBuildingType" methodname="ValidateRejectsDuplicateBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="823797587" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000301" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2571" name="ValidateRejectsDuplicateLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ValidateRejectsDuplicateLegacyKey" methodname="ValidateRejectsDuplicateLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="588074853" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000222" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2572" name="ValidateRejectsMissingBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ValidateRejectsMissingBuildingType" methodname="ValidateRejectsMissingBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="1171170671" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000197" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2569" name="ValidateRejectsWrongCount" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests.ValidateRejectsWrongCount" methodname="ValidateRejectsWrongCount" classname="BeeKingdom.Tests.Editor.Interaction.BuildingMappingTableTests" runstate="Runnable" seed="685953527" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.000172" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2573" name="BuildingRuntimeViewBootstrapTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:43Z" duration="3.247956" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2576" name="HideDevMarkersDisablesSurfaceReperesOnly" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests.HideDevMarkersDisablesSurfaceReperesOnly" methodname="HideDevMarkersDisablesSurfaceReperesOnly" classname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" runstate="Runnable" seed="646543617" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.006969" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2577" name="HideDevMarkersHidesBaseDiscAndTip" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests.HideDevMarkersHidesBaseDiscAndTip" methodname="HideDevMarkersHidesBaseDiscAndTip" classname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" runstate="Runnable" seed="180677010" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:40Z" duration="0.001456" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2575" name="MaterializedVisualsCarryRendererColliderAndInteraction" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests.MaterializedVisualsCarryRendererColliderAndInteraction" methodname="MaterializedVisualsCarryRendererColliderAndInteraction" classname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" runstate="Runnable" seed="1677284527" result="Passed" start-time="2026-08-16 01:10:40Z" end-time="2026-08-16 01:10:41Z" duration="1.273265" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2578" name="MaterializedVisualsUseDedicatedInteractionLayer" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests.MaterializedVisualsUseDedicatedInteractionLayer" methodname="MaterializedVisualsUseDedicatedInteractionLayer" classname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" runstate="Runnable" seed="1051648027" result="Passed" start-time="2026-08-16 01:10:41Z" end-time="2026-08-16 01:10:42Z" duration="0.995165" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2574" name="MaterializeRuntimeVisualBuildingsCreatesFourteen" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests.MaterializeRuntimeVisualBuildingsCreatesFourteen" methodname="MaterializeRuntimeVisualBuildingsCreatesFourteen" classname="BeeKingdom.Tests.Editor.Interaction.BuildingRuntimeViewBootstrapTests" runstate="Runnable" seed="1725360293" result="Passed" start-time="2026-08-16 01:10:42Z" end-time="2026-08-16 01:10:43Z" duration="0.969737" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2579" name="BuildingSelectionFeedbackTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-08-16 01:10:43Z" end-time="2026-08-16 01:10:43Z" duration="0.073309" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2583" name="DeselectHidesHighlight" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests.DeselectHidesHighlight" methodname="DeselectHidesHighlight" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests" runstate="Runnable" seed="1481406131" result="Passed" start-time="2026-08-16 01:10:43Z" end-time="2026-08-16 01:10:43Z" duration="0.003390" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2580" name="InteractionLayerMaskIsolation" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests.InteractionLayerMaskIsolation" methodname="InteractionLayerMaskIsolation" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests" runstate="Runnable" seed="212689908" result="Passed" start-time="2026-08-16 01:10:43Z" end-time="2026-08-16 01:10:43Z" duration="0.000246" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2581" name="SelectShowsHighlightOnRegisteredBuilding" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests.SelectShowsHighlightOnRegisteredBuilding" methodname="SelectShowsHighlightOnRegisteredBuilding" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests" runstate="Runnable" seed="154739688" result="Passed" start-time="2026-08-16 01:10:43Z" end-time="2026-08-16 01:10:43Z" duration="0.000660" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2582" name="SwitchingSelectionMovesHighlight" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests.SwitchingSelectionMovesHighlight" methodname="SwitchingSelectionMovesHighlight" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionFeedbackTests" runstate="Runnable" seed="95324123" result="Passed" start-time="2026-08-16 01:10:43Z" end-time="2026-08-16 01:10:43Z" duration="0.000506" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2584" name="BuildingSelectionServiceTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-08-16 01:10:43Z" end-time="2026-08-16 01:10:44Z" duration="0.021521" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2593" name="ClickNotificationDoesNotSelect" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.ClickNotificationDoesNotSelect" methodname="ClickNotificationDoesNotSelect" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="2082062131" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000984" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2589" name="CyclingBackKeepsOneCurrent" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.CyclingBackKeepsOneCurrent" methodname="CyclingBackKeepsOneCurrent" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="1245475733" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000225" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2587" name="DeselectClears" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.DeselectClears" methodname="DeselectClears" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="1209303231" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000178" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2595" name="DeselectWhenNothingSelectedDoesNothing" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.DeselectWhenNothingSelectedDoesNothing" methodname="DeselectWhenNothingSelectedDoesNothing" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="686816065" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000091" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2585" name="InitiallyNoSelection" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.InitiallyNoSelection" methodname="InitiallyNoSelection" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="568437614" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000100" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2594" name="InterfaceContractWorks" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.InterfaceContractWorks" methodname="InterfaceContractWorks" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="761931529" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000166" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2590" name="RepeatedSelectionOfSameBuildingStaysSelected" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.RepeatedSelectionOfSameBuildingStaysSelected" methodname="RepeatedSelectionOfSameBuildingStaysSelected" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="913643585" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000128" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2591" name="SelectByBuildingType" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.SelectByBuildingType" methodname="SelectByBuildingType" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="190714374" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000130" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2592" name="SelectByLegacyKey" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.SelectByLegacyKey" methodname="SelectByLegacyKey" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="722738995" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000105" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2586" name="SelectSetsCurrent" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.SelectSetsCurrent" methodname="SelectSetsCurrent" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="199288156" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000168" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2588" name="SwitchingSelectionKeepsOneCurrent" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests.SwitchingSelectionKeepsOneCurrent" methodname="SwitchingSelectionKeepsOneCurrent" classname="BeeKingdom.Tests.Editor.Interaction.BuildingSelectionServiceTests" runstate="Runnable" seed="1372458422" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000139" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2596" name="BuildingWindowContractTests" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests" classname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.001750" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2598" name="CloseBuildsContextForFutureBuilding" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests.CloseBuildsContextForFutureBuilding" methodname="CloseBuildsContextForFutureBuilding" classname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests" runstate="Runnable" seed="522202318" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000268" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2597" name="OpenBuildsContextWithAllFields" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests.OpenBuildsContextWithAllFields" methodname="OpenBuildsContextWithAllFields" classname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests" runstate="Runnable" seed="393086322" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000217" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2600" name="RouterWithHostOpensAndCloses" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests.RouterWithHostOpensAndCloses" methodname="RouterWithHostOpensAndCloses" classname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests" runstate="Runnable" seed="285989640" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000307" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2599" name="RouterWithoutHostDoesNotOpen" fullname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests.RouterWithoutHostDoesNotOpen" methodname="RouterWithoutHostDoesNotOpen" classname="BeeKingdom.Tests.Editor.Interaction.BuildingWindowContractTests" runstate="Runnable" seed="1531217809" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000115" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2601" name="LivingHiveMenuPortTests" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.286231" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2614" name="CanvasBuildCreatesRailAndOverlayPanels" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.CanvasBuildCreatesRailAndOverlayPanels" methodname="CanvasBuildCreatesRailAndOverlayPanels" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1344842530" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.214139" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2609" name="ChatToggleOpensChatAndClosesMenu" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.ChatToggleOpensChatAndClosesMenu" methodname="ChatToggleOpensChatAndClosesMenu" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1083568099" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000792" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2615" name="ClickingQuestsOpensQuestPanel" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.ClickingQuestsOpensQuestPanel" methodname="ClickingQuestsOpensQuestPanel" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="593500626" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.032291" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2613" name="DefaultsAreAllStock" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.DefaultsAreAllStock" methodname="DefaultsAreAllStock" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1607889992" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000804" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2602" name="LandscapeRailHasExactlyTenLivingHiveEntries" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.LandscapeRailHasExactlyTenLivingHiveEntries" methodname="LandscapeRailHasExactlyTenLivingHiveEntries" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1864130206" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000349" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2611" name="MoreClickWhenSettingsOpenClosesPanel" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.MoreClickWhenSettingsOpenClosesPanel" methodname="MoreClickWhenSettingsOpenClosesPanel" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1524480757" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000131" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2617" name="MoreRowSettingsOpensSettingsPanel" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.MoreRowSettingsOpensSettingsPanel" methodname="MoreRowSettingsOpensSettingsPanel" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="570955114" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.006159" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2610" name="MoreShowsActiveWhenSettingsOpen" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.MoreShowsActiveWhenSettingsOpen" methodname="MoreShowsActiveWhenSettingsOpen" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1755341961" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000346" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2604" name="NavIconIdMatchesMonolithMapping" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.NavIconIdMatchesMonolithMapping" methodname="NavIconIdMatchesMonolithMapping" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="261968745" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000225" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2603" name="PortraitRailHasExactlyFiveLivingHiveEntries" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.PortraitRailHasExactlyFiveLivingHiveEntries" methodname="PortraitRailHasExactlyFiveLivingHiveEntries" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1877260937" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000186" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2606" name="PortraitRailOneValidColumnLayout" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.PortraitRailOneValidColumnLayout" methodname="PortraitRailOneValidColumnLayout" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1303819807" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000952" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2605" name="PortraitRailRectsMatchMonolithExactGeometry" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.PortraitRailRectsMatchMonolithExactGeometry" methodname="PortraitRailRectsMatchMonolithExactGeometry" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="770107004" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000201" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2619" name="RailBackdropSitsFullWidthAtBottomOfCanvas" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.RailBackdropSitsFullWidthAtBottomOfCanvas" methodname="RailBackdropSitsFullWidthAtBottomOfCanvas" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="690585637" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.009995" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2618" name="RailForProofMatchesMonolithFullWidthBottomBar" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.RailForProofMatchesMonolithFullWidthBottomBar" methodname="RailForProofMatchesMonolithFullWidthBottomBar" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="2115827938" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000415" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2620" name="RailHasNoCanvasScaler" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.RailHasNoCanvasScaler" methodname="RailHasNoCanvasScaler" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1720790472" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.006632" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2612" name="SettingsRoundTripPersistsThroughPlayerPrefs" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.SettingsRoundTripPersistsThroughPlayerPrefs" methodname="SettingsRoundTripPersistsThroughPlayerPrefs" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="681836656" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.001681" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2616" name="SurfaceSwitchShowsWorldMapOverlay" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.SurfaceSwitchShowsWorldMapOverlay" methodname="SurfaceSwitchShowsWorldMapOverlay" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1561794302" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.007461" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2608" name="SurfaceSwitchTogglesWorldAndClosesMenu" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.SurfaceSwitchTogglesWorldAndClosesMenu" methodname="SurfaceSwitchTogglesWorldAndClosesMenu" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="639832338" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000274" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2607" name="ToggleEntryOpensAndClosesMenu" fullname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests.ToggleEntryOpensAndClosesMenu" methodname="ToggleEntryOpensAndClosesMenu" classname="BeeKingdom.Tests.Editor.Interaction.LivingHiveMenuPortTests" runstate="Runnable" seed="1167671484" result="Passed" start-time="2026-08-16 01:10:44Z" end-time="2026-08-16 01:10:44Z" duration="0.000196" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[<color=#ff6b6b>fail:</color> [21:10:44:3066] <color=#B4FF32>[AI]</color> <color=#58D68D><b>TestResultCollector</b></color> Test run finished, but the pending MCP request id was missing. The test results cannot be delivered to the client.
+Saving results to: C:/Users/Utilisateur/AppData/LocalLow/BKD Honey Studio/BeeKingdom\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

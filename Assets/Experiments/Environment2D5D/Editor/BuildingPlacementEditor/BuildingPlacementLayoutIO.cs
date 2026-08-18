@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using BeeKingdom.Experiments.Environment2D5D;
+using BeeKingdom.Buildings.Placement;
 using UnityEditor;
 using UnityEngine;
 
@@ -54,17 +54,60 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
     {
         private const string OfficialLayoutPath =
             "Assets/Experiments/Environment2D5D/Layout/BuildingPlaceholderLayout_FINAL.json";
-        private const string SidecarSavePath =
+        private const string DefaultSidecarSavePath =
             "Assets/Experiments/Environment2D5D/Config/BuildingPlacementEditor_Saves.json";
 
         public static string SidecarPath
         {
-            get { return SidecarSavePath; }
+            get
+            {
+                var context = GetActiveHiveMapContext();
+                if (context != null && !string.IsNullOrEmpty(context.sidecarPath))
+                {
+                    return context.sidecarPath;
+                }
+                return DefaultSidecarSavePath;
+            }
+        }
+
+        public static bool UseOfficialLayoutFallback
+        {
+            get
+            {
+                var context = GetActiveHiveMapContext();
+                return context == null || context.useOfficialLayoutFallback;
+            }
+        }
+
+        private static HiveMapPlacementContext GetActiveHiveMapContext()
+        {
+            // Cherche un contexte HiveMap dans la scène courante (Editor only)
+            return UnityEngine.Object.FindFirstObjectByType<HiveMapPlacementContext>();
         }
 
         public static BuildingPlacementRecord LoadInitial(string buildingType)
         {
-            BuildingPlacementRecord record = BuildFromOfficialLayout(buildingType);
+            BuildingPlacementRecord record;
+            if (UseOfficialLayoutFallback)
+            {
+                record = BuildFromOfficialLayout(buildingType);
+            }
+            else
+            {
+                // Nouveau contexte HiveMap : record neutre sans layout officiel
+                record = new BuildingPlacementRecord
+                {
+                    buildingType = buildingType,
+                    z = GroundSurfaceResolver.BuildingZ,
+                    scaleX = 1f,
+                    scaleY = 1f
+                };
+                BuildingCatalogEntry entry = BuildingCatalog.Find(buildingType);
+                record.buildingId = entry != null ? "BUILDING_" + buildingType.Replace("_", "") : "BUILDING_" + buildingType;
+                record.x = 0f;
+                record.terrainY = GroundSurfaceResolver.TerrainYFromX(record.x);
+                record.layoutReferenceY = record.terrainY;
+            }
 
             PlacementSaveEntry saved = LoadSavedEntry(buildingType);
             if (saved != null)
@@ -85,7 +128,7 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
                 record.terrainY = GroundSurfaceResolver.TerrainYFromX(record.x);
             }
 
-            Debug.Log("[BUILDING_PLACEMENT] LOAD_SOURCE=" + (saved != null ? "SIDECAR" : "OFFICIAL_LAYOUT") +
+            Debug.Log("[BUILDING_PLACEMENT] LOAD_SOURCE=" + (saved != null ? "SIDECAR" : (UseOfficialLayoutFallback ? "OFFICIAL_LAYOUT" : "NEUTRAL")) +
                       " LOAD_BUILDING=" + buildingType +
                       " LOAD_X=" + F(record.x, 3) +
                       " LOAD_TERRAINY=" + F(record.terrainY, 3) +
@@ -164,19 +207,21 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
                 return;
             }
 
+            string path = SidecarPath;
+
             Debug.Log("[BUILDING_PLACEMENT] SAVE_CLICK");
-            Debug.Log("[BUILDING_PLACEMENT] SAVE_PATH=" + SidecarSavePath);
+            Debug.Log("[BUILDING_PLACEMENT] SAVE_PATH=" + path);
             Debug.Log("[BUILDING_PLACEMENT] SAVE_BUILDING=" + record.buildingType);
             Debug.Log("[BUILDING_PLACEMENT] SAVE_X=" + F(record.x, 3));
             Debug.Log("[BUILDING_PLACEMENT] SAVE_SCALE=" + F(record.scaleX, 3));
 
             PlacementSaveFile file = new PlacementSaveFile();
 
-            if (File.Exists(SidecarSavePath))
+            if (File.Exists(path))
             {
                 try
                 {
-                    string json = File.ReadAllText(SidecarSavePath);
+                    string json = File.ReadAllText(path);
                     PlacementSaveFile existing = JsonUtility.FromJson<PlacementSaveFile>(json);
                     if (existing != null && existing.placements != null) file = existing;
                 }
@@ -208,8 +253,8 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
             });
 
             string outJson = JsonUtility.ToJson(file, true);
-            Directory.CreateDirectory(Path.GetDirectoryName(SidecarSavePath));
-            File.WriteAllText(SidecarSavePath, outJson);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, outJson);
             AssetDatabase.Refresh();
 
             Debug.Log("[BUILDING_PLACEMENT] SAVE_COMPLETED=true " +
@@ -219,10 +264,11 @@ namespace BeeKingdom.Experiments.Environment2D5D.EditorTools.BuildingPlacement
 
         private static PlacementSaveEntry LoadSavedEntry(string buildingType)
         {
-            if (!File.Exists(SidecarSavePath)) return null;
+            string path = SidecarPath;
+            if (!File.Exists(path)) return null;
             try
             {
-                string json = File.ReadAllText(SidecarSavePath);
+                string json = File.ReadAllText(path);
                 PlacementSaveFile file = JsonUtility.FromJson<PlacementSaveFile>(json);
                 if (file == null || file.placements == null) return null;
                 for (int i = 0; i < file.placements.Count; i++)

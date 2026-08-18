@@ -21,6 +21,8 @@
         "BeeKingdom.Save",
         "BeeKingdom.WorldMap",
         "BeeKingdom.LivingHiveMenu",
+        "BeeKingdom.LocalPreviewData",
+        "BeeKingdom.Localization",
         "UnityEngine.UI"
     ],
     "includePlatforms": [

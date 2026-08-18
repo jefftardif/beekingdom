@@ -49,6 +49,7 @@ namespace BeeKingdom.Playground
         public static IHiveSpeedUpClient SpeedUpClient => championBeeAndTroopTierGameplayReady ? speedUpClient : null;
         public static IHiveRewardLedgerClient RewardLedgerClient => championBeeAndTroopTierGameplayReady ? rewardLedgerClient : null;
         public static Guid GameplayHiveId => gameplayHiveId;
+        public static Guid GameplayPlayerId => gameplayPlayerId;
         private static readonly LivingHiveChatSessionCoordinator chatCoordinator = new LivingHiveChatSessionCoordinator();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -150,6 +151,25 @@ namespace BeeKingdom.Playground
                 "mobile_squad_reservation_auto_submit:false",
                 "mobile_gameplay_outbox_explicit_logout_purge:true"
             };
+        }
+
+        // Minimal counterpart to TryConfigureGameplayForActiveSession() below: activates
+        // ONLY the chat session (ActivateChatForActiveSession), without constructing the
+        // full gameplay client/controller suite (research, production, combat, daily
+        // round, etc.) that method also wires into HiveViewProductUiPresenter. Scenes that
+        // only need chat (e.g. the HiveMap Communication rail button) should call this, not
+        // TryConfigureGameplayForActiveSession, to avoid spinning up ~15 unrelated REST
+        // clients they never use.
+        public static bool TryActivateChatOnlyForActiveSession()
+        {
+            MobileAccountSessionRuntimeConfiguration configuration = activeConfiguration;
+            if (client == null || configuration == null) return false;
+            bool authenticatedAuthority = client.State == MobileAccountSessionState.Authenticated &&
+                client.ServerGameplayAuthorityGranted;
+            if (!authenticatedAuthority) return false;
+            if (!client.TryGetKnownPlayerId(out gameplayPlayerId) || gameplayPlayerId == Guid.Empty) return false;
+            ActivateChatForActiveSession(configuration);
+            return true;
         }
 
         public static bool TryConfigureGameplayForActiveSession()

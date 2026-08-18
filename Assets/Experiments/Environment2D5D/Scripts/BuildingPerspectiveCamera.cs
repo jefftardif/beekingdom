@@ -3,6 +3,14 @@ using UnityEngine.InputSystem;
 
 namespace BeeKingdom.Experiments.Environment2D5D
 {
+    // [ExecuteAlways]: without it, Awake()/Update() only run in Play Mode, so the camera
+    // sits at whatever position/projection was last SAVED in the scene (a stale, manually
+    // authored pose) until the instant Play starts and snaps it to the real anchor/pitch/
+    // distance pose below. That snap is exactly what made buildings look "synced in Editor,
+    // shifted in Play": the Editor Game view was never rendering through this computed
+    // pose at all before Play began. Running the same transform math continuously in Edit
+    // Mode keeps the camera (and therefore the Game view) always at the true pose.
+    [ExecuteAlways]
     public class BuildingPerspectiveCamera : MonoBehaviour
     {
         [Header("View Rig")]
@@ -65,7 +73,11 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void Update()
         {
-            if (inputEnabled) HandleInput();
+            // WASD/R/F/scroll navigation stays Play-only: with [ExecuteAlways], Update()
+            // now also runs in Edit Mode, and reading keyboard/mouse there would fight
+            // with normal Editor typing/shortcuts. ApplyTransform() below is unconditional
+            // so the pose itself still stays continuously correct in Edit Mode.
+            if (inputEnabled && Application.isPlaying) HandleInput();
             ApplyTransform();
         }
 

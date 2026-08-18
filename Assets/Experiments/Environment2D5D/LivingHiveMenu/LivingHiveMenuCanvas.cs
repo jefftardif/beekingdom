@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using BeeKingdom.Core.Integration;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace BeeKingdom.LivingHiveMenu
@@ -16,6 +18,14 @@ namespace BeeKingdom.LivingHiveMenu
     public sealed class LivingHiveMenuCanvas : MonoBehaviour
     {
         private const string FontResource = "LegacyRuntime.ttf";
+
+        // Mirrors SplashDevelopmentSceneConfig.WorldMapScenePath / Wave5PremiumMapModeKey
+        // (Assets/BeeKingdom/Playground/SplashDevelopmentSceneConfig.cs). Duplicated as
+        // constants rather than referenced directly: that type lives in the default
+        // Assembly-CSharp assembly, which no .asmdef — including this package's
+        // BeeKingdom.LivingHiveMenu — is allowed to reference.
+        private const string WorldMapScenePath = "Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity";
+        private const string Wave5PremiumMapModeKey = "BeeKingdom.Dev.WorldMapMode.Wave5Premium25x25";
 
         private readonly LivingHiveMenuState state = new LivingHiveMenuState();
 
@@ -95,7 +105,8 @@ namespace BeeKingdom.LivingHiveMenu
         {
             get
             {
-                if (state.ChatOpen) return LivingHiveMenuSpec.ChatId;
+                if (state.ActivitiesOpen) return LivingHiveMenuSpec.ActivitiesId;
+                if (state.CommunicationOpen) return LivingHiveMenuSpec.CommunicationId;
                 if (state.IsMoreActiveForProof()) return LivingHiveMenuSpec.MoreId;
                 if (string.IsNullOrEmpty(state.ActiveMenuId)) return string.Empty;
                 return state.ActiveMenuId;
@@ -596,8 +607,44 @@ namespace BeeKingdom.LivingHiveMenu
 
         private void OnEntryClicked(string itemId)
         {
+            if (LivingHiveMenuSpec.IsSurfaceSwitch(itemId))
+            {
+                OpenWorldMap();
+                return;
+            }
+            if (LivingHiveMenuSpec.IsCommunication(itemId))
+            {
+                // Toggles HiveViewProductUiPresenter's own mini-chat / "CHAT ROYAL" IMGUI
+                // overlay (see LivingHiveChatBridge.ToggleOverlay + LivingHiveChatBridgeBootstrap
+                // .OnGUI) — the exact widget SandboxPlayground's Communication button opens,
+                // not a uGUI panel built here.
+                LivingHiveChatBridge.ToggleOverlay();
+                return;
+            }
             state.ToggleEntry(itemId);
             RefreshAll();
+        }
+
+        // Mirrors HiveViewProductUiPresenter.OpenCanonicalWorldMap(): CARTE is a hard
+        // LoadSceneMode.Single switch to the real world map, not the local "Carte" overlay
+        // stub (BuildWorldMapOverlay/state.SurfaceMode below, kept only because
+        // LivingHiveMenuState is still directly unit-tested as a standalone state model).
+        // Two effects mirrored from the monolith: disable the dev-only Wave5 Premium 25x25
+        // test-scene override (a real bug once stranded a player on that debug scene with
+        // no way back — see SplashDevelopmentSceneConfig.DisableWave5PremiumMapMode), then
+        // load. Guarded by isPlaying: EditMode tests (SimulateEntryClick) have no Play
+        // context to load a scene into.
+        private static void OpenWorldMap()
+        {
+            if (!Application.isPlaying) return;
+            if (SceneUtility.GetBuildIndexByScenePath(WorldMapScenePath) < 0)
+            {
+                Debug.LogWarning("[LivingHiveMenu] World map scene not in Build Settings: " + WorldMapScenePath);
+                return;
+            }
+            PlayerPrefs.SetInt(Wave5PremiumMapModeKey, 0);
+            PlayerPrefs.Save();
+            SceneManager.LoadScene(WorldMapScenePath, LoadSceneMode.Single);
         }
 
         public void SimulateEntryClick(string itemId)
@@ -614,11 +661,13 @@ namespace BeeKingdom.LivingHiveMenu
 
         private void BuildPanels(Transform parent)
         {
-            BuildPanel(parent, LivingHiveMenuSpec.QuestsId, "Journal de quetes", BuildQuestsContent, new Rect(10f, 96f, 520f, 460f));
+            BuildPanel(parent, LivingHiveMenuSpec.ActivitiesId, "Activites", BuildActivitiesContent, new Rect(10f, 96f, 520f, 460f));
+            // Communication no longer builds a uGUI panel here: it toggles
+            // HiveViewProductUiPresenter's own IMGUI mini-chat overlay instead (see
+            // OnEntryClicked / LivingHiveChatBridge.ToggleOverlay).
             BuildPanel(parent, LivingHiveMenuSpec.BagId, "Sac & stocks", BuildBagContent, new Rect(10f, 96f, 520f, 460f));
             BuildPanel(parent, LivingHiveMenuSpec.MoreId, "Plus", BuildMoreContent, new Rect(10f, 96f, 420f, 520f));
             BuildPanel(parent, LivingHiveMenuSpec.SettingsId, "Parametres", BuildSettingsContent, new Rect(10f, 96f, 460f, 520f));
-            BuildPanel(parent, LivingHiveMenuSpec.ChatId, "Chat", BuildChatContent, new Rect(10f, 96f, 440f, 420f));
             BuildPanel(parent, "Carte", "Carte du monde", BuildWorldMapOverlay, new Rect(10f, 96f, 720f, 540f));
             // Reine/Boutique : contrairement aux panneaux ci-dessus (déjà en coordonnées
             // uGUI bas-gauche constantes), QueenProfilePanelRect/ShopPanelRect sont des rects
@@ -692,19 +741,28 @@ namespace BeeKingdom.LivingHiveMenu
             panels[panelId] = go;
         }
 
-        private void BuildQuestsContent(Transform parent, Rect panel)
+        private void BuildActivitiesContent(Transform parent, Rect panel)
         {
-            string[] quests =
-            {
-                "Recolter 5x nectar",
-                "Produire 3x miel",
-                "Elever une couveuse",
-                "Reconnaitre 2 zones"
-            };
+            string[] tabs = { "Evenements", "Defis", "Quetes" };
             float y = 52f;
-            for (int i = 0; i < quests.Length; i++)
+            Text title = CreateLabel(parent, "ACTIVITES", 18, TextAnchor.MiddleLeft, true);
+            title.color = new Color(1f, 0.72f, 0.16f);
+            LabelRect(title.GetComponent<RectTransform>(), 16f, y);
+            y += 40f;
+
+            // Onglets
+            for (int i = 0; i < tabs.Length; i++)
             {
-                Text row = CreateLabel(parent, "  " + quests[i] + "   [en cours]", 15, TextAnchor.MiddleLeft);
+                Text tab = CreateLabel(parent, tabs[i], 16, TextAnchor.MiddleLeft);
+                tab.color = new Color(0.92f, 0.62f, 0.16f);
+                LabelRect(tab.GetComponent<RectTransform>(), 16f + i * 140f, y);
+            }
+            y += 34f;
+
+            string[] activities = { "Evenement Special - Recolte d'Or", "Defi Hebdomadaire : Produire 500 Miel", "Quete Journaliere : Elever 3 Couveuses", "Defi Mensuel : Decouvrir 5 Zones" };
+            for (int i = 0; i < activities.Length; i++)
+            {
+                Text row = CreateLabel(parent, "  " + activities[i] + "   [disponible]", 15, TextAnchor.MiddleLeft);
                 row.color = new Color(0.92f, 0.62f, 0.16f);
                 LabelRect(row.GetComponent<RectTransform>(), 16f, y);
                 y += 34f;
@@ -891,7 +949,8 @@ namespace BeeKingdom.LivingHiveMenu
         {
             if (string.Equals(panelId, "QueenProfile", System.StringComparison.Ordinal)) return queenProfileOpen;
             if (string.Equals(panelId, "Shop", System.StringComparison.Ordinal)) return shopOpen;
-            if (state.ChatOpen && panelId == LivingHiveMenuSpec.ChatId) return true;
+            if (state.ActivitiesOpen && panelId == LivingHiveMenuSpec.ActivitiesId) return true;
+            if (state.CommunicationOpen && panelId == LivingHiveMenuSpec.CommunicationId) return true;
             if (string.Equals(panelId, "Carte", System.StringComparison.Ordinal))
             {
                 return state.SurfaceMode == LivingHiveMenuState.SurfaceBoundary.World;

@@ -1,0 +1,124 @@
+using BeeKingdom.Buildings.Interaction;
+using UnityEngine;
+
+namespace BeeKingdom.LivingHiveMenu
+{
+    // HÔTE DE LA FENÊTRE Recherche (Local Preview) pour la scène Environment2D5D_SpatialV3.
+    //
+    // Implémente IBuildingWindowHost (BuildingWindowContract.cs) et s'enregistre dans
+    // BuildingWindowRouter au play-mode via LivingHiveResearchRuntime. Le bâtiment
+    // ResearchNode (BuildingTypes.Research) est le point d'entrée : son clic (event
+    // BuildingSelectionService.BuildingClicked, L.36 de BuildingSelectionService.cs) ouvre la
+    // fenêtre plein écran ; la fermeture (X, back, Échap) la masque et restaure la Ruche.
+    //
+    // Pendant l'ouverture, le Header et le menu inférieur (racine du port LivingHiveMenu,
+    // LivingHiveMenuRuntime.Root) sont masqués par activation/désactivation (jamais
+    // détruits) et restaurés à la fermeture — conformément à la mission.
+    public sealed class LivingHiveResearchHost : IBuildingWindowHost
+    {
+        private readonly LivingHiveResearchWindow window;
+        private ISelectionService selection;
+        private GameObject hudRoot;
+        private bool hudHidden;
+
+        public LivingHiveResearchHost(LivingHiveResearchWindow window)
+        {
+            this.window = window;
+        }
+
+        public LivingHiveResearchWindow Window => window;
+
+        public bool IsOpen => window != null && window.IsOpen;
+
+        // Racine du HUD à masquer pendant la fenêtre (Header + menu inférieur du port).
+        public GameObject HudRoot
+        {
+            get { return hudRoot; }
+            set
+            {
+                // Ne jamais recouvrir un état déjà masqué : si la fenêtre est ouverte, la
+                // nouvelle racine doit rester masquée jusqu'à la fermeture.
+                hudRoot = value;
+                if (hudRoot != null && IsOpen && !hudHidden && hudRoot.activeSelf)
+                {
+                    hudRoot.SetActive(false);
+                    hudHidden = true;
+                }
+            }
+        }
+
+        public bool IsHudHiddenForProof => hudHidden && hudRoot != null && !hudRoot.activeSelf;
+
+        public void Register()
+        {
+            BuildingWindowRouter.Host = this;
+        }
+
+        public void Unregister()
+        {
+            if (BuildingWindowRouter.Host == this) BuildingWindowRouter.Host = null;
+        }
+
+        public void Attach(ISelectionService service)
+        {
+            Detach();
+            selection = service;
+            if (selection != null) selection.BuildingClicked += OnBuildingClicked;
+        }
+
+        public void Detach()
+        {
+            if (selection != null)
+            {
+                selection.BuildingClicked -= OnBuildingClicked;
+                selection = null;
+            }
+        }
+
+        private void OnBuildingClicked(BuildingDefinition building)
+        {
+            if (building == null) return;
+            if (!string.Equals(building.BuildingType, BuildingTypes.Research, System.StringComparison.Ordinal)) return;
+            BuildingWindowRouter.TryOpen(building);
+        }
+
+        // Implémentation IBuildingWindowHost.
+        public void Open(BuildingWindowContext context)
+        {
+            if (window == null) return;
+            window.Open();
+            HideHud();
+        }
+
+        public void Close()
+        {
+            if (window == null) return;
+            window.Hide();
+            ShowHud();
+        }
+
+        private void HideHud()
+        {
+            if (hudRoot == null) return;
+            if (hudRoot.activeSelf)
+            {
+                hudRoot.SetActive(false);
+                hudHidden = true;
+            }
+        }
+
+        private void ShowHud()
+        {
+            if (hudRoot == null) return;
+            if (!hudRoot.activeSelf)
+            {
+                hudRoot.SetActive(true);
+                hudHidden = false;
+            }
+            else
+            {
+                hudHidden = false;
+            }
+        }
+    }
+}

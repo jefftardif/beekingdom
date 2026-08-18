@@ -28,6 +28,15 @@ namespace BeeKingdom.Experiments.Environment2D5D
     //
     // Grid (debug, HIDDEN by default): X toggles a yellow rectangle + 25/50/75% lines
     // to verify that all four sides stay perfectly straight and parallel.
+    //
+    // [ExecuteAlways]: without it, LateUpdate() (which pins this quad to the camera) only
+    // ran in Play Mode, so in Edit Mode the backdrop sat at whatever localPosition was
+    // last SAVED in the scene instead of the live cam.InverseTransformPoint(pinned)
+    // result. Once BuildingPerspectiveCamera also got [ExecuteAlways] and started
+    // applying its real pose in Edit Mode, that stale backdrop position no longer matched
+    // the (now correct) camera — producing a new, second Edit/Play mismatch. Running the
+    // same pinning logic continuously keeps the backdrop glued to the camera in both modes.
+    [ExecuteAlways]
     public class FrontalBackdrop : MonoBehaviour
     {
         public Texture2D image;
@@ -49,6 +58,9 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void Update()
         {
+            // Play-only: with [ExecuteAlways], Update() also runs in Edit Mode, and
+            // reading keyboard there would fight with normal Editor typing/shortcuts.
+            if (!Application.isPlaying) return;
             Keyboard kb = Keyboard.current;
             if (kb != null && kb.xKey.wasPressedThisFrame) showGrid = !showGrid;
         }

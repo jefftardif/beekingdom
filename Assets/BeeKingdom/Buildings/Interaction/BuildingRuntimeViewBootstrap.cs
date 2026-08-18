@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using BeeKingdom.Buildings.Placement;
 
 namespace BeeKingdom.Buildings.Interaction
 {
@@ -17,14 +18,14 @@ namespace BeeKingdom.Buildings.Interaction
     // Contraintes respectées :
     //   - Aucune référence UnityEditor : tout passe par UnityEngine + System.IO.
     //   - Aucun fichier protégé modifié (sidecar/scènes/éditeur/artworks).
-    //   - Compilé dans BeeKingdom.Buildings (référence BeeKingdom.Core uniquement).
+    //   - Compilé dans BeeKingdom.Buildings (référence BeeKingdom.Core + BeeKingdom.Buildings.Placement).
     public static class BuildingRuntimeViewBootstrap
     {
         private const string VisualRootNamePrefix = "RuntimeVisual_";
         private const string ShaderName = "BeeKingdom/Experiments/ArtworkUnlit";
         private const float CanvasHeightWorld = 18f;
         private const float AlphaThreshold = 8f / 255f;
-        private const string RelativeSidecarPath = "Assets/Experiments/Environment2D5D/Config/BuildingPlacementEditor_Saves.json";
+        private const string DefaultRelativeSidecarPath = "Assets/Experiments/Environment2D5D/Config/BuildingPlacementEditor_Saves.json";
         private const string RelativeArtRoot = "Assets/BeeKingdom/Art/Buildings";
 
         // Type -> fichier d'artwork (miroir EXACT du catalogue éditeur BuildingCatalog).
@@ -115,6 +116,17 @@ namespace BeeKingdom.Buildings.Interaction
             return false;
         }
 
+        private static string GetSidecarPathForScene(Scene scene)
+        {
+            // Cherche un contexte HiveMap dans la scène
+            var context = UnityEngine.Object.FindFirstObjectByType<HiveMapPlacementContext>();
+            if (context != null && !string.IsNullOrEmpty(context.sidecarPath))
+            {
+                return context.sidecarPath;
+            }
+            return DefaultRelativeSidecarPath;
+        }
+
         private static BuildingInteractionController FindOrCreateController(Scene scene)
         {
             for (int i = 0; i < SceneManager.sceneCount; i++)
@@ -136,7 +148,8 @@ namespace BeeKingdom.Buildings.Interaction
         private static void MaterializeInto(BuildingInteractionController controller)
         {
             if (VisualsAlreadyPresent(controller.Registry)) return;
-            MaterializeRuntimeVisualBuildings(controller.Registry);
+            Scene active = SceneManager.GetActiveScene();
+            MaterializeRuntimeVisualBuildings(controller.Registry, active);
             HideDevMarkers();
             EnsureSelectionFeedback(controller);
         }
@@ -170,10 +183,18 @@ namespace BeeKingdom.Buildings.Interaction
         // --- Matérialisation des 14 bâtiments visibles + cliquables (M-INTERACTION). ---
         public static int MaterializeRuntimeVisualBuildings(BuildingInteractionRegistry registry)
         {
+            // Compat overload: utilise la scène active comme fallback
+            Scene activeScene = SceneManager.GetActiveScene();
+            if (!activeScene.IsValid()) activeScene = SceneManager.GetSceneAt(0);
+            return MaterializeRuntimeVisualBuildings(registry, activeScene);
+        }
+
+        public static int MaterializeRuntimeVisualBuildings(BuildingInteractionRegistry registry, Scene scene)
+        {
             if (registry == null) throw new ArgumentNullException("registry");
 
+            string relative = GetSidecarPathForScene(scene);
             string dataPath = Application.dataPath;
-            string relative = RelativeSidecarPath;
             if (relative.StartsWith("Assets/")) relative = relative.Substring("Assets/".Length);
             string fullPath = Path.Combine(dataPath, relative.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(fullPath)) return 0;

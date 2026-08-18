@@ -2,7 +2,11 @@
     "name": "BeeKingdom.LivingHiveMenu",
     "rootNamespace": "BeeKingdom.LivingHiveMenu",
     "references": [
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "BeeKingdom.Buildings",
+        "BeeKingdom.Localization",
+        "BeeKingdom.Core",
+        "BeeKingdom.LocalPreviewData"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
