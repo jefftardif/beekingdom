@@ -1,0 +1,79 @@
+name: Deploy BeeKingdomApi
+
+# Manual promotion, not push-to-main - see conversation with Jeff (2026-08-19):
+# main gets ordinary commits/PRs, this workflow only runs when something is
+# pushed to (or merged into) `deploy`. That one extra deliberate step before
+# anything reaches the live IIS site is worth the few seconds it costs.
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build:
+    # Cloud-hosted - the .NET SDK never runs on the production server, only
+    # here. Publish output is framework-dependent; IIS's ANCM in-process
+    # hosting model on the server handles the rest, same as it already does
+    # for the site this replaces.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish
+        run: dotnet publish Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release -o publish-output
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beekingdom-api
+          path: publish-output/
+          retention-days: 14
+
+  deploy:
+    needs: build
+    # Self-hosted runner on 104.129.128.136, scoped to this repo only.
+    # Adjust the label below to whatever was actually chosen when the runner
+    # was registered (GitHub defaults to `self-hosted` + OS/arch tags unless
+    # a custom label was added at registration time).
+    runs-on: [self-hosted, beekingdom-deploy]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: beekingdom-api
+          path: publish-output
+
+      - name: Take the site offline
+        shell: powershell
+        run: |
+          "<html><body>Deploying, back in a moment.</body></html>" | Out-File -FilePath "C:\inetpub\BeeKingdomApi\app_offline.htm" -Encoding utf8 -Force
+          Import-Module WebAdministration
+          Stop-WebAppPool -Name "BeeKingdomApi"
+
+      - name: Copy published files
+        shell: powershell
+        run: |
+          $exclude = @('app_offline.htm', 'web.config')
+          Get-ChildItem -Path "publish-output" -Recurse -File |
+            Where-Object { $exclude -notcontains $_.Name } |
+            ForEach-Object {
+              $target = $_.FullName.Replace((Resolve-Path "publish-output").Path, "C:\inetpub\BeeKingdomApi")
+              New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+              Copy-Item -Path $_.FullName -Destination $target -Force
+            }
+
+      - name: Bring the site back online
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+          Start-WebAppPool -Name "BeeKingdomApi"
+          Remove-Item -Path "C:\inetpub\BeeKingdomApi\app_offline.htm" -Force -ErrorAction SilentlyContinue
+
+      - name: Smoke test
+        shell: powershell
+        run: |
+          Start-Sleep -Seconds 5
+          $response = Invoke-WebRequest -Uri "https://api.ops.beekingdomgame.com/" -UseBasicParsing -TimeoutSec 15
+          if ($response.StatusCode -ne 200) { throw "Health check failed: $($response.StatusCode)" }
