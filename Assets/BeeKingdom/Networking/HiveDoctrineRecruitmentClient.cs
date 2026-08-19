@@ -44,6 +44,8 @@ namespace BeeKingdom.Networking
         public Dictionary<string, long> Counts { get; set; }
         public List<string> LegacyRoles { get; set; }
         public RemoteDoctrineRecruitmentOperation ActiveOperation { get; set; }
+        public int PopulationCapacity { get; set; }
+        public long PopulationUsed { get; set; }
     }
 
     public sealed class DoctrineRecruitmentStartRequest

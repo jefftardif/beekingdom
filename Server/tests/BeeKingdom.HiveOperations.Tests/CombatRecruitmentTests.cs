@@ -52,4 +52,69 @@ public sealed class CombatRecruitmentTests
         Assert.Equal(8, CombatRecruitmentService.Catalog["darters"].BatchSize);
         Assert.All(CombatRecruitmentService.Catalog.Values, d => Assert.Equal(TimeSpan.FromSeconds(14), d.Duration));
     }
+
+    [Fact]
+    public void ComputePopulationCapacity_grows_with_nursery_level_and_caps_at_max()
+    {
+        Assert.Equal(CombatRecruitmentService.InitialPopulationCapacity, CombatRecruitmentService.ComputePopulationCapacity(new Dictionary<string, int>()));
+        Assert.Equal(
+            CombatRecruitmentService.InitialPopulationCapacity + 5 * CombatRecruitmentService.PopulationCapacityPerNurseryLevel,
+            CombatRecruitmentService.ComputePopulationCapacity(new Dictionary<string, int> { ["nursery_cluster"] = 5 }));
+        Assert.Equal(
+            CombatRecruitmentService.MaxPopulationCapacity,
+            CombatRecruitmentService.ComputePopulationCapacity(new Dictionary<string, int> { ["nursery_cluster"] = 1_000_000 }));
+    }
+
+    [Fact]
+    public async Task StartAsync_blocks_when_population_capacity_would_be_exceeded()
+    {
+        Guid player = Guid.NewGuid(), hive = Guid.NewGuid();
+        var clock = new FixedClock(DateTimeOffset.Parse("2026-08-19T12:00:00Z"));
+        string root = Path.Combine(Path.GetTempPath(), "recruitment-capacity-" + Guid.NewGuid());
+        try
+        {
+            var factory = (Guid p, Guid h) => new PlayerHiveState(p, h, HiveStateMigrator.CurrentModelVersion, 0,
+                new Dictionary<string, ResourceBalance> { ["honey"] = new(10_000, 20_000), ["pollen"] = new(10_000, 20_000) },
+                new Dictionary<string, int> { ["guard_post"] = 1, ["nursery_cluster"] = 0 }, [], new(),
+                DoctrineRoster: new DoctrineRosterState(0, new Dictionary<string, long> { ["guardians"] = 18 }, null, new()));
+            var repo = new DurableJsonHiveStateRepository(root, factory);
+            var service = new CombatRecruitmentService(repo, clock);
+
+            var result = await service.StartAsync(new StartDoctrineTrainingCommand(player, hive, "guardians", 0, "cap-1"), CancellationToken.None);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("game.population_capacity_exceeded", result.Code);
+            Assert.Null((await repo.ReadAsync(player, hive))!.DoctrineRoster!.ActiveOperation);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task StartAsync_allows_training_once_nursery_level_raises_capacity_enough()
+    {
+        Guid player = Guid.NewGuid(), hive = Guid.NewGuid();
+        var clock = new FixedClock(DateTimeOffset.Parse("2026-08-19T12:00:00Z"));
+        string root = Path.Combine(Path.GetTempPath(), "recruitment-capacity-" + Guid.NewGuid());
+        try
+        {
+            var factory = (Guid p, Guid h) => new PlayerHiveState(p, h, HiveStateMigrator.CurrentModelVersion, 0,
+                new Dictionary<string, ResourceBalance> { ["honey"] = new(10_000, 20_000), ["pollen"] = new(10_000, 20_000) },
+                new Dictionary<string, int> { ["guard_post"] = 1, ["nursery_cluster"] = 5 },
+                [], new(),
+                DoctrineRoster: new DoctrineRosterState(0, new Dictionary<string, long> { ["guardians"] = 18 }, null, new()));
+            var repo = new DurableJsonHiveStateRepository(root, factory);
+            var service = new CombatRecruitmentService(repo, clock);
+
+            var result = await service.StartAsync(new StartDoctrineTrainingCommand(player, hive, "guardians", 0, "cap-2"), CancellationToken.None);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull((await repo.ReadAsync(player, hive))!.DoctrineRoster!.ActiveOperation);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    private sealed class FixedClock(DateTimeOffset value) : IServerClock
+    {
+        public DateTimeOffset UtcNow { get; } = value;
+    }
 }

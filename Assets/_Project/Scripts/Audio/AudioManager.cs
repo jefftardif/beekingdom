@@ -65,6 +65,13 @@ namespace BeeKingdom.Audio
         // pour les autres champs de sons de gameplay (tous a fileID 0 avant ce correctif).
         private const string ResourceGainSoundResourcePath = "collect";
 
+        // Meme convention auto-chargee que ResourceGainSoundResourcePath - troop_ready joue une
+        // seule fois au moment ou un entrainement passe a "pret a reclamer" (voir
+        // TickBarrackTrainingForExternalHost), collect_troop joue quand le joueur reclame
+        // effectivement (clic sur le bouton "Reclamer" ou sur le badge du batiment).
+        private const string TroopReadySoundResourcePath = "troop_ready";
+        private const string CollectTroopSoundResourcePath = "collect_troop";
+
         // Delai minimal entre deux lectures du MEME son d'interface - absorbe les doubles
         // declenchements (double-clic, plusieurs boutons presses dans la meme frame) sans jamais
         // etre perceptible comme un retard (retour de Jeff, Sprint Audio Polish, 2026-08-05 :
@@ -86,6 +93,8 @@ namespace BeeKingdom.Audio
         [SerializeField] private AudioClip errorSound;
         [SerializeField] private AudioClip resourceGainSound;
         [SerializeField] private AudioClip productionIncreaseSound;
+        [SerializeField] private AudioClip troopReadySound;
+        [SerializeField] private AudioClip collectTroopSound;
 
         [Header("Music")]
         [SerializeField] private AudioClip backgroundMusic;
@@ -139,6 +148,9 @@ namespace BeeKingdom.Audio
             {
                 Debug.LogWarning("AudioManager: aucun clip de collecte trouve sous Resources/" + ResourceGainSoundResourcePath + " - le son de collecte restera silencieux.");
             }
+
+            if (troopReadySound == null) troopReadySound = Resources.Load<AudioClip>(TroopReadySoundResourcePath);
+            if (collectTroopSound == null) collectTroopSound = Resources.Load<AudioClip>(CollectTroopSoundResourcePath);
 
             // Toujours router sfxSource vers le groupe SFX du MasterMixer (jamais directement vers le
             // master) - couvre a la fois les futurs sons d'interface et les effets sonores existants
@@ -292,6 +304,22 @@ namespace BeeKingdom.Audio
         public void PlayProductionIncrease()
         {
             PlaySound(productionIncreaseSound);
+        }
+
+        /// <summary>
+        /// Joue une seule fois quand un entrainement de troupes passe a "pret a reclamer".
+        /// </summary>
+        public void PlayTroopReady()
+        {
+            PlaySound(troopReadySound);
+        }
+
+        /// <summary>
+        /// Joue quand le joueur reclame effectivement des troupes entrainees.
+        /// </summary>
+        public void PlayCollectTroop()
+        {
+            PlaySound(collectTroopSound);
         }
 
         #endregion

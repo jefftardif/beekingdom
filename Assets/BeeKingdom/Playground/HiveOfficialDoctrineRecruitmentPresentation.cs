@@ -83,7 +83,9 @@ namespace BeeKingdom.Playground
             IReadOnlyDictionary<string, long> counts,
             IReadOnlyDictionary<string, long> balances,
             IReadOnlyList<string> legacyRoles,
-            HiveDoctrineRecruitmentOperationModel activeOperation)
+            HiveDoctrineRecruitmentOperationModel activeOperation,
+            int populationCapacity,
+            long populationUsed)
         {
             State = state;
             ErrorCode = errorCode ?? string.Empty;
@@ -104,6 +106,8 @@ namespace BeeKingdom.Playground
             Balances = balances ?? new Dictionary<string, long>();
             LegacyRoles = legacyRoles ?? Array.Empty<string>();
             ActiveOperation = activeOperation;
+            PopulationCapacity = populationCapacity;
+            PopulationUsed = populationUsed;
             FormationRoster =
                 HiveFormationReadinessProjection.ProjectOfficial(
                     Counts,
@@ -132,6 +136,8 @@ namespace BeeKingdom.Playground
         {
             get;
         }
+        public int PopulationCapacity { get; }
+        public long PopulationUsed { get; }
         public HiveFormationReadinessSnapshot FormationRoster { get; }
         public bool IsReadOnly =>
             State == HiveDoctrineRecruitmentScreenState.OfflineReadOnly;
@@ -303,7 +309,9 @@ namespace BeeKingdom.Playground
                 snapshot.ActiveOperation == null
                     ? null
                     : new HiveDoctrineRecruitmentOperationModel(
-                        snapshot.ActiveOperation));
+                        snapshot.ActiveOperation),
+                snapshot.PopulationCapacity,
+                snapshot.PopulationUsed);
         }
 
         private static HiveDoctrineRecruitmentScreenModel Empty(
@@ -327,7 +335,9 @@ namespace BeeKingdom.Playground
                 new Dictionary<string, long>(),
                 new Dictionary<string, long>(),
                 Array.Empty<string>(),
-                null);
+                null,
+                0,
+                0L);
         }
     }
 

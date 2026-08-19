@@ -7,7 +7,7 @@ public sealed record DoctrineRecruitmentDefinition(string Family, int BatchSize,
 public sealed record DoctrineRecruitmentOffer(string Family, int BatchSize, long HoneyCost, long PollenCost, TimeSpan Duration);
 public sealed record DoctrineRecruitmentPublicOperation(Guid OperationId, string Family, int BatchSize, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc, string Status);
 public sealed record DoctrineRecruitmentReceipt(Guid PlayerId, Guid HiveId, string IdempotencyKey, Guid OperationId, string Family, int BatchSize, long RevisionBefore, long RevisionAfter, DateTimeOffset AcceptedAtUtc, string Code);
-public sealed record DoctrineRecruitmentSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, string CatalogVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyList<DoctrineRecruitmentOffer> Offers, IReadOnlyDictionary<string, ResourceBalance> Balances, IReadOnlyDictionary<string, long> Counts, IReadOnlyList<string> LegacyRoles, DoctrineRecruitmentPublicOperation? ActiveOperation);
+public sealed record DoctrineRecruitmentSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, string CatalogVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyList<DoctrineRecruitmentOffer> Offers, IReadOnlyDictionary<string, ResourceBalance> Balances, IReadOnlyDictionary<string, long> Counts, IReadOnlyList<string> LegacyRoles, DoctrineRecruitmentPublicOperation? ActiveOperation, int PopulationCapacity, long PopulationUsed);
 public sealed record DoctrineRecruitmentResponse(DoctrineRecruitmentReceipt Receipt, DoctrineRecruitmentSnapshot Snapshot);
 public sealed record StartDoctrineTrainingCommand(Guid PlayerId, Guid HiveId, string Family, long ExpectedRevision, string IdempotencyKey);
 public sealed record ClaimDoctrineTrainingCommand(Guid PlayerId, Guid HiveId, Guid OperationId, long ExpectedRevision, string IdempotencyKey);
@@ -23,6 +23,21 @@ public sealed class CombatRecruitmentService
         ["wingrunners"] = new("wingrunners", 6, 420, 260, TimeSpan.FromSeconds(14)),
         ["darters"] = new("darters", 8, 500, 120, TimeSpan.FromSeconds(14))
     };
+    // Population capacity mirrors CombatSquadReservationService.ComputeCapacity's shape
+    // (same "no official player-level/skill-tree system yet, stand in with a real
+    // already-upgradeable building" reasoning) - Nursery (nursery_cluster) is the
+    // thematically-correct building for population instead of guard_post. Placeholder
+    // tuning, same as the building-upgrade catalog's costs - pure data, no code change
+    // needed to rebalance later.
+    public const int InitialPopulationCapacity = 20;
+    public const int MaxPopulationCapacity = 2000;
+    public const int PopulationCapacityPerNurseryLevel = 6;
+    public static int ComputePopulationCapacity(IReadOnlyDictionary<string, int> buildingLevels)
+    {
+        int nurseryLevel = Math.Max(0, buildingLevels?.GetValueOrDefault("nursery_cluster") ?? 0);
+        long capacity = InitialPopulationCapacity + (long)nurseryLevel * PopulationCapacityPerNurseryLevel;
+        return (int)Math.Min(MaxPopulationCapacity, capacity);
+    }
     private readonly IHiveStateRepository repository; private readonly IServerClock clock;
     public CombatRecruitmentService(IHiveStateRepository repository, IServerClock clock) { this.repository = repository; this.clock = clock; }
     public async Task<DoctrineRecruitmentSnapshot> ReadAsync(Guid player, Guid hive, CancellationToken ct) => Snapshot(await repository.ReadAsync(player, hive, ct) ?? throw new KeyNotFoundException());
@@ -36,6 +51,8 @@ public sealed class CombatRecruitmentService
             if (!Catalog.TryGetValue(c.Family, out var d)) { result = new(false, "game.invalid_request", Snapshot(state)); return state; }
             if (r.Revision != c.ExpectedRevision || r.ActiveOperation is not null) { result = new(false, "game.revision_conflict", Snapshot(state)); return state; }
             if (state.BuildingLevels.GetValueOrDefault("guard_post") < 1) { result = new(false, "game.recruitment_precondition_failed", Snapshot(state)); return state; }
+            var populationUsed = r.Counts.Values.Sum();
+            if (populationUsed + d.BatchSize > ComputePopulationCapacity(state.BuildingLevels)) { result = new(false, "game.population_capacity_exceeded", Snapshot(state)); return state; }
             if (!state.Resources.TryGetValue("honey", out var honey) || !state.Resources.TryGetValue("pollen", out var pollen) || honey.Amount < d.HoneyCost || pollen.Amount < d.PollenCost) { result = new(false, "game.insufficient_resources", Snapshot(state)); return state; }
             var op = new DoctrineTrainingOperation(Guid.NewGuid(), c.Family, d.BatchSize, now, now.Add(d.Duration), r.Revision + 1, c.IdempotencyKey, hash, false);
             var receipts = new Dictionary<string, IdempotencyReceipt>(r.Receipts) { [c.IdempotencyKey] = new(hash, true, "game.recruitment_started", op.OperationId, now, r.Revision, r.Revision + 1, c.Family, d.BatchSize.ToString(System.Globalization.CultureInfo.InvariantCulture)) };
@@ -60,7 +77,7 @@ public sealed class CombatRecruitmentService
         }, ct);
         return result ?? throw new InvalidOperationException("Recruitment claim did not produce a result");
     }
-    private DoctrineRecruitmentSnapshot Snapshot(PlayerHiveState s) { var now = clock.UtcNow; var r = s.DoctrineRoster ?? new DoctrineRosterState(0, new(), null, new()); var offers = Catalog.Values.Select(d => new DoctrineRecruitmentOffer(d.Family,d.BatchSize,d.HoneyCost,d.PollenCost,d.Duration)).ToArray(); var balances = new Dictionary<string,ResourceBalance>(StringComparer.Ordinal); foreach(var k in new[]{"honey","pollen"}) if(s.Resources.TryGetValue(k,out var b)) balances[k]=b; DoctrineRecruitmentPublicOperation? active = r.ActiveOperation is { } op ? new(op.OperationId,op.Family,op.BatchSize,op.StartedAtUtc,op.EndsAtUtc,now < op.EndsAtUtc ? "running" : "awaiting_completion") : null; return new(s.PlayerId,s.HiveId,"phase4-combat-recruitment-v1",CatalogVersion,r.Revision,now,offers,balances,new Dictionary<string,long>(r.Counts),["Soldats","Gardiennes","Eclaireuses"],active); }
+    private DoctrineRecruitmentSnapshot Snapshot(PlayerHiveState s) { var now = clock.UtcNow; var r = s.DoctrineRoster ?? new DoctrineRosterState(0, new(), null, new()); var offers = Catalog.Values.Select(d => new DoctrineRecruitmentOffer(d.Family,d.BatchSize,d.HoneyCost,d.PollenCost,d.Duration)).ToArray(); var balances = new Dictionary<string,ResourceBalance>(StringComparer.Ordinal); foreach(var k in new[]{"honey","pollen"}) if(s.Resources.TryGetValue(k,out var b)) balances[k]=b; DoctrineRecruitmentPublicOperation? active = r.ActiveOperation is { } op ? new(op.OperationId,op.Family,op.BatchSize,op.StartedAtUtc,op.EndsAtUtc,now < op.EndsAtUtc ? "running" : "awaiting_completion") : null; return new(s.PlayerId,s.HiveId,"phase4-combat-recruitment-v1",CatalogVersion,r.Revision,now,offers,balances,new Dictionary<string,long>(r.Counts),["Soldats","Gardiennes","Eclaireuses"],active,ComputePopulationCapacity(s.BuildingLevels),r.Counts.Values.Sum()); }
     private static bool ValidKey(string? key) => !string.IsNullOrWhiteSpace(key) && key.Trim() == key && key.Length <= 256 && key.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }

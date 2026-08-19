@@ -3348,6 +3348,961 @@ private static string courierToast = string.Empty;
             DrawAllianceHeadquartersScreen(compact);
         }
 
+        // Small supplementary building-level upgrade button, drawn on top of the reused
+        // DrawAllianceHeadquartersScreen rather than edited into it directly - that function
+        // is large, original monolith code this bridge has never modified, and a corner
+        // overlay is far lower-risk than threading a new control through it. Same shared
+        // redirect+glow entry point as everywhere else.
+        public static void DrawAllianceUpgradeButtonForExternalHost()
+        {
+            if (!AllianceOverlayOpenForExternalHost) return;
+            Rect button = new Rect(14f, Screen.height - 58f, 190f, 40f);
+            if (DrawPreviewActionButton(button, "N." + DisplayedBuildingLevel("alliance_future_hall").ToString(CultureInfo.InvariantCulture) + " Ameliorer le batiment", true, true))
+            {
+                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("alliance_future_hall");
+            }
+        }
+
+        // Manual production (Honey Reserve / Warehouse / Transformation - "honey_storage" /
+        // "warehouse_cells" / "wax_workshop" hotspot ids, see BuildingMappingTable). The
+        // accumulate/collect game logic below is reused byte-for-byte from LivingHive's
+        // local-preview manual production system via the existing test-hook bridge
+        // (AdvanceManualProductionForProof / CollectManualProductionForProof, both already
+        // public) - only the rendering is new: DrawReferenceBackedRuntimeUi's own bee-swirl/
+        // ready-glow draws are hardwired to the flat reference-image coordinate space
+        // (Resources/PremiumBeeReference/background_hive), which HiveMap doesn't use (its
+        // buildings are 2.5D quads positioned by BuildingPerspectiveCamera instead). Verified
+        // GUI-free except EnsureStyles()/the draw call itself: DisplayedPendingManualProduction,
+        // DisplayedManualProductionCapacity and AccumulatePendingProduction never touch
+        // EnsureSceneObjects() or the reference art.
+        public static bool ManualProductionReadyForExternalHost(string hotspotId)
+        {
+            // Same threshold split as DrawManualCollectionReadyMarkers: the server only
+            // requires >0 collectable whole units (see CanCollect), a much lower bar than
+            // the local-preview demo's CollectionReadyThreshold - without this branch the
+            // building was already collectible (and played the collect sound) well before
+            // the icon appeared for a server-backed account.
+            float readyThreshold = OfficialOfflineProductionConfigured() ? 1f : CollectionReadyThreshold;
+            return DisplayedPendingManualProduction(hotspotId) >= readyThreshold;
+        }
+
+        public static void TickManualProductionForExternalHost(float deltaSeconds)
+        {
+            AdvanceManualProductionForProof(deltaSeconds);
+            EnsureManualProductionRefreshedForExternalHost();
+        }
+
+        private static float manualProductionExternalHostLastRefreshAt = -100f;
+
+        // A real logged-in account (not the local-preview demo) makes
+        // OfficialOfflineProductionConfigured() true, switching Displayed/TryCollect above
+        // to the server-backed branch - same periodic-refresh pattern as
+        // DrawOfficialProductionDetail (line ~39725): the model is a snapshot from the last
+        // Refresh(), never updated on its own, and TryCollectPendingProduction only calls
+        // Refresh() reactively (after a click already failed once because the model/line
+        // was still null). Without polling this proactively, the very first click after
+        // entering the hive always collects 0 - nothing in HiveMap was driving this refresh
+        // loop before, since it normally runs only while the reference-image production
+        // panel is open.
+        private static void EnsureManualProductionRefreshedForExternalHost()
+        {
+            if (!OfficialOfflineProductionConfigured() || offlineProductionController.IsBusy) return;
+            if (NowForUi() - manualProductionExternalHostLastRefreshAt < 5f) return;
+            manualProductionExternalHostLastRefreshAt = NowForUi();
+            offlineProductionController.Refresh();
+        }
+
+        public static float CollectManualProductionForExternalHost(string hotspotId)
+        {
+            return CollectManualProductionForProof(hotspotId);
+        }
+
+        // Same balances DrawTopHud itself reads - honey/wax/pollen already branch
+        // local-preview vs. real server-backed totals correctly (see
+        // OfficialOfflineProductionConfigured() above). HiveMap's own uGUI header
+        // (LivingHiveMenuCanvas / LivingHiveMenuHeaderData) never read any of this, it
+        // displayed hardcoded preview constants, which is why the number never moved after
+        // a collection. `bees` now branches too (CombatRecruitmentService.PopulationUsed,
+        // Training + population milestone) - `capacityUsed`/`capacityMax` stay local-preview
+        // even when official: despite living in the same out-param list, they represent a
+        // generic honey/wax/pollen storage ceiling (HiveStockSnapshot's domain, explicitly
+        // out of scope this milestone), not population capacity - see
+        // DisplayedPopulationCapacity()/DisplayedPopulationUsed() for that instead.
+        public static void GetResourceTotalsForExternalHost(out float honey, out float wax, out float pollen, out float bees, out float capacityUsed, out float capacityMax)
+        {
+            if (OfficialOfflineProductionConfigured())
+            {
+                HiveOfflineProductionLineModel honeyLine = OfficialOfflineProductionLine("honey_storage");
+                HiveOfflineProductionLineModel waxLine = OfficialOfflineProductionLine("wax_workshop");
+                HiveOfflineProductionLineModel pollenLine = OfficialOfflineProductionLine("warehouse_cells");
+                honey = honeyLine != null ? (float)honeyLine.BalanceAmount : 0f;
+                wax = waxLine != null ? (float)waxLine.BalanceAmount : 0f;
+                pollen = pollenLine != null ? (float)pollenLine.BalanceAmount : 0f;
+            }
+            else
+            {
+                honey = localPreviewHoney;
+                wax = localPreviewWax;
+                pollen = localPreviewPollen;
+            }
+            bees = OfficialDoctrineRecruitmentConfigured() ? DisplayedPopulationUsed() : localPreviewBees;
+            capacityUsed = localPreviewCapacityUsed;
+            capacityMax = localPreviewCapacityMax;
+        }
+
+        // Population used/capacity, official server value when the doctrine recruitment
+        // system is configured, local preview otherwise - single place the HUD and the
+        // Barrack panel both pull from, same pattern as DisplayedBuildingLevel.
+        private static float DisplayedPopulationUsed()
+        {
+            if (OfficialDoctrineRecruitmentConfigured())
+            {
+                HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+                if (model != null) return model.PopulationUsed;
+            }
+            return localPreviewBees;
+        }
+
+        private static float DisplayedPopulationCapacity()
+        {
+            if (OfficialDoctrineRecruitmentConfigured())
+            {
+                HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+                if (model != null) return model.PopulationCapacity;
+            }
+            return localPreviewCapacityMax;
+        }
+
+        // Barrack training (guard_post hotspot id - Soldats/Gardiennes/Eclaireuses). Unlike
+        // Honey/Wax/Pollen production above, there is no server-backed branch for troops at
+        // all - StartPreviewTraining/CompletePreviewTrainingIfReady are always the on-device
+        // implementation (see DrawTrainingPreview's own "Effectifs persistés sur cet
+        // appareil" label), so no OfficialXxxConfigured() branching is needed here. Reuses
+        // DrawBarracksTroopSelector/DrawTrainingPreview/DrawPreviewActionButton/DrawProgressBar
+        // as-is (all take an explicit Rect, none touch EnsureSceneObjects()) - only the
+        // containing full-screen chrome is new, since in LivingHive this UI lives inside the
+        // reference-image hotspot detail panel that HiveMap doesn't use.
+        private static bool barrackOverlayOpenForExternalHost;
+
+        public static bool BarrackOverlayOpenForExternalHost => barrackOverlayOpenForExternalHost;
+
+        public static void OpenBarrackOverlayForExternalHost()
+        {
+            EnsureLocalPreviewQueueJournalLoaded();
+            barrackOverlayOpenForExternalHost = true;
+            // Without this, the panel shows whatever the controller last fetched (possibly
+            // stale or empty from before this session even had resources) until something
+            // else happens to trigger a refresh - which nothing did, since this window has
+            // no periodic poll of its own like the queue sidebar does (and the sidebar is
+            // hidden while this overlay is open anyway).
+            if (OfficialDoctrineRecruitmentConfigured() && doctrineRecruitmentController != null && !doctrineRecruitmentController.IsBusy)
+                doctrineRecruitmentController.Refresh();
+        }
+
+        public static void CloseBarrackOverlayForExternalHost()
+        {
+            barrackOverlayOpenForExternalHost = false;
+        }
+
+        private static bool officialTrainingWasAwaitingCompletion;
+
+        // True the instant the client's own countdown reaches zero, not only once the
+        // server has confirmed AwaitingCompletion - Jeff's feedback was that waiting on a
+        // server round-trip for the badge/sound felt laggy (up to the ~5s poll interval).
+        // EndsAtUtc was already known to the client the moment the operation started, so
+        // there's no real reason the READY FEEDBACK needs to wait on a fetch - only the
+        // actual Claim() call still goes through the server, which remains the sole
+        // authority and will reject a too-early claim on its own (game.recruitment_not_complete).
+        private static bool IsTrainingReadyToClaimNow(HiveDoctrineRecruitmentScreenModel model)
+        {
+            if (model?.ActiveOperation == null) return false;
+            return model.ActiveOperation.AwaitingCompletion ||
+                model.Remaining(doctrineRecruitmentController.Elapsed) <= TimeSpan.Zero;
+        }
+
+        public static void TickBarrackTrainingForExternalHost()
+        {
+            CompletePreviewTrainingIfReady();
+            RefreshDoctrineRecruitmentIfDueOrJustFinished();
+
+            // Edge-detects local-preview -> ready so troop_ready plays exactly once per
+            // completed batch, not every frame while it stays ready.
+            bool awaitingNow = OfficialDoctrineRecruitmentConfigured() && IsTrainingReadyToClaimNow(OfficialDoctrineRecruitmentModel());
+            if (awaitingNow && !officialTrainingWasAwaitingCompletion) AudioManager.Instance?.PlayTroopReady();
+            officialTrainingWasAwaitingCompletion = awaitingNow;
+        }
+
+        // Placeholder image+description per troop type - Jeff will supply the real artwork/
+        // copy later; this just needs a stable place to plug them in (see
+        // DrawBarrackTroopDetailForExternalHost below).
+        private static string BarrackTroopPlaceholderDescription(string troopType)
+        {
+            if (string.Equals(troopType, "Gardiennes", StringComparison.Ordinal))
+                return "Unites defensives stationnaires. Renforcent la protection de la ruche contre les incursions.";
+            if (string.Equals(troopType, "Eclaireuses", StringComparison.Ordinal))
+                return "Unites rapides dediees a la reconnaissance et au reperage des menaces.";
+            return "Unite de combat polyvalente. Forme le coeur des troupes de defense de la ruche.";
+        }
+
+        private static string BarrackTroopIcon(string troopType)
+        {
+            if (string.Equals(troopType, "Gardiennes", StringComparison.Ordinal)) return "guard-bee";
+            if (string.Equals(troopType, "Eclaireuses", StringComparison.Ordinal)) return "bee";
+            return "worker-bee";
+        }
+
+        private static void DrawBarrackBanner(float height, bool compact)
+        {
+            Rect banner = new Rect(0f, 0f, Screen.width, height);
+            Texture2D texture = Resources.Load<Texture2D>("PremiumBeeReference/BuildingBanners/guard_post");
+            if (texture != null) GUI.DrawTexture(banner, texture, ScaleMode.ScaleAndCrop, true);
+            else DrawPremiumPanel(banner, new Color(0.14f, 0.085f, 0.025f, 0.98f), new Color(1f, 0.68f, 0.16f, 0.90f));
+            GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
+            GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(28f, height - (compact ? 42f : 48f), Screen.width * 0.68f, 26f), "CASERNE", new GUIStyle(titleStyle) { fontSize = compact ? 20 : 28, fontStyle = FontStyle.Bold });
+            GUI.Label(new Rect(30f, height - (compact ? 20f : 23f), Screen.width * 0.70f, 16f), "Entrainement des troupes de defense", new GUIStyle(smallStyle) { fontSize = compact ? 9 : 12 });
+        }
+
+        private static void DrawBarrackTopBar(float bannerHeight)
+        {
+            GUI.color = new Color(1f, 0.60f, 0.14f, 0.95f);
+            GUI.DrawTexture(new Rect(0f, bannerHeight - 1f, Screen.width, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+            if (DrawPremiumBackButton(new Rect(4f, 2f, 48f, 46f)))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                CloseBarrackOverlayForExternalHost();
+                return;
+            }
+            GUI.Label(new Rect(54f, 12f, Screen.width - 220f, 24f), "CASERNE", new GUIStyle(badgeStyle) { fontSize = 11 });
+            Rect badge = new Rect(Screen.width - 158f, 10f, 96f, 28f);
+            DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
+            GUI.Label(badge, LocalArmyTotal().ToString(CultureInfo.InvariantCulture) + " TROUPES", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+
+            // Building-level upgrade for the Barrack itself (guard_post), separate from troop
+            // training below - same shared redirect+glow entry point as everywhere else.
+            Rect upgradeBadge = new Rect(Screen.width - 158f, 42f, 96f, 24f);
+            if (DrawPreviewActionButton(upgradeBadge, "N." + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture) + " Ameliorer", true, true))
+            {
+                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("guard_post");
+            }
+        }
+
+        // Placeholder content area for the currently selected troop type - a stable slot for
+        // the real per-type image/description Jeff will provide later (see
+        // BarrackTroopPlaceholderDescription above).
+        private static void DrawBarrackTroopDetail(Rect rect, string troopType)
+        {
+            DrawPremiumPanel(rect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
+
+            float portraitSize = Mathf.Min(rect.height - 24f, 120f);
+            Rect portraitRect = new Rect(rect.x + 16f, rect.y + 12f, portraitSize, portraitSize);
+            DrawPremiumPanel(portraitRect, new Color(0.05f, 0.045f, 0.03f, 0.92f), new Color(0.62f, 0.42f, 0.14f, 0.6f));
+            DrawGameIcon(new Rect(portraitRect.x + portraitRect.width * 0.2f, portraitRect.y + portraitRect.height * 0.2f, portraitRect.width * 0.6f, portraitRect.height * 0.6f), BarrackTroopIcon(troopType), Color.white);
+            GUI.Label(new Rect(portraitRect.x, portraitRect.yMax - 16f, portraitRect.width, 14f), "Image a venir", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+
+            float textX = portraitRect.xMax + 16f;
+            float textWidth = rect.xMax - textX - 16f;
+            GUI.Label(new Rect(textX, rect.y + 12f, textWidth, 24f), troopType, new GUIStyle(titleStyle) { fontSize = 18, fontStyle = FontStyle.Bold });
+            GUI.Label(new Rect(textX, rect.y + 40f, textWidth, rect.height - 80f), BarrackTroopPlaceholderDescription(troopType), new GUIStyle(smallStyle) { wordWrap = true });
+            GUI.Label(
+                new Rect(textX, rect.yMax - 26f, textWidth, 18f),
+                "En reserve : " + TroopCount(troopType).ToString(CultureInfo.InvariantCulture) + "  ·  Cout : " + TrainingCostText(troopType),
+                new GUIStyle(tinyLabelStyle));
+        }
+
+        public static void DrawBarrackOverlayForExternalHost(bool compact)
+        {
+            if (!barrackOverlayOpenForExternalHost) return;
+            EnsureStyles();
+            EnsureLocalPreviewHiveProgressLoaded();
+
+            Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
+            GUI.color = new Color(0.006f, 0.005f, 0.004f, 0.99f);
+            GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+
+            float bannerHeight = compact ? Mathf.Min(150f, Screen.height * 0.20f) : Mathf.Clamp(Screen.height * 0.20f, 150f, 190f);
+            DrawBarrackBanner(bannerHeight, compact);
+            DrawBarrackTopBar(bannerHeight);
+            if (!barrackOverlayOpenForExternalHost) return;
+
+            float margin = 16f;
+            float contentTop = bannerHeight + 12f;
+            float contentWidth = Screen.width - margin * 2f;
+
+            // Training + population milestone: when a real session is configured, the
+            // Barrack trains against CombatRecruitmentService's 3 real families
+            // (guardians/wingrunners/darters) instead of the local-preview Soldats/
+            // Gardiennes/Eclaireuses set - a separate, self-contained content block
+            // rather than threading official-awareness through the local selector's
+            // troop-tier/promotion UI (which has no server equivalent at all), same
+            // reasoning as DrawOfficialBuildingUpgradeOnlyDetail being separate from the
+            // local Construction detail rendering.
+            if (OfficialDoctrineRecruitmentConfigured())
+            {
+                DrawOfficialBarrackContent(margin, contentTop, contentWidth);
+                return;
+            }
+
+            float selectorHeight = compact ? 84f : 96f;
+            DrawBarracksTroopSelector(new Rect(margin, contentTop, contentWidth, selectorHeight));
+            float y = contentTop + selectorHeight + 14f;
+
+            float footerHeight = IsTrainingRunning() ? 56f : 76f;
+            float detailHeight = Mathf.Max(120f, Screen.height - y - footerHeight - margin);
+            DrawBarrackTroopDetail(new Rect(margin, y, contentWidth, detailHeight), selectedLocalTroopType);
+            y += detailHeight + 12f;
+
+            if (IsTrainingRunning())
+            {
+                float speedUpButtonWidth = 130f;
+                GUI.Label(new Rect(margin, y, contentWidth - speedUpButtonWidth - 8f, 18f), "Entrainement en cours (" + localPreviewTrainingTroopType + ") : " + Mathf.RoundToInt(TrainingProgress01() * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
+                if (DrawPreviewActionButton(new Rect(margin + contentWidth - speedUpButtonWidth, y - 2f, speedUpButtonWidth, 22f), "⚡ Accelerer", true, true))
+                {
+                    OpenSpeedUpForExternalHost(SpeedUpCategory.Training, localPreviewTrainingTroopType, (long)GetTrainingRemaining(localPreviewTrainingTroopType));
+                }
+                DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), TrainingProgress01());
+            }
+            else
+            {
+                bool canTrain = CanStartTraining(selectedLocalTroopType);
+                if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), "Entrainer (" + TrainingCostText(selectedLocalTroopType) + ")", canTrain))
+                {
+                    StartPreviewTraining(selectedLocalTroopType);
+                }
+                if (!canTrain)
+                {
+                    GUI.Label(new Rect(margin, y + 48f, contentWidth, 18f), TrainingDisabledReason(selectedLocalTroopType), new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
+                }
+            }
+        }
+
+        // Compact status line for the official Barrack detail panel - mirrors
+        // OfficialBuildingUpgradeStatusText's shape (offer cost/duration, running
+        // remaining, insufficient-resources note) but there's no equivalent function
+        // already exposed for recruitment specifically, only per-action label/enabled
+        // helpers (OfficialDoctrineRecruitmentActionLabel/Enabled), so this is new.
+        private static string OfficialDoctrineRecruitmentStatusText(string family)
+        {
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+            if (model == null || model.State == HiveDoctrineRecruitmentScreenState.NotConfigured)
+                return "Entrainement officiel non configure";
+            if (model.IsReadOnly) return "Hors ligne - actions bloquees";
+            HiveDoctrineRecruitmentOperationModel active = model.ActiveOperation;
+            if (active != null)
+            {
+                if (!string.Equals(active.Family, family, StringComparison.Ordinal))
+                    return "Une autre troupe occupe la file d'entrainement";
+                if (active.AwaitingCompletion) return "Entrainement termine - a reclamer";
+                return "En cours - " + FormatBuildingUpgradeDuration(model.Remaining(doctrineRecruitmentController.Elapsed)) + " restantes";
+            }
+            HiveDoctrineRecruitmentOfferModel offer = model.FindOffer(family);
+            if (offer == null) return "Aucune offre disponible";
+            string offerText = "Lot de " + offer.BatchSize.ToString(CultureInfo.InvariantCulture) + " - " + offer.HoneyCost.ToString(CultureInfo.InvariantCulture) + " miel, " + offer.PollenCost.ToString(CultureInfo.InvariantCulture) + " pollen - " + FormatBuildingUpgradeDuration(offer.Duration);
+            if (!model.CanStart(family)) return "Ressources insuffisantes - " + offerText;
+            return offerText;
+        }
+
+        private static readonly string[] OfficialTroopFamilies = { "guardians", "wingrunners", "darters" };
+        private static readonly string[] OfficialTroopFamilyLabels = { "Gardiennes", "Voltigeuses", "Lanceuses" };
+        private static string officialSelectedTroopFamily = "guardians";
+        private static float officialBarrackLastLiveRefreshAt = -100f;
+
+        // Same periodic poll as the building-upgrade/production detail panels
+        // (officialProductionDetailLastLiveRefreshAt), plus one refinement (Jeff's
+        // feedback: the ready badge/sound lagged 2-3s behind the countdown reaching 0):
+        // as soon as the client-side countdown says an active operation should be done but
+        // the server hasn't confirmed AwaitingCompletion yet, refresh immediately instead
+        // of waiting for the next 5s tick. Shared by the Barrack panel and the queue
+        // sidebar so both react at the same moment.
+        private static void RefreshDoctrineRecruitmentIfDueOrJustFinished()
+        {
+            if (!OfficialDoctrineRecruitmentConfigured() || doctrineRecruitmentController == null || doctrineRecruitmentController.IsBusy) return;
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+            bool justFinished = model?.ActiveOperation != null && !model.ActiveOperation.AwaitingCompletion &&
+                model.Remaining(doctrineRecruitmentController.Elapsed) <= TimeSpan.Zero;
+            if (!justFinished && NowForUi() - officialBarrackLastLiveRefreshAt <= 5f) return;
+            officialBarrackLastLiveRefreshAt = NowForUi();
+            doctrineRecruitmentController.Refresh();
+        }
+
+        private static void DrawOfficialBarrackContent(float margin, float contentTop, float contentWidth)
+        {
+            RefreshDoctrineRecruitmentIfDueOrJustFinished();
+
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+
+            float selectorHeight = 84f;
+            Rect selectorRect = new Rect(margin, contentTop, contentWidth, selectorHeight);
+            float gap = 6f;
+            float troopWidth = (contentWidth - gap * 2f) / 3f;
+            for (int i = 0; i < OfficialTroopFamilies.Length; i++)
+            {
+                string family = OfficialTroopFamilies[i];
+                Rect troop = new Rect(selectorRect.x + i * (troopWidth + gap), selectorRect.y, troopWidth, selectorRect.height);
+                bool selected = family == officialSelectedTroopFamily;
+                DrawPremiumPanel(troop, selected ? new Color(0.060f, 0.050f, 0.034f, 0.98f) : new Color(0.045f, 0.050f, 0.040f, 0.88f), selected ? new Color(1f, 0.78f, 0.18f, 0.78f) : new Color(0.66f, 0.46f, 0.16f, 0.74f));
+                if (GUI.Button(troop, string.Empty, GUIStyle.none)) officialSelectedTroopFamily = family;
+                DrawGameIcon(new Rect(troop.x + 8f, troop.y + 6f, 26f, 26f), i == 0 ? "guard-bee" : "bee", Color.white);
+                GUI.Label(new Rect(troop.x + 6f, troop.yMax - 34f, troop.width - 12f, 15f), OfficialTroopFamilyLabels[i], tinyLabelStyle);
+                long count = model != null ? model.Count(family) : 0L;
+                GUI.Label(new Rect(troop.x + 6f, troop.yMax - 18f, troop.width - 12f, 16f), count.ToString(CultureInfo.InvariantCulture), badgeStyle);
+            }
+            float y = contentTop + selectorHeight + 14f;
+
+            float populationHeight = 44f;
+            Rect populationRect = new Rect(margin, y, contentWidth, populationHeight);
+            DrawPremiumPanel(populationRect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
+            GUI.Label(populationRect, "Population : " + DisplayedPopulationUsed().ToString("F0", CultureInfo.InvariantCulture) + " / " + DisplayedPopulationCapacity().ToString("F0", CultureInfo.InvariantCulture), new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter });
+            y += populationHeight + 12f;
+
+            float detailHeight = 96f;
+            Rect detailRect = new Rect(margin, y, contentWidth, detailHeight);
+            DrawPremiumPanel(detailRect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
+            GUI.Label(new Rect(detailRect.x + 16f, detailRect.y + 12f, detailRect.width - 32f, 24f), OfficialTroopFamilyLabels[Array.IndexOf(OfficialTroopFamilies, officialSelectedTroopFamily)], new GUIStyle(titleStyle) { fontSize = 18, fontStyle = FontStyle.Bold });
+            GUI.Label(new Rect(detailRect.x + 16f, detailRect.y + 42f, detailRect.width - 32f, detailHeight - 54f), OfficialDoctrineRecruitmentStatusText(officialSelectedTroopFamily), new GUIStyle(tinyLabelStyle) { wordWrap = true });
+            y += detailHeight + 12f;
+
+            HiveDoctrineRecruitmentOperationModel active = model?.ActiveOperation;
+            bool runningHere = active != null && string.Equals(active.Family, officialSelectedTroopFamily, StringComparison.Ordinal) && !IsTrainingReadyToClaimNow(model);
+            if (runningHere)
+            {
+                GUI.Label(new Rect(margin, y, contentWidth, 18f), "Entrainement en cours : " + Mathf.RoundToInt((float)model.Progress01(doctrineRecruitmentController.Elapsed) * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
+                DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), (float)model.Progress01(doctrineRecruitmentController.Elapsed));
+            }
+            else if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily)))
+            {
+                RunOfficialDoctrineRecruitmentAction(officialSelectedTroopFamily);
+            }
+        }
+
+        // Prerequisite redirect + glow (Jeff's request): the ONLY real upgrade prerequisite
+        // in this system is the Coeur Royal (administration_core / ROYAL_PALACE) level cap -
+        // see UpgradeDisabledReason: every other building is blocked from out-leveling it.
+        // So "redirect to the building you actually need to upgrade first" always means
+        // ROYAL_PALACE, never a general dependency graph. This one shared entry point is
+        // used everywhere an upgrade can be requested (the building-click handlers, the
+        // Construction grid, and the small "Ameliorer" buttons added to the Alliance/
+        // Barrack windows): on success it starts the upgrade normally; on the Coeur Royal
+        // block specifically, it closes whatever HiveMap panel is open and flags
+        // ROYAL_PALACE for a glow highlight instead of just showing disabled text.
+        private const string CoeurRoyalUpgradeBlockedReason = "Niveau du Coeur royal insuffisant";
+        private static string highlightedPrerequisiteBuildingType;
+
+        public static string HighlightedPrerequisiteBuildingTypeForExternalHost => highlightedPrerequisiteBuildingType;
+
+        public static void ClearHighlightedPrerequisiteForExternalHost()
+        {
+            highlightedPrerequisiteBuildingType = null;
+        }
+
+        // Current level for a hotspot, official server value when that building is on the
+        // real upgrade path, local preview otherwise - single place both small button
+        // labels (Barrack/Alliance) and the Construction detail panel pull this from, so
+        // they can never disagree with which action TryStartUpgradeWithPrerequisiteRedirectForExternalHost
+        // is actually about to take for the same hotspot.
+        private static int DisplayedBuildingLevel(string hotspotId)
+        {
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+            {
+                HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+                return model == null ? 0 : model.LevelFor(hotspotId);
+            }
+            return EnsureLocalPreviewLevel(hotspotId);
+        }
+
+        public static bool TryStartUpgradeWithPrerequisiteRedirectForExternalHost(string hotspotId)
+        {
+            // Hive gameplay sprint: every building is now server-authoritative whenever a
+            // real session is configured - route through the same official action already
+            // used by the (legacy, HiveMap-unreachable) reference-hotspot detail panel
+            // instead of the local preview system below. No prerequisite redirect exists
+            // on the official path today (BuildingUpgradeService only checks the single
+            // building's own level, not a cross-building Coeur Royal cap), so this simply
+            // starts/completes via the real server flow and reports success/failure as-is.
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+            {
+                bool enabledBefore = OfficialBuildingUpgradeActionEnabled(hotspotId);
+                RunOfficialBuildingUpgradeAction(hotspotId);
+                return enabledBefore;
+            }
+
+            ReferenceHiveHotspot hotspot = FindReferenceHotspot(hotspotId);
+            if (string.IsNullOrEmpty(hotspot.HotspotId)) return false;
+
+            if (CanStartUpgrade(hotspot))
+            {
+                StartPreviewUpgrade(hotspot);
+                if (string.Equals(hotspotId, "administration_core", StringComparison.Ordinal))
+                    highlightedPrerequisiteBuildingType = null;
+                return true;
+            }
+
+            string reason = UpgradeDisabledReason(hotspot);
+            if (string.Equals(reason, CoeurRoyalUpgradeBlockedReason, StringComparison.Ordinal))
+            {
+                highlightedPrerequisiteBuildingType = "ROYAL_PALACE";
+                CloseAllianceOverlayForExternalHost();
+                CloseBarrackOverlayForExternalHost();
+                CloseConstructionOverlayForExternalHost();
+                localPreviewLoopMessage = "Ameliorez d'abord le Palais Royal.";
+                localPreviewLastActionStatus = "Redirection: Palais Royal";
+                return false;
+            }
+
+            localPreviewLoopMessage = reason;
+            return false;
+        }
+
+        // Hollow rectangular border of the given thickness - same GUI.color + whiteTexture
+        // idiom used throughout this file for solid rects (e.g. DrawBroodVitalityMeter),
+        // just drawn as 4 thin strips instead of one filled rect.
+        private static void DrawFrame(Rect rect, Color color, float thickness)
+        {
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, thickness), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.DrawTexture(new Rect(rect.x, rect.yMax - thickness, rect.width, thickness), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.DrawTexture(new Rect(rect.x, rect.y, thickness, rect.height), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.DrawTexture(new Rect(rect.xMax - thickness, rect.y, thickness, rect.height), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.color = previous;
+        }
+
+        // Pulsing ring, same visual language as the Alliance/POI selection rings elsewhere
+        // in this file - drawn by the caller at the highlighted building's own on-screen
+        // rect (computed from the 2.5D camera, this file has no notion of HiveMap's world
+        // space), so it sits directly on the building rather than as a generic screen badge.
+        public static void DrawPrerequisiteGlowForExternalHost(Rect buildingRect, float time)
+        {
+            if (string.IsNullOrEmpty(highlightedPrerequisiteBuildingType)) return;
+            float pulse = 0.55f + 0.35f * Mathf.PingPong(time * 0.9f, 1f);
+            float ringSize = Mathf.Max(buildingRect.width, buildingRect.height) * 1.15f;
+            Rect ring = new Rect(buildingRect.center.x - ringSize * 0.5f, buildingRect.center.y - ringSize * 0.5f, ringSize, ringSize);
+            DrawFrame(ring, new Color(1f, 0.82f, 0.20f, pulse), 3.5f);
+        }
+
+        // Construction / building upgrade - generic per-hotspot leveling (any of the 14
+        // buildings, StartPreviewUpgrade/CanStartUpgrade/UpgradeCost/
+        // CompletePreviewUpgradeIfReady, all reused as-is: always local/on-device like
+        // Barrack training, no server branch to worry about for the action itself - only
+        // DrawSideRail's read-only progress card checks an official model, the action
+        // methods never do). LivingHive only ever showed this buried in a single-line
+        // progress strip tied to the guided tutorial's UpgradeRunning/UpgradeAuditing/...
+        // steps, one of a dozen near-identical strips sharing the same tiny corner of a
+        // detail panel - never a real standalone screen (Jeff's own words: something was
+        // started here but he wasn't happy with it). This is a fresh full-screen
+        // "CONSTRUCTION" UI in the same family as the Barrack panel, not a port of that strip.
+        private static string constructionSelectedHotspotId = "administration_core";
+        private static bool constructionOverlayOpenForExternalHost;
+
+        public static bool ConstructionOverlayOpenForExternalHost => constructionOverlayOpenForExternalHost;
+
+        public static void OpenConstructionOverlayForExternalHost()
+        {
+            EnsureLocalPreviewQueueJournalLoaded();
+            EnsureLocalPreviewHiveProgressLoaded();
+            if (IsUpgradeRunning()) constructionSelectedHotspotId = localPreviewUpgradeHotspotId;
+            constructionOverlayOpenForExternalHost = true;
+        }
+
+        // Same as OpenConstructionOverlayForExternalHost, but pre-selects a specific
+        // hotspot first - used when a building with no dedicated window of its own is
+        // clicked directly, so the player lands on that building's own entry in the
+        // picker instead of whatever was last selected.
+        public static void OpenConstructionOverlayForExternalHost(string preselectHotspotId)
+        {
+            if (!string.IsNullOrEmpty(preselectHotspotId) && !IsUpgradeRunning()) constructionSelectedHotspotId = preselectHotspotId;
+            OpenConstructionOverlayForExternalHost();
+        }
+
+        public static void CloseConstructionOverlayForExternalHost()
+        {
+            constructionOverlayOpenForExternalHost = false;
+        }
+
+        public static void TickConstructionForExternalHost()
+        {
+            CompletePreviewUpgradeIfReady();
+        }
+
+        private static void DrawConstructionBanner(float height, bool compact)
+        {
+            Rect banner = new Rect(0f, 0f, Screen.width, height);
+            Texture2D texture = Resources.Load<Texture2D>("PremiumBeeReference/BuildingBanners/administration_core");
+            if (texture != null) GUI.DrawTexture(banner, texture, ScaleMode.ScaleAndCrop, true);
+            else DrawPremiumPanel(banner, new Color(0.14f, 0.085f, 0.025f, 0.98f), new Color(1f, 0.68f, 0.16f, 0.90f));
+            GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
+            GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(28f, height - (compact ? 42f : 48f), Screen.width * 0.68f, 26f), "CONSTRUCTION", new GUIStyle(titleStyle) { fontSize = compact ? 20 : 28, fontStyle = FontStyle.Bold });
+            GUI.Label(new Rect(30f, height - (compact ? 20f : 23f), Screen.width * 0.70f, 16f), "Ameliorez les batiments de la ruche", new GUIStyle(smallStyle) { fontSize = compact ? 9 : 12 });
+        }
+
+        private static void DrawConstructionTopBar(float bannerHeight)
+        {
+            GUI.color = new Color(1f, 0.60f, 0.14f, 0.95f);
+            GUI.DrawTexture(new Rect(0f, bannerHeight - 1f, Screen.width, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+            if (DrawPremiumBackButton(new Rect(4f, 2f, 48f, 46f)))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                CloseConstructionOverlayForExternalHost();
+                return;
+            }
+            GUI.Label(new Rect(54f, 12f, Screen.width - 220f, 24f), "CONSTRUCTION", new GUIStyle(badgeStyle) { fontSize = 11 });
+            Rect badge = new Rect(Screen.width - 158f, 10f, 96f, 28f);
+            DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
+            GUI.Label(badge, "COEUR N." + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture), new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+        }
+
+        // Visual grid of all 14 buildings (icon + name + level badge), premium-panel tiles
+        // matching the rest of this file's look - selecting one is blocked while another
+        // upgrade is already running, same guard StartPreviewUpgrade itself enforces.
+        private static void DrawConstructionBuildingGrid(Rect rect)
+        {
+            const int columns = 5;
+            float gap = 8f;
+            float tileW = (rect.width - gap * (columns - 1)) / columns;
+            float tileH = 74f;
+            for (int i = 0; i < ReferenceHotspots.Length; i++)
+            {
+                ReferenceHiveHotspot hotspot = ReferenceHotspots[i];
+                int row = i / columns;
+                int col = i % columns;
+                Rect tile = new Rect(rect.x + col * (tileW + gap), rect.y + row * (tileH + gap), tileW, tileH);
+                bool selected = hotspot.HotspotId == constructionSelectedHotspotId;
+                bool running = IsUpgradeRunning() && hotspot.HotspotId == localPreviewUpgradeHotspotId;
+                Color accent = running ? new Color(1f, 0.78f, 0.20f, 0.90f) : selected ? new Color(1f, 0.78f, 0.18f, 0.78f) : new Color(0.66f, 0.46f, 0.16f, 0.60f);
+                DrawPremiumPanel(tile, selected ? new Color(0.060f, 0.050f, 0.034f, 0.98f) : new Color(0.045f, 0.050f, 0.040f, 0.88f), accent);
+                DrawGameIcon(new Rect(tile.x + 8f, tile.y + 6f, 26f, 26f), hotspot.IconId, Color.white);
+
+                Rect levelBadge = new Rect(tile.xMax - 30f, tile.y + 4f, 26f, 16f);
+                DrawPremiumPanel(levelBadge, new Color(0.05f, 0.04f, 0.025f, 0.92f), accent);
+                GUI.Label(levelBadge, "N." + EnsureLocalPreviewLevel(hotspot.HotspotId).ToString(CultureInfo.InvariantCulture), new GUIStyle(centeredTinyLabelStyle) { fontSize = 7 });
+
+                GUI.Label(new Rect(tile.x + 6f, tile.yMax - 30f, tile.width - 12f, 15f), LocalizedHotspotLabel(hotspot), new GUIStyle(tinyLabelStyle) { fontSize = 9, wordWrap = false, clipping = TextClipping.Clip });
+                GUI.Label(new Rect(tile.x + 6f, tile.yMax - 16f, tile.width - 12f, 14f), running ? "En cours" : UpgradeCostText(hotspot), new GUIStyle(centeredTinyLabelStyle) { fontSize = 7 });
+
+                if (GUI.Button(tile, string.Empty, GUIStyle.none))
+                {
+                    if (IsUpgradeRunning() && !running)
+                    {
+                        localPreviewLoopMessage = "Selection bloquee: amelioration en cours";
+                    }
+                    else
+                    {
+                        AudioManager.Instance?.PlayUIClick();
+                        constructionSelectedHotspotId = hotspot.HotspotId;
+                    }
+                }
+            }
+        }
+
+        public static void DrawConstructionOverlayForExternalHost(bool compact)
+        {
+            if (!constructionOverlayOpenForExternalHost) return;
+            EnsureStyles();
+            EnsureLocalPreviewHiveProgressLoaded();
+
+            Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
+            GUI.color = new Color(0.006f, 0.005f, 0.004f, 0.99f);
+            GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+
+            float bannerHeight = compact ? Mathf.Min(150f, Screen.height * 0.20f) : Mathf.Clamp(Screen.height * 0.20f, 150f, 190f);
+            DrawConstructionBanner(bannerHeight, compact);
+            DrawConstructionTopBar(bannerHeight);
+            if (!constructionOverlayOpenForExternalHost) return;
+
+            float margin = 16f;
+            float contentTop = bannerHeight + 12f;
+            float contentWidth = Screen.width - margin * 2f;
+
+            int rows = Mathf.CeilToInt(ReferenceHotspots.Length / 5f);
+            float gridHeight = rows * 74f + (rows - 1) * 8f;
+            DrawConstructionBuildingGrid(new Rect(margin, contentTop, contentWidth, gridHeight));
+            float y = contentTop + gridHeight + 14f;
+
+            ReferenceHiveHotspot selectedHotspot = FindReferenceHotspot(constructionSelectedHotspotId);
+            if (string.IsNullOrEmpty(selectedHotspot.HotspotId))
+            {
+                GUI.Label(new Rect(margin, y, contentWidth, 24f), "Selectionnez un batiment ci-dessus.", smallStyle);
+                return;
+            }
+
+            // Hive gameplay sprint: every building is now server-authoritative
+            // (OfficialUpgradeBuildingIds covers all 14 legacy keys) whenever a real
+            // session is configured - branch to the same official model/action helpers
+            // the legacy reference-hotspot detail panel already used
+            // (OfficialBuildingUpgradeStatusText/ActionLabel/ActionEnabled,
+            // RunOfficialBuildingUpgradeAction), rather than duplicating that logic here.
+            // Local preview only remains the fallback when no official session is
+            // configured (offline/logged-out), same convention as everywhere else in this
+            // file.
+            bool official = IsOfficialUpgradeBuilding(selectedHotspot.HotspotId) && OfficialBuildingUpgradeConfigured();
+            HiveBuildingUpgradeScreenModel officialModel = official ? OfficialBuildingUpgradeModel() : null;
+            bool runningHere = official
+                ? officialModel?.ActiveOperation != null && string.Equals(officialModel.ActiveOperation.BuildingKey, selectedHotspot.HotspotId, StringComparison.Ordinal)
+                : IsUpgradeRunning() && string.Equals(localPreviewUpgradeHotspotId, selectedHotspot.HotspotId, StringComparison.Ordinal);
+            float detailHeight = 96f;
+            Rect detailRect = new Rect(margin, y, contentWidth, detailHeight);
+            DrawPremiumPanel(detailRect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
+            DrawGameIcon(new Rect(detailRect.x + 16f, detailRect.y + 16f, 56f, 56f), selectedHotspot.IconId, Color.white);
+            GUI.Label(new Rect(detailRect.x + 84f, detailRect.y + 14f, detailRect.width - 100f, 24f), LocalizedHotspotLabel(selectedHotspot), new GUIStyle(titleStyle) { fontSize = 18, fontStyle = FontStyle.Bold });
+            if (official)
+            {
+                int officialLevel = DisplayedBuildingLevel(selectedHotspot.HotspotId);
+                GUI.Label(new Rect(detailRect.x + 84f, detailRect.y + 42f, detailRect.width - 100f, 18f), "Niveau actuel : " + (officialLevel > 0 ? officialLevel.ToString(CultureInfo.InvariantCulture) : "-"), smallStyle);
+                GUI.Label(new Rect(detailRect.x + 84f, detailRect.y + 62f, detailRect.width - 100f, 18f), OfficialBuildingUpgradeStatusText(selectedHotspot.HotspotId), new GUIStyle(tinyLabelStyle) { wordWrap = true });
+            }
+            else
+            {
+                GUI.Label(new Rect(detailRect.x + 84f, detailRect.y + 42f, detailRect.width - 100f, 18f), "Niveau actuel : " + EnsureLocalPreviewLevel(selectedHotspot.HotspotId).ToString(CultureInfo.InvariantCulture), smallStyle);
+                GUI.Label(new Rect(detailRect.x + 84f, detailRect.y + 62f, detailRect.width - 100f, 18f), "Cout du prochain niveau : " + UpgradeCostText(selectedHotspot), new GUIStyle(tinyLabelStyle));
+            }
+            y += detailHeight + 12f;
+
+            if (official)
+            {
+                if (runningHere)
+                {
+                    // No "Accelerer" here: speed-up items only ever apply to the local
+                    // preview journal today (no server endpoint exists to shorten a real
+                    // BuildingUpgradeService operation) - offering a button that can't
+                    // actually affect the server timer would be a fake control, so it's
+                    // left off rather than wired to something that would silently no-op.
+                    GUI.Label(new Rect(margin, y, contentWidth, 18f), "Amelioration en cours : " + Mathf.RoundToInt((float)officialModel.Progress01(buildingUpgradeController.Elapsed) * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
+                    DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), (float)officialModel.Progress01(buildingUpgradeController.Elapsed));
+                }
+                else if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), OfficialBuildingUpgradeActionLabel(selectedHotspot.HotspotId), OfficialBuildingUpgradeActionEnabled(selectedHotspot.HotspotId)))
+                {
+                    RunOfficialBuildingUpgradeAction(selectedHotspot.HotspotId);
+                }
+            }
+            else if (runningHere)
+            {
+                float speedUpButtonWidth = 130f;
+                GUI.Label(new Rect(margin, y, contentWidth - speedUpButtonWidth - 8f, 18f), "Amelioration en cours : " + Mathf.RoundToInt(UpgradeProgress01() * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
+                if (DrawPreviewActionButton(new Rect(margin + contentWidth - speedUpButtonWidth, y - 2f, speedUpButtonWidth, 22f), "⚡ Accelerer", true, true))
+                {
+                    OpenSpeedUpForExternalHost(SpeedUpCategory.Construction, selectedHotspot.HotspotId, (long)GetBuildingUpgradeRemaining(selectedHotspot.HotspotId));
+                }
+                DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), UpgradeProgress01());
+            }
+            else
+            {
+                bool canUpgrade = CanStartUpgrade(selectedHotspot);
+                string disabledReason = canUpgrade ? string.Empty : UpgradeDisabledReason(selectedHotspot);
+                bool blockedByCoeurRoyal = string.Equals(disabledReason, CoeurRoyalUpgradeBlockedReason, StringComparison.Ordinal);
+                // The button stays clickable even when blocked by the Coeur Royal cap - the
+                // click itself is what triggers the redirect+glow onto ROYAL_PALACE, rather
+                // than leaving the player stuck reading disabled text with nothing to do.
+                if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), "Ameliorer (" + UpgradeCostText(selectedHotspot) + ")", canUpgrade || blockedByCoeurRoyal))
+                {
+                    TryStartUpgradeWithPrerequisiteRedirectForExternalHost(selectedHotspot.HotspotId);
+                }
+                if (!canUpgrade && !blockedByCoeurRoyal)
+                {
+                    GUI.Label(new Rect(margin, y + 48f, contentWidth, 18f), disabledReason, new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
+                }
+            }
+        }
+
+        // Speed-up items (Jeff's request: quest/purchase-earned items that reduce the
+        // remaining time on Construction/Training/Research/etc). The full item catalog
+        // (SpeedUpRegistry - 6 categories x 13 duration tiers, rarity, icons),
+        // inventory/stacking (SpeedUpInventory), and an optimal-combination auto-use
+        // planner (SmartSpeedUpCalculator, dynamic-programming knapsack over owned stacks)
+        // already exist and are complete (Assets/BeeKingdom/Playground/SpeedUp.cs,
+        // SpeedUpInventory.cs, SmartSpeedUp.cs) - unlike the Construction/upgrade UI, this
+        // dialog (DrawSpeedUpWindow) was already built as a real standalone premium screen
+        // (header, category tabs, "Utiliser automatiquement", content list), just never
+        // opened from HiveMap. Reused as-is. "Terminer immediatement" (spend gems to finish
+        // instantly) is already an intentional stub in the source ("Bientot disponible avec
+        // gemmes") - a real purchase flow needs pricing/currency decisions this task
+        // doesn't include, so left exactly as the original team left it. Likewise, no
+        // quest-completion reward hook exists yet to grant these items automatically -
+        // DrawSpeedUpContent already self-seeds a starter inventory on first open
+        // (EnsureSpeedUpDemoInventorySeeded) so HiveMap has something to test with, same
+        // convention as the rest of local-preview state.
+        public static bool SpeedUpOverlayOpenForExternalHost => speedUpWindowOpen;
+
+        public static void OpenSpeedUpForExternalHost(SpeedUpCategory category, string targetHotspotId, long remainingSeconds)
+        {
+            OpenSpeedUpDialog(category, targetHotspotId, remainingSeconds);
+        }
+
+        public static void CloseSpeedUpForExternalHost()
+        {
+            speedUpWindowOpen = false;
+            SpeedUpDialog.Close();
+        }
+
+        public static void DrawSpeedUpOverlayForExternalHost(bool compact)
+        {
+            if (!speedUpWindowOpen) return;
+            EnsureStyles();
+            DrawSpeedUpWindow(compact);
+        }
+
+        // Left-side queue sidebar (Construction / Entrainement / Recherche timer cards),
+        // same data/state resolution as DrawSideRail (each branches official server model
+        // vs. local-preview fallback - copied rather than called directly since DrawSideRail
+        // also owns a periodic buildingUpgradeController.Refresh() call and a click-to-
+        // navigate tail wired to activeHiveMenu/the reference hotspot system, neither of
+        // which HiveMap uses). Reuses DrawQueueTimerCard/DrawSideTimerBackplate as-is (both
+        // take an explicit Rect). Construction and Entrainement open their HiveMap panels on
+        // click - Recherche has its own separate system (LivingHiveResearchHost) not yet
+        // wired to this card, so it still only shows live progress.
+        public static void DrawQueueSidebarForExternalHost(bool compact)
+        {
+            if (compact) return;
+            EnsureStyles();
+
+            if (OfficialBuildingUpgradeConfigured() && !buildingUpgradeController.IsBusy &&
+                NowForUi() - officialProductionDetailLastLiveRefreshAt > 5f)
+            {
+                officialProductionDetailLastLiveRefreshAt = NowForUi();
+                buildingUpgradeController.Refresh();
+            }
+            // Same periodic poll, missing for recruitment specifically - without it the
+            // countdown reaches 0 (a pure client-side calculation off the last fetched
+            // ActiveOperation) but the card never learns the operation actually flipped to
+            // AwaitingCompletion server-side, so it just sits at "0s" instead of switching
+            // to "A reclamer" until something else happens to trigger a refresh.
+            RefreshDoctrineRecruitmentIfDueOrJustFinished();
+
+            HiveBuildingUpgradeScreenModel officialUpgrade = OfficialBuildingUpgradeConfigured() ? OfficialBuildingUpgradeModel() : null;
+            HiveResearchScreenModel officialResearch = OfficialResearchConfigured() ? OfficialResearchModel() : null;
+            HiveDoctrineRecruitmentScreenModel officialRecruitment = OfficialDoctrineRecruitmentConfigured() ? OfficialDoctrineRecruitmentModel() : null;
+            bool officialConstruction = officialUpgrade != null && officialUpgrade.ActiveOperation != null;
+            bool officialResearchActive = officialResearch != null && officialResearch.ActiveOperation != null;
+            bool officialTrainingActive = officialRecruitment != null && officialRecruitment.ActiveOperation != null;
+            bool constructionRunning = OfficialBuildingUpgradeConfigured() ? officialConstruction : IsUpgradeRunning();
+            bool trainingRunning = OfficialDoctrineRecruitmentConfigured() ? officialTrainingActive : IsTrainingRunning();
+            bool researchRunning = OfficialResearchConfigured() ? officialResearchActive : IsResearchRunning();
+
+            string idle = BeeLocalization.Text("ui.queue.idle", "Inactif");
+            string free = BeeLocalization.Text("ui.queue.free", "Libre");
+            string[] labels =
+            {
+                BeeLocalization.Text("ui.queue.build", "Construction"),
+                BeeLocalization.Text("ui.queue.train", "Entraînement"),
+                BeeLocalization.Text("ui.queue.research", "Recherche")
+            };
+            string[] icons = { "build", "sword", "research" };
+            string inProgress = BeeLocalization.Text("ui.queue.in_progress", "En cours");
+            string[] states = { constructionRunning ? inProgress : free, trainingRunning ? inProgress : free, researchRunning ? inProgress : free };
+            string[] statusKinds =
+            {
+                officialConstruction && officialUpgrade.ActiveOperation.IsAwaitingCompletion ? "ready" : constructionRunning ? "running" : "idle",
+                officialTrainingActive && officialRecruitment.ActiveOperation.AwaitingCompletion ? "ready" : trainingRunning ? "running" : "idle",
+                officialResearchActive && officialResearch.ActiveOperation.IsAwaitingCompletion ? "ready" : researchRunning ? "research" : "idle"
+            };
+            float[] progress =
+            {
+                officialConstruction ? (float)officialUpgrade.Progress01(buildingUpgradeController.Elapsed) : constructionRunning ? UpgradeProgress01() : 0f,
+                officialTrainingActive ? (float)officialRecruitment.Progress01(doctrineRecruitmentController.Elapsed) : trainingRunning ? TrainingProgress01() : 0f,
+                officialResearchActive ? (float)officialResearch.Progress01(researchController.Elapsed) : researchRunning ? ResearchProgress01() : 0f
+            };
+            string[] times =
+            {
+                officialConstruction
+                    ? (officialUpgrade.ActiveOperation.IsAwaitingCompletion ? BeeLocalization.Text("building_upgrade.queue.ready", "À valider") : FormatBuildingUpgradeDuration(officialUpgrade.Remaining(buildingUpgradeController.Elapsed)))
+                    : constructionRunning ? RemainingQueueSeconds(UpgradeProgress01(), localPreviewUpgradeDuration) : idle,
+                officialTrainingActive
+                    ? (officialRecruitment.ActiveOperation.AwaitingCompletion ? BeeLocalization.Text("formation_readiness.official.queue.ready", "À réclamer") : FormatBuildingUpgradeDuration(officialRecruitment.Remaining(doctrineRecruitmentController.Elapsed)))
+                    : trainingRunning ? RemainingQueueSeconds(TrainingProgress01(), localPreviewTrainingDuration) : idle,
+                officialResearchActive
+                    ? (officialResearch.ActiveOperation.IsAwaitingCompletion ? BeeLocalization.Text("research.official.queue.ready", "À valider") : FormatBuildingUpgradeDuration(officialResearch.Remaining(researchController.Elapsed)))
+                    : researchRunning ? RemainingQueueSeconds(ResearchProgress01(), localPreviewResearchDuration) : idle
+            };
+
+            Rect railBack = new Rect(8f, 88f, 124f, labels.Length * 68f + 4f);
+            DrawSideTimerBackplate(railBack);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                Rect card = new Rect(12f, 96f + i * 68f, 116f, 58f);
+                DrawQueueTimerCard(card, icons[i], labels[i], states[i], times[i], progress[i], statusKinds[i]);
+                if (i == 0 && GUI.Button(card, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    OpenConstructionOverlayForExternalHost();
+                }
+                if (i == 1 && GUI.Button(card, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    OpenBarrackOverlayForExternalHost();
+                }
+            }
+        }
+
+        // Two bees swirling in a small ellipse around the building's own on-screen rect
+        // (reuses DrawRuntimeWorkerBee, the same per-bee sprite/wobble/pulse primitive
+        // DrawAmbientHiveBeeTraffic calls - just anchored to an arbitrary caller-supplied
+        // rect instead of the reference-art coordinate space) plus the same glow+icon
+        // treatment as DrawManualCollectionReadyMarkers when production is ready to collect.
+        public static void DrawManualProductionBeesForExternalHost(Rect buildingRect, string hotspotId, float time)
+        {
+            if (buildingRect.width <= 0f || buildingRect.height <= 0f) return;
+            EnsureStyles();
+
+            bool ready = ManualProductionReadyForExternalHost(hotspotId);
+            if (ready)
+            {
+                string icon = ManualProductionIcon(hotspotId);
+                if (!string.IsNullOrWhiteSpace(icon))
+                {
+                    float glowSize = Mathf.Clamp(Mathf.Min(buildingRect.width, buildingRect.height) * 0.34f, 26f, 64f);
+                    Rect glowRect = new Rect(buildingRect.center.x - glowSize * 0.5f, buildingRect.center.y - glowSize * 0.5f, glowSize, glowSize);
+                    Color previous = GUI.color;
+                    float pulse = 1f + Mathf.Sin(time * 4.2f) * 0.055f;
+                    Rect pulsedGlow = new Rect(glowRect.center.x - glowRect.width * pulse * 0.5f, glowRect.center.y - glowRect.height * pulse * 0.5f, glowRect.width * pulse, glowRect.height * pulse);
+                    // Pale blue, not the amber/gold used elsewhere for "ready" state: the
+                    // icons (honey/wax/pollen) are warm-toned like the buildings themselves
+                    // and were getting lost against them - blue is the one accent color
+                    // nothing in the surrounding artwork uses, so the halo actually pops.
+                    GUI.color = new Color(0.55f, 0.82f, 1f, 0.85f);
+                    GUI.DrawTexture(pulsedGlow, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
+                    GUI.color = Color.white;
+                    float iconSize = glowSize * 0.5f;
+                    Rect iconRect = new Rect(glowRect.center.x - iconSize * 0.5f, glowRect.center.y - iconSize * 0.5f, iconSize, iconSize);
+                    DrawGameIcon(iconRect, icon, Color.white);
+                    GUI.color = previous;
+
+                    // The 3D building collider already collects on click, but the badge now
+                    // sits on top of it - without its own hit target the icon would just be
+                    // inert decoration layered over whatever the collider's raycast picks up.
+                    // TryCollectPendingProduction is threshold-gated (see CollectionReadyThreshold),
+                    // so a click that happens to also register on the collider the same frame
+                    // collects once, not twice: the second call finds pending already back
+                    // below threshold and no-ops.
+                    if (GUI.Button(glowRect, string.Empty, GUIStyle.none))
+                    {
+                        CollectManualProductionForExternalHost(hotspotId);
+                    }
+                }
+            }
+
+            float radiusX = buildingRect.width * 0.50f;
+            float radiusY = buildingRect.height * 0.22f;
+            float beeSize = Mathf.Clamp(buildingRect.width * 0.16f, 18f, 46f);
+            int beeCount = ready ? 3 : 2;
+            for (int i = 0; i < beeCount; i++)
+            {
+                float phase = i * (Mathf.PI * 2f / beeCount);
+                float speed = ready ? 1.55f : 0.85f;
+                float t = time * speed + phase;
+                Vector2 center = new Vector2(
+                    buildingRect.center.x + Mathf.Cos(t) * radiusX,
+                    buildingRect.y + buildingRect.height * 0.15f + Mathf.Sin(t) * radiusY);
+                Rect beeRect = new Rect(center.x - beeSize * 0.5f, center.y - beeSize * 0.5f, beeSize, beeSize);
+                DrawRuntimeWorkerBee(beeRect, phase, ready ? 0.92f : 0.60f, time, false);
+            }
+        }
+
         public static void Draw(float fps, bool compact)
         {
             bool previousGuiEnabled = GUI.enabled;
@@ -19354,6 +20309,18 @@ public static string[] ConnectionTruthForProof()
             return buildingUpgradeController != null && buildingUpgradeController.IsConfigured;
         }
 
+        // Legacy key of whichever building currently has a running server-authoritative
+        // upgrade operation, or null if none - used to drive the "upgrading" visual state
+        // on the 3D building itself (see BuildingSelectionHighlight's TintColor). Only one
+        // construction can run hive-wide at a time (BuildingUpgradeService enforces this
+        // server-side), so this is always at most one building.
+        public static string ActiveOfficialUpgradeHotspotIdForExternalHost()
+        {
+            if (!OfficialBuildingUpgradeConfigured()) return null;
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            return model?.ActiveOperation?.BuildingKey;
+        }
+
         private static HiveBuildingUpgradeScreenModel OfficialBuildingUpgradeModel()
         {
             return buildingUpgradeController == null ? null : buildingUpgradeController.Model;
@@ -19361,7 +20328,9 @@ public static string[] ConnectionTruthForProof()
 
         private static readonly HashSet<string> OfficialUpgradeBuildingIds = new HashSet<string>(StringComparer.Ordinal)
         {
-            "honey_storage", "wax_workshop", "warehouse_cells", "administration_core"
+            "nursery_cluster", "honey_storage", "guard_post", "defense_growth", "genetics_garden",
+            "research_node", "warehouse_cells", "wax_workshop", "infirmary_grove", "academy_canopy",
+            "hive_bank", "administration_core", "alliance_future_hall", "archives_honeyfall"
         };
 
         private static bool IsOfficialUpgradeBuilding(string hotspotId)
@@ -19558,6 +20527,44 @@ public static string[] ConnectionTruthForProof()
             if (model == null || !model.CanComplete(hotspotId)) return false;
             RunOfficialBuildingUpgradeAction(hotspotId);
             return true;
+        }
+
+        // Same "tap the building directly instead of opening its window" pattern as
+        // TryCompleteReadyBuildingUpgradeOnTap, for the Barrack specifically (Jeff's
+        // request) - a click on the Barrack claims ready troops immediately when there's
+        // something to claim, only falling through to opening the full panel otherwise.
+        public static bool TryClaimReadyTrainingOnTapForExternalHost()
+        {
+            if (!OfficialDoctrineRecruitmentConfigured()) return false;
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+            if (model?.ActiveOperation == null || !model.CanClaim()) return false;
+            RunOfficialDoctrineRecruitmentAction(model.ActiveOperation.Family);
+            return true;
+        }
+
+        // Pulsing "ready to claim" badge drawn directly on the Barrack building in HiveMap's
+        // 3D world (caller projects world->screen, same as DrawPrerequisiteGlowForExternalHost/
+        // the building-upgrade visual state bootstrap) - visual cue that a tap will claim
+        // directly, matching TryClaimReadyTrainingOnTapForExternalHost's behavior.
+        public static void DrawTrainingReadyBadgeForExternalHost(Rect buildingRect, float time)
+        {
+            if (!OfficialDoctrineRecruitmentConfigured()) return;
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+            if (!IsTrainingReadyToClaimNow(model)) return;
+            EnsureStyles();
+
+            float baseSize = Mathf.Clamp(Mathf.Min(buildingRect.width, buildingRect.height) * 0.32f, 30f, 64f);
+            float pulse = 1f + Mathf.Sin(time * 3.4f) * 0.08f;
+            float size = baseSize * pulse;
+            Rect iconRect = new Rect(buildingRect.center.x - size * 0.5f, buildingRect.center.y - size * 0.5f, size, size);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(1f, 0.92f, 0.58f, 0.78f);
+            Rect glow = new Rect(iconRect.x - size * 0.4f, iconRect.y - size * 0.4f, size * 1.8f, size * 1.8f);
+            GUI.DrawTexture(glow, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
+            GUI.color = Color.white;
+            DrawGameIcon(iconRect, "upgrade-ready", Color.white);
+            GUI.color = previous;
         }
 
         private static bool OfficialResearchConfigured()
@@ -28199,7 +29206,10 @@ if (leftNavigationTexture == null)
                     StringComparison.Ordinal))
             {
                 if (active.AwaitingCompletion)
+                {
+                    AudioManager.Instance?.PlayCollectTroop();
                     doctrineRecruitmentController.Claim();
+                }
                 else
                     doctrineRecruitmentController.Refresh();
                 return;

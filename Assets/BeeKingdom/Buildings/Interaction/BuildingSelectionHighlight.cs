@@ -34,6 +34,11 @@ namespace BeeKingdom.Buildings.Interaction
             get { return _overlay != null; }
         }
 
+        // Lets a second instance of this same outline technique represent a different
+        // building state (e.g. "upgrading in progress") with its own color, without
+        // duplicating the silhouette/shader logic. Defaults to the original selection gold.
+        public Color TintColor { get; set; } = HighlightColor;
+
         public void Show(BuildingDefinition definition, GameObject target)
         {
             Hide();
@@ -100,7 +105,7 @@ namespace BeeKingdom.Buildings.Interaction
                 if (_material.HasProperty("_OutlineWidth")) _material.SetFloat("_OutlineWidth", OutlineWidthTexels);
             }
             _material.mainTexture = texture;
-            _material.color = HighlightColor;
+            _material.color = TintColor;
             _material.renderQueue = 3001;
             return _material;
         }
