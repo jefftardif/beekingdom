@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BeeKingdom.Networking::BeeKingdom.Networking.MobileAccountSessionRuntimeConfiguration
   officialAccountsEnabled: 1
   officialGameplayEnabled: 1
-  baseUrl: https://chat.dravii.com
+  baseUrl: https://api-ops.beekingdomgame.com
   officialHiveId: 5b9f2835-5eda-4f02-9fa8-0f99794f7438
   region: ca-east
   timeoutSeconds: 20
