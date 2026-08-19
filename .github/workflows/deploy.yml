@@ -76,7 +76,18 @@ jobs:
             ForEach-Object {
               $target = $_.FullName.Replace((Resolve-Path "publish-output").Path, "C:\inetpub\BeeKingdomApi")
               New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
-              Copy-Item -Path $_.FullName -Destination $target -Force
+              # The app pool being Stopped doesn't guarantee every file handle is released
+              # instantly - a moment-late antivirus scan on the freshly-written DLL is a
+              # common cause too. Retry briefly instead of guessing which process to kill.
+              $attempts = 0
+              while ($true) {
+                try { Copy-Item -Path $_.FullName -Destination $target -Force -ErrorAction Stop; break }
+                catch {
+                  $attempts++
+                  if ($attempts -ge 5) { throw }
+                  Start-Sleep -Seconds 3
+                }
+              }
             }
 
       - name: Bring the site back online
