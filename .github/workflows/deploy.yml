@@ -82,5 +82,9 @@ jobs:
           # this is a deploy-time reachability check, not a public TLS trust decision.
           # Remove this once the domain has a real certificate.
           [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+          # Windows PowerShell 5.1 / .NET Framework doesn't always enable TLS 1.2 by
+          # default for this process - force it explicitly rather than relying on the
+          # OS default, which is the more common cause of this exact generic error.
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
           $response = Invoke-WebRequest -Uri "https://api.ops.beekingdomgame.com/" -UseBasicParsing -TimeoutSec 15
           if ($response.StatusCode -ne 200) { throw "Health check failed: $($response.StatusCode)" }
