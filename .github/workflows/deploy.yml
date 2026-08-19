@@ -50,7 +50,12 @@ jobs:
         run: |
           "<html><body>Deploying, back in a moment.</body></html>" | Out-File -FilePath "C:\inetpub\BeeKingdomApi\app_offline.htm" -Encoding utf8 -Force
           Import-Module WebAdministration
-          Stop-WebAppPool -Name "BeeKingdomApi"
+          # Stop-WebAppPool throws if the pool is already stopped (e.g. someone took the
+          # site offline by hand before the run) instead of treating that as a no-op -
+          # only call it when there's actually something to stop.
+          if ((Get-WebAppPoolState -Name "BeeKingdomApi").Value -ne "Stopped") {
+            Stop-WebAppPool -Name "BeeKingdomApi"
+          }
 
           # Stop-WebAppPool returns as soon as the stop is *requested* - the in-process
           # w3wp.exe worker can take a moment to actually exit and release its file
@@ -94,7 +99,10 @@ jobs:
         shell: powershell
         run: |
           Import-Module WebAdministration
-          Start-WebAppPool -Name "BeeKingdomApi"
+          # Same "already in target state throws" quirk as Stop-WebAppPool, symmetric fix.
+          if ((Get-WebAppPoolState -Name "BeeKingdomApi").Value -ne "Started") {
+            Start-WebAppPool -Name "BeeKingdomApi"
+          }
           Remove-Item -Path "C:\inetpub\BeeKingdomApi\app_offline.htm" -Force -ErrorAction SilentlyContinue
 
       - name: Smoke test
