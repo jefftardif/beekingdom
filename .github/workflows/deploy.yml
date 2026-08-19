@@ -52,6 +52,21 @@ jobs:
           Import-Module WebAdministration
           Stop-WebAppPool -Name "BeeKingdomApi"
 
+          # Stop-WebAppPool returns as soon as the stop is *requested* - the in-process
+          # w3wp.exe worker can take a moment to actually exit and release its file
+          # handles (BeeKingdom.*.dll etc.), which is why the copy step below used to
+          # fail with "being used by another process". Poll for the real Stopped state
+          # first, then force-kill any worker process still holding this pool's files if
+          # it hasn't exited on its own after a reasonable wait.
+          $deadline = (Get-Date).AddSeconds(30)
+          while ((Get-WebAppPoolState -Name "BeeKingdomApi").Value -ne "Stopped" -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 1
+          }
+          Get-CimInstance Win32_Process -Filter "Name = 'w3wp.exe'" |
+            Where-Object { $_.CommandLine -like '*BeeKingdomApi*' } |
+            ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+          Start-Sleep -Seconds 2
+
       - name: Copy published files
         shell: powershell
         run: |
