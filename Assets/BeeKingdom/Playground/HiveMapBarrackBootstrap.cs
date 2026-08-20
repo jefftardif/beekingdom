@@ -1,5 +1,6 @@
 using System;
 using BeeKingdom.Buildings.Interaction;
+using BeeKingdom.LivingHiveMenu;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -101,6 +102,7 @@ namespace BeeKingdom.Playground
 
         private void OnBuildingClicked(BuildingDefinition building)
         {
+            if (LivingHiveResearchRuntime.IsModalOpen) return;
             if (building == null || !string.Equals(building.BuildingType, BuildingTypes.Barrack, StringComparison.Ordinal)) return;
             // Jeff's request: tapping the Barrack while troops are ready claims them
             // directly instead of opening the full window - only falls through to opening
@@ -111,6 +113,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            if (LivingHiveResearchRuntime.IsModalOpen) return;
             bool compact = Screen.width < 900;
             HiveViewProductUiPresenter.DrawBarrackOverlayForExternalHost(compact);
             // Same OnGUI call as the panel it opens from, so it always draws on top of it -

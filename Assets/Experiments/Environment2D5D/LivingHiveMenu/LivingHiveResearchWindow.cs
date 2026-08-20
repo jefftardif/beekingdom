@@ -27,6 +27,7 @@ namespace BeeKingdom.LivingHiveMenu
     public sealed class LivingHiveResearchWindow : MonoBehaviour
     {
         private const string BannerResource = "PremiumBeeReference/BuildingBanners/research_node";
+        private const string LeftNavigationAssetPath = "Assets/Art/UI/Navigation/closing_arrow.png";
 
         private readonly LivingHiveResearchState state = new LivingHiveResearchState();
 
@@ -193,12 +194,12 @@ namespace BeeKingdom.LivingHiveMenu
             titleText = CreateLabel(banner.rectTransform, LivingHiveResearchSpec.BannerTitle, portrait ? 20 : 28, TextAnchor.MiddleLeft, true);
             titleText.transform.SetAsLastSibling();
             titleText.color = Color.white;
-            TitleRect(titleText, 28f, bannerH - (portrait ? 42f : 48f));
+            TitleRect(titleText, 68f, bannerH - (portrait ? 42f : 48f));
 
             subtitleText = CreateLabel(banner.rectTransform, LivingHiveResearchSpec.BannerSubtitle, portrait ? 9 : 12, TextAnchor.MiddleLeft);
             subtitleText.transform.SetAsLastSibling();
             subtitleText.color = LivingHiveMenuVisuals.LabelInactiveColor;
-            TitleRect(subtitleText, 30f, bannerH - (portrait ? 20f : 23f));
+            TitleRect(subtitleText, 70f, bannerH - (portrait ? 20f : 23f));
 
             separator = NewImage(banner.rectTransform, "Separator", LivingHiveMenuVisuals.RailOrnamentSprite());
             separator.color = LivingHiveResearchSpec.SeparatorColor;
@@ -208,13 +209,9 @@ namespace BeeKingdom.LivingHiveMenu
 
         private void BuildTopButtons()
         {
-            Button back = NewButton(windowRoot, "BackButton", "<");
+            Button back = NewNavigationBackButton(windowRoot, "BackButton");
             PositionRect(back.GetComponent<RectTransform>(), ScreenRectToUiRect(LivingHiveResearchSpec.BackButtonRect()));
             back.onClick.AddListener(() => RequestClose("back"));
-
-            Button close = NewButton(windowRoot, "CloseButton", "X");
-            PositionRect(close.GetComponent<RectTransform>(), ScreenRectToUiRect(LivingHiveResearchSpec.CloseButtonRect(Screen.width)));
-            close.onClick.AddListener(() => RequestClose("close"));
         }
 
         private void BuildFilterRail()
@@ -594,8 +591,8 @@ namespace BeeKingdom.LivingHiveMenu
             {
                 PositionRect(banner.rectTransform, ScreenRectToUiRect(new Rect(0f, 0f, screenW, bannerH)));
             }
-            if (titleText != null) TitleRect(titleText, 28f, bannerH - (portrait ? 42f : 48f));
-            if (subtitleText != null) TitleRect(subtitleText, 30f, bannerH - (portrait ? 20f : 23f));
+            if (titleText != null) TitleRect(titleText, 68f, bannerH - (portrait ? 42f : 48f));
+            if (subtitleText != null) TitleRect(subtitleText, 70f, bannerH - (portrait ? 20f : 23f));
             if (separator != null)
             {
                 PositionRect(separator.rectTransform, ScreenRectToUiRect(new Rect(0f, bannerH - 1f, screenW, 1f)));
@@ -669,6 +666,7 @@ namespace BeeKingdom.LivingHiveMenu
         }
 
         private static TMP_FontAsset cachedHudFont;
+        private static Sprite cachedNavigationBackSprite;
 
         // Meme police + meme contour materiau-partage que LivingHiveMenuCanvas.HudFont (voir
         // son commentaire pour pourquoi le contour ne peut pas passer par
@@ -706,18 +704,32 @@ namespace BeeKingdom.LivingHiveMenu
             }
         }
 
-        private Button NewButton(RectTransform parent, string name, string label)
+        private Button NewNavigationBackButton(RectTransform parent, string name)
         {
-            Image bg = NewImage(parent, name, LivingHiveMenuVisuals.ButtonNormalSprite());
-            bg.type = Image.Type.Sliced;
+            Image bg = NewImage(parent, name, NavigationBackSprite());
+            bg.type = Image.Type.Simple;
+            bg.preserveAspect = true;
             bg.raycastTarget = true;
-            TextMeshProUGUI text = CreateLabel(bg.rectTransform, label, 18, TextAnchor.MiddleCenter, true);
-            text.raycastTarget = false;
-            FillRect(text.rectTransform);
             Button button = bg.gameObject.AddComponent<Button>();
             button.targetGraphic = bg;
             button.transition = Selectable.Transition.None;
             return button;
+        }
+
+        private static Sprite NavigationBackSprite()
+        {
+            if (cachedNavigationBackSprite != null) return cachedNavigationBackSprite;
+            Texture2D texture = null;
+#if UNITY_EDITOR
+            texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(LeftNavigationAssetPath);
+#endif
+            if (texture == null) texture = Resources.Load<Texture2D>("UI/Navigation/closing_arrow");
+            if (texture == null) return LivingHiveMenuVisuals.IconSprite("back");
+            cachedNavigationBackSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f));
+            return cachedNavigationBackSprite;
         }
 
         private static void PositionRect(RectTransform rect, Rect uiRect)

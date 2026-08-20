@@ -71,6 +71,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            if (BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;

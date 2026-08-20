@@ -24,6 +24,7 @@ namespace BeeKingdom.LivingHiveMenu
         public LivingHiveResearchHost(LivingHiveResearchWindow window)
         {
             this.window = window;
+            if (this.window != null) this.window.CloseRequested += OnWindowCloseRequested;
         }
 
         public LivingHiveResearchWindow Window => window;
@@ -56,6 +57,7 @@ namespace BeeKingdom.LivingHiveMenu
 
         public void Unregister()
         {
+            if (window != null) window.CloseRequested -= OnWindowCloseRequested;
             if (BuildingWindowRouter.Host == this) BuildingWindowRouter.Host = null;
         }
 
@@ -119,6 +121,12 @@ namespace BeeKingdom.LivingHiveMenu
             {
                 hudHidden = false;
             }
+        }
+
+        private void OnWindowCloseRequested(string via)
+        {
+            _ = via;
+            ShowHud();
         }
     }
 }

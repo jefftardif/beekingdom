@@ -1,4 +1,5 @@
 using System;
+using BeeKingdom.LivingHiveMenu;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -42,7 +43,8 @@ namespace BeeKingdom.Playground
             bool anyOverlayOpen = HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost;
+                || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
+                || LivingHiveResearchRuntime.IsModalOpen;
             if (anyOverlayOpen) return;
 
             HiveViewProductUiPresenter.DrawQueueSidebarForExternalHost(Screen.width < 900);

@@ -21,12 +21,10 @@ namespace BeeKingdom.Playground
     // its own Draw() wrapper) - HiveMap's bootstraps call individual Draw*ForExternalHost
     // methods directly instead of that wrapper, so that protection never applied here.
     //
-    // uGUI-based full-screen windows (e.g. the Research window,
-    // LivingHiveResearchWindow/LivingHiveResearchRuntime) don't need to be listed here:
-    // BuildingInteractionController.HandlePointer() checks
-    // UnityEngine.EventSystems.EventSystem.IsPointerOverGameObject() directly, which
-    // already covers any uGUI Canvas with a GraphicRaycaster. This gate exists only for
-    // IMGUI overlays, which have no EventSystem presence at all.
+    // Research is a uGUI fullscreen modal, so its own card clicks are already protected by
+    // EventSystem raycasts. It is still listed here because HiveMap also has independent
+    // IMGUI/world bootstraps and a bottom/header canvas that must be suppressed while
+    // Research owns the screen.
     //
     // Same auto-bootstrap strategy as the other Environment2D5D runtime bootstraps: a
     // RuntimeInitializeOnLoadMethod creates this only when the active scene starts with
@@ -65,6 +63,7 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost
+                || LivingHiveResearchRuntime.IsModalOpen
                 // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
                 // own overlay bookkeeping, so they need their own flags here.
                 || HiveMapNurseryBootstrap.OverlayOpenForExternalHost

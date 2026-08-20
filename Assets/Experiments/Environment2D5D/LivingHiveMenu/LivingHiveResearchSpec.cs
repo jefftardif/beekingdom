@@ -133,7 +133,7 @@ namespace BeeKingdom.LivingHiveMenu
         // fermer haut-droit.
         public static Rect BackButtonRect()
         {
-            return new Rect(10f, 8f, 42f, 34f);
+            return new Rect(4f, 2f, 48f, 46f);
         }
 
         public static Rect CloseButtonRect(float screenWidth)

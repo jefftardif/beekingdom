@@ -1,5 +1,6 @@
 using System;
 using BeeKingdom.Buildings.Interaction;
+using BeeKingdom.LivingHiveMenu;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -69,6 +70,7 @@ namespace BeeKingdom.Playground
 
         private void OnBuildingClicked(BuildingDefinition building)
         {
+            if (LivingHiveResearchRuntime.IsModalOpen) return;
             if (building == null || !IsTrackedBuildingType(building.BuildingType)) return;
             string hotspotId = BuildingMappingTable.GetByBuildingType(building.BuildingType).LegacyKey;
             HiveViewProductUiPresenter.CollectManualProductionForExternalHost(hotspotId);
@@ -86,6 +88,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            if (LivingHiveResearchRuntime.IsModalOpen) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;

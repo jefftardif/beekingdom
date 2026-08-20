@@ -20,6 +20,7 @@ namespace BeeKingdom.LivingHiveMenu
         public static GameObject Root { get; private set; }
         public static LivingHiveResearchWindow Window { get; private set; }
         public static LivingHiveResearchHost Host { get; private set; }
+        public static bool IsModalOpen => Window != null && Window.IsOpen;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
