@@ -87,6 +87,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
             if (!OverlayOpenForExternalHost) return;
 
             IHiveBroodVitalityPanelController controller = MobileAccountSessionRuntimeBootstrap.BroodVitalityControllerForHiveMap;

@@ -116,7 +116,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
             string highlightedType = HiveViewProductUiPresenter.HighlightedPrerequisiteBuildingTypeForExternalHost;
             if (string.IsNullOrEmpty(highlightedType) || subscribedController == null) return;
             Camera camera = Camera.main;

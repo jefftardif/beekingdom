@@ -44,6 +44,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
             bool compact = Screen.width < 900;
             HiveViewProductUiPresenter.DrawConstructionOverlayForExternalHost(compact);
             // Drawn in the same OnGUI call, right after the panel it can be opened from, so

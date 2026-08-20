@@ -45,6 +45,10 @@ namespace BeeKingdom.Playground
             new UnavailableHiveOfflineProductionPanelController();
         private static readonly IHiveBroodVitalityPanelController UnavailableBroodVitalityController =
             new UnavailableHiveBroodVitalityPanelController();
+        private static readonly IHiveDailyRoundPanelController UnavailableDailyRoundController =
+            new UnavailableHiveDailyRoundPanelController();
+        private static readonly IHiveMilestoneEventPanelController UnavailableMilestoneEventController =
+            new UnavailableHiveMilestoneEventPanelController();
 
         public static IHiveOfflineProductionPanelController OfflineProductionControllerForHiveMap =>
             offlineProductionController != null
@@ -55,6 +59,16 @@ namespace BeeKingdom.Playground
             broodVitalityController != null
                 ? (IHiveBroodVitalityPanelController)broodVitalityController
                 : UnavailableBroodVitalityController;
+
+        public static IHiveDailyRoundPanelController DailyRoundControllerForHiveMap =>
+            dailyRoundController != null
+                ? (IHiveDailyRoundPanelController)dailyRoundController
+                : UnavailableDailyRoundController;
+
+        public static IHiveMilestoneEventPanelController MilestoneEventControllerForHiveMap =>
+            milestoneEventController != null
+                ? (IHiveMilestoneEventPanelController)milestoneEventController
+                : UnavailableMilestoneEventController;
         private static Guid gameplayHiveId;
         private static IHiveChampionBeeClient championBeeClient;
         private static IHiveTroopTierClient troopTierClient;

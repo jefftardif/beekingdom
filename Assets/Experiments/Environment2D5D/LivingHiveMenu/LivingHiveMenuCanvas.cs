@@ -121,7 +121,7 @@ namespace BeeKingdom.LivingHiveMenu
         {
             get
             {
-                if (state.ActivitiesOpen) return LivingHiveMenuSpec.ActivitiesId;
+                if (state.ActivitiesOpen || LivingHiveActivitiesBridge.IsOpen) return LivingHiveMenuSpec.ActivitiesId;
                 if (state.CommunicationOpen) return LivingHiveMenuSpec.CommunicationId;
                 if (state.IsMoreActiveForProof() || LivingHiveSettingsBridge.IsOpen) return LivingHiveMenuSpec.MoreId;
                 if (string.IsNullOrEmpty(state.ActiveMenuId)) return string.Empty;
@@ -749,6 +749,11 @@ namespace BeeKingdom.LivingHiveMenu
                 LivingHiveChatBridge.ToggleOverlay();
                 return;
             }
+            if (LivingHiveMenuSpec.IsActivities(itemId))
+            {
+                LivingHiveActivitiesBridge.OpenOverlay();
+                return;
+            }
             state.ToggleEntry(itemId);
             RefreshAll();
         }
@@ -883,30 +888,9 @@ namespace BeeKingdom.LivingHiveMenu
 
         private void BuildActivitiesContent(Transform parent, Rect panel)
         {
-            string[] tabs = { "Evenements", "Defis", "Quetes" };
-            float y = 52f;
-            TextMeshProUGUI title = CreateLabel(parent, "ACTIVITES", 18, TextAnchor.MiddleLeft, true);
-            title.color = new Color(1f, 0.72f, 0.16f);
-            LabelRect(title.GetComponent<RectTransform>(), 16f, y);
-            y += 40f;
-
-            // Onglets
-            for (int i = 0; i < tabs.Length; i++)
-            {
-                TextMeshProUGUI tab = CreateLabel(parent, tabs[i], 16, TextAnchor.MiddleLeft);
-                tab.color = new Color(0.92f, 0.62f, 0.16f);
-                LabelRect(tab.GetComponent<RectTransform>(), 16f + i * 140f, y);
-            }
-            y += 34f;
-
-            string[] activities = { "Evenement Special - Recolte d'Or", "Defi Hebdomadaire : Produire 500 Miel", "Quete Journaliere : Elever 3 Couveuses", "Defi Mensuel : Decouvrir 5 Zones" };
-            for (int i = 0; i < activities.Length; i++)
-            {
-                TextMeshProUGUI row = CreateLabel(parent, "  " + activities[i] + "   [disponible]", 15, TextAnchor.MiddleLeft);
-                row.color = new Color(0.92f, 0.62f, 0.16f);
-                LabelRect(row.GetComponent<RectTransform>(), 16f, y);
-                y += 34f;
-            }
+            TextMeshProUGUI hint = CreateLabel(parent, "Ouverture des activites officielles...", 15, TextAnchor.MiddleCenter);
+            hint.color = new Color(0.92f, 0.82f, 0.58f);
+            LabelRect(hint.GetComponent<RectTransform>(), 16f, 52f);
         }
 
         private void BuildBagContent(Transform parent, Rect panel)

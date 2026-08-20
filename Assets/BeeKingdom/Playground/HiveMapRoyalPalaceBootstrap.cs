@@ -67,6 +67,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
             if (HiveViewProductUiPresenter.ColonyOverviewOpenForExternalHost)
             {
                 HiveViewProductUiPresenter.DrawColonyOverviewOverlayForExternalHost(Screen.width < 900);

@@ -67,6 +67,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
             if (!OverlayOpenForExternalHost) return;
             BuildingDefinition building = selectedBuilding;
             if (building == null)

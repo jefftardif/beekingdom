@@ -64,6 +64,7 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost
                 || LivingHiveResearchRuntime.IsModalOpen
+                || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
                 || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
                 // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
                 // own overlay bookkeeping, so they need their own flags here.
