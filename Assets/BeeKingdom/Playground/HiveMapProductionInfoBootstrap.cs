@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BeeKingdom.Buildings.Interaction;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,7 +15,9 @@ namespace BeeKingdom.Playground
     // never reaching BuildingInteractionController's 3D raycast or the building's own
     // BuildingClicked event.
     //
-    // Transformation is intentionally excluded - out of scope for this wave.
+    // M008-CX wave 2: extends the same read-only forecast to Transformation, the third
+    // manual-production building, without touching HiveMapProductionBootstrap's
+    // tap-to-collect/badge/feedback behavior.
     //
     // Same auto-bootstrap strategy as the other Environment2D5D runtime bootstraps: a
     // RuntimeInitializeOnLoadMethod creates this only when the active scene starts with
@@ -29,7 +31,8 @@ namespace BeeKingdom.Playground
         private static readonly string[] TrackedBuildingTypes =
         {
             BuildingTypes.HoneyReserve,
-            BuildingTypes.Warehouse
+            BuildingTypes.Warehouse,
+            BuildingTypes.Transformation
         };
 
         public static bool OverlayOpenForExternalHost { get; private set; }
@@ -145,6 +148,7 @@ namespace BeeKingdom.Playground
         {
             if (string.Equals(buildingType, BuildingTypes.HoneyReserve, StringComparison.Ordinal)) return "Reserve de miel";
             if (string.Equals(buildingType, BuildingTypes.Warehouse, StringComparison.Ordinal)) return "Entrepot";
+            if (string.Equals(buildingType, BuildingTypes.Transformation, StringComparison.Ordinal)) return "Transformation";
             return "Batiment";
         }
 

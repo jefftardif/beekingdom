@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BeeKingdom.Buildings.Interaction;
 using BeeKingdom.LivingHiveMenu;
 using UnityEngine;
@@ -68,7 +68,10 @@ namespace BeeKingdom.Playground
                 // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
                 // own overlay bookkeeping, so they need their own flags here.
                 || HiveMapNurseryBootstrap.OverlayOpenForExternalHost
-                || HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost;
+                || HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost
+                // M008-CX wave 2: same IMGUI input protection for the Genetics/Infirmary
+                // capability/status window.
+                || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost;
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller != null) controller.IsEnabled = !blocked;
