@@ -64,7 +64,11 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost;
+                || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost
+                // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
+                // own overlay bookkeeping, so they need their own flags here.
+                || HiveMapNurseryBootstrap.OverlayOpenForExternalHost
+                || HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost;
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller != null) controller.IsEnabled = !blocked;

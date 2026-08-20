@@ -6,13 +6,14 @@ using UnityEngine.SceneManagement;
 namespace BeeKingdom.Playground
 {
     // Lets the player click directly on any building that has no dedicated window of its
-    // own (Nursery, Defense, Genetics, Infirmary, Academy, Bank, Royal Palace, Champion
-    // Hall) to open the generic Construction picker pre-selected to that building, instead
-    // of leaving the click with no UI feedback at all. Buildings that already have their
-    // own window/action (Barrack, Alliance Center, the 3 production buildings, Research)
-    // are excluded here - clicking those keeps its existing meaning (open the window /
-    // collect / etc), and upgrading them happens via the "Ameliorer" button inside their
-    // own window, same as the Construction picker's own button for everything else.
+    // own (Defense, Genetics, Infirmary, Academy, Bank, Royal Palace, Champion Hall) to
+    // open the generic Construction picker pre-selected to that building, instead of
+    // leaving the click with no UI feedback at all. Buildings that already have their own
+    // window/action (Barrack, Alliance Center, the 3 production buildings, Research,
+    // Nursery as of M006-CL wave 1) are excluded here - clicking those keeps its existing
+    // meaning (open the window / collect / etc), and upgrading them happens via the
+    // "Ameliorer" button inside their own window, same as the Construction picker's own
+    // button for everything else.
     //
     // Also draws the prerequisite glow (see HiveViewProductUiPresenter's
     // HighlightedPrerequisiteBuildingTypeForExternalHost) on whichever building the player
@@ -35,6 +36,10 @@ namespace BeeKingdom.Playground
             BuildingTypes.Warehouse,
             BuildingTypes.Transformation,
             BuildingTypes.Research,
+            // M006-CL wave 1: Nursery now has its own window (HiveMapNurseryBootstrap),
+            // which includes its own "Ameliorer" button routing to this same Construction
+            // picker - no longer needs the generic no-window fallback.
+            BuildingTypes.Nursery,
         };
 
         private BuildingInteractionController subscribedController;

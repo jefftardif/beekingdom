@@ -33,6 +33,28 @@ namespace BeeKingdom.Playground
         private static HiveMilestoneEventPanelController milestoneEventController;
         private static ProtectedGameMutationOutbox gameplayMutationOutbox;
         private static Guid gameplayPlayerId;
+
+        // Direct read access to two already-instantiated server controllers, for HiveMap
+        // bootstraps that want to consume them without going through
+        // HiveViewProductUiPresenter's IMGUI bridge (see Docs/AI/Missions/
+        // M005-CX-HiveMap-Decoupling-Strategy.md, "Preparer l'acces direct aux controleurs
+        // serveur deja crees par MobileAccountSessionRuntimeBootstrap"). Never null: falls
+        // back to the same Unavailable* singletons HiveViewProductUiPresenter itself uses
+        // before a session is configured or after logout clears the real controller.
+        private static readonly IHiveOfflineProductionPanelController UnavailableOfflineProductionController =
+            new UnavailableHiveOfflineProductionPanelController();
+        private static readonly IHiveBroodVitalityPanelController UnavailableBroodVitalityController =
+            new UnavailableHiveBroodVitalityPanelController();
+
+        public static IHiveOfflineProductionPanelController OfflineProductionControllerForHiveMap =>
+            offlineProductionController != null
+                ? (IHiveOfflineProductionPanelController)offlineProductionController
+                : UnavailableOfflineProductionController;
+
+        public static IHiveBroodVitalityPanelController BroodVitalityControllerForHiveMap =>
+            broodVitalityController != null
+                ? (IHiveBroodVitalityPanelController)broodVitalityController
+                : UnavailableBroodVitalityController;
         private static Guid gameplayHiveId;
         private static IHiveChampionBeeClient championBeeClient;
         private static IHiveTroopTierClient troopTierClient;
