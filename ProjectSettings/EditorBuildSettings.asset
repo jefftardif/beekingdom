@@ -6,98 +6,20 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/LivingHive.unity
-    guid: d71c61733e1eecb4a9806ef7263fe85a
+    path: Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_HiveMap_Test.unity
+    guid: 7fbab56df58e3dd498dc6b8dd19b10d7
   - enabled: 1
     path: Assets/Scenes/SandboxPlayground.unity
     guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 1
-    path: Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_SpatialV3.unity
-    guid: 4b324d452b7a3854bb04cb16bc83d8b8
   - enabled: 1
     path: Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity
     guid: 1805d1342de3a89429d15c76bdf2a35a
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
+  - enabled: 1
+    path: Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_SpatialV3.unity
+    guid: 4b324d452b7a3854bb04cb16bc83d8b8
   - enabled: 0
     path: Assets/Scenes/LivingHive.unity
     guid: d71c61733e1eecb4a9806ef7263fe85a
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/LivingHive.unity
-    guid: d71c61733e1eecb4a9806ef7263fe85a
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
-  - enabled: 0
-    path: Assets/Scenes/SandboxPlayground.unity
-    guid: eddcad37b064c6541a30db4623d11021
   - enabled: 0
     path: Assets/Scenes/WorldMapMmoFullscreenFoundation.unity
     guid: 81ed790cd04090446863fcbdb8f3ba77
