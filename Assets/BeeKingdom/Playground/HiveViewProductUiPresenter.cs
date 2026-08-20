@@ -20417,6 +20417,109 @@ public static string[] ConnectionTruthForProof()
             return model?.ActiveOperation?.BuildingKey;
         }
 
+        public static bool ColonyOverviewOpenForExternalHost => colonyOverviewOpen;
+
+        public static void OpenColonyOverviewForExternalHost()
+        {
+            AudioManager.Instance?.PlayMenuOpen();
+            colonyOverviewOpen = true;
+            colonyOverviewDetailHotspotId = string.Empty;
+            colonyOverviewScroll = Vector2.zero;
+        }
+
+        public static void DrawColonyOverviewOverlayForExternalHost(bool compact)
+        {
+            if (colonyOverviewOpen) DrawColonyOverviewOverlay(compact);
+        }
+
+        public static int RoyalPalaceLevelForExternalHost()
+        {
+            return CoeurRoyalLevel();
+        }
+
+        public static string RoyalPalaceLevelAuthorityForExternalHost()
+        {
+            if (IsOfficialUpgradeBuilding("administration_core") && OfficialBuildingUpgradeConfigured())
+            {
+                HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+                if (model != null && model.LevelFor("administration_core") > 0)
+                    return BeeLocalization.Text("building_upgrade.authority.server", "Serveur officiel");
+            }
+
+            return BeeLocalization.Text("building_upgrade.authority.local_preview", "Mode preview local");
+        }
+
+        public static string RoyalPalaceUpgradeStatusForExternalHost()
+        {
+            const string hotspotId = "administration_core";
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+                return OfficialBuildingUpgradeStatusText(hotspotId);
+
+            ReferenceHiveHotspot hotspot = FindReferenceHotspot(hotspotId);
+            if (string.IsNullOrEmpty(hotspot.HotspotId))
+                return BeeLocalization.Text("building_upgrade.status.unavailable", "Amelioration indisponible");
+            if (IsUpgradeRunning() && string.Equals(localPreviewUpgradeHotspotId, hotspotId, StringComparison.Ordinal))
+                return BeeLocalization.Text("ui.building.upgrade_running", "Amelioration en cours...");
+            string reason = UpgradeDisabledReason(hotspot);
+            if (!string.IsNullOrWhiteSpace(reason)) return EffectiveActionDisabledReason(reason);
+            return BeeLocalization.Text("ui.building.upgrade_action", "Ameliorer") + " (" + UpgradeCostText(hotspot) + ")";
+        }
+
+        public static string RoyalPalaceUpgradeActionLabelForExternalHost()
+        {
+            const string hotspotId = "administration_core";
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+                return OfficialBuildingUpgradeActionLabel(hotspotId);
+
+            if (IsUpgradeRunning() && string.Equals(localPreviewUpgradeHotspotId, hotspotId, StringComparison.Ordinal))
+                return BeeLocalization.Text("ui.building.upgrade_running", "Amelioration en cours...");
+            return BeeLocalization.Text("ui.building.upgrade_action", "Ameliorer");
+        }
+
+        public static bool RoyalPalaceUpgradeActionEnabledForExternalHost()
+        {
+            const string hotspotId = "administration_core";
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+                return OfficialBuildingUpgradeActionEnabled(hotspotId);
+
+            ReferenceHiveHotspot hotspot = FindReferenceHotspot(hotspotId);
+            return !string.IsNullOrEmpty(hotspot.HotspotId)
+                && !(IsUpgradeRunning() && string.Equals(localPreviewUpgradeHotspotId, hotspotId, StringComparison.Ordinal))
+                && CanStartUpgrade(hotspot);
+        }
+
+        public static float RoyalPalaceUpgradeProgressForExternalHost()
+        {
+            const string hotspotId = "administration_core";
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+            {
+                HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+                return model == null ? 0f : (float)model.Progress01(buildingUpgradeController.Elapsed);
+            }
+
+            return IsUpgradeRunning() && string.Equals(localPreviewUpgradeHotspotId, hotspotId, StringComparison.Ordinal)
+                ? UpgradeProgress01()
+                : 0f;
+        }
+
+        public static void RefreshRoyalPalaceUpgradeForExternalHost()
+        {
+            if (OfficialBuildingUpgradeConfigured() && !buildingUpgradeController.IsBusy)
+                buildingUpgradeController.Refresh();
+        }
+
+        public static void RunRoyalPalaceUpgradeActionForExternalHost()
+        {
+            const string hotspotId = "administration_core";
+            if (IsOfficialUpgradeBuilding(hotspotId) && OfficialBuildingUpgradeConfigured())
+            {
+                RunOfficialBuildingUpgradeAction(hotspotId);
+                return;
+            }
+
+            TryStartUpgradeWithPrerequisiteRedirectForExternalHost(hotspotId);
+        }
+
         private static HiveBuildingUpgradeScreenModel OfficialBuildingUpgradeModel()
         {
             return buildingUpgradeController == null ? null : buildingUpgradeController.Model;
@@ -24570,6 +24673,11 @@ if (leftNavigationTexture == null)
 				height);
 			return GUI.Button(hit, string.Empty, GUIStyle.none);
 		}
+
+        public static bool DrawPremiumBackButtonForExternalHost(Rect visual)
+        {
+            return DrawPremiumBackButton(visual);
+        }
 
 		// Zone de clic confortable pour les petits controles du mini-chat.
 		private static bool DrawPremiumHitButton(Rect visual, string label = "", int fontSize = 14)
@@ -40007,14 +40115,28 @@ public static void ResetMissionsStateForProof()
             }
 
             Color previousColor = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.60f);
-            GUI.DrawTexture(new Rect(0f, bannerHeight - 70f, Screen.width, 70f), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.color = new Color(0f, 0f, 0f, 0.58f);
+            GUI.DrawTexture(showingDetail ? new Rect(0f, bannerHeight - 70f, Screen.width, 70f) : bannerRect, Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
             GUI.color = previousColor;
 
-            GUI.Label(
-                new Rect(24f, bannerHeight - 56f, Screen.width - 96f, 40f),
-                showingDetail ? LocalizedHotspotLabel(detailHotspot) : BeeLocalization.Text("ui.colony_overview.title", "Vue d'ensemble de la colonie"),
-                new GUIStyle(titleStyle) { fontSize = compact ? 20 : 28 });
+            if (showingDetail)
+            {
+                GUI.Label(
+                    new Rect(68f, bannerHeight - 56f, Screen.width - 140f, 40f),
+                    LocalizedHotspotLabel(detailHotspot),
+                    new GUIStyle(titleStyle) { fontSize = compact ? 20 : 28 });
+            }
+            else
+            {
+                GUI.Label(
+                    new Rect(68f, 12f, Screen.width - 220f, 30f),
+                    BeeLocalization.Text("ui.colony_overview.fullscreen_title", "VUE DE LA COLONIE"),
+                    new GUIStyle(titleStyle) { fontSize = 22, fontStyle = FontStyle.Bold });
+                GUI.Label(
+                    new Rect(70f, 42f, Screen.width - 220f, 22f),
+                    BeeLocalization.Text("ui.colony_overview.title", "Vue d'ensemble de la colonie"),
+                    new GUIStyle(smallStyle) { fontSize = 13 });
+            }
 
 			if (DrawPremiumBackButton(new Rect(4f, 2f, compact ? 44f : 48f, compact ? 44f : 48f)))
 			{

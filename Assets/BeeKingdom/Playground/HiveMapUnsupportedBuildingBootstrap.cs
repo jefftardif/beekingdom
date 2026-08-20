@@ -11,6 +11,8 @@ namespace BeeKingdom.Playground
     // Construction, while preserving that existing upgrade path one tap deeper.
     // M009-CX wave 3 extends the same honest status pattern to Academy and Defense after
     // inspection confirmed they do not yet own official building-specific gameplay.
+    // M013-CX wave 4 adds Bank: the catalog marks it future and no bank-specific
+    // server-backed gameplay controller exists in the current client.
     public sealed class HiveMapUnsupportedBuildingBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Unsupported Building Runtime";
@@ -113,7 +115,8 @@ namespace BeeKingdom.Playground
             return string.Equals(buildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)
                 || string.Equals(buildingType, BuildingTypes.Genetics, StringComparison.Ordinal)
                 || string.Equals(buildingType, BuildingTypes.Academy, StringComparison.Ordinal)
-                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal);
+                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal)
+                || string.Equals(buildingType, BuildingTypes.Bank, StringComparison.Ordinal);
         }
 
         private static string BuildingStatus(BuildingDefinition building)
@@ -124,6 +127,8 @@ namespace BeeKingdom.Playground
                 return "L'Academie est presente comme batiment futur. La Recherche officielle reste portee par son propre noeud et sa fenetre HiveMap dediee; aucune formation Academie separee n'est server-backed aujourd'hui.";
             if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal))
                 return "La Defense reste une zone future. Les systemes combat/perimetre existants vivent dans les parcours Armee et serveur, mais ne sont pas encore une action officielle de ce batiment.";
+            if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal))
+                return "La Banque est presente comme batiment futur. Les stocks, recompenses et ressources officielles restent portes par leurs panneaux et clients dedies; aucune action bancaire separee n'est server-backed aujourd'hui.";
             return "La genetique officielle reste une capacite future : les choix de mutation/progression ne sont pas encore server-backed.";
         }
 
@@ -132,6 +137,7 @@ namespace BeeKingdom.Playground
             if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)) return "Infirmerie";
             if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal)) return "Academie";
             if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal)) return "Defense";
+            if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal)) return "Banque";
             return "Genetique";
         }
     }

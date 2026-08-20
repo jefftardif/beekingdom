@@ -64,6 +64,7 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost
                 || LivingHiveResearchRuntime.IsModalOpen
+                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
                 // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
                 // own overlay bookkeeping, so they need their own flags here.
                 || HiveMapNurseryBootstrap.OverlayOpenForExternalHost
@@ -72,6 +73,7 @@ namespace BeeKingdom.Playground
                 || HiveMapChampionHallBootstrap.OverlayOpenForExternalHost
                 // M008-CX wave 2: same IMGUI input protection for the Genetics/Infirmary
                 // capability/status window; M009 extends it to Academy/Defense status.
+                // M013 extends that status window to Bank.
                 || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost;
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();

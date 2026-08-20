@@ -44,7 +44,8 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
-                || LivingHiveResearchRuntime.IsModalOpen;
+                || LivingHiveResearchRuntime.IsModalOpen
+                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost;
             if (anyOverlayOpen) return;
 
             HiveViewProductUiPresenter.DrawQueueSidebarForExternalHost(Screen.width < 900);

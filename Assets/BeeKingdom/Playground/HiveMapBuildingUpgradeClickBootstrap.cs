@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace BeeKingdom.Playground
 {
     // Lets the player click directly on any building that has no dedicated window of its
-    // own (Bank, Royal Palace) to open the generic
+    // own to open the generic
     // Construction picker pre-selected to that building, instead of
     // leaving the click with no UI feedback at all. Buildings that already have their own
     // window/action (Barrack, Alliance Center, the 3 production buildings, Research,
@@ -52,6 +52,10 @@ namespace BeeKingdom.Playground
             BuildingTypes.ChampionHall,
             BuildingTypes.Academy,
             BuildingTypes.Defense,
+            // M013-CX wave 4: Bank now shows an honest future status window; Royal Palace
+            // is the Administration/Core window and preserves upgrade access from there.
+            BuildingTypes.Bank,
+            BuildingTypes.RoyalPalace,
         };
 
         private BuildingInteractionController subscribedController;
@@ -112,6 +116,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            if (HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
             string highlightedType = HiveViewProductUiPresenter.HighlightedPrerequisiteBuildingTypeForExternalHost;
             if (string.IsNullOrEmpty(highlightedType) || subscribedController == null) return;
             Camera camera = Camera.main;
