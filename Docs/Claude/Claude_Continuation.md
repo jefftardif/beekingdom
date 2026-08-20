@@ -40,6 +40,158 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — Chantier UI/HUD HiveMap, etape 1+2 : police, contour, fondus, roll-up (2026-08-19)
+
+Suite du jalon precedent du meme jour. Jeff a compare le HUD HiveMap a un HUD de reference
+(style Whiteout Survival, cite via noesisengine.com) et juge l'ecart de qualite visuelle
+important. Decision actee : viser ce niveau (nettete/fluidite/animations) en restant dans le
+stack actuel (IMGUI + uGUI), pas d'adoption de Noesis. Plan ecrit et approuve en 3 etapes ;
+etapes 1 et 2 terminees cette session, etape 3 (relief/degrades sur les textures procedurales
+de LivingHiveMenuVisuals.cs) pas commencee.
+
+**Etape 1 — Nettete (texte)** : `LivingHiveMenuCanvas.cs` et `LivingHiveResearchWindow.cs`
+utilisaient `UnityEngine.UI.Text` + `LegacyRuntime.ttf` (flou). Remplace par
+`TextMeshProUGUI` (package `Unity.TextMeshPro` ajoute aux references de
+`BeeKingdom.LivingHiveMenu.asmdef`). Piege rencontre : regler `outlineWidth`/`outlineColor`
+par instance juste apres `AddComponent<TextMeshProUGUI>()` levait une
+`NullReferenceException` dans `SetOutlineThickness` quand le parent est `SetActive(false)`
+(cas de `BuildPanel`) — Awake/OnEnable ne s'etaient pas encore executes, `m_sharedMaterial`
+etait null. Fix : le contour est pose UNE FOIS sur le materiau partage de la police
+(`HudFont().material.SetFloat/SetColor`), jamais par instance.
+
+Police : plusieurs allers-retours avec Jeff (ExtraBold Baloo2 → Bold Baloo2 → SemiBold
+Montserrat → Regular Montserrat → **Cinzel Regular**, validee). Toutes extraites en instance
+statique depuis la police variable Google Fonts correspondante via `fonttools varLib.instancer`
+(`py -3 -m pip install fonttools`, dispo via le lanceur `py` malgre l'echec initial de
+`python3`), car Unity/TMP ne gere pas bien la selection d'instance nommee d'une police
+variable dans ce projet. Fichier final : `Assets/Fonts/Cinzel-Regular.ttf` +
+`Assets/Fonts/Resources/Cinzel-Regular SDF.asset` (Resources car chargee via
+`Resources.Load<TMP_FontAsset>` au runtime, aucun wiring scene/prefab possible dans ce
+package construit entierement par code). Verifie : subset `latin-ext` de Cinzel couvre les
+accents francais. Jeff a explicitement demande Mestiza (police payante, fonderie Lechuga
+Type/MyFonts/Adobe Fonts) — refuse (pas de licence), propose Cinzel a la place (deja sur la
+liste d'options initiale), accepte.
+
+Icones de ressources : suppression du libelle texte sous chaque chip ("Miel"/"Cire"/...,
+Jeff : "l'icone se suffit") — icone et valeur agrandies pour occuper toute la hauteur de la
+pastille. `HeaderChipVisual.Label` et `HeaderResourceLabel()` retires (morts).
+
+**Etape 2 — Fluidite** : `BeeKingdom.LivingHiveMenu` ne peut pas referencer
+`Assets/BeeKingdom/Playground/UIAnimation.cs` (Assembly-CSharp, meme contrainte
+cross-assembly que partout ailleurs dans ce package) — pas de nouveau moteur de tween
+partage, logique d'easing dupliquee localement (cubique simple, pas de dependance externe).
+- Panneaux (`BuildPanel`/`RefreshPanels`) : fondu ouverture/fermeture via `CanvasGroup.alpha`
+  (nouveau `PanelAnimState` + `TickPanelAnimations()`, appele chaque frame). PAS d'animation
+  d'echelle : le pivot (0,0) coin bas-gauche de ces rects (convention partagee par
+  `PositionRect`/`Rect2Local`/`LabelRect` dans tout le fichier) ferait "grandir" le panneau
+  depuis son coin si on scalait `transform.localScale` — change de convention aurait ete trop
+  risque pour le temps disponible, fondu seul suffit.
+- Chips de ressources : `RefreshHeader()` anime maintenant ("roll-up") de l'ancien nombre
+  affiche vers le nouveau sur 0,5s au lieu d'un saut instantane, des que
+  `LivingHiveMenuHeaderData.PreviewValue` change. Appelee chaque frame maintenant (avant :
+  toutes les 0,5s) — cout negligeable, necessaire pour une interpolation fluide. Chip
+  "capacite" (2 nombres) exclue, snap conserve.
+- Bouton rail (punch au clic) : pas fait, laisse pour une prochaine passe si Jeff le demande
+  explicitement — scope volontairement limite aux 2 items a plus fort impact visuel.
+
+Preuves : compilation Unity 0 erreur a chaque etape (`assets-refresh` + `console-get-logs`),
+declenchement reel d'une collecte de cire via `script-execute` pour verifier qu'aucune
+exception ne se produit au moment du roll-up. Verification visuelle par Jeff via ses propres
+captures d'ecran a chaque iteration de police (mon outil `screenshot-game-view` a perdu
+l'acces a la fenetre Game View plusieurs fois pendant la session — Jeff a pris le relais).
+
+Prochain test utilisateur : ouvrir/fermer un panneau (Sac, Plus, Activites) et observer le
+fondu ; collecter une ressource et observer le chiffre compter au lieu de sauter.
+
+Ouvert / a faire ensuite :
+- **Etape 3 du chantier UI/HUD (pas commencee)** : degrades/relief sur les textures
+  procedurales plates de `LivingHiveMenuVisuals.cs` (`CreateSoftShadowTexture`,
+  `CreateBadgeTexture`, `CreateHeaderBandTexture`) en reprenant la technique deja prouvee de
+  `CreateIconSocketTexture`/`CreateSoftRadialGlowTexture` (dégradé radial par pixel).
+- Punch d'echelle au clic sur les boutons du rail (`BeginButtonPress/Release` — non fait,
+  voir etape 2 ci-dessus).
+- Voir aussi la question de session parallele soulevee dans le jalon precedent (toujours
+  pertinente si elle se reproduit).
+
+---
+
+## Jalon courant — HiveMap : clic-a-travers, Parametres reels, badges ressources/troupes (2026-08-19)
+
+Session de suite au handoff `HANDOFF_2026-08-19.md` (Hive gameplay sprint + troop training,
+deja pousse sur `main` en `79f6660`). Quatre corrections ciblees sur HiveMap
+(Environment2D5D), toutes verifiees par compilation Unity (0 erreur a chaque etape) :
+
+1. **Clic-a-travers sur les fenetres ouvertes** : la vraie cause n'etait pas seulement
+   `HiveMapOverlayInputGateBootstrap` (qui bloque bien Alliance/Communication/Barrack/
+   Construction/Parametres via un booleen par overlay IMGUI), mais l'absence totale de garde
+   dans `BuildingInteractionController.HandlePointer()` : le raycast 3D ne consultait jamais
+   l'EventSystem uGUI. La fenetre Recherche (systeme uGUI a part, `LivingHiveResearchWindow`)
+   n'etait donc protegee par rien. Fix generique et definitif : un check
+   `EventSystem.current.IsPointerOverGameObject()` avant le raycast, qui couvre Recherche et
+   toute future fenetre uGUI sans liste a maintenir. Parametres ajoute a la liste booleenne
+   IMGUI du gate.
+2. **Ecran Parametres reel** : `LivingHiveMenuCanvas` ouvrait un panneau placeholder local
+   (4 toggles sans effet). Remplace par un pont vers le vrai panneau de
+   `HiveViewProductUiPresenter` (mouvement reduit, mode economie, son, musique, langue —
+   PlayerPrefs reels), meme pattern que le pont Chat existant
+   (`LivingHiveSettingsBridge` dans `BeeKingdom.Core.Integration`, nouveau bootstrap
+   `HiveMapSettingsBootstrap`).
+3. **Icones de ressources sur Honey Reserve/Warehouse/Transformation** : les vraies icones
+   (honey.png/wax.png/pollen.png, deja les memes fichiers que Jeff peint dans
+   `Assets/Art/UI/icons/`) etaient deja chargees correctement — le vrai probleme etait la
+   taille : trop petite au depart, puis incoherente entre les 3 batiments (taille derivee du
+   rect ecran de chaque batiment, qui differe par profondeur isometrique), puis fixe en
+   pixels et ne suivait pas le zoom. Fix final : taille calculee une fois par frame depuis le
+   zoom de la camera orthographique (`Screen.height / (2 * orthographicSize)` * une taille en
+   unites monde constante, 10.8 apres le -10% demande par Jeff), partagee par les 3 batiments
+   — identique entre eux, et suit le zoom. Animation de collecte "+icone flottante" (existait
+   dans LivingHive via `DrawManualCollectionFeedback`, jamais portee sur HiveMap car ancree au
+   systeme de coordonnees de l'image de reference plat) : nouvelle version
+   `DrawManualCollectionFeedbackForExternalHost` ancree au rect ecran reel du batiment.
+4. **Meme traitement pour la Caserne** : nouvelle icone reelle (bee + couronne, fournie par
+   Jeff) enregistree sous `Assets/BeeKingdom/Playground/Resources/PremiumBeeIcons/
+   troops-ready.png` (meme dossier que les icones de ressources), badge "pret a reclamer"
+   corrige (bug de taille : l'icone se dessinait a la taille complete du halo au lieu de 64%
+   comme les badges ressources — d'ou un badge visiblement trop gros), taille partagee avec
+   la meme formule de zoom, animation de reclamation flottante ajoutee
+   (`DrawTrainingClaimFeedbackForExternalHost`, retour visuel optimiste au tap, le serveur
+   reste seul autoritaire sur `Claim()`).
+
+**Observation importante** : une AUTRE session (Claude Code ou autre) a modifie en parallele
+`HiveViewProductUiPresenter.cs`, `HiveMapBarrackBootstrap.cs` et les fichiers
+`LivingHiveMenuVisuals.cs`/`LivingHiveMenuCanvas.cs` pendant cette session — ajout d'une
+surbrillance "entrainement en cours" sur la Caserne (`IsBarrackTrainingInProgressForExternalHost`,
+`TrainingHighlightTintColor`, `BuildingSelectionHighlight.SetAlpha`), d'un `SoftRadialGlowSprite`,
+et de `royalJelly` a la liste d'icones reelles — non ecrit par cette session. Compile sans
+erreur avec mes propres changements, mais **si Jeff a deux sessions Claude Code ouvertes en
+parallele sur ce depot, une coordination explicite serait plus sure** — a confirmer avec lui
+en debut de prochaine session.
+
+Preuves : `assets-refresh` + `console-get-logs` (0 erreur) apres chaque etape, captures Game
+View via `screenshot-game-view` + verification en Play Mode reelle par Jeff (badges corriges,
+animation de collecte confirmee visible par Jeff).
+
+Prochain test utilisateur : verifier en jeu que le badge de troupes n'est plus surdimensionne
+et que l'animation "en cours d'entrainement" (abeilles autour de la Caserne) se declenche
+bien pendant l'entrainement, avant le badge "pret".
+
+Ouvert / a faire ensuite :
+- **Nouveau chantier demande par Jeff (pas commence)** : refonte HUD/interface HiveMap. Jeff
+  a montre une comparaison avec un HUD de reference (style Whiteout Survival : barre de
+  pouvoir, plusieurs compteurs de ressources avec icones distinctes, badge VIP, bouton de
+  collecte avec anneau lumineux, panneau de batiment avec barre de progression et actions
+  separees Upgrade/Details/Stats, nav du bas plus riche) et juge l'ecart avec le HUD HiveMap
+  actuel tres important. A traiter comme un chantier separe avec son propre plan par etapes,
+  pas une correction ponctuelle — a demarrer en analysant precisement l'ecran de reference
+  fourni par Jeff avant de proposer un plan.
+- Confirmer aupres de Jeff s'il a une session Claude Code parallele active (voir observation
+  ci-dessus) avant toute nouvelle modification de `HiveViewProductUiPresenter.cs`.
+- Bug pre-existant hors-scope signale (chip de tache genere) : `BuildingInteractionRegistry.
+  GetGameObjectByBuildingType` leve une exception a chaque frame dans la scene
+  `Environment2D5D_HiveMap_Test` quand aucun batiment BARRACK n'y est place.
+
+---
+
 ## Jalon courant — BeeQA Sprint-024 : BeeQA Module Framework (2026-08-09)
 
 BeeQA est maintenant un framework de plugins Editor interne et indépendant du gameplay. Le point d'entrée `BeeKingdom > BeeQA > Open Dashboard` ouvre un panneau qui découvre automatiquement les implémentations de `IBeeQAModule`, affiche leurs métadonnées et permet `Run` ou `Run All`. Le Dashboard ne référence jamais de module concret.

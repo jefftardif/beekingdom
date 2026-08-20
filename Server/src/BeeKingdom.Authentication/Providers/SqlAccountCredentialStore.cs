@@ -53,9 +53,9 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         using IDbCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO dbo.AuthenticationAccounts
-            (AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded)
+            (AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded, Role)
             VALUES
-            (@AccountId, @PlayerId, @Email, @PasswordHash, @SecurityState, @FailedAttempts, @LockedUntilUtc, @GoogleSubjectId, @DisplayName, @IsOnboarded);
+            (@AccountId, @PlayerId, @Email, @PasswordHash, @SecurityState, @FailedAttempts, @LockedUntilUtc, @GoogleSubjectId, @DisplayName, @IsOnboarded, @Role);
             """;
         AddAccountParameters(command, account);
         command.ExecuteNonQuery();
@@ -67,7 +67,7 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         connection.Open();
         using IDbCommand command = connection.CreateCommand();
         command.CommandText = """
-            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded
+            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded, Role
             FROM dbo.AuthenticationAccounts
             WHERE Email = @Email;
             """;
@@ -89,7 +89,7 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         connection.Open();
         using IDbCommand command = connection.CreateCommand();
         command.CommandText = """
-            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded
+            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded, Role
             FROM dbo.AuthenticationAccounts
             WHERE GoogleSubjectId = @GoogleSubjectId;
             """;
@@ -111,7 +111,7 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         connection.Open();
         using IDbCommand command = connection.CreateCommand();
         command.CommandText = """
-            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded
+            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded, Role
             FROM dbo.AuthenticationAccounts
             WHERE AccountId = @AccountId;
             """;
@@ -144,6 +144,23 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         return result != null && Convert.ToInt32(result) > 0;
     }
 
+    public IReadOnlyList<AuthenticationAccount> SearchByDisplayName(string displayNameContains)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded, Role
+            FROM dbo.AuthenticationAccounts
+            WHERE DisplayName LIKE @DisplayNameContains;
+            """;
+        Add(command, "@DisplayNameContains", $"%{displayNameContains.Trim()}%");
+        using IDataReader reader = command.ExecuteReader();
+        List<AuthenticationAccount> results = new();
+        while (reader.Read()) results.Add(ReadAccount(reader));
+        return results;
+    }
+
     public void Save(AuthenticationAccount account)
     {
         using IDbConnection connection = connectionFactory.CreateConnection();
@@ -160,6 +177,7 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
                 GoogleSubjectId = @GoogleSubjectId,
                 DisplayName = @DisplayName,
                 IsOnboarded = @IsOnboarded,
+                Role = @Role,
                 UpdatedAtUtc = SYSUTCDATETIME()
             WHERE AccountId = @AccountId;
             """;
@@ -179,7 +197,8 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
             reader.IsDBNull(6) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)),
             reader.IsDBNull(7) ? null : reader.GetString(7),
             reader.IsDBNull(8) ? null : reader.GetString(8),
-            !reader.IsDBNull(9) && reader.GetBoolean(9));
+            !reader.IsDBNull(9) && reader.GetBoolean(9),
+            (AccountRole)reader.GetInt32(10));
     }
 
     private static void AddAccountParameters(IDbCommand command, AuthenticationAccount account)
@@ -194,6 +213,7 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         Add(command, "@GoogleSubjectId", (object?)account.GoogleSubjectId ?? DBNull.Value);
         Add(command, "@DisplayName", (object?)account.DisplayName ?? DBNull.Value);
         Add(command, "@IsOnboarded", account.IsOnboarded);
+        Add(command, "@Role", (int)account.Role);
     }
 
     private static void Add(IDbCommand command, string name, object value)

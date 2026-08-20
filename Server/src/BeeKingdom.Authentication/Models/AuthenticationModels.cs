@@ -19,6 +19,16 @@ public enum AccountSecurityState
     Disabled = 2
 }
 
+// Admin is bootstrap-only (granted via the shared-secret admin support endpoint, never
+// in-game) - it exists so a small number of trusted accounts can grant/revoke Moderator to
+// other players from inside the game itself. See IAccountCredentialStore.Save.
+public enum AccountRole
+{
+    Player = 0,
+    Moderator = 1,
+    Admin = 2
+}
+
 public sealed record AuthenticationRequest(
     string Email,
     string Password,

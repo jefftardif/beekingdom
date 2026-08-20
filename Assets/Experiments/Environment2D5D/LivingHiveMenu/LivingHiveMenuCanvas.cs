@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BeeKingdom.Core.Integration;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -17,8 +18,6 @@ namespace BeeKingdom.LivingHiveMenu
     // recharge entièrement l'état depuis LivingHiveMenuState (pur C#).
     public sealed class LivingHiveMenuCanvas : MonoBehaviour
     {
-        private const string FontResource = "LegacyRuntime.ttf";
-
         // Mirrors SplashDevelopmentSceneConfig.WorldMapScenePath / Wave5PremiumMapModeKey
         // (Assets/BeeKingdom/Playground/SplashDevelopmentSceneConfig.cs). Duplicated as
         // constants rather than referenced directly: that type lives in the default
@@ -34,7 +33,17 @@ namespace BeeKingdom.LivingHiveMenu
         private readonly Dictionary<string, Button> railButtons = new Dictionary<string, Button>();
         private readonly Dictionary<string, RailButtonVisual> railVisuals = new Dictionary<string, RailButtonVisual>();
         private readonly Dictionary<string, GameObject> panels = new Dictionary<string, GameObject>();
+        private readonly Dictionary<string, PanelAnimState> panelAnimStates = new Dictionary<string, PanelAnimState>();
         private Vector2 lastScreenSize;
+
+        // Etat de fondu d'un panneau - voir BuildPanel/RefreshPanels/TickPanelAnimations.
+        private sealed class PanelAnimState
+        {
+            public GameObject Root;
+            public CanvasGroup Group;
+            public bool Closing;
+            public float StartedAt;
+        }
 
         // --- Header supérieur (Reine / ressources / Boutique) ---
         private GameObject headerRoot;
@@ -55,8 +64,15 @@ namespace BeeKingdom.LivingHiveMenu
         {
             public Image Panel;
             public Image Icon;
-            public Text Value;
-            public Text Label;
+            public TextMeshProUGUI Value;
+
+            // Animation de comptage ("roll-up") - voir RefreshHeader. DisplayedValue est la
+            // valeur actuellement affichee (interpolee), TargetValue la derniere valeur reelle
+            // connue ; RollUpStartValue/RollUpStartedAt bornent l'interpolation en cours.
+            public float DisplayedValue = float.NaN;
+            public float TargetValue;
+            public float RollUpStartValue;
+            public float RollUpStartedAt;
         }
 
         // Références nécessaires à RefreshRailHighlights pour reproduire l'état actif
@@ -67,7 +83,7 @@ namespace BeeKingdom.LivingHiveMenu
             public Image Glow;
             public Image Socket;
             public Image Icon;
-            public Text Label;
+            public TextMeshProUGUI Label;
             public GameObject HeaderBand;
             public GameObject ProgressLine;
         }
@@ -107,10 +123,24 @@ namespace BeeKingdom.LivingHiveMenu
             {
                 if (state.ActivitiesOpen) return LivingHiveMenuSpec.ActivitiesId;
                 if (state.CommunicationOpen) return LivingHiveMenuSpec.CommunicationId;
-                if (state.IsMoreActiveForProof()) return LivingHiveMenuSpec.MoreId;
+                if (state.IsMoreActiveForProof() || LivingHiveSettingsBridge.IsOpen) return LivingHiveMenuSpec.MoreId;
                 if (string.IsNullOrEmpty(state.ActiveMenuId)) return string.Empty;
                 return state.ActiveMenuId;
             }
+        }
+
+        private GraphicRaycaster raycaster;
+
+        // Lets a full-screen IMGUI overlay drawn on top of this canvas (Alliance/
+        // Communication/Barrack, see HiveMapOverlayInputGateBootstrap) block clicks from
+        // reaching the rail/header underneath. IMGUI draws are visual only - they never
+        // stop uGUI's own EventSystem raycasts, so without this a click meant for the
+        // overlay's own close button also fires whatever uGUI element (or, separately, 3D
+        // building collider - see BuildingInteractionController.IsEnabled) happens to sit
+        // at that same screen position.
+        public void SetInputBlocked(bool blocked)
+        {
+            if (raycaster != null) raycaster.enabled = !blocked;
         }
 
         public void Build()
@@ -127,7 +157,7 @@ namespace BeeKingdom.LivingHiveMenu
             // chasserait le rail de la zone visible. L'overlay sans scaler mappe
             // 1 unité uGUI = 1 pixel écran, reproduisant fidèlement la géométrie du
             // monolithe ; le relayout sur changement de résolution gère les réglages.
-            canvasObj.AddComponent<GraphicRaycaster>();
+            raycaster = canvasObj.AddComponent<GraphicRaycaster>();
 
             BuildRail(canvasObj.transform);
             BuildHeader(canvasObj.transform);
@@ -135,6 +165,9 @@ namespace BeeKingdom.LivingHiveMenu
             RefreshAll();
             lastScreenSize = new Vector2(Screen.width, Screen.height);
         }
+
+        private const float HeaderLiveRefreshIntervalSeconds = 0.5f;
+        private float headerLiveRefreshLastAt = -100f;
 
         private void Update()
         {
@@ -147,6 +180,27 @@ namespace BeeKingdom.LivingHiveMenu
                 RebuildHeader();
                 RepositionHeaderOverlayPanels();
                 RefreshAll();
+                return;
+            }
+
+            // LivingHiveMenuHeaderData's resource values are pushed from outside
+            // (HiveMapResourceHudBootstrap, Assembly-CSharp) whenever they change server-
+            // side/via a collection - this package has no way to be notified directly (see
+            // the cross-assembly constraint noted at the top of this file), so it just
+            // polls its own already-cheap RefreshHeader() every frame instead (needed for the
+            // roll-up count animation below to actually animate smoothly, not just jump once
+            // every 0.5s).
+            RefreshHeader();
+            TickPanelAnimations();
+
+            if (Time.unscaledTime - headerLiveRefreshLastAt >= HeaderLiveRefreshIntervalSeconds)
+            {
+                headerLiveRefreshLastAt = Time.unscaledTime;
+                // The real Settings overlay (IMGUI) can close itself (its own back button)
+                // without going through OnMoreRowClicked, which is the only other place the
+                // rail's "More" highlight gets refreshed - poll it here so the glow doesn't
+                // stay stuck on after that happens.
+                RefreshRailHighlights();
             }
         }
 
@@ -263,6 +317,7 @@ namespace BeeKingdom.LivingHiveMenu
 
             BuildQueenButton(parent, portrait, w, h);
             BuildResourceChips(parent, portrait, w, h);
+            BuildRoyalJellyChip(parent, portrait, w, h);
             BuildShopButton(parent, portrait, w, h);
 
             headerRoot = bg;
@@ -287,19 +342,31 @@ namespace BeeKingdom.LivingHiveMenu
             button.transition = Selectable.Transition.None;
             button.onClick.AddListener(() => OnHeaderClicked(HeaderQueenElementId));
 
-            // Icône couronne (46 en paysage, 36 en portrait).
+            // Icône couronne (46 en paysage, 36 en portrait), avec un halo dore doux derriere
+            // (SoftRadialGlowSprite, voir son commentaire - meme traitement "premium" que les
+            // chips de ressources ci-dessous). Le halo deborde volontairement du conteneur
+            // (uGUI ne le decoupe pas sans Mask), c'est voulu : il donne du poids visuel a
+            // l'icone sans agrandir la zone cliquable ni toucher la geometrie testee.
             float icon = portrait ? 36f : 46f;
+            float glowSize = icon * 1.7f;
+            float iconX = (portrait ? 8f : 12f);
+            float iconY = (portrait ? 4f : 9f);
+            Image glow = NewImage(container, "IconGlow", LivingHiveMenuVisuals.SoftRadialGlowSprite());
+            glow.color = new Color(1f, 0.82f, 0.32f, 0.55f);
+            glow.raycastTarget = false;
+            Rect2Local(glow, iconX + icon * 0.5f - glowSize * 0.5f, iconY + icon * 0.5f - glowSize * 0.5f, glowSize, glowSize);
+
             Image iconImage = NewImage(container, "Icon", LivingHiveMenuVisuals.IconSprite("queen"));
             iconImage.color = LivingHiveMenuVisuals.IconTintActive;
             iconImage.raycastTarget = false;
-            Rect2Local(iconImage, (portrait ? 8f : 12f), (portrait ? 4f : 9f), icon, icon);
+            Rect2Local(iconImage, iconX, iconY, icon, icon);
 
             // Nom "Reine" + niveau.
-            Text name = CreateLabel(container, "Reine", portrait ? 15 : 18, TextAnchor.MiddleLeft, true);
+            TextMeshProUGUI name = CreateLabel(container, "Reine", portrait ? 15 : 18, TextAnchor.MiddleLeft, true);
             name.color = new Color(1f, 0.90f, 0.58f);
             Rect2Local(name, (portrait ? 52f : 70f), (portrait ? 4f : 6f), 90f, 20f);
 
-            Text level = CreateLabel(container, "Niv. " + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString(),
+            TextMeshProUGUI level = CreateLabel(container, "Niv. " + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString(),
                 portrait ? 11 : 12, TextAnchor.MiddleLeft);
             level.color = LivingHiveMenuVisuals.LabelInactiveColor;
             Rect2Local(level, (portrait ? 52f : 70f), portrait ? 24f : 28f, 80f, 16f);
@@ -323,45 +390,83 @@ namespace BeeKingdom.LivingHiveMenu
             HeaderResourceChipCount = ids.Length;
             for (int i = 0; i < ids.Length; i++)
             {
-                Rect ui = ScreenRectToUiRect(rects[i]);
-                string id = ids[i];
-                RectTransform container = NewContainer(parent, "HeaderChip_" + id, ui);
-
-                Image panel = container.gameObject.AddComponent<Image>();
-                panel.sprite = LivingHiveMenuVisuals.ButtonNormalSprite();
-                panel.type = Image.Type.Sliced;
-                panel.color = new Color(1f, 1f, 1f, 0.7f);
-
-                Color accent = LivingHiveMenuHeaderData.ResourceAccent(id);
-                Image icon = NewImage(container, "Icon", LivingHiveMenuVisuals.IconSprite(id));
-                icon.color = accent;
-                icon.raycastTarget = false;
-                Rect2Local(icon, 6f, (portrait ? 9f : 7f), portrait ? 18f : 24f, portrait ? 18f : 24f);
-
-                Text value = CreateLabel(container, "0", portrait ? 14 : 15, TextAnchor.MiddleRight, true);
-                value.color = new Color(0.96f, 0.94f, 0.86f);
-                Rect2Local(value, portrait ? 28f : 36f, portrait ? 4f : 4f,
-                    ui.width - (portrait ? 36f : 44f), portrait ? 20f : 22f);
-
-                Text label = CreateLabel(container, HeaderResourceLabel(id), portrait ? 10 : 11, TextAnchor.MiddleCenter);
-                label.color = LivingHiveMenuVisuals.LabelInactiveColor;
-                Rect2Local(label, 4f, portrait ? 24f : 24f, ui.width - 8f, 12f);
-
-                headerChipVisuals[id] = new HeaderChipVisual { Panel = panel, Icon = icon, Value = value, Label = label };
+                BuildOneResourceChip(parent, ids[i], ScreenRectToUiRect(rects[i]), portrait, "HeaderChip_" + ids[i]);
             }
         }
 
-        private static string HeaderResourceLabel(string resourceId)
+        // Gelee Royale (monnaie premium) : sa propre pastille additive juste avant la
+        // Boutique - voir LandscapeRoyalJellyRect/PortraitRoyalJellyRect pour pourquoi ce
+        // n'est pas un 6e element de BuildResourceChips. Reutilise le meme chip visuel que
+        // les ressources en vrac (meme dictionnaire headerChipVisuals => RefreshHeader() le
+        // met a jour automatiquement, HeaderResourceValue("royalJelly") fonctionne aussi
+        // gratuitement), avec en plus un petit bouton "+" qui ouvre la Boutique - aucune
+        // logique d'achat reelle n'existe encore, ce n'est qu'une redirection.
+        private void BuildRoyalJellyChip(Transform parent, bool portrait, float w, float h)
         {
-            switch (resourceId)
-            {
-                case "honey": return "Miel";
-                case "wax": return "Cire";
-                case "pollen": return "Pollen";
-                case "bees": return "Abeilles";
-                case "capacity": return "Capacite";
-                default: return resourceId;
-            }
+            Rect imgui = portrait
+                ? LivingHiveMenuHeaderData.PortraitRoyalJellyRect(w, h)
+                : LivingHiveMenuHeaderData.LandscapeRoyalJellyRect(w, h);
+            RectTransform container = BuildOneResourceChip(parent, "royalJelly", ScreenRectToUiRect(imgui), portrait, "HeaderRoyalJelly");
+
+            float plusSize = portrait ? 20f : 24f;
+            RectTransform plusContainer = NewContainer(container, "PlusButton", new Rect(container.sizeDelta.x - plusSize - 4f, (container.sizeDelta.y - plusSize) * 0.5f, plusSize, plusSize));
+            Image plusPanel = plusContainer.gameObject.AddComponent<Image>();
+            plusPanel.sprite = LivingHiveMenuVisuals.ButtonActiveSprite();
+            plusPanel.type = Image.Type.Sliced;
+            plusPanel.color = new Color(1f, 1f, 1f, LivingHiveMenuVisuals.ButtonActiveFill.a);
+            Button plusButton = plusContainer.gameObject.AddComponent<Button>();
+            plusButton.targetGraphic = plusPanel;
+            plusButton.transition = Selectable.Transition.None;
+            plusButton.onClick.AddListener(() => OnHeaderClicked(HeaderShopElementId));
+
+            TextMeshProUGUI plusLabel = CreateLabel(plusContainer, "+", portrait ? 14 : 16, TextAnchor.MiddleCenter, true);
+            plusLabel.color = new Color(1f, 0.9f, 0.4f);
+            Rect2Local(plusLabel, 0f, 0f, plusSize, plusSize);
+        }
+
+        // Corps partage d'une pastille de ressource : fond premium, icone + halo dore doux
+        // derriere (SoftRadialGlowSprite, teinte a l'accent de la ressource - real art comme
+        // fallback procedural en beneficient tous les deux, contrairement au tint plat qui ne
+        // s'appliquait qu'au fallback), valeur, libelle. Retourne le conteneur pour permettre
+        // d'y ajouter un element de plus (voir BuildRoyalJellyChip's "+" button).
+        private RectTransform BuildOneResourceChip(Transform parent, string id, Rect ui, bool portrait, string containerName)
+        {
+            RectTransform container = NewContainer(parent, containerName, ui);
+
+            Image panel = container.gameObject.AddComponent<Image>();
+            panel.sprite = LivingHiveMenuVisuals.ButtonNormalSprite();
+            panel.type = Image.Type.Sliced;
+            panel.color = new Color(1f, 1f, 1f, 0.7f);
+
+            Color accent = LivingHiveMenuHeaderData.ResourceAccent(id);
+            // Jeff (2026-08-19): l'icone se suffit a elle-meme - plus besoin du libelle texte
+            // ("Miel"/"Cire"/...) qui vivait sous la valeur. Sans lui a caser, l'icone et la
+            // valeur prennent toute la hauteur de la pastille au lieu de se partager 2 rangees.
+            float iconSize = Mathf.Min(ui.height - 6f, portrait ? 30f : 36f);
+            float iconX = 6f;
+            float iconY = (ui.height - iconSize) * 0.5f;
+
+            float glowSize = iconSize * 1.6f;
+            Image glow = NewImage(container, "IconGlow", LivingHiveMenuVisuals.SoftRadialGlowSprite());
+            glow.color = new Color(accent.r, accent.g, accent.b, 0.45f);
+            glow.raycastTarget = false;
+            Rect2Local(glow, iconX + iconSize * 0.5f - glowSize * 0.5f, iconY + iconSize * 0.5f - glowSize * 0.5f, glowSize, glowSize);
+
+            Image icon = NewImage(container, "Icon", LivingHiveMenuVisuals.IconSprite(id));
+            // Real painted art (PremiumBeeIcons/honey, wax, pollen, ...) already has its
+            // own color - only the procedural hex-badge fallback needs the accent tint
+            // to read as a distinct resource.
+            icon.color = LivingHiveMenuVisuals.IconIsRealArt(id) ? Color.white : accent;
+            icon.raycastTarget = false;
+            Rect2Local(icon, iconX, iconY, iconSize, iconSize);
+
+            float valueX = iconX + iconSize + 6f;
+            TextMeshProUGUI value = CreateLabel(container, "0", portrait ? 15 : 16, TextAnchor.MiddleRight, true);
+            value.color = new Color(0.96f, 0.94f, 0.86f);
+            Rect2Local(value, valueX, 0f, ui.width - valueX - 6f, ui.height);
+
+            headerChipVisuals[id] = new HeaderChipVisual { Panel = panel, Icon = icon, Value = value };
+            return container;
         }
 
         private void BuildShopButton(Transform parent, bool portrait, float w, float h)
@@ -426,20 +531,43 @@ namespace BeeKingdom.LivingHiveMenu
             BuildHeader(canvas.transform);
         }
 
+        // Jeff (2026-08-19, "fluidite"): les valeurs sautaient directement au nouveau nombre.
+        // Chaque chip (sauf "capacity", composee de 2 nombres - snap conserve) anime
+        // maintenant de l'ancien affichage vers le nouveau sur RollUpDurationSeconds des que
+        // la vraie valeur (PreviewValue) change, au lieu d'un saut instantane.
+        private const float RollUpDurationSeconds = 0.5f;
+
         private void RefreshHeader()
         {
-            bool portrait = LivingHiveMenuSpec.IsPortrait(Screen.width, Screen.height);
+            float now = Time.unscaledTime;
             foreach (KeyValuePair<string, HeaderChipVisual> pair in headerChipVisuals)
             {
                 HeaderChipVisual v = pair.Value;
-                int value = LivingHiveMenuHeaderData.PreviewValue(pair.Key);
-                string text = LivingHiveMenuHeaderData.FormatResource(value);
                 if (string.Equals(pair.Key, "capacity", System.StringComparison.Ordinal))
                 {
-                    text = LivingHiveMenuHeaderData.FormatResource(LivingHiveMenuHeaderData.PreviewCapacityUsed)
+                    v.Value.text = LivingHiveMenuHeaderData.FormatResource(LivingHiveMenuHeaderData.PreviewCapacityUsed)
                         + "/" + LivingHiveMenuHeaderData.FormatResource(LivingHiveMenuHeaderData.PreviewCapacityMax);
+                    continue;
                 }
-                v.Value.text = text;
+
+                int target = LivingHiveMenuHeaderData.PreviewValue(pair.Key);
+                if (float.IsNaN(v.DisplayedValue))
+                {
+                    // Premier passage (juste apres Build) - pas d'animation a jouer depuis rien.
+                    v.DisplayedValue = target;
+                    v.TargetValue = target;
+                }
+                else if (!Mathf.Approximately(target, v.TargetValue))
+                {
+                    v.RollUpStartValue = v.DisplayedValue;
+                    v.TargetValue = target;
+                    v.RollUpStartedAt = now;
+                }
+
+                float t = Mathf.Clamp01((now - v.RollUpStartedAt) / RollUpDurationSeconds);
+                float eased = 1f - Mathf.Pow(1f - t, 3f);
+                v.DisplayedValue = Mathf.Lerp(v.RollUpStartValue, v.TargetValue, eased);
+                v.Value.text = LivingHiveMenuHeaderData.FormatResource(Mathf.RoundToInt(v.DisplayedValue));
             }
         }
 
@@ -557,7 +685,7 @@ namespace BeeKingdom.LivingHiveMenu
             progressLine.SetActive(false);
 
             // Libellé en bande basse (taille 11, conforme au monolithe — DrawIconButton labelStyle).
-            Text label = CreateLabel(go.transform, entry.Label, 11, TextAnchor.MiddleCenter);
+            TextMeshProUGUI label = CreateLabel(go.transform, entry.Label, 11, TextAnchor.MiddleCenter);
             label.color = LivingHiveMenuVisuals.LabelInactiveColor;
             rect2(label.gameObject, 2f, 2f, Mathf.Max(1f, bw - 4f), 20f);
 
@@ -667,7 +795,9 @@ namespace BeeKingdom.LivingHiveMenu
             // OnEntryClicked / LivingHiveChatBridge.ToggleOverlay).
             BuildPanel(parent, LivingHiveMenuSpec.BagId, "Sac & stocks", BuildBagContent, new Rect(10f, 96f, 520f, 460f));
             BuildPanel(parent, LivingHiveMenuSpec.MoreId, "Plus", BuildMoreContent, new Rect(10f, 96f, 420f, 520f));
-            BuildPanel(parent, LivingHiveMenuSpec.SettingsId, "Parametres", BuildSettingsContent, new Rect(10f, 96f, 460f, 520f));
+            // Settings ("Parametres") no longer builds a uGUI panel here: it toggles
+            // HiveViewProductUiPresenter's real Settings overlay instead (see
+            // OnMoreRowClicked / LivingHiveSettingsBridge.ToggleOverlay).
             BuildPanel(parent, "Carte", "Carte du monde", BuildWorldMapOverlay, new Rect(10f, 96f, 720f, 540f));
             // Reine/Boutique : contrairement aux panneaux ci-dessus (déjà en coordonnées
             // uGUI bas-gauche constantes), QueenProfilePanelRect/ShopPanelRect sont des rects
@@ -723,7 +853,6 @@ namespace BeeKingdom.LivingHiveMenu
         {
             GameObject go = new GameObject("Panel_" + panelId);
             go.transform.SetParent(parent, false);
-            go.SetActive(false);
             Image image = go.AddComponent<Image>();
             image.color = new Color(0.026f, 0.024f, 0.020f, 0.97f);
 
@@ -734,18 +863,29 @@ namespace BeeKingdom.LivingHiveMenu
             rect.anchoredPosition = new Vector2(size.x, size.y);
             rect.sizeDelta = new Vector2(size.width, size.height);
 
-            Text titleLabel = CreateLabel(go.transform, title, 22, TextAnchor.MiddleLeft, true);
+            TextMeshProUGUI titleLabel = CreateLabel(go.transform, title, 22, TextAnchor.MiddleLeft, true);
             LabelRect(titleLabel.GetComponent<RectTransform>(), 14f, 12f);
 
             contentBuilder(go.transform, size);
             panels[panelId] = go;
+
+            // Fondu d'ouverture/fermeture (Jeff, 2026-08-19, "fluidite") au lieu d'un
+            // SetActive instantane - voir TickPanelAnimations/RefreshPanels. Pas d'animation
+            // d'echelle : le pivot (0,0) de ce rect est le coin bas-gauche (convention
+            // partagee par PositionRect/Rect2Local/LabelRect dans tout ce fichier), donc
+            // scaler ce transform ferait "grandir" le panneau depuis son coin au lieu de son
+            // centre - un fondu seul reste propre sans toucher a cette convention partagee.
+            CanvasGroup group = go.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            panelAnimStates[panelId] = new PanelAnimState { Root = go, Group = group };
+            go.SetActive(false);
         }
 
         private void BuildActivitiesContent(Transform parent, Rect panel)
         {
             string[] tabs = { "Evenements", "Defis", "Quetes" };
             float y = 52f;
-            Text title = CreateLabel(parent, "ACTIVITES", 18, TextAnchor.MiddleLeft, true);
+            TextMeshProUGUI title = CreateLabel(parent, "ACTIVITES", 18, TextAnchor.MiddleLeft, true);
             title.color = new Color(1f, 0.72f, 0.16f);
             LabelRect(title.GetComponent<RectTransform>(), 16f, y);
             y += 40f;
@@ -753,7 +893,7 @@ namespace BeeKingdom.LivingHiveMenu
             // Onglets
             for (int i = 0; i < tabs.Length; i++)
             {
-                Text tab = CreateLabel(parent, tabs[i], 16, TextAnchor.MiddleLeft);
+                TextMeshProUGUI tab = CreateLabel(parent, tabs[i], 16, TextAnchor.MiddleLeft);
                 tab.color = new Color(0.92f, 0.62f, 0.16f);
                 LabelRect(tab.GetComponent<RectTransform>(), 16f + i * 140f, y);
             }
@@ -762,7 +902,7 @@ namespace BeeKingdom.LivingHiveMenu
             string[] activities = { "Evenement Special - Recolte d'Or", "Defi Hebdomadaire : Produire 500 Miel", "Quete Journaliere : Elever 3 Couveuses", "Defi Mensuel : Decouvrir 5 Zones" };
             for (int i = 0; i < activities.Length; i++)
             {
-                Text row = CreateLabel(parent, "  " + activities[i] + "   [disponible]", 15, TextAnchor.MiddleLeft);
+                TextMeshProUGUI row = CreateLabel(parent, "  " + activities[i] + "   [disponible]", 15, TextAnchor.MiddleLeft);
                 row.color = new Color(0.92f, 0.62f, 0.16f);
                 LabelRect(row.GetComponent<RectTransform>(), 16f, y);
                 y += 34f;
@@ -775,7 +915,7 @@ namespace BeeKingdom.LivingHiveMenu
             float y = 52f;
             for (int i = 0; i < rows.Length; i++)
             {
-                Text row = CreateLabel(parent, rows[i], 16, TextAnchor.MiddleLeft);
+                TextMeshProUGUI row = CreateLabel(parent, rows[i], 16, TextAnchor.MiddleLeft);
                 LabelRect(row.GetComponent<RectTransform>(), 16f, y);
                 y += 38f;
             }
@@ -796,7 +936,7 @@ namespace BeeKingdom.LivingHiveMenu
                 rect2(go, 10f, y, panel.width - 20f, rowH);
                 Button b = go.AddComponent<Button>();
                 b.targetGraphic = img;
-                Text t = CreateLabel(go.transform, entry, 16, TextAnchor.MiddleLeft);
+                TextMeshProUGUI t = CreateLabel(go.transform, entry, 16, TextAnchor.MiddleLeft);
                 LabelRect(t.GetComponent<RectTransform>(), 14f, 0f);
                 string captureEntry = entry;
                 b.onClick.AddListener(() => OnMoreRowClicked(captureEntry));
@@ -808,58 +948,38 @@ namespace BeeKingdom.LivingHiveMenu
         {
             if (string.Equals(entry, "Parametres", System.StringComparison.Ordinal))
             {
-                state.OpenSettings();
+                // Close the Plus panel first: the real Settings overlay draws via IMGUI on
+                // top of it, and IMGUI never occludes uGUI's own EventSystem raycasts (see
+                // BuildingInteractionController.HandlePointer) - leaving the Plus panel's
+                // uGUI buttons live underneath would let a click meant for a Settings toggle
+                // also fire whatever Plus row happens to sit at that same screen position.
+                state.CloseActiveMenuPanel();
+                LivingHiveSettingsBridge.ToggleOverlay();
             }
             RefreshAll();
         }
 
-        private void BuildSettingsContent(Transform parent, Rect panel)
-        {
-            AddSettingToggle(parent, "Mouvement reduit", state.ReducedMotionEnabled, state.SetReducedMotion, 52f);
-            AddSettingToggle(parent, "Mode economie", state.EconomyModeEnabled, state.SetEconomyMode, 110f);
-            AddSettingToggle(parent, "Effets sonores", state.SoundEnabled, state.SetSoundEnabled, 168f);
-            AddSettingToggle(parent, "Musique", state.MusicEnabled, state.SetMusicEnabled, 226f);
-
-            Text lang = CreateLabel(parent, "Langue : " + state.CurrentLocale, 16, TextAnchor.MiddleLeft);
-            lang.color = new Color(0.92f, 0.62f, 0.16f);
-            LabelRect(lang.GetComponent<RectTransform>(), 16f, 300f);
-        }
-
-        private void AddSettingToggle(Transform parent, string label, bool current, System.Action<bool> setter, float y)
-        {
-            GameObject go = new GameObject("Setting_" + label);
-            go.transform.SetParent(parent, false);
-            Image img = go.AddComponent<Image>();
-            img.color = new Color(0.035f, 0.030f, 0.023f, 0.94f);
-            rect2(go, 10f, y, 400f, 44f);
-            Button b = go.AddComponent<Button>();
-            b.targetGraphic = img;
-            Text t = CreateLabel(go.transform, label + "   :   " + (current ? "ON" : "OFF"), 16, TextAnchor.MiddleLeft);
-            LabelRect(t.GetComponent<RectTransform>(), 14f, 0f);
-            b.onClick.AddListener(() => setter(!current));
-        }
-
         private void BuildChatContent(Transform parent, Rect panel)
         {
-            Text hint = CreateLabel(parent, "Mini chat (canal ruche) - preview locale", 15, TextAnchor.MiddleLeft);
+            TextMeshProUGUI hint = CreateLabel(parent, "Mini chat (canal ruche) - preview locale", 15, TextAnchor.MiddleLeft);
             hint.color = new Color(0.90f, 0.90f, 0.90f);
             LabelRect(hint.GetComponent<RectTransform>(), 16f, 52f);
-            Text msg = CreateLabel(parent, "Bienvenue dans le canal ruche !", 15, TextAnchor.MiddleLeft);
+            TextMeshProUGUI msg = CreateLabel(parent, "Bienvenue dans le canal ruche !", 15, TextAnchor.MiddleLeft);
             LabelRect(msg.GetComponent<RectTransform>(), 16f, 92f);
         }
 
         private void BuildWorldMapOverlay(Transform parent, Rect panel)
         {
-            Text title = CreateLabel(parent, state.SurfaceMode == LivingHiveMenuState.SurfaceBoundary.World
+            TextMeshProUGUI title = CreateLabel(parent, state.SurfaceMode == LivingHiveMenuState.SurfaceBoundary.World
                 ? "Mode Carte : surface changement active"
                 : "Mode Ruche", 18, TextAnchor.MiddleCenter, true);
             LabelRect(title.GetComponent<RectTransform>(), 0f, 16f);
 
-            Text hint = CreateLabel(parent, "La surface active est : " + state.SurfaceSwitchLabelForProof + ".",
+            TextMeshProUGUI hint = CreateLabel(parent, "La surface active est : " + state.SurfaceSwitchLabelForProof + ".",
                 15, TextAnchor.MiddleCenter);
             LabelRect(hint.GetComponent<RectTransform>(), 0f, 60f);
 
-            Text route = CreateLabel(parent, "Routes : Goldenheart - Silverstream - Meadowguard - Amberfall"
+            TextMeshProUGUI route = CreateLabel(parent, "Routes : Goldenheart - Silverstream - Meadowguard - Amberfall"
                 + " - Stonepeak - Sunblossom - Frostwing - Thornwatch - Crimson.",
                 14, TextAnchor.MiddleCenter);
             route.color = new Color(0.86f, 0.68f, 0.30f);
@@ -870,17 +990,17 @@ namespace BeeKingdom.LivingHiveMenu
         // /arbre/couvain/atelier/plein écran — fonctionnel, contenu enrichi plus tard.
         private void BuildQueenProfileContent(Transform parent, Rect panel)
         {
-            Text level = CreateLabel(parent, "Niveau " + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString(),
+            TextMeshProUGUI level = CreateLabel(parent, "Niveau " + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString(),
                 17, TextAnchor.MiddleLeft, true);
             level.color = new Color(1f, 0.90f, 0.58f);
             LabelRect(level.GetComponent<RectTransform>(), 16f, 52f);
 
-            Text progress = CreateLabel(parent, "Progression vers le niveau suivant : 12%",
+            TextMeshProUGUI progress = CreateLabel(parent, "Progression vers le niveau suivant : 12%",
                 14, TextAnchor.MiddleLeft);
             progress.color = new Color(0.92f, 0.92f, 0.92f);
             LabelRect(progress.GetComponent<RectTransform>(), 16f, 90f);
 
-            Text preview = CreateLabel(parent, "Donnees preview locales (economie future branchable ici).",
+            TextMeshProUGUI preview = CreateLabel(parent, "Donnees preview locales (economie future branchable ici).",
                 12, TextAnchor.MiddleLeft);
             preview.color = LivingHiveMenuVisuals.LabelInactiveColor;
             LabelRect(preview.GetComponent<RectTransform>(), 16f, 128f);
@@ -889,11 +1009,11 @@ namespace BeeKingdom.LivingHiveMenu
         // Panneau Boutique : accès uniquement, contenu différé (coquille présente).
         private void BuildShopContent(Transform parent, Rect panel)
         {
-            Text hint = CreateLabel(parent, "Boutique - acces d'essai.", 16, TextAnchor.MiddleCenter, true);
+            TextMeshProUGUI hint = CreateLabel(parent, "Boutique - acces d'essai.", 16, TextAnchor.MiddleCenter, true);
             hint.color = new Color(0.96f, 0.94f, 0.86f);
             LabelRect(hint.GetComponent<RectTransform>(), 0f, 48f);
 
-            Text message = CreateLabel(parent, "Le contenu (abonnements, passes, achats)"
+            TextMeshProUGUI message = CreateLabel(parent, "Le contenu (abonnements, passes, achats)"
                 + " sera ajoute dans une mission dediee.",
                 13, TextAnchor.MiddleCenter);
             message.color = new Color(0.88f, 0.88f, 0.88f);
@@ -936,12 +1056,57 @@ namespace BeeKingdom.LivingHiveMenu
             }
         }
 
+        private const float PanelFadeInSeconds = 0.16f;
+        private const float PanelFadeOutSeconds = 0.12f;
+
+        // Jeff (2026-08-19, "fluidite"): ouverture/fermeture instantanee (SetActive brut)
+        // remplacee par un fondu - voir TickPanelAnimations pour l'avancement par frame et le
+        // commentaire de BuildPanel pour pourquoi ce n'est qu'un fondu (pas d'echelle).
         private void RefreshPanels()
         {
+            float now = Time.unscaledTime;
             foreach (KeyValuePair<string, GameObject> pair in panels)
             {
                 bool shouldShow = ShouldShowPanel(pair.Key);
-                if (pair.Value.activeSelf != shouldShow) pair.Value.SetActive(shouldShow);
+                PanelAnimState state = panelAnimStates[pair.Key];
+                bool isActive = pair.Value.activeSelf;
+
+                if (shouldShow && !isActive)
+                {
+                    pair.Value.SetActive(true);
+                    state.Group.alpha = 0f;
+                    state.Closing = false;
+                    state.StartedAt = now;
+                }
+                else if (!shouldShow && isActive && !state.Closing)
+                {
+                    state.Closing = true;
+                    state.StartedAt = now;
+                }
+                else if (shouldShow && isActive && state.Closing)
+                {
+                    // Rouvert pendant le fondu de fermeture - repart en ouverture depuis
+                    // l'alpha courant (evite un saut visible).
+                    state.Closing = false;
+                    state.StartedAt = now - (1f - state.Group.alpha) * PanelFadeInSeconds;
+                }
+            }
+        }
+
+        private void TickPanelAnimations()
+        {
+            float now = Time.unscaledTime;
+            foreach (KeyValuePair<string, PanelAnimState> pair in panelAnimStates)
+            {
+                PanelAnimState state = pair.Value;
+                if (state.Root == null || !state.Root.activeSelf) continue;
+
+                float duration = state.Closing ? PanelFadeOutSeconds : PanelFadeInSeconds;
+                float t = duration > 0f ? Mathf.Clamp01((now - state.StartedAt) / duration) : 1f;
+                float eased = 1f - Mathf.Pow(1f - t, 3f);
+                state.Group.alpha = state.Closing ? 1f - eased : eased;
+
+                if (state.Closing && t >= 1f) state.Root.SetActive(false);
             }
         }
 
@@ -961,20 +1126,74 @@ namespace BeeKingdom.LivingHiveMenu
 
         // --- Helpers uGUI ---
 
-        private static Text CreateLabel(Transform parent, string text, int size, TextAnchor align, bool bold = false)
+        // Jeff (2026-08-19): "netteté" pass, étape 1 - legacy UnityEngine.UI.Text/
+        // LegacyRuntime.ttf rendait flou, surtout redimensionné. TextMeshProUGUI (deja
+        // importe et utilise partout ailleurs dans le projet - Assets/_Project/Scripts/UI/*)
+        // rend net via SDF a n'importe quelle taille. Police Baloo 2 ExtraBold (choisie par
+        // Jeff le 2026-08-19 pour se rapprocher du HUD de reference) plutot que la police par
+        // defaut LiberationSans - voir HudFont ci-dessous.
+        private static TextMeshProUGUI CreateLabel(Transform parent, string text, int size, TextAnchor align, bool bold = false)
         {
             GameObject go = new GameObject("Label");
             go.transform.SetParent(parent, false);
-            Text t = go.AddComponent<Text>();
+            TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
             t.text = text;
-            t.font = Resources.GetBuiltinResource<Font>(FontResource);
+            t.font = HudFont();
             t.fontSize = size;
-            t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
+            t.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
             t.color = Color.white;
-            t.alignment = align;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.alignment = ToTmpAlignment(align);
+            t.enableWordWrapping = false;
+            t.overflowMode = TextOverflowModes.Overflow;
             return t;
+        }
+
+        private static TMP_FontAsset cachedHudFont;
+
+        // Assets/Fonts/Resources/Baloo2-ExtraBold SDF.asset (instance statique Poids 800
+        // extraite de la police variable Google Fonts Baloo 2, licence OFL). Repli sur la
+        // police TMP par defaut du projet si jamais l'asset venait a manquer - jamais de null.
+        //
+        // Le contour sombre (Jeff, 2026-08-19 - lisibilite sur n'importe quel fond de la
+        // ruche, meme intention que le style "contour + ombre" du HUD de reference) est pose
+        // UNE FOIS sur le materiau partage de la police plutot que via
+        // TMP_Text.outlineWidth/outlineColor par instance : ce setter touche
+        // m_sharedMaterial en interne, qui n'existe pas encore tant que le GameObject n'a pas
+        // traverse Awake/OnEnable - or BuildPanel cree ses labels sous un panneau
+        // SetActive(false), donc Awake/OnEnable ne se declenchent jamais avant qu'on essaie
+        // de regler le contour -> NullReferenceException dans SetOutlineThickness. Le
+        // materiau partage, lui, existe des la creation de l'asset et n'a pas ce probleme.
+        private static TMP_FontAsset HudFont()
+        {
+            if (cachedHudFont != null) return cachedHudFont;
+            // Jeff (2026-08-19): apres Baloo 2 (trop rond) et Montserrat (encore trop gras),
+            // changement pour Cinzel Regular - registre "titulature romaine/royaume", voulu
+            // explicitement pour l'esthetique regale du jeu plutot qu'un sans-serif d'app.
+            cachedHudFont = Resources.Load<TMP_FontAsset>("Cinzel-Regular SDF");
+            if (cachedHudFont == null) return TMP_Settings.defaultFontAsset;
+            if (cachedHudFont.material != null)
+            {
+                cachedHudFont.material.SetFloat("_OutlineWidth", 0.06f);
+                cachedHudFont.material.SetColor("_OutlineColor", new Color32(18, 12, 4, 190));
+            }
+            return cachedHudFont;
+        }
+
+        private static TextAlignmentOptions ToTmpAlignment(TextAnchor anchor)
+        {
+            switch (anchor)
+            {
+                case TextAnchor.UpperLeft: return TextAlignmentOptions.TopLeft;
+                case TextAnchor.UpperCenter: return TextAlignmentOptions.Top;
+                case TextAnchor.UpperRight: return TextAlignmentOptions.TopRight;
+                case TextAnchor.MiddleLeft: return TextAlignmentOptions.Left;
+                case TextAnchor.MiddleCenter: return TextAlignmentOptions.Center;
+                case TextAnchor.MiddleRight: return TextAlignmentOptions.Right;
+                case TextAnchor.LowerLeft: return TextAlignmentOptions.BottomLeft;
+                case TextAnchor.LowerCenter: return TextAlignmentOptions.Bottom;
+                case TextAnchor.LowerRight: return TextAlignmentOptions.BottomRight;
+                default: return TextAlignmentOptions.Left;
+            }
         }
 
         private static void LabelRect(RectTransform rect, float x, float y)

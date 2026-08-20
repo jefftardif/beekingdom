@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BeeKingdom.Playground;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,7 +26,6 @@ namespace BeeKingdom.LivingHiveMenu
     // l'hiérarchie, RefreshAll() recharge l'état depuis LivingHiveResearchState (pur C#).
     public sealed class LivingHiveResearchWindow : MonoBehaviour
     {
-        private const string FontResource = "LegacyRuntime.ttf";
         private const string BannerResource = "PremiumBeeReference/BuildingBanners/research_node";
 
         private readonly LivingHiveResearchState state = new LivingHiveResearchState();
@@ -34,8 +34,8 @@ namespace BeeKingdom.LivingHiveMenu
         private RectTransform windowRoot;
         private Image veil;
         private Image banner;
-        private Text titleText;
-        private Text subtitleText;
+        private TextMeshProUGUI titleText;
+        private TextMeshProUGUI subtitleText;
         private Image separator;
         private GameObject filterPanel;
         private GameObject contentPanel;
@@ -244,7 +244,7 @@ namespace BeeKingdom.LivingHiveMenu
                 Rect filterUi = ScreenRectToUiRect(new Rect(6f + i * (itemWidth + gap), 8f, itemWidth, railUi.height - 16f));
                 PositionRect(visual.rectTransform, filterUi);
 
-                Text label = CreateLabel(visual.rectTransform, labels[i], portrait ? 8 : 10, TextAnchor.MiddleCenter);
+                TextMeshProUGUI label = CreateLabel(visual.rectTransform, labels[i], portrait ? 8 : 10, TextAnchor.MiddleCenter);
                 label.transform.SetAsLastSibling();
                 FillRect(label.rectTransform);
 
@@ -362,25 +362,23 @@ namespace BeeKingdom.LivingHiveMenu
             PositionRect(icon.rectTransform, Ui(12f, 14f, iconSize, iconSize, cardHeight));
 
             float textWidth = cardWidth - iconSize - 24f - (portrait ? 64f : 78f);
-            Text title = CreateLabel(panel.rectTransform, LivingHiveResearchState.ResearchTitle(definition),
+            TextMeshProUGUI title = CreateLabel(panel.rectTransform, LivingHiveResearchState.ResearchTitle(definition),
                 portrait ? 12 : 14, TextAnchor.MiddleLeft, true);
             title.color = LivingHiveResearchSpec.CardNormalAccent;
             title.raycastTarget = false;
             PositionRect(title.rectTransform, Ui(portrait ? 64f : 78f, 12f, textWidth, 22f, cardHeight));
             title.transform.SetAsLastSibling();
 
-            Text summary = CreateLabel(panel.rectTransform, LivingHiveResearchState.ResearchSummary(definition),
+            TextMeshProUGUI summary = CreateLabel(panel.rectTransform, LivingHiveResearchState.ResearchSummary(definition),
                 portrait ? 9 : 11, TextAnchor.UpperLeft);
             summary.raycastTarget = false;
-            summary.horizontalOverflow = HorizontalWrapMode.Wrap;
-            summary.verticalOverflow = VerticalWrapMode.Overflow;
+            summary.enableWordWrapping = true;
             PositionRect(summary.rectTransform, Ui(portrait ? 64f : 78f, 38f, textWidth, portrait ? 34f : 44f, cardHeight));
             summary.transform.SetAsLastSibling();
 
-            Text detail = CreateLabel(panel.rectTransform, LivingHiveResearchState.ResearchCostText(definition),
+            TextMeshProUGUI detail = CreateLabel(panel.rectTransform, LivingHiveResearchState.ResearchCostText(definition),
                 portrait ? 8 : 9, TextAnchor.MiddleLeft);
             detail.raycastTarget = false;
-            detail.horizontalOverflow = HorizontalWrapMode.Overflow;
             PositionRect(detail.rectTransform, Ui(14f, cardHeight - 30f, cardWidth - 128f, 22f, cardHeight));
             detail.transform.SetAsLastSibling();
 
@@ -390,7 +388,7 @@ namespace BeeKingdom.LivingHiveMenu
             actionPanel.raycastTarget = true;
             PositionRect(actionPanel.rectTransform, Ui(cardWidth - actionWidth - 12f, 14f, actionWidth, 42f, cardHeight));
 
-            Text actionLabel = CreateLabel(actionPanel.rectTransform, "Lancer", portrait ? 10 : 11, TextAnchor.MiddleCenter, true);
+            TextMeshProUGUI actionLabel = CreateLabel(actionPanel.rectTransform, "Lancer", portrait ? 10 : 11, TextAnchor.MiddleCenter, true);
             actionLabel.color = Color.white;
             actionLabel.raycastTarget = false;
             FillRect(actionLabel.rectTransform);
@@ -402,10 +400,8 @@ namespace BeeKingdom.LivingHiveMenu
             action.onClick.AddListener(() => OnActionClicked(researchId));
 
             // Raison non-lançable sous le bouton (miroir L.33465).
-            Text reason = CreateLabel(panel.rectTransform, string.Empty, portrait ? 8 : 9, TextAnchor.MiddleCenter);
+            TextMeshProUGUI reason = CreateLabel(panel.rectTransform, string.Empty, portrait ? 8 : 9, TextAnchor.MiddleCenter);
             reason.raycastTarget = false;
-            reason.horizontalOverflow = HorizontalWrapMode.Overflow;
-            reason.verticalOverflow = VerticalWrapMode.Overflow;
             PositionRect(reason.rectTransform, Ui(cardWidth - actionWidth - 16f, cardHeight - actionWidth - 2f, actionWidth + 8f, 22f, cardHeight));
             reason.transform.SetAsLastSibling();
 
@@ -653,21 +649,61 @@ namespace BeeKingdom.LivingHiveMenu
             return image;
         }
 
-        private static Text CreateLabel(Transform parent, string text, int size, TextAnchor align, bool bold = false)
+        // Meme passe "netteté" que LivingHiveMenuCanvas.CreateLabel (voir son commentaire) -
+        // legacy Text/LegacyRuntime.ttf remplace par TextMeshProUGUI.
+        private static TextMeshProUGUI CreateLabel(Transform parent, string text, int size, TextAnchor align, bool bold = false)
         {
             GameObject go = new GameObject("Label");
             go.transform.SetParent(parent, false);
-            Text t = go.AddComponent<Text>();
+            TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
             t.text = text;
-            t.font = Resources.GetBuiltinResource<Font>(FontResource);
+            t.font = HudFont();
             t.fontSize = size;
-            t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
+            t.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
             t.color = Color.white;
-            t.alignment = align;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.alignment = ToTmpAlignment(align);
+            t.enableWordWrapping = false;
+            t.overflowMode = TextOverflowModes.Overflow;
             t.raycastTarget = false;
             return t;
+        }
+
+        private static TMP_FontAsset cachedHudFont;
+
+        // Meme police + meme contour materiau-partage que LivingHiveMenuCanvas.HudFont (voir
+        // son commentaire pour pourquoi le contour ne peut pas passer par
+        // TMP_Text.outlineWidth par instance ici - ce fichier construit aussi ses labels sous
+        // des parents SetActive(false) par endroits).
+        private static TMP_FontAsset HudFont()
+        {
+            if (cachedHudFont != null) return cachedHudFont;
+            // Meme police que LivingHiveMenuCanvas.HudFont (voir son commentaire) -
+            // Cinzel Regular.
+            cachedHudFont = Resources.Load<TMP_FontAsset>("Cinzel-Regular SDF");
+            if (cachedHudFont == null) return TMP_Settings.defaultFontAsset;
+            if (cachedHudFont.material != null)
+            {
+                cachedHudFont.material.SetFloat("_OutlineWidth", 0.06f);
+                cachedHudFont.material.SetColor("_OutlineColor", new Color32(18, 12, 4, 190));
+            }
+            return cachedHudFont;
+        }
+
+        private static TextAlignmentOptions ToTmpAlignment(TextAnchor anchor)
+        {
+            switch (anchor)
+            {
+                case TextAnchor.UpperLeft: return TextAlignmentOptions.TopLeft;
+                case TextAnchor.UpperCenter: return TextAlignmentOptions.Top;
+                case TextAnchor.UpperRight: return TextAlignmentOptions.TopRight;
+                case TextAnchor.MiddleLeft: return TextAlignmentOptions.Left;
+                case TextAnchor.MiddleCenter: return TextAlignmentOptions.Center;
+                case TextAnchor.MiddleRight: return TextAlignmentOptions.Right;
+                case TextAnchor.LowerLeft: return TextAlignmentOptions.BottomLeft;
+                case TextAnchor.LowerCenter: return TextAlignmentOptions.Bottom;
+                case TextAnchor.LowerRight: return TextAlignmentOptions.BottomRight;
+                default: return TextAlignmentOptions.Left;
+            }
         }
 
         private Button NewButton(RectTransform parent, string name, string label)
@@ -675,7 +711,7 @@ namespace BeeKingdom.LivingHiveMenu
             Image bg = NewImage(parent, name, LivingHiveMenuVisuals.ButtonNormalSprite());
             bg.type = Image.Type.Sliced;
             bg.raycastTarget = true;
-            Text text = CreateLabel(bg.rectTransform, label, 18, TextAnchor.MiddleCenter, true);
+            TextMeshProUGUI text = CreateLabel(bg.rectTransform, label, 18, TextAnchor.MiddleCenter, true);
             text.raycastTarget = false;
             FillRect(text.rectTransform);
             Button button = bg.gameObject.AddComponent<Button>();
@@ -726,12 +762,12 @@ namespace BeeKingdom.LivingHiveMenu
             public GameObject Root;
             public Image Panel;
             public Image Icon;
-            public Text Title;
-            public Text Summary;
-            public Text Detail;
-            public Text ActionLabel;
+            public TextMeshProUGUI Title;
+            public TextMeshProUGUI Summary;
+            public TextMeshProUGUI Detail;
+            public TextMeshProUGUI ActionLabel;
             public Button Action;
-            public Text Reason;
+            public TextMeshProUGUI Reason;
             public GameObject ProgressRoot;
             public Image ProgressFill;
         }

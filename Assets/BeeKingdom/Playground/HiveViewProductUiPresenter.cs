@@ -624,6 +624,12 @@ private const string LeftNavigationAssetPath = "Assets/Art/UI/Navigation/closing
 
 		private static float localPreviewCapacityMax = 80000f;
 
+		// Gelee Royale ("Royal Jelly") - premium-currency equivalent (Jeff, 2026-08-19).
+		// Local-preview only, same as every other system in this project before real
+		// server/economy backing exists - starting value is a placeholder, tunable without
+		// any code change once the real economy is designed.
+		private static float localPreviewRoyalJelly = 1250f;
+
         private static readonly Dictionary<string, Action<long>> localRewardWriters = new Dictionary<string, Action<long>>(StringComparer.Ordinal)
         {
             { "honey", amount => localPreviewHoney += amount },
@@ -648,6 +654,13 @@ private const string LeftNavigationAssetPath = "Assets/Art/UI/Navigation/closing
 		private static float localPreviewCollectionFeedbackStartedAt = -10f;
 
 		private static int localPreviewManualCollectionCount;
+
+		// Zero-delay client feedback for the Barrack "tap to claim" animation (see
+		// TryClaimReadyTrainingOnTapForExternalHost / DrawTrainingClaimFeedbackForExternalHost)
+		// - set optimistically the instant the tap fires, same pattern as the manual
+		// production collection feedback above, while RunOfficialDoctrineRecruitmentAction
+		// stays the sole server-authoritative write.
+		private static float barrackClaimFeedbackStartedAt = -10f;
 
 		private static float localPreviewBroodNutrition = 35f;
 
@@ -3316,6 +3329,38 @@ private static string courierToast = string.Empty;
             }
         }
 
+        // Settings ("Parametres") panel — real preferences (reduced motion, economy mode,
+        // sound, music, language), PlayerPrefs-backed, not a placeholder. Replaces
+        // LivingHiveMenuCanvas's old local uGUI placeholder (4 toggles wired to nothing) —
+        // see HiveMapSettingsBootstrap / LivingHiveSettingsBridge for the wiring. Same
+        // EnsureSceneObjects()-free guarantee as Communication above:
+        // DrawMobileComfortSettingsPanel only touches PlayerPrefs-backed preference state.
+        public static bool SettingsOverlayOpenForExternalHost => activeMainMenuId == "Settings";
+
+        public static void OpenSettingsOverlayForExternalHost()
+        {
+            EnsureMobileComfortPreferencesLoaded();
+            activeMainMenuId = "Settings";
+        }
+
+        public static void CloseSettingsOverlayForExternalHost()
+        {
+            activeMainMenuId = string.Empty;
+        }
+
+        public static void ToggleSettingsOverlayForExternalHost()
+        {
+            if (SettingsOverlayOpenForExternalHost) CloseSettingsOverlayForExternalHost();
+            else OpenSettingsOverlayForExternalHost();
+        }
+
+        public static void DrawSettingsOverlayForExternalHost(bool compact)
+        {
+            if (!SettingsOverlayOpenForExternalHost) return;
+            EnsureStyles();
+            DrawMobileComfortSettingsPanel(compact);
+        }
+
         // Alliance headquarters screen (rail's old "Alliance" button in the 10-item
         // landscape rail — HiveMap's building-click trigger reuses it instead). Same
         // EnsureSceneObjects()-free guarantee as Communication above (that method has
@@ -3428,7 +3473,7 @@ private static string courierToast = string.Empty;
         // generic honey/wax/pollen storage ceiling (HiveStockSnapshot's domain, explicitly
         // out of scope this milestone), not population capacity - see
         // DisplayedPopulationCapacity()/DisplayedPopulationUsed() for that instead.
-        public static void GetResourceTotalsForExternalHost(out float honey, out float wax, out float pollen, out float bees, out float capacityUsed, out float capacityMax)
+        public static void GetResourceTotalsForExternalHost(out float honey, out float wax, out float pollen, out float bees, out float capacityUsed, out float capacityMax, out float royalJelly)
         {
             if (OfficialOfflineProductionConfigured())
             {
@@ -3448,6 +3493,7 @@ private static string courierToast = string.Empty;
             bees = OfficialDoctrineRecruitmentConfigured() ? DisplayedPopulationUsed() : localPreviewBees;
             capacityUsed = localPreviewCapacityUsed;
             capacityMax = localPreviewCapacityMax;
+            royalJelly = localPreviewRoyalJelly;
         }
 
         // Population used/capacity, official server value when the doctrine recruitment
@@ -4244,7 +4290,16 @@ private static string courierToast = string.Empty;
         // DrawAmbientHiveBeeTraffic calls - just anchored to an arbitrary caller-supplied
         // rect instead of the reference-art coordinate space) plus the same glow+icon
         // treatment as DrawManualCollectionReadyMarkers when production is ready to collect.
-        public static void DrawManualProductionBeesForExternalHost(Rect buildingRect, string hotspotId, float time)
+        // glowSize is in screen pixels, computed by the caller from the camera's zoom (world
+        // units * pixels-per-world-unit) rather than from this building's own on-screen
+        // rect. Jeff (2026-08-19): the honey/wax/pollen badge was unreadable on the new
+        // HiveMap buildings; sizing it off each building's own rect (originally 26-64px/
+        // 0.34 clamp, then a flat 140px) either made the 3 badges visibly different sizes
+        // (the 3 production buildings sit at different screen depths in the isometric view)
+        // or didn't rescale when the player zoomed the camera in/out. A single zoom-derived
+        // size shared by all 3 callers fixes both: identical badge size across buildings,
+        // and it grows/shrinks with the camera the same way the buildings themselves do.
+        public static void DrawManualProductionBeesForExternalHost(Rect buildingRect, string hotspotId, float time, float glowSize)
         {
             if (buildingRect.width <= 0f || buildingRect.height <= 0f) return;
             EnsureStyles();
@@ -4255,7 +4310,6 @@ private static string courierToast = string.Empty;
                 string icon = ManualProductionIcon(hotspotId);
                 if (!string.IsNullOrWhiteSpace(icon))
                 {
-                    float glowSize = Mathf.Clamp(Mathf.Min(buildingRect.width, buildingRect.height) * 0.34f, 26f, 64f);
                     Rect glowRect = new Rect(buildingRect.center.x - glowSize * 0.5f, buildingRect.center.y - glowSize * 0.5f, glowSize, glowSize);
                     Color previous = GUI.color;
                     float pulse = 1f + Mathf.Sin(time * 4.2f) * 0.055f;
@@ -4267,7 +4321,7 @@ private static string courierToast = string.Empty;
                     GUI.color = new Color(0.55f, 0.82f, 1f, 0.85f);
                     GUI.DrawTexture(pulsedGlow, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
                     GUI.color = Color.white;
-                    float iconSize = glowSize * 0.5f;
+                    float iconSize = glowSize * 0.64f;
                     Rect iconRect = new Rect(glowRect.center.x - iconSize * 0.5f, glowRect.center.y - iconSize * 0.5f, iconSize, iconSize);
                     DrawGameIcon(iconRect, icon, Color.white);
                     GUI.color = previous;
@@ -4301,6 +4355,48 @@ private static string courierToast = string.Empty;
                 Rect beeRect = new Rect(center.x - beeSize * 0.5f, center.y - beeSize * 0.5f, beeSize, beeSize);
                 DrawRuntimeWorkerBee(beeRect, phase, ready ? 0.92f : 0.60f, time, false);
             }
+        }
+
+        // "+N" floating collection feedback (icon rising + tiny bee carrier, fading out) -
+        // exists in the reference/LivingHive draw path as DrawManualCollectionFeedback, but
+        // that function anchors itself to the flat reference-image hotspot rect system
+        // (FindReferenceHotspot/ReferencePoint), which has no equivalent position on
+        // HiveMap's 2.5D buildings. Jeff (2026-08-19): this animation played in LivingHive
+        // but was missing entirely on HiveMap after collecting - this is a parallel
+        // implementation anchored to the building's own on-screen rect instead (the same
+        // ScreenRectFor projection HiveMapProductionBootstrap already uses for everything
+        // else on these 3 buildings), so it doesn't touch the original.
+        public static void DrawManualCollectionFeedbackForExternalHost(Rect buildingRect, string hotspotId)
+        {
+            if (buildingRect.width <= 0f || buildingRect.height <= 0f) return;
+            if (!string.Equals(hotspotId, localPreviewLastCollectedHotspotId, StringComparison.Ordinal)) return;
+            float elapsed = NowForUi() - localPreviewCollectionFeedbackStartedAt;
+            if (elapsed < 0f || elapsed > CollectionFeedbackSeconds) return;
+
+            string icon = ManualProductionIcon(hotspotId);
+            if (string.IsNullOrWhiteSpace(icon)) return;
+            EnsureStyles();
+
+            float t = Mathf.Clamp01(elapsed / CollectionFeedbackSeconds);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            Vector2 start = buildingRect.center;
+            Vector2 end = start + new Vector2(0f, -Mathf.Max(90f, buildingRect.height * 0.6f));
+            Vector2 center = productionReducedMotionForProof ? start + new Vector2(0f, -34f) : Vector2.Lerp(start, end, eased);
+            center.x += productionReducedMotionForProof ? 0f : Mathf.Sin(t * Mathf.PI) * 18f;
+            float alpha = 1f - Mathf.Clamp01((t - 0.58f) / 0.42f);
+            float size = Mathf.Lerp(64f, 38f, eased);
+            Rect iconRect = new Rect(center.x - size * 0.5f, center.y - size * 0.5f, size, size);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+            GUI.DrawTexture(new Rect(iconRect.x - 12f, iconRect.y - 12f, iconRect.width + 24f, iconRect.height + 24f), GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
+            DrawGameIcon(iconRect, icon, new Color(1f, 1f, 1f, alpha));
+            GUI.color = previous;
+
+            float carrierSize = 34f;
+            Vector2 carrierCenter = center + new Vector2(size * 0.58f, size * 0.10f);
+            Rect carrierRect = new Rect(carrierCenter.x - carrierSize * 0.5f, carrierCenter.y - carrierSize * 0.5f, carrierSize, carrierSize);
+            DrawRuntimeWorkerBee(carrierRect, 0.18f, alpha * 0.94f, NowForUi(), false);
         }
 
         public static void Draw(float fps, bool compact)
@@ -20539,6 +20635,7 @@ public static string[] ConnectionTruthForProof()
             HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
             if (model?.ActiveOperation == null || !model.CanClaim()) return false;
             RunOfficialDoctrineRecruitmentAction(model.ActiveOperation.Family);
+            barrackClaimFeedbackStartedAt = NowForUi();
             return true;
         }
 
@@ -20546,25 +20643,164 @@ public static string[] ConnectionTruthForProof()
         // 3D world (caller projects world->screen, same as DrawPrerequisiteGlowForExternalHost/
         // the building-upgrade visual state bootstrap) - visual cue that a tap will claim
         // directly, matching TryClaimReadyTrainingOnTapForExternalHost's behavior.
-        public static void DrawTrainingReadyBadgeForExternalHost(Rect buildingRect, float time)
+        // glowSize is in screen pixels, computed by the caller from the camera's zoom - same
+        // shared sizing approach as DrawManualProductionBeesForExternalHost (see its comment
+        // for why), so the troop badge matches the resource badges' size/zoom behavior
+        // exactly, per Jeff's request (2026-08-19).
+        public static void DrawTrainingReadyBadgeForExternalHost(Rect buildingRect, float time, float glowSize)
         {
             if (!OfficialDoctrineRecruitmentConfigured()) return;
             HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
             if (!IsTrainingReadyToClaimNow(model)) return;
             EnsureStyles();
 
-            float baseSize = Mathf.Clamp(Mathf.Min(buildingRect.width, buildingRect.height) * 0.32f, 30f, 64f);
             float pulse = 1f + Mathf.Sin(time * 3.4f) * 0.08f;
-            float size = baseSize * pulse;
+            float pulsedGlowSize = glowSize * pulse;
+            // Icon is a fraction of the glow, not the full glow size - same 0.64 ratio as
+            // DrawManualProductionBeesForExternalHost's icon/glow split. Missing this was why
+            // the troop badge rendered much larger than the resource badges (Jeff, 2026-08-19).
+            float size = pulsedGlowSize * 0.64f;
             Rect iconRect = new Rect(buildingRect.center.x - size * 0.5f, buildingRect.center.y - size * 0.5f, size, size);
 
             Color previous = GUI.color;
             GUI.color = new Color(1f, 0.92f, 0.58f, 0.78f);
-            Rect glow = new Rect(iconRect.x - size * 0.4f, iconRect.y - size * 0.4f, size * 1.8f, size * 1.8f);
+            Rect glow = new Rect(buildingRect.center.x - pulsedGlowSize * 0.5f, buildingRect.center.y - pulsedGlowSize * 0.5f, pulsedGlowSize, pulsedGlowSize);
             GUI.DrawTexture(glow, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
             GUI.color = Color.white;
-            DrawGameIcon(iconRect, "upgrade-ready", Color.white);
+            DrawGameIcon(iconRect, "troops-ready", Color.white);
             GUI.color = previous;
+        }
+
+        // Real-state query for "is the Barrack currently training" (running, not yet ready
+        // to claim) - same condition DrawTrainingInProgressAnimationForExternalHost already
+        // gates on, exposed separately so a bootstrap can drive a building-silhouette tint
+        // (BuildingSelectionHighlight) without duplicating the model lookup. Mirrors
+        // ActiveOfficialUpgradeHotspotIdForExternalHost's role for building upgrades.
+        public static bool IsBarrackTrainingInProgressForExternalHost()
+        {
+            if (!OfficialDoctrineRecruitmentConfigured()) return false;
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+            return model?.ActiveOperation != null && !IsTrainingReadyToClaimNow(model);
+        }
+
+        // Restrained blue/gold tint the Barrack breathes while training is running -
+        // deliberately calmer than the gold "selected" or blue "upgrading" tints (lower
+        // peak alpha, slower pulse) so it reads as ambient activity, not a UI alert.
+        private static readonly Color TrainingTintColor = new Color(0.55f, 0.72f, 0.95f, 1f);
+
+        public static Color TrainingHighlightTintColor
+        {
+            get { return TrainingTintColor; }
+        }
+
+        public static float TrainingHighlightPulseAlpha(float time)
+        {
+            if (productionReducedMotionForProof) return 0.24f;
+            return 0.20f + (0.5f + 0.5f * Mathf.Sin(time * 1.05f)) * 0.16f; // breathes between ~0.20 and ~0.36
+        }
+
+        // Ambient "training in progress" animation on the Barrack itself - worker bees
+        // circling the training area, a slower bee occasionally passing through the main
+        // entrance, and a restrained glow at the entrance point. Same DrawRuntimeWorkerBee/
+        // GetPremiumTexture primitives as the idle/ready swirl on the 3 production buildings
+        // (DrawManualProductionBeesForExternalHost) and the ready badge - no new art or
+        // particle systems, just the existing IMGUI toolkit reused. Jeff (2026-08-19): wanted
+        // visible-but-subtle feedback that the Barrack is actively working while a troop
+        // trains, distinct from (and not overlapping with) the ready-to-claim badge.
+        public static void DrawTrainingInProgressAnimationForExternalHost(Rect buildingRect, float time)
+        {
+            if (buildingRect.width <= 0f || buildingRect.height <= 0f) return;
+            if (!IsBarrackTrainingInProgressForExternalHost()) return;
+            EnsureStyles();
+
+            // Entrance point: bottom-center of the building's own rect - the buildings are
+            // single ground-anchored quads (BuildingRuntimeViewBootstrap contact point), so
+            // the bottom edge is where foot traffic visually reads as "coming and going."
+            Vector2 entrance = new Vector2(buildingRect.center.x, buildingRect.yMax - buildingRect.height * 0.08f);
+
+            float glowSize = Mathf.Clamp(buildingRect.width * 0.34f, 26f, 90f);
+            float glowPulse = productionReducedMotionForProof ? 1f : 1f + Mathf.Sin(time * 1.6f) * 0.10f;
+            Rect glowRect = new Rect(entrance.x - glowSize * glowPulse * 0.5f, entrance.y - glowSize * glowPulse * 0.5f, glowSize * glowPulse, glowSize * glowPulse);
+            Color previousColor = GUI.color;
+            // Restrained - roughly half the alpha of the "ready" badge glow, blue/gold blend
+            // instead of pure amber so it never gets mistaken for "tap to collect."
+            GUI.color = new Color(0.72f, 0.78f, 0.98f, 0.34f);
+            GUI.DrawTexture(glowRect, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
+            GUI.color = previousColor;
+
+            float radiusX = buildingRect.width * 0.50f;
+            float radiusY = buildingRect.height * 0.22f;
+            float beeSize = Mathf.Clamp(buildingRect.width * 0.16f, 18f, 46f);
+            int beeCount = mobileEconomyMode ? 2 : 3;
+            for (int i = 0; i < beeCount; i++)
+            {
+                float phase = i * (Mathf.PI * 2f / beeCount);
+                float t = time * 1.15f + phase;
+                Vector2 center = new Vector2(
+                    buildingRect.center.x + Mathf.Cos(t) * radiusX,
+                    buildingRect.y + buildingRect.height * 0.15f + Mathf.Sin(t) * radiusY);
+                Rect beeRect = new Rect(center.x - beeSize * 0.5f, center.y - beeSize * 0.5f, beeSize, beeSize);
+                DrawRuntimeWorkerBee(beeRect, phase, 0.80f, time, false);
+            }
+
+            DrawTrainingEntranceBeePass(buildingRect, entrance, time);
+        }
+
+        // One bee making an occasional pass through the entrance (outside the rect -> the
+        // entrance point -> back out), separate from the training-area orbit above - reads
+        // as "someone just went in/out" rather than constant circling. Active for roughly a
+        // third of a 6-second cycle so it stays occasional, not continuous; skipped entirely
+        // under reduced motion (same flag DrawTrainingClaimFeedbackForExternalHost respects).
+        private static void DrawTrainingEntranceBeePass(Rect buildingRect, Vector2 entrance, float time)
+        {
+            if (productionReducedMotionForProof) return;
+
+            const float cycle = 6f;
+            float cycleT = Mathf.Repeat(time, cycle) / cycle;
+            const float activeFraction = 0.34f;
+            if (cycleT >= activeFraction) return;
+
+            float passT = cycleT / activeFraction; // 0..1 across the visible portion of the cycle
+            float eased = Mathf.Sin(passT * Mathf.PI); // 0 -> 1 -> 0, so it eases in and back out
+            Vector2 outside = entrance + new Vector2(buildingRect.width * 0.62f, buildingRect.height * 0.05f);
+            Vector2 pos = Vector2.Lerp(outside, entrance, passT);
+
+            float beeSize = Mathf.Clamp(buildingRect.width * 0.13f, 14f, 36f);
+            Rect beeRect = new Rect(pos.x - beeSize * 0.5f, pos.y - beeSize * 0.5f, beeSize, beeSize);
+            DrawRuntimeWorkerBee(beeRect, 0.4f, eased * 0.75f, time, false);
+        }
+
+        // "+N" floating claim feedback (icon rising + tiny bee carrier, fading out) for the
+        // Barrack, mirroring DrawManualCollectionFeedbackForExternalHost - see
+        // barrackClaimFeedbackStartedAt for why this is set optimistically on tap rather than
+        // waiting on the server response.
+        public static void DrawTrainingClaimFeedbackForExternalHost(Rect buildingRect)
+        {
+            if (buildingRect.width <= 0f || buildingRect.height <= 0f) return;
+            float elapsed = NowForUi() - barrackClaimFeedbackStartedAt;
+            if (elapsed < 0f || elapsed > CollectionFeedbackSeconds) return;
+            EnsureStyles();
+
+            float t = Mathf.Clamp01(elapsed / CollectionFeedbackSeconds);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            Vector2 start = buildingRect.center;
+            Vector2 end = start + new Vector2(0f, -Mathf.Max(90f, buildingRect.height * 0.6f));
+            Vector2 center = productionReducedMotionForProof ? start + new Vector2(0f, -34f) : Vector2.Lerp(start, end, eased);
+            center.x += productionReducedMotionForProof ? 0f : Mathf.Sin(t * Mathf.PI) * 18f;
+            float alpha = 1f - Mathf.Clamp01((t - 0.58f) / 0.42f);
+            float size = Mathf.Lerp(64f, 38f, eased);
+            Rect iconRect = new Rect(center.x - size * 0.5f, center.y - size * 0.5f, size, size);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+            GUI.DrawTexture(new Rect(iconRect.x - 12f, iconRect.y - 12f, iconRect.width + 24f, iconRect.height + 24f), GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
+            DrawGameIcon(iconRect, "troops-ready", new Color(1f, 1f, 1f, alpha));
+            GUI.color = previous;
+
+            float carrierSize = 34f;
+            Vector2 carrierCenter = center + new Vector2(size * 0.58f, size * 0.10f);
+            Rect carrierRect = new Rect(carrierCenter.x - carrierSize * 0.5f, carrierCenter.y - carrierSize * 0.5f, carrierSize, carrierSize);
+            DrawRuntimeWorkerBee(carrierRect, 0.18f, alpha * 0.94f, NowForUi(), false);
         }
 
         private static bool OfficialResearchConfigured()

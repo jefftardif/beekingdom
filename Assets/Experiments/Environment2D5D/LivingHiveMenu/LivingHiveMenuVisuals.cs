@@ -61,6 +61,49 @@ namespace BeeKingdom.LivingHiveMenu
         public static Sprite BadgeSprite(bool urgent) =>
             GetSimpleSprite(urgent ? "badge-urgent" : "badge-info", () => CreateBadgeTexture(urgent));
 
+        // Neutral white radial falloff, unlike CreateSelectedGlowTexture/CreateSoftShadowTexture
+        // above which bake fixed gold/cyan/black colors into the texture itself - this one is
+        // meant to be tinted via Image.color (same "draw white, tint per-caller" contract as the
+        // monolith's own IMGUI "selected-glow" texture, see GetPremiumTexture usage in
+        // HiveViewProductUiPresenter). Used behind the header's resource/queen icons so each one
+        // gets its own accent-colored halo instead of one fixed color for all of them.
+        public static Sprite SoftRadialGlowSprite() => GetSimpleSprite("soft-radial-glow", CreateSoftRadialGlowTexture);
+
+        private static Texture2D CreateSoftRadialGlowTexture()
+        {
+            const int size = 128;
+            Texture2D tex = NewTransparentTexture(size, size);
+            const float center = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x - center) / center;
+                    float dy = (y - center) / center;
+                    float d = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+                    float alpha = Mathf.Clamp01(Mathf.Pow(1f - d, 2.2f));
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        // Ids resolved to real art (Resources.Load succeeded) rather than the procedural
+        // hex-badge fallback - the header resource chips use this to skip their accent tint
+        // (ResourceAccent) on real painted art, same distinction the monolith makes via its
+        // own OfficialIconKeys/PremiumIconKeys (see GetIconTexture/DrawGameIcon).
+        private static readonly HashSet<string> RealArtIconKeys = new HashSet<string>();
+
+        public static bool IconIsRealArt(string iconId)
+        {
+            string key = string.IsNullOrEmpty(iconId) ? "future" : iconId;
+            // Force the lookup (and RealArtIconKeys population) if this id hasn't been
+            // resolved yet this session.
+            IconSprite(iconId);
+            return RealArtIconKeys.Contains(key);
+        }
+
         public static Sprite IconSprite(string iconId)
         {
             if (string.Equals(iconId, "world", StringComparison.OrdinalIgnoreCase) ||
@@ -71,7 +114,35 @@ namespace BeeKingdom.LivingHiveMenu
             }
 
             string key = "icon-" + (string.IsNullOrEmpty(iconId) ? "future" : iconId);
-            return GetSimpleSprite(key, () => CreateIconTexture(iconId));
+            return GetSimpleSprite(key, () => LoadOrCreateIconTexture(iconId));
+        }
+
+        // Scoped to the header's resource ids only (not the rail's nav icons - "quests",
+        // "hive-nav", etc. - which also happen to have same-named files in PremiumBeeIcons
+        // but were never in scope for this fix and already look correct procedural).
+        private static readonly HashSet<string> ResourceArtIconIds = new HashSet<string>
+        {
+            "honey", "wax", "pollen", "bees", "capacity", "royalJelly"
+        };
+
+        // Same real-art-first, procedural-fallback strategy as the monolith's own
+        // GetIconTexture (HiveViewProductUiPresenter.cs) - "PremiumBeeIcons" is a shared
+        // Resources folder (Assets/BeeKingdom/Playground/Resources/PremiumBeeIcons), so it
+        // loads the exact same honey/wax/pollen/bees/capacity art Jeff paints there,
+        // regardless of which assembly calls Resources.Load.
+        private static Texture2D LoadOrCreateIconTexture(string iconId)
+        {
+            string rawKey = string.IsNullOrEmpty(iconId) ? "future" : iconId;
+            if (ResourceArtIconIds.Contains(rawKey))
+            {
+                Texture2D texture = Resources.Load<Texture2D>("PremiumBeeIcons/" + rawKey);
+                if (texture != null)
+                {
+                    RealArtIconKeys.Add(rawKey);
+                    return texture;
+                }
+            }
+            return CreateIconTexture(iconId);
         }
 
         private static Texture2D LoadWorldMapIcon()
@@ -456,6 +527,15 @@ namespace BeeKingdom.LivingHiveMenu
                     FillRect(tex, 108, 148, 40, 10, blue);
                     DrawLine(tex, 104, 92, 128, 62, light, 6);
                     DrawLine(tex, 152, 92, 128, 62, light, 6);
+                    break;
+                case "royalJelly":
+                    // Pot de gelee royale (repli procedural avant le vrai artwork peint) :
+                    // bol dore + goutte credeuse + accent violet, meme langage que "honey"
+                    // mais teinte distincte (monnaie premium, pas une ressource en vrac).
+                    FillCircle(tex, 128, 150, 46, new Color(0.62f, 0.42f, 0.85f, 1f));
+                    StrokeCircle(tex, 128, 150, 52, gold, 8);
+                    FillCircle(tex, 128, 118, 30, new Color(0.98f, 0.92f, 0.70f, 1f));
+                    StrokeCircle(tex, 128, 118, 34, light, 5);
                     break;
                 case "shop":
                     // Vitrine / boutique : écrin hexagonal + enseigne, accents assortis.

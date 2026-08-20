@@ -110,6 +110,18 @@ namespace BeeKingdom.Buildings.Interaction
             return _material;
         }
 
+        // Cheap per-frame alpha pulse on an already-shown overlay: just recolors the cached
+        // material, no mesh/renderer rebuild - lets a caller (e.g. the Barrack training
+        // visual state) breathe the tint in and out every frame without paying Show()'s
+        // silhouette-clone cost each time.
+        public void SetAlpha(float alpha)
+        {
+            if (_material == null) return;
+            Color c = TintColor;
+            c.a = alpha;
+            _material.color = c;
+        }
+
         public void Hide()
         {
             if (_overlay != null)

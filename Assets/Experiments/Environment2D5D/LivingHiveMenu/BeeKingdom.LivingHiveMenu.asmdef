@@ -6,7 +6,8 @@
         "BeeKingdom.Buildings",
         "BeeKingdom.Localization",
         "BeeKingdom.Core",
-        "BeeKingdom.LocalPreviewData"
+        "BeeKingdom.LocalPreviewData",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

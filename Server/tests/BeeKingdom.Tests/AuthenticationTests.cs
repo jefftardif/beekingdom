@@ -50,6 +50,48 @@ public sealed class AuthenticationTests
     }
 
     [Test]
+    public void NewAccountDefaultsToPlayerRole()
+    {
+        IAccountCredentialStore accounts = CreateProvider().GetRequiredService<IAccountCredentialStore>();
+        AuthenticationAccount account = accounts.CreateEmailAccount("drone@bee.test", "secret");
+
+        Assert.That(account.Role, Is.EqualTo(AccountRole.Player));
+    }
+
+    [Test]
+    public void SaveRolePromotesAndDemotesAccount()
+    {
+        IAccountCredentialStore accounts = CreateProvider().GetRequiredService<IAccountCredentialStore>();
+        AuthenticationAccount account = accounts.CreateEmailAccount("sentinel@bee.test", "secret");
+
+        accounts.Save(account with { Role = AccountRole.Moderator });
+        accounts.TryGetByAccountId(account.AccountId, out AuthenticationAccount promoted);
+
+        accounts.Save(promoted with { Role = AccountRole.Player });
+        accounts.TryGetByAccountId(account.AccountId, out AuthenticationAccount demoted);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(promoted.Role, Is.EqualTo(AccountRole.Moderator));
+            Assert.That(demoted.Role, Is.EqualTo(AccountRole.Player));
+        });
+    }
+
+    [Test]
+    public void SearchByDisplayNameFindsMatchingAccountsOnly()
+    {
+        IAccountCredentialStore accounts = CreateProvider().GetRequiredService<IAccountCredentialStore>();
+        AuthenticationAccount scout = accounts.CreateEmailAccount("scout-role@bee.test", "secret");
+        accounts.Save(scout with { DisplayName = "Scarlet Scout" });
+        AuthenticationAccount guard = accounts.CreateEmailAccount("guard-role@bee.test", "secret");
+        accounts.Save(guard with { DisplayName = "Golden Guard" });
+
+        IReadOnlyList<AuthenticationAccount> results = accounts.SearchByDisplayName("scout");
+
+        Assert.That(results.Select(a => a.AccountId), Is.EquivalentTo(new[] { scout.AccountId }));
+    }
+
+    [Test]
     public async Task RefreshTokenRotatesRefreshToken()
     {
         ServiceProvider provider = CreateProvider();

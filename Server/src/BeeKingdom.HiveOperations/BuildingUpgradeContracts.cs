@@ -8,7 +8,12 @@ public sealed record BuildingUpgradeCatalogEntry(string BuildingKey, int FromLev
 public sealed class BuildingUpgradeOptions
 {
     public const string SectionName = "BuildingUpgrades";
-    private static readonly HashSet<string> KnownBuildingKeys = new(StringComparer.Ordinal) { "honey_storage", "wax_workshop", "warehouse_cells", "administration_core" };
+    private static readonly HashSet<string> KnownBuildingKeys = new(StringComparer.Ordinal)
+    {
+        "nursery_cluster", "honey_storage", "guard_post", "defense_growth", "genetics_garden",
+        "research_node", "warehouse_cells", "wax_workshop", "infirmary_grove", "academy_canopy",
+        "hive_bank", "administration_core", "alliance_future_hall", "archives_honeyfall"
+    };
     private static readonly HashSet<string> KnownResourceKeys = new(StringComparer.Ordinal) { "honey", "wax", "pollen" };
 
     public bool Enabled { get; set; }

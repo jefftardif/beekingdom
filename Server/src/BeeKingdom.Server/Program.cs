@@ -1082,6 +1082,22 @@ app.MapPost("/admin/v1/players/{playerId:guid}/hives/{hiveId:guid}/combat-patrol
     catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
 });
 
+// Bootstrap-only: grants/revokes the Admin (and, if ever needed directly, Moderator) role
+// on an account. Shared-secret gated like the rest of this admin surface - deliberately NOT
+// reachable from inside the game. Once an account holds Admin, it can grant/revoke
+// Moderator to other players itself via the session-authenticated /accounts/v1/role/...
+// endpoints below, so this endpoint should only be called rarely (e.g. to make the very
+// first Admin accounts).
+app.MapPost("/admin/v1/accounts/{accountId:guid}/role", (HttpContext context, Guid accountId, IOptions<AdminSupportOptions> adminOptions, IAccountCredentialStore credentials, AdminSetRoleHttpRequest request) =>
+{
+    IResult? authorization = AuthorizeAdminSupport(context, adminOptions.Value);
+    if (authorization is not null) return authorization;
+    if (request is null || string.IsNullOrWhiteSpace(request.Reason) || !Enum.IsDefined(request.Role)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    if (!credentials.TryGetByAccountId(accountId, out AuthenticationAccount account)) return GameError(404, "game.not_found", "game.error.not_found");
+    credentials.Save(account with { Role = request.Role });
+    return Results.Ok(new AdminPlayerLookupResponse(account.PlayerId.Value, account.AccountId, account.Email, account.State.ToString()));
+});
+
 app.MapPost("/game/v1/hives/{hiveId}/strategic-path", async (HttpContext context, string hiveId, AuthenticationManager authentication, StrategicPathService strategic, IOptions<StrategicPathOptions> options, StrategicPathHttpRequest request, CancellationToken ct) =>
 {
     if (!options.Value.Enabled) return GameError(StatusCodes.Status503ServiceUnavailable, "game.unavailable", "game.error.unavailable");
@@ -1731,6 +1747,40 @@ app.MapPost("/accounts/{accountId:guid}/profile", (AccountManager accounts, Guid
 app.MapPost("/accounts/{accountId:guid}/preferences", (AccountManager accounts, Guid accountId, AccountPreferences preferences) =>
 {
     return Results.Ok(accounts.UpdatePreferences(accountId, preferences));
+});
+
+// In-game moderator management: reachable from the client (Jeff's requirement is that
+// naming moderators happens "à même le jeu", not through the external /admin/ui tool).
+// Both endpoints resolve the CALLER's own role from their authenticated AccountId
+// (TokenValidationResult.AccountId, the same identity AuthenticateGameRequest uses
+// everywhere else) and require Role == Admin server-side - never from client-supplied
+// input. This is the opposite of ChatContracts.RequesterAllianceRole/
+// LocalChatAudienceResolver, which trusts a client-supplied role string for chat audience
+// resolution; that field must never be reused as an authorization signal for anything
+// real, which is exactly why role authorization here is re-derived from the account
+// record on every call instead. Responses only ever expose AccountRoleLookupResult, never
+// the raw AuthenticationAccount, so PasswordHash can never leak through this surface.
+app.MapGet("/accounts/v1/role/lookup", (HttpContext context, string query, AuthenticationManager authentication, IAccountCredentialStore credentials) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!credentials.TryGetByAccountId(auth.AccountId, out AuthenticationAccount caller) || caller.Role != AccountRole.Admin) return GameError(403, "game.forbidden", "game.error.forbidden");
+    if (string.IsNullOrWhiteSpace(query) || query.Length > 128) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    var results = credentials.SearchByDisplayName(query).Select(a => new AccountRoleLookupResult(a.AccountId, a.DisplayName, a.Email, a.Role)).ToArray();
+    return Results.Ok(results);
+});
+
+app.MapPost("/accounts/v1/role/assign", (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, AccountRoleAssignHttpRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!credentials.TryGetByAccountId(auth.AccountId, out AuthenticationAccount caller) || caller.Role != AccountRole.Admin) return GameError(403, "game.forbidden", "game.error.forbidden");
+    // Admin can only be granted through the bootstrap admin endpoint, never from here -
+    // otherwise any Admin could mint more Admins from inside the game.
+    if (request is null || request.Role is not (AccountRole.Player or AccountRole.Moderator)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    if (!credentials.TryGetByAccountId(request.TargetAccountId, out AuthenticationAccount target)) return GameError(404, "game.not_found", "game.error.not_found");
+    credentials.Save(target with { Role = request.Role });
+    return Results.Ok(new AccountRoleLookupResult(target.AccountId, target.DisplayName, target.Email, request.Role));
 });
 
 app.MapPost("/gateway/connections", (GatewayManager gateway, GatewayConnectionRequest request) =>
@@ -2670,6 +2720,9 @@ public sealed record AdminPlayerHivesResponse(IReadOnlyList<Guid> HiveIds);
 public sealed record AdminResourceAdjustHttpRequest(string Resource, long Delta, string Reason, long ExpectedRevision);
 public sealed record AdminRosterAdjustHttpRequest(string Family, long Delta, string Reason, long ExpectedRevision);
 public sealed record AdminGrantSlotHttpRequest(bool Premium, string Reason, long ExpectedRevision);
+public sealed record AdminSetRoleHttpRequest(AccountRole Role, string Reason);
+public sealed record AccountRoleAssignHttpRequest(Guid TargetAccountId, AccountRole Role);
+public sealed record AccountRoleLookupResult(Guid AccountId, string? DisplayName, string Email, AccountRole Role);
 public sealed record AdminGrantRewardHttpRequest(string RewardKey, string Source, string ResourceKey, long Amount, string Reason, long ExpectedRevision, string IdempotencyKey, string? NotificationKey = null);
 public sealed record CombatPatrolPreviewHttpRequest(long Guardians, long Wingrunners, long Darters);
 public sealed record CombatPatrolLaunchHttpRequest(int Tier, long Guardians, long Wingrunners, long Darters, long ExpectedRevision, string IdempotencyKey);

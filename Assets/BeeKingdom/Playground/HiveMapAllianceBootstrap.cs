@@ -68,6 +68,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             HiveViewProductUiPresenter.DrawAllianceOverlayForExternalHost(Screen.width < 900);
+            HiveViewProductUiPresenter.DrawAllianceUpgradeButtonForExternalHost();
         }
     }
 }

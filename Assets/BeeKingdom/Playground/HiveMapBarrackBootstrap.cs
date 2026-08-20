@@ -20,6 +20,8 @@ namespace BeeKingdom.Playground
         private const string RuntimeRootName = "HiveMap Barrack Runtime";
 
         private BuildingInteractionController subscribedController;
+        private BuildingSelectionHighlight trainingHighlight;
+        private bool trainingHighlightActive;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -45,16 +47,56 @@ namespace BeeKingdom.Playground
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
             HiveViewProductUiPresenter.TickBarrackTrainingForExternalHost();
 
-            if (subscribedController != null) return;
-            BuildingInteractionController controller = FindFirstObjectByType<BuildingInteractionController>();
-            if (controller == null) return;
-            controller.Selection.BuildingClicked += OnBuildingClicked;
-            subscribedController = controller;
+            if (subscribedController == null)
+            {
+                BuildingInteractionController controller = FindFirstObjectByType<BuildingInteractionController>();
+                if (controller == null) return;
+                controller.Selection.BuildingClicked += OnBuildingClicked;
+                subscribedController = controller;
+            }
+
+            UpdateTrainingHighlight();
         }
 
         private void OnDestroy()
         {
             if (subscribedController != null) subscribedController.Selection.BuildingClicked -= OnBuildingClicked;
+        }
+
+        // Drives BuildingSelectionHighlight's restrained blue/gold tint on the Barrack
+        // itself while training is running - a separate overlay instance parented directly
+        // to the building (same technique/reasoning as
+        // HiveMapBuildingUpgradeVisualStateBootstrap's "upgrading" tint), so it stays lit
+        // independently of whatever the player currently has selected and disappears the
+        // instant the real server-backed training state says there's nothing running -
+        // never a locally-invented timer.
+        private void UpdateTrainingHighlight()
+        {
+            bool shouldBeActive = HiveViewProductUiPresenter.IsBarrackTrainingInProgressForExternalHost();
+            if (shouldBeActive != trainingHighlightActive)
+            {
+                trainingHighlightActive = shouldBeActive;
+                if (!shouldBeActive)
+                {
+                    if (trainingHighlight != null) trainingHighlight.Hide();
+                }
+                else if (subscribedController != null
+                    && BuildingCatalog.TryGetByLegacyKey(BuildingLegacyKeys.GuardPost, out BuildingDefinition definition))
+                {
+                    GameObject target = subscribedController.Registry.GetGameObjectByBuildingType(BuildingTypes.Barrack);
+                    if (target != null)
+                    {
+                        if (trainingHighlight == null) trainingHighlight = target.AddComponent<BuildingSelectionHighlight>();
+                        trainingHighlight.TintColor = HiveViewProductUiPresenter.TrainingHighlightTintColor;
+                        trainingHighlight.Show(definition, target);
+                    }
+                }
+            }
+
+            if (trainingHighlightActive && trainingHighlight != null)
+            {
+                trainingHighlight.SetAlpha(HiveViewProductUiPresenter.TrainingHighlightPulseAlpha(Time.unscaledTime));
+            }
         }
 
         private void OnBuildingClicked(BuildingDefinition building)
@@ -79,14 +121,31 @@ namespace BeeKingdom.Playground
             // closed - only meaningful when the player hasn't already opened the window
             // (which shows its own status), and only once the building's runtime GameObject
             // and camera are actually available.
-            if (!HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost && subscribedController != null)
+            if (subscribedController != null)
             {
                 Camera camera = Camera.main;
                 GameObject go = subscribedController.Registry.GetGameObjectByBuildingType(BuildingTypes.Barrack);
                 if (camera != null && go != null)
                 {
                     Rect rect = ScreenRectFor(go, camera);
-                    if (rect.width > 0f) HiveViewProductUiPresenter.DrawTrainingReadyBadgeForExternalHost(rect, Time.unscaledTime);
+                    if (rect.width > 0f)
+                    {
+                        // Same zoom-derived shared size as HiveMapProductionBootstrap's badges
+                        // (see its comment) - identical formula/world size so the troop badge
+                        // matches the resource badges exactly, per Jeff's request (2026-08-19).
+                        const float BadgeWorldSize = 10.8f;
+                        float pixelsPerWorldUnit = camera.orthographic && camera.orthographicSize > 0.001f
+                            ? Screen.height / (2f * camera.orthographicSize)
+                            : 11.76f;
+                        float badgeGlowSize = Mathf.Clamp(BadgeWorldSize * pixelsPerWorldUnit, 40f, 220f);
+
+                        if (!HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost)
+                        {
+                            HiveViewProductUiPresenter.DrawTrainingInProgressAnimationForExternalHost(rect, Time.unscaledTime);
+                            HiveViewProductUiPresenter.DrawTrainingReadyBadgeForExternalHost(rect, Time.unscaledTime, badgeGlowSize);
+                        }
+                        HiveViewProductUiPresenter.DrawTrainingClaimFeedbackForExternalHost(rect);
+                    }
                 }
             }
         }

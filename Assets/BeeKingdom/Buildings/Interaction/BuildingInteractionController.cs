@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Buildings.Interaction
@@ -82,6 +83,13 @@ namespace BeeKingdom.Buildings.Interaction
             if (!_enabled) return;
             Camera camera = EffectiveCamera();
             if (camera == null || !Input.GetMouseButtonDown(0)) return;
+
+            // uGUI overlays (the LivingHiveMenu rail/header, the Research full-screen
+            // window, ...) draw on their own Canvas/GraphicRaycaster, independent of the
+            // IMGUI-overlay boolean flags HiveMapOverlayInputGateBootstrap tracks - without
+            // this check, a click meant for one of those uGUI panels also reaches the 3D
+            // building underneath since this raycast never consulted the EventSystem at all.
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             Ray ray = camera.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;

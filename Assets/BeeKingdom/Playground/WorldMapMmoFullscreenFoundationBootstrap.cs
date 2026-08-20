@@ -95,6 +95,7 @@ namespace BeeKingdom.Playground
         private bool mapFilterResources = true;
         private bool mapFilterThreats = true;
         private bool mapFilterBearDen = true;
+        private bool mapFilterBiomeOverlay = true;
         private string mapToolsStatus = "Lecture carte prete";
         private bool spawnInspectorCollapsed = true;
         private bool spawnDiagnosticOverlayEnabled;
@@ -228,6 +229,7 @@ namespace BeeKingdom.Playground
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
             DrawActiveChunks();
+            DrawBiomeOverlay();
             if (debugChunkOverlay) DrawChunkDebugOverlay();
             if (mapFilterBearDen) DrawBearDenLandmark();
             DrawAerialFlights();
@@ -235,6 +237,7 @@ namespace BeeKingdom.Playground
             if (mapFilterThreats) DrawBestiary();
             if (mapFilterHives) DrawHives();
             DrawPointsOfInterest();
+            DrawRegionLabels();
             if (localLab != null) localLab.DrawWorld(WorldToScreen, animatedTime);
             // Ambiance meteo (demande de Jeff, 2026-08-02, "la meteo influence legerement
             // l'ambiance") : teinte l'ensemble du monde deja dessine (terrain + entites) - dessinee
@@ -3581,20 +3584,67 @@ namespace BeeKingdom.Playground
             int tier = 1 + Hash(data.Chunk.x, data.Chunk.y, 161) % 7;
             int variant = 1 + Hash(data.Chunk.x, data.Chunk.y, 167) % 2;
             string id = "beast_t" + tier.ToString(CultureInfo.InvariantCulture) + "_v" + variant.ToString(CultureInfo.InvariantCulture) + "_" + data.Chunk.x.ToString(CultureInfo.InvariantCulture) + "_" + data.Chunk.y.ToString(CultureInfo.InvariantCulture);
-            data.Bestiary.Add(new WorldBestiaryNode(id, BestiaryLabel(tier, variant), tier, variant, position, BestiaryRole(tier)));
+            WorldBiome spawnBiome = WorldBiomeCatalog.BiomeForChunk(data.Chunk.x, data.Chunk.y);
+            data.Bestiary.Add(new WorldBestiaryNode(id, BestiaryLabel(tier, variant, spawnBiome), tier, variant, position, BestiaryRole(tier)));
         }
 
-        // Catalogue des premiers Points d'Interet (demande de Jeff, 2026-08-01) : des lieux qui
-        // racontent quelque chose sans expliquer de mecanique - le joueur doit vouloir s'en
-        // souvenir, pas les "utiliser". Chaque entree prepare un futur systeme different
-        // (alliance/diplomatie, occupation, evenement, boss) sans en construire aucun ici.
-        private static readonly (string Kind, string Label, string Description)[] PointOfInterestCatalog =
+        // Catalogue des Points d'Interet (demande de Jeff, 2026-08-01, complete par la Bible
+        // du Monde le 2026-08-18) : des lieux qui racontent quelque chose sans expliquer de
+        // mecanique - le joueur doit vouloir s'en souvenir, pas les "utiliser". Chaque
+        // entree prepare un futur systeme different (alliance/diplomatie, occupation,
+        // evenement, boss) sans en construire aucun ici. Description/Histoire sont une
+        // transcription des lignes "Description carte"/"Histoire" de
+        // BIBLE/09_World/POINTS_OF_INTEREST_BIBLE.md pour les 5 POI principaux ; les 5 POI
+        // additionnels n'ont dans la bible qu'une description courte (pas de paragraphe
+        // d'histoire separe), donc Histoire reste vide pour ceux-la plutot que d'en inventer une.
+        // BossTeaser = transcription of BIBLE/09_World/BOSS_FOUNDATION_BIBLE.md's "boss
+        // possible" line for this POI (main 5) or the POI bible's own "Promesse future"
+        // line when it names a boss (2 of the additional 5 - Mare aux Reflets/"boss
+        // humide" and Pierre Chaude/"boss de chaleur" cross-reference to Crapaud Royal and
+        // Scorpion Geant in the Boss bible). Left empty where neither source names one
+        // (Souche-Cathedrale, Champ des Premieres Fleurs, Branche des Veilleurs) rather
+        // than inventing one - purely a flavor line, never a real encounter (see the Boss
+        // bible's own rule: "un boss doit avoir un lieu avant d'avoir des statistiques" -
+        // this just reserves the lieu, no stats/mechanic follow).
+        private static readonly (string Kind, string Label, string Family, WorldBiome PrimaryBiome, string Description, string History, string BossTeaser)[] PointOfInterestCatalog =
         {
-            ("ancient_hive", "Ruche ancienne", "Une ruche abandonnee depuis des generations. Ses murs de cire durcie n'ont plus bourdonne depuis longtemps - certains disent qu'une autre colonie pourrait un jour vouloir s'y installer."),
-            ("fossil_nest", "Nid fossilise", "Les restes petrifies d'un nid disparu. Les eclaireuses le contournent toujours, comme si quelque chose y dormait encore."),
-            ("blooming_grove", "Bosquet legendaire", "Un bosquet ou les fleurs ne fanent jamais tout a fait. Aucune colonie n'a jamais explique pourquoi."),
-            ("sunken_hive", "Ruche naufragee", "Une ruche a moitie engloutie, oubliee par le temps. Son interieur reste un mystere que personne n'a encore perce."),
-            ("forgotten_sanctuary", "Sanctuaire oublie", "Un lieu que meme les cartes les plus anciennes ne nomment plus - mais que toutes les colonies evitent de deranger.")
+            ("ancient_hive", "Ruche ancienne", "Heritage apicole", WorldBiome.ForetClaire,
+                "Une ruche morte ne signifie pas un royaume oublie. La cire conserve encore la forme des gestes qui l'ont batie.",
+                "Cette ruche appartenait a une colonie disparue avant la saison actuelle. Ses galeries ne sont pas detruites par la guerre, mais usees par le temps.",
+                "On raconte qu'un Titan de Propolis ou une Reine Guepe Antique pourrait un jour revendiquer ces ruines."),
+            ("fossil_nest", "Nid fossilise", "Prehistoire des insectes", WorldBiome.TerresSeches,
+                "Les parois gardent l'empreinte d'un peuple qui savait deja batir avant que les ruches du joueur n'existent.",
+                "Avant les Frelons Noirs actuels, d'autres peuples ailes ont construit ici. Le nid a ete enseveli par une saison de boue puis durci par le temps.",
+                "Une Reine Guepe Antique pourrait s'y eveiller, si une invasion ou une floraison anormale la derangeait."),
+            ("blooming_grove", "Bosquet legendaire", "Sanctuaire vegetal", WorldBiome.PrairieFleurie,
+                "Certaines fleurs ne poussent pas parce que le sol est fertile. Elles poussent parce que le monde se souvient d'un printemps parfait.",
+                "Le bosquet fleurit selon un rythme que les abeilles ne comprennent pas encore. Les fleurs y semblent plus anciennes, moins cultivees.",
+                "Le Gardien du Chene ou une Mante Orchidee legendaire y veillerait, dit-on."),
+            ("sunken_hive", "Ruche naufragee", "Catastrophe et reconstruction", WorldBiome.BergesEtMares,
+                "L'eau a disperse la ruche, mais pas son histoire. Chaque fragment de cire semble chercher les autres.",
+                "Une colonie a ete arrachee par une crue ou une tempete. La ruche n'est pas entiere ; elle est dispersee.",
+                "Un Crapaud Royal aurait pris possession de la zone humide apres la catastrophe."),
+            ("forgotten_sanctuary", "Sanctuaire oublie", "Spiritualite apicole", WorldBiome.ForetClaire,
+                "Rien ne garde le sanctuaire. C'est peut-etre pour cela que personne n'ose le profaner.",
+                "Personne ne sait quelle colonie a fonde ce sanctuaire. Les Championnes y parlent plus bas.",
+                "L'Ancetre des Abeilles ou un Titan de Propolis gardien y seraient lies."),
+            ("souche_cathedrale", "Souche-Cathedrale", "Carrefour naturel", WorldBiome.ForetClaire,
+                "Une souche immense creusee par les saisons, assez vaste pour abriter insectes, mousses et chambres naturelles.",
+                string.Empty, string.Empty),
+            ("mare_aux_reflets", "Mare aux Reflets", "POI aquatique", WorldBiome.BergesEtMares,
+                "Une petite mare dont la surface reflete le ciel meme sous les feuilles.",
+                string.Empty,
+                "Un boss humide - un Crapaud Royal - pourrait un jour y trouver refuge."),
+            ("champ_premieres_fleurs", "Champ des Premieres Fleurs", "Lieu saisonnier central", WorldBiome.PrairieFleurie,
+                "Une prairie qui fleurit avant toutes les autres, observee par les Chroniqueuses.",
+                string.Empty, string.Empty),
+            ("pierre_chaude", "Pierre Chaude", "POI de biome sec", WorldBiome.TerresSeches,
+                "Une grande pierre qui conserve la chaleur et attire reptiles, scorpions et abeilles fatiguees.",
+                string.Empty,
+                "Un boss de chaleur - un Scorpion Geant - rode peut-etre deja pres d'ici."),
+            ("branche_veilleurs", "Branche des Veilleurs", "POI aerien et diplomatique", WorldBiome.ForetClaire,
+                "Une branche haute d'ou l'on voit plusieurs ruches et routes de vol.",
+                string.Empty, string.Empty),
         };
 
         private void GenerateSeededPointsOfInterest(WorldChunkData data)
@@ -3609,9 +3659,9 @@ namespace BeeKingdom.Playground
             if (bearDenLandmark != null && bearDenLandmark.ExcludesSpawn(position)) return;
 
             int catalogIndex = Hash(data.Chunk.x, data.Chunk.y, 197) % PointOfInterestCatalog.Length;
-            (string kind, string label, string description) = PointOfInterestCatalog[catalogIndex];
+            (string kind, string label, string family, WorldBiome primaryBiome, string description, string history, string bossTeaser) = PointOfInterestCatalog[catalogIndex];
             string id = "poi_" + kind + "_" + data.Chunk.x.ToString(CultureInfo.InvariantCulture) + "_" + data.Chunk.y.ToString(CultureInfo.InvariantCulture);
-            data.PointsOfInterest.Add(new WorldPointOfInterestNode(id, label, kind, position, description));
+            data.PointsOfInterest.Add(new WorldPointOfInterestNode(id, label, kind, position, description, family, primaryBiome, history, bossTeaser));
         }
 
         private StressWindowStats SimulateStressWindow(Vector2Int center)
@@ -3742,6 +3792,92 @@ namespace BeeKingdom.Playground
         private bool ShouldDrawWave6AtmospherePass()
         {
             return !useWave5Method12288PreviewRuntimePackageForPlayMode;
+        }
+
+        // Bible-driven biome identity layer (see WorldBiomeCatalog.cs) - a very low-alpha
+        // colored wash so each region's "emotional color" (bible rule: every region needs
+        // one, not just a visual color) reads at a glance without fighting the painted
+        // terrain art underneath.
+        //
+        // Draws WorldBiomeCatalog's fixed 10x10 grid directly (<=100 rects, screen-culled)
+        // rather than one rect per streamed art tile: this file has dedicated 50x50
+        // stress-test tooling because IMGUI draw cost has regressed before, and
+        // wave6Provider.VisibleTiles can hold up to CacheCapacity=128 tiles at extreme
+        // zoom-out - iterating that per-tile would have tripled draw calls (terrain + biome
+        // + event wash) right when the map is already under the most load. The 10x10 grid
+        // gives a hard, zoom-independent upper bound instead.
+        private void DrawBiomeOverlay()
+        {
+            if (!mapFilterBiomeOverlay) return;
+            if (wave6Provider == null || !wave6Provider.ManifestReady || wave6Provider.HasLoadFailure) return;
+
+            ForEachVisibleBiomeCell((cellRect, biome) =>
+            {
+                Color emotional = WorldBiomeCatalog.ProfileFor(biome).EmotionalColor;
+                DrawSolid(cellRect, new Color(emotional.r, emotional.g, emotional.b, 0.07f));
+            });
+        }
+
+        // Shared iterator for anything that wants to draw one rect per biome-grid cell
+        // (DrawBiomeOverlay, DrawWorldEventBiomeBiasedWash) - computes each cell's world rect
+        // from WorldBiomeCatalog's own grid constants, projects it, and skips off-screen
+        // cells before invoking the callback, so callers never touch tile-streaming state.
+        private void ForEachVisibleBiomeCell(Action<Rect, WorldBiome> draw)
+        {
+            const int cells = 10;
+            const int tilesPerCell = 5;
+            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            for (int cellY = 0; cellY < cells; cellY++)
+            {
+                for (int cellX = 0; cellX < cells; cellX++)
+                {
+                    int chunkX = WorldMapWave6StreamingTileProvider.OriginChunkX + cellX * tilesPerCell;
+                    int chunkY = WorldMapWave6StreamingTileProvider.OriginChunkY + cellY * tilesPerCell;
+                    Rect worldRect = new Rect(chunkX * ChunkSize, chunkY * ChunkSize, tilesPerCell * ChunkSize, tilesPerCell * ChunkSize);
+                    Rect projected = WorldRectToScreenRect(worldRect);
+                    if (!projected.Overlaps(screen)) continue;
+                    WorldBiome biome = WorldBiomeCatalog.BiomeForChunk(chunkX + tilesPerCell / 2, chunkY + tilesPerCell / 2);
+                    draw(projected, biome);
+                }
+            }
+        }
+
+        // Large, low-opacity watermark labels for the 5 bible-named regions - only past a
+        // zoom-out threshold (currentZoom is small when zoomed out, see WorldToScreen),
+        // since at normal play zoom they'd just be clutter over the terrain/entities the
+        // player is actually reading. Fades in smoothly over a small zoom band rather than
+        // a hard on/off cutoff, so crossing the threshold while zooming doesn't pop.
+        private const float RegionLabelZoomThreshold = 0.55f;
+        private const float RegionLabelZoomFadeStart = 0.38f;
+
+        private void DrawRegionLabels()
+        {
+            if (!mapFilterBiomeOverlay) return;
+            if (currentZoom >= RegionLabelZoomThreshold) return;
+            float fade = Mathf.Clamp01((RegionLabelZoomThreshold - currentZoom) / (RegionLabelZoomThreshold - RegionLabelZoomFadeStart));
+
+            Rect painted = new Rect(
+                WorldMapWave6StreamingTileProvider.OriginChunkX * ChunkSize,
+                WorldMapWave6StreamingTileProvider.OriginChunkY * ChunkSize,
+                WorldMapWave6StreamingTileProvider.Columns * ChunkSize,
+                WorldMapWave6StreamingTileProvider.Rows * ChunkSize);
+
+            WorldRegionProfile[] regions = WorldBiomeCatalog.Regions;
+            for (int i = 0; i < regions.Length; i++)
+            {
+                Rect bounds = regions[i].NormalizedBounds;
+                Vector2 worldCenter = new Vector2(
+                    painted.x + (bounds.x + bounds.width * 0.5f) * painted.width,
+                    painted.y + (bounds.y + bounds.height * 0.5f) * painted.height);
+                Vector2 screenPoint = WorldToScreen(worldCenter);
+                if (screenPoint.x < -200f || screenPoint.x > Screen.width + 200f
+                    || screenPoint.y < -60f || screenPoint.y > Screen.height + 60f) continue;
+
+                Color labelColor = WorldBiomeCatalog.ProfileFor(regions[i].DominantBiome).EmotionalColor;
+                GUIStyle style = LabelStyle(new Color(labelColor.r, labelColor.g, labelColor.b, 0.55f * fade), 22, FontStyle.Bold, TextAnchor.MiddleCenter);
+                Rect labelRect = new Rect(screenPoint.x - 160f, screenPoint.y - 16f, 320f, 32f);
+                GUI.Label(labelRect, regions[i].Label.ToUpperInvariant(), style);
+            }
         }
 
         private void DrawWave6WorldTerrain()
@@ -3950,11 +4086,32 @@ namespace BeeKingdom.Playground
 
                 if (selected)
                 {
-                    Rect descriptionRect = new Rect(p.x - 110f, labelRect.yMax + 2f, 220f, 56f);
+                    // Bible rule: "un POI ne cree pas de mecanique par lui-meme" - this stays a
+                    // small read-only card (family + carte one-liner + short history + a boss
+                    // flavor line where the bible names one), never a menu with actions.
+                    bool hasHistory = !string.IsNullOrEmpty(poi.History);
+                    bool hasBoss = !string.IsNullOrEmpty(poi.BossTeaser);
+                    float cardHeight = 22f + 34f + (hasHistory ? 40f : 0f) + (hasBoss ? 32f : 0f);
+                    Rect descriptionRect = new Rect(p.x - 120f, labelRect.yMax + 2f, 240f, cardHeight);
                     DrawSolid(descriptionRect, new Color(0.02f, 0.018f, 0.012f, 0.86f));
                     DrawFrame(descriptionRect, new Color(accent.r, accent.g, accent.b, 0.75f), 1.2f);
-                    GUI.Label(new Rect(descriptionRect.x + 8f, descriptionRect.y + 4f, descriptionRect.width - 16f, descriptionRect.height - 8f),
-                        poi.Description, new GUIStyle(MiniLabel(Color.white, 10, TextAnchor.UpperLeft)) { wordWrap = true });
+
+                    float textX = descriptionRect.x + 8f;
+                    float textWidth = descriptionRect.width - 16f;
+                    float y = descriptionRect.y + 4f;
+                    GUI.Label(new Rect(textX, y, textWidth, 16f), poi.Family, MiniLabel(accent, 10, TextAnchor.UpperLeft));
+                    y += 18f;
+                    GUI.Label(new Rect(textX, y, textWidth, 34f), poi.Description, new GUIStyle(MiniLabel(Color.white, 10, TextAnchor.UpperLeft)) { wordWrap = true });
+                    if (hasHistory)
+                    {
+                        y += 36f;
+                        GUI.Label(new Rect(textX, y, textWidth, 40f), poi.History, new GUIStyle(MiniLabel(new Color(0.82f, 0.80f, 0.74f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true });
+                    }
+                    if (hasBoss)
+                    {
+                        y += hasHistory ? 42f : 36f;
+                        GUI.Label(new Rect(textX, y, textWidth, 30f), "⚔ " + poi.BossTeaser, new GUIStyle(MiniLabel(new Color(0.92f, 0.62f, 0.30f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true, fontStyle = FontStyle.Italic });
+                    }
                 }
             }
         }
@@ -3967,10 +4124,19 @@ namespace BeeKingdom.Playground
                 case "fossil_nest": return new Color(0.60f, 0.66f, 0.72f, 1f);
                 case "blooming_grove": return new Color(0.92f, 0.48f, 0.72f, 1f);
                 case "sunken_hive": return new Color(0.30f, 0.72f, 0.76f, 1f);
-                default: return new Color(0.64f, 0.44f, 0.88f, 1f); // forgotten_sanctuary
+                case "forgotten_sanctuary": return new Color(0.64f, 0.44f, 0.88f, 1f);
+                case "souche_cathedrale": return new Color(0.55f, 0.42f, 0.22f, 1f);
+                case "mare_aux_reflets": return new Color(0.35f, 0.62f, 0.90f, 1f);
+                case "champ_premieres_fleurs": return new Color(0.98f, 0.75f, 0.30f, 1f);
+                case "pierre_chaude": return new Color(0.80f, 0.42f, 0.20f, 1f);
+                default: return new Color(0.68f, 0.78f, 0.95f, 1f); // branche_veilleurs
             }
         }
 
+        // Bible rule: "un POI doit pouvoir etre reconnu par sa silhouette avant son nom" -
+        // the 5 additional POIs reuse the same 4 base shape primitives as the original 5
+        // (no new polygon-drawing code) but each carries an outer ring so its silhouette
+        // never collides with an original POI of the same base shape.
         private void DrawPointOfInterestGlyph(Vector2 p, float size, string kind, Color accent)
         {
             float radius = size * 0.46f;
@@ -3981,8 +4147,19 @@ namespace BeeKingdom.Playground
                 case "fossil_nest": DrawTriangle(p, radius, accent, width); break;
                 case "blooming_grove": DrawCircle(p, radius, accent, 20); break;
                 case "sunken_hive": DrawDiamond(p, radius, accent, width); break;
-                default: DrawCircle(p, radius * 1.15f, accent, 26); break; // forgotten_sanctuary
+                case "forgotten_sanctuary": DrawCircle(p, radius * 1.15f, accent, 26); break;
+                case "souche_cathedrale": DrawHex(p, radius, accent, width); DrawRingAccent(p, radius, accent, width); break;
+                case "mare_aux_reflets": DrawDiamond(p, radius, accent, width); DrawRingAccent(p, radius, accent, width); break;
+                case "champ_premieres_fleurs": DrawCircle(p, radius, accent, 20); DrawRingAccent(p, radius, accent, width); break;
+                case "pierre_chaude": DrawTriangle(p, radius, accent, width); DrawRingAccent(p, radius, accent, width); break;
+                default: DrawCircle(p, radius * 1.15f, accent, 26); DrawRingAccent(p, radius * 1.15f, accent, width); break; // branche_veilleurs
             }
+        }
+
+        private void DrawRingAccent(Vector2 p, float innerRadius, Color accent, float width)
+        {
+            float ringRadius = innerRadius * 1.55f;
+            DrawFrame(new Rect(p.x - ringRadius, p.y - ringRadius, ringRadius * 2f, ringRadius * 2f), new Color(accent.r, accent.g, accent.b, 0.65f), width);
         }
 
         // Ressource vivante (demande de Jeff, 2026-08-01) : chacun de ces 4 etats se lit
@@ -4657,6 +4834,7 @@ namespace BeeKingdom.Playground
                     image.y + bounds.yMin / WorldHeightUnits() * image.height,
                     bounds.width / WorldWidthUnits() * image.width,
                     bounds.height / WorldHeightUnits() * image.height);
+                if (mapFilterBiomeOverlay) DrawMiniMapBiomeGrid(artRegion);
                 DrawFrame(artRegion, new Color(0.20f, 0.80f, 0.48f, 0.82f), 1.5f);
             }
 
@@ -4675,6 +4853,29 @@ namespace BeeKingdom.Playground
                 image.x + currentWorldCenter.x / WorldWidthUnits() * image.width,
                 image.y + currentWorldCenter.y / WorldHeightUnits() * image.height);
             DrawCircle(p, 4f, new Color(0.20f, 0.85f, 1f, 0.95f), 12);
+        }
+
+        // Same 10x10 grid DrawBiomeOverlay/DrawRegionLabels read (WorldBiomeCatalog), drawn
+        // at minimap scale so the minimap itself reads as a small atlas of the world instead
+        // of just an activity heatmap - lets the player orient by biome even fully zoomed out.
+        private void DrawMiniMapBiomeGrid(Rect artRegion)
+        {
+            const int cells = 10;
+            const int tilesPerCell = 5;
+            float cellW = artRegion.width / cells;
+            float cellH = artRegion.height / cells;
+            for (int cellY = 0; cellY < cells; cellY++)
+            {
+                for (int cellX = 0; cellX < cells; cellX++)
+                {
+                    int chunkX = WorldMapWave6StreamingTileProvider.OriginChunkX + cellX * tilesPerCell + tilesPerCell / 2;
+                    int chunkY = WorldMapWave6StreamingTileProvider.OriginChunkY + cellY * tilesPerCell + tilesPerCell / 2;
+                    WorldBiome biome = WorldBiomeCatalog.BiomeForChunk(chunkX, chunkY);
+                    Color c = WorldBiomeCatalog.ProfileFor(biome).EmotionalColor;
+                    Rect cellRect = new Rect(artRegion.x + cellX * cellW, artRegion.y + cellY * cellH, cellW + 0.6f, cellH + 0.6f);
+                    DrawSolid(cellRect, new Color(c.r, c.g, c.b, 0.55f));
+                }
+            }
         }
 
         private void DrawMapReadingTools()
@@ -4702,6 +4903,8 @@ namespace BeeKingdom.Playground
             y += 24f;
             mapFilterThreats = GUI.Toggle(new Rect(rect.x + 12f, y, 128f, 22f), mapFilterThreats, "Menaces");
             mapFilterBearDen = GUI.Toggle(new Rect(rect.x + 142f, y, 128f, 22f), mapFilterBearDen, "BearDen");
+            y += 24f;
+            mapFilterBiomeOverlay = GUI.Toggle(new Rect(rect.x + 12f, y, 128f, 22f), mapFilterBiomeOverlay, "Biomes");
             y += 30f;
 
             if (GUI.Button(new Rect(rect.x + 12f, y, rect.width - 24f, 28f), "Selectionner plus proche"))
@@ -4861,8 +5064,8 @@ namespace BeeKingdom.Playground
 
         private Rect MapReadingToolsRect()
         {
-            if (IsPortraitLayout()) return mapToolsCollapsed ? new Rect(8f, 246f, 214f, 40f) : new Rect(8f, 246f, 300f, 196f);
-            return mapToolsCollapsed ? new Rect(548f, 128f, 210f, 40f) : new Rect(548f, 128f, 286f, 196f);
+            if (IsPortraitLayout()) return mapToolsCollapsed ? new Rect(8f, 246f, 214f, 40f) : new Rect(8f, 246f, 300f, 220f);
+            return mapToolsCollapsed ? new Rect(548f, 128f, 210f, 40f) : new Rect(548f, 128f, 286f, 220f);
         }
 
         private void SelectNearestMapNode()
@@ -5614,6 +5817,33 @@ namespace BeeKingdom.Playground
             return variant == 1 ? "Reine frelon" : "Titan lucane";
         }
 
+        // Bible-flavored overload (WORLD_BIBLE_FOUNDATION.md "Faune" per biome), used by the
+        // organic seeded spawner only (GenerateSeededBestiary) - the fixed demo/proof beasts
+        // keep the plain generic name so automated harnesses reading those labels stay
+        // stable. Only overrides the handful of (tier, variant) slots whose EXISTING internal
+        // id already named a specific real-world creature this file was clearly modeling
+        // (see BestiaryFileToken below: "aphid_thief", "jumping_spider", "shield_beetle",
+        // "armored_tarantula", "root_scorpion", "ancient_hornet_queen") - translating those
+        // into their proper Bible species name, gated to the biome that actually lists them,
+        // rather than forcing a bible name onto every one of the 42 (tier,variant,biome)
+        // combinations without a clean match.
+        private string BestiaryLabel(int tier, int variant, WorldBiome biome)
+        {
+            string flavor = BestiaryBiomeFlavorName(tier, variant, biome);
+            return string.IsNullOrEmpty(flavor) ? BestiaryLabel(tier, variant) : flavor;
+        }
+
+        private static string BestiaryBiomeFlavorName(int tier, int variant, WorldBiome biome)
+        {
+            if (biome == WorldBiome.PrairieFleurie && tier == 1 && variant == 1) return "Puceron Voleur";
+            if (biome == WorldBiome.PrairieFleurie && tier == 3 && variant == 1) return "Araignee Sauteuse";
+            if (biome == WorldBiome.ForetClaire && tier == 2 && variant == 2) return "Scarabee Ouvrier";
+            if (biome == WorldBiome.RonciersEtHaies && tier == 6 && variant == 2) return "Araignee Titan";
+            if (biome == WorldBiome.TerresSeches && tier == 6 && variant == 1) return "Scorpion Noir";
+            if (biome == WorldBiome.TerresSeches && tier == 7 && variant == 1) return "Reine Guepe Antique";
+            return null;
+        }
+
         private string BestiaryRole(int tier)
         {
             if (tier <= 2) return "nuisance";
@@ -6134,35 +6364,91 @@ namespace BeeKingdom.Playground
             GUI.color = previous;
         }
 
-        // Ambiance meteo (demande de Jeff, 2026-08-02) : simple lavis de couleur plein ecran, tres
-        // discret, plus un petit badge nommant l'evenement - le joueur comprend TOUJOURS pourquoi
-        // l'ambiance a change, sans avoir a ouvrir un panneau. Change plusieurs fois par jour, comme
-        // le catalogue serveur qu'il miroite exactement.
+        // Ambiance meteo (demande de Jeff, 2026-08-02), enrichie le 2026-08-18 pour suivre la
+        // regle de la Bible des Evenements Mondiaux : "un evenement doit se voir sur la carte
+        // avant de se lire dans une interface". Le catalogue reel (WorldEventCatalog, cote
+        // serveur, non modifie) n'a que 6 cles - chacune est ici associee a l'evenement de la
+        // Bible le plus proche (voir WorldEventNarrativeLine) et biaisee vers les biomes que
+        // cet evenement nomme (WorldEventBiasesBiome), au lieu d'un lavis plat plein ecran :
+        // le lavis n'est fort que sur les tuiles des biomes concernes, quasi invisible ailleurs,
+        // donc l'evenement est visible comme une VRAIE zone du monde plutot qu'un simple filtre
+        // ecran. spider_surge n'a pas d'equivalent dans la Bible (aucune "menace araignee"
+        // nommee) - traite comme une menace generique des Ronciers plutot que d'inventer un nom.
         private void DrawWorldEventAmbiance()
         {
             ActiveWorldEvent activeEvent = WorldEventCatalog.Active(DateTimeOffset.UtcNow);
             Color tint = WorldEventAmbianceTint(activeEvent.Key);
-            if (tint.a > 0f) DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), tint);
+            if (tint.a > 0f) DrawWorldEventBiomeBiasedWash(activeEvent.Key, tint);
 
-            Rect badge = new Rect(14f, 14f, 250f, 32f);
+            Rect badge = new Rect(14f, 14f, 280f, 50f);
             DrawSolid(badge, new Color(0.020f, 0.018f, 0.014f, 0.74f));
             DrawFrame(badge, new Color(tint.r, tint.g, tint.b, 0.92f), 1.5f);
-            GUI.Label(new Rect(badge.x + 10f, badge.y, badge.width - 20f, badge.height),
+            GUI.Label(new Rect(badge.x + 10f, badge.y + 2f, badge.width - 20f, 20f),
                 HiveViewProductUiPresenter.WorldEventDisplayName(activeEvent.Key),
                 LabelStyle(Color.white, 12, FontStyle.Bold, TextAnchor.MiddleLeft));
+            GUI.Label(new Rect(badge.x + 10f, badge.y + 22f, badge.width - 20f, 26f),
+                WorldEventNarrativeLine(activeEvent.Key),
+                new GUIStyle(MiniLabel(new Color(0.86f, 0.84f, 0.78f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true });
+        }
+
+        // Same fixed 10x10 grid budget as DrawBiomeOverlay (see ForEachVisibleBiomeCell) -
+        // cells whose biome matches the active event get the full tint, everything else gets
+        // a faint fraction of it (never zero, so the map still reads as "something is
+        // happening everywhere", matching the bible's ambiance intent) rather than a hard,
+        // unnatural cutoff line.
+        private void DrawWorldEventBiomeBiasedWash(string eventKey, Color tint)
+        {
+            if (wave6Provider == null || !wave6Provider.ManifestReady || wave6Provider.HasLoadFailure) return;
+
+            ForEachVisibleBiomeCell((cellRect, biome) =>
+            {
+                bool biased = WorldEventBiasesBiome(eventKey, biome);
+                float alphaScale = biased ? 1f : 0.18f;
+                DrawSolid(cellRect, new Color(tint.r, tint.g, tint.b, tint.a * alphaScale));
+            });
+        }
+
+        private static bool WorldEventBiasesBiome(string eventKey, WorldBiome biome)
+        {
+            switch (eventKey)
+            {
+                case "blossom": return biome == WorldBiome.PrairieFleurie || biome == WorldBiome.VergerAncien;
+                case "rain": return biome == WorldBiome.BergesEtMares || biome == WorldBiome.ForetClaire;
+                case "drought": return biome == WorldBiome.TerresSeches;
+                case "ant_invasion": return biome == WorldBiome.PrairieFleurie || biome == WorldBiome.ForetClaire;
+                case "spider_surge": return biome == WorldBiome.RonciersEtHaies;
+                case "hornet_swarm": return biome == WorldBiome.RonciersEtHaies || biome == WorldBiome.VergerAncien;
+                default: return false;
+            }
+        }
+
+        // Plain literals, matching this file's own convention (it never uses BeeLocalization
+        // elsewhere - unlike HiveViewProductUiPresenter.cs, which is a different namespace).
+        private static string WorldEventNarrativeLine(string eventKey)
+        {
+            switch (eventKey)
+            {
+                case "blossom": return "Les fleurs s'ouvrent presque ensemble, le monde devient plus lumineux.";
+                case "rain": return "Pluie, ruissellement, ressources humides le long des berges.";
+                case "drought": return "Fleurs plus rares mais nectar plus concentre dans les terres seches.";
+                case "ant_invasion": return "De longues pistes de fourmis relient pucerons et fourmilieres.";
+                case "spider_surge": return "Les toiles se multiplient dans les ronciers - restez sur vos gardes.";
+                case "hornet_swarm": return "Des patrouilles de frelons menacent les ressources exposees.";
+                default: return string.Empty;
+            }
         }
 
         private static Color WorldEventAmbianceTint(string key)
         {
             switch (key)
             {
-                case "blossom": return new Color(1f, 0.74f, 0.86f, 0.05f);
-                case "rain": return new Color(0.52f, 0.64f, 0.82f, 0.07f);
-                case "drought": return new Color(0.78f, 0.56f, 0.24f, 0.06f);
+                case "blossom": return new Color(1f, 0.74f, 0.86f, 0.09f);
+                case "rain": return new Color(0.52f, 0.64f, 0.82f, 0.11f);
+                case "drought": return new Color(0.78f, 0.56f, 0.24f, 0.10f);
                 case "ant_invasion":
                 case "spider_surge":
                 case "hornet_swarm":
-                    return new Color(0.68f, 0.16f, 0.12f, 0.05f);
+                    return new Color(0.68f, 0.16f, 0.12f, 0.09f);
                 default: return new Color(0f, 0f, 0f, 0f);
             }
         }
@@ -6956,14 +7242,22 @@ namespace BeeKingdom.Playground
             public readonly string Kind;
             public readonly Vector2 WorldCoord;
             public readonly string Description;
+            public readonly string Family;
+            public readonly WorldBiome PrimaryBiome;
+            public readonly string History;
+            public readonly string BossTeaser;
 
-            public WorldPointOfInterestNode(string id, string label, string kind, Vector2 worldCoord, string description)
+            public WorldPointOfInterestNode(string id, string label, string kind, Vector2 worldCoord, string description, string family, WorldBiome primaryBiome, string history, string bossTeaser)
             {
                 Id = id;
                 Label = label;
                 Kind = kind;
                 WorldCoord = worldCoord;
                 Description = description;
+                Family = family;
+                PrimaryBiome = primaryBiome;
+                History = history;
+                BossTeaser = bossTeaser;
             }
         }
 

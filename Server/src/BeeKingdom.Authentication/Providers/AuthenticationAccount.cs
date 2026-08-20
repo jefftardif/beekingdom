@@ -13,4 +13,5 @@ public sealed record AuthenticationAccount(
     DateTimeOffset? LockedUntilUtc,
     string? GoogleSubjectId = null,
     string? DisplayName = null,
-    bool IsOnboarded = false);
+    bool IsOnboarded = false,
+    AccountRole Role = AccountRole.Player);

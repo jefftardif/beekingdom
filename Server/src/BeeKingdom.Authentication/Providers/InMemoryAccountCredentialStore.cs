@@ -92,6 +92,16 @@ public sealed class InMemoryAccountCredentialStore : IAccountCredentialStore
         }
     }
 
+    public IReadOnlyList<AuthenticationAccount> SearchByDisplayName(string displayNameContains)
+    {
+        lock (sync)
+        {
+            return accountsByEmail.Values
+                .Where(a => !string.IsNullOrEmpty(a.DisplayName) && a.DisplayName.Contains(displayNameContains, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+    }
+
     public void Save(AuthenticationAccount account)
     {
         lock (sync)
