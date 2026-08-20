@@ -9,6 +9,8 @@ namespace BeeKingdom.Playground
     // no server-authoritative gameplay controller in the current client. HiveMap should
     // still give a clear building-specific response instead of silently falling through to
     // Construction, while preserving that existing upgrade path one tap deeper.
+    // M009-CX wave 3 extends the same honest status pattern to Academy and Defense after
+    // inspection confirmed they do not yet own official building-specific gameplay.
     public sealed class HiveMapUnsupportedBuildingBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Unsupported Building Runtime";
@@ -109,19 +111,27 @@ namespace BeeKingdom.Playground
         private static bool IsTracked(string buildingType)
         {
             return string.Equals(buildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)
-                || string.Equals(buildingType, BuildingTypes.Genetics, StringComparison.Ordinal);
+                || string.Equals(buildingType, BuildingTypes.Genetics, StringComparison.Ordinal)
+                || string.Equals(buildingType, BuildingTypes.Academy, StringComparison.Ordinal)
+                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal);
         }
 
         private static string BuildingStatus(BuildingDefinition building)
         {
             if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal))
                 return "Les soins officiels ne sont pas encore exposes par un controleur Infirmary. Les soigneuses restent donc en attente de fonctionnalite.";
+            if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal))
+                return "L'Academie est presente comme batiment futur. La Recherche officielle reste portee par son propre noeud et sa fenetre HiveMap dediee; aucune formation Academie separee n'est server-backed aujourd'hui.";
+            if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal))
+                return "La Defense reste une zone future. Les systemes combat/perimetre existants vivent dans les parcours Armee et serveur, mais ne sont pas encore une action officielle de ce batiment.";
             return "La genetique officielle reste une capacite future : les choix de mutation/progression ne sont pas encore server-backed.";
         }
 
         private static string BuildingTitle(BuildingDefinition building)
         {
             if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)) return "Infirmerie";
+            if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal)) return "Academie";
+            if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal)) return "Defense";
             return "Genetique";
         }
     }

@@ -69,8 +69,10 @@ namespace BeeKingdom.Playground
                 // own overlay bookkeeping, so they need their own flags here.
                 || HiveMapNurseryBootstrap.OverlayOpenForExternalHost
                 || HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost
+                // M009-CX wave 3: Champion Hall uses its own IMGUI catalog/status window.
+                || HiveMapChampionHallBootstrap.OverlayOpenForExternalHost
                 // M008-CX wave 2: same IMGUI input protection for the Genetics/Infirmary
-                // capability/status window.
+                // capability/status window; M009 extends it to Academy/Defense status.
                 || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost;
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();

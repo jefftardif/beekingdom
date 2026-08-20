@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace BeeKingdom.Playground
 {
     // Lets the player click directly on any building that has no dedicated window of its
-    // own (Defense, Academy, Bank, Royal Palace, Champion Hall) to open the generic
+    // own (Bank, Royal Palace) to open the generic
     // Construction picker pre-selected to that building, instead of
     // leaving the click with no UI feedback at all. Buildings that already have their own
     // window/action (Barrack, Alliance Center, the 3 production buildings, Research,
@@ -46,6 +46,12 @@ namespace BeeKingdom.Playground
             // Construction picker via its "Ameliorer" button.
             BuildingTypes.Genetics,
             BuildingTypes.Infirmary,
+            // M009-CX wave 3: Champion Hall now has its own catalog/server-read window.
+            // Academy and Defense intentionally show honest building-specific status
+            // windows instead of falling straight through to Construction.
+            BuildingTypes.ChampionHall,
+            BuildingTypes.Academy,
+            BuildingTypes.Defense,
         };
 
         private BuildingInteractionController subscribedController;
