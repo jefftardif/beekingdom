@@ -124,6 +124,12 @@ namespace BeeKingdom.Playground
         void PurchaseResourceSlot();
         void GrantPremiumSlot();
         void DismissDebrief();
+        // Recu de reclamation le plus recent pour une rencontre donnee (demande de Jeff,
+        // 2026-08-26, mission M021) - couvre aussi bien la reclamation manuelle que la
+        // reclamation automatique (AutoClaimFinishedEncountersAsync), qui jusqu'ici jetait ce
+        // recu au lieu de le conserver. Sert uniquement a la marche de retour sur la carte du
+        // monde (composition de survivants) - ne rejoue jamais la resolution de combat.
+        bool TryGetRecentClaimReceipt(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt);
     }
 
     public sealed class UnavailableCombatPatrolPanelController : ICombatPatrolPanelController
@@ -142,6 +148,7 @@ namespace BeeKingdom.Playground
         public void PurchaseResourceSlot() { }
         public void GrantPremiumSlot() { }
         public void DismissDebrief() { }
+        public bool TryGetRecentClaimReceipt(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt) { receipt = null; return false; }
     }
 
     public sealed class CombatPatrolPanelController : ICombatPatrolPanelController, IDisposable
@@ -151,6 +158,12 @@ namespace BeeKingdom.Playground
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private bool disposed;
         private bool busy;
+        // Recus de reclamation recents, bornes (demande de Jeff, 2026-08-26, mission M021) - la
+        // seule fonction est d'alimenter la marche de retour sur la carte du monde avec la vraie
+        // composition de survivants au lieu de rejouer la composition d'avant-combat.
+        private const int MaxRecentClaimReceipts = 16;
+        private readonly Dictionary<Guid, RemoteCombatPatrolClaimReceipt> recentClaimReceipts = new Dictionary<Guid, RemoteCombatPatrolClaimReceipt>();
+        private readonly List<Guid> recentClaimReceiptOrder = new List<Guid>();
 
         public CombatPatrolPanelController(ICombatPatrolClient client, Guid hiveId)
         {
@@ -217,6 +230,21 @@ namespace BeeKingdom.Playground
         public void Recall() => Forget(RecallCoreAsync());
         public void PurchaseResourceSlot() => Forget(PurchaseResourceSlotCoreAsync());
         public void GrantPremiumSlot() => Forget(GrantPremiumSlotCoreAsync());
+
+        public bool TryGetRecentClaimReceipt(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt)
+            => recentClaimReceipts.TryGetValue(encounterId, out receipt);
+
+        private void RememberClaimReceipt(RemoteCombatPatrolClaimReceipt receipt)
+        {
+            if (receipt == null) return;
+            if (!recentClaimReceipts.ContainsKey(receipt.EncounterId)) recentClaimReceiptOrder.Add(receipt.EncounterId);
+            recentClaimReceipts[receipt.EncounterId] = receipt;
+            while (recentClaimReceiptOrder.Count > MaxRecentClaimReceipts)
+            {
+                recentClaimReceipts.Remove(recentClaimReceiptOrder[0]);
+                recentClaimReceiptOrder.RemoveAt(0);
+            }
+        }
 
         public void DismissDebrief()
         {
@@ -307,6 +335,7 @@ namespace BeeKingdom.Playground
             {
                 RemoteCombatPatrolMutationResponse response = await client.ClaimAsync(hiveId, target.EncounterId, Model.Revision, NewKey("claim"), lifetime.Token);
                 if (disposed) return;
+                RememberClaimReceipt(response.ClaimReceipt);
                 if (response.ClaimReceipt != null)
                 {
                     Model.Debrief = new CombatPatrolDebrief
@@ -361,6 +390,7 @@ namespace BeeKingdom.Playground
                 {
                     RemoteCombatPatrolMutationResponse response = await client.ClaimAsync(hiveId, ready.EncounterId, Model.Revision, NewKey("auto-claim"), lifetime.Token);
                     if (disposed) return;
+                    RememberClaimReceipt(response.ClaimReceipt);
                     ApplySnapshot(response.Snapshot);
                 }
                 catch (CombatPatrolClientException) { return; }

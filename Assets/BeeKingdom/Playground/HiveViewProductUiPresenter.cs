@@ -36065,6 +36065,24 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
         // reclame automatiquement (AutoClaimFinishedEncountersAsync) toute rencontre terminee.
         internal static void RefreshCombatPatrolForWorldMap() => combatPatrolController?.Refresh();
 
+        // Mission M021 (2026-08-26) : jeton de champion actuellement assigne (portee ruche
+        // entiere, pas par marche - voir ChampionBeeProgressState.AssignedBeeIds) reutilise tel
+        // quel pour representer le chef de formation sur la marche de combat de la carte du
+        // monde. Deja charge par EnsureOfficialChampionBeeAndTroopTierStateLoaded pour l'ecran
+        // Abeilles championnes - aucun nouvel appel reseau ici.
+        internal static IReadOnlyList<string> PeekAssignedChampionBeeIdsForWorldMap()
+            => officialAssignedChampionBeeIds ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+        // Recu de reclamation le plus recent pour une rencontre (mission M021) - permet a la
+        // marche de retour de la carte du monde d'afficher la vraie composition de survivants
+        // (CommittedTroops moins PermanentLosses) au lieu de rejouer la composition d'avant-combat
+        // quand le recu a ete conserve (reclamation manuelle ou automatique).
+        internal static bool TryGetCombatPatrolClaimReceiptForWorldMap(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt)
+        {
+            receipt = null;
+            return combatPatrolController != null && combatPatrolController.TryGetRecentClaimReceipt(encounterId, out receipt);
+        }
+
         internal static void DrawCombatPatrolOverlayForWorldMap()
         {
             DrawCombatPatrolQueueStrip();

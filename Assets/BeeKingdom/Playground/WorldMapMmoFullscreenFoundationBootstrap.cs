@@ -4447,6 +4447,15 @@ namespace BeeKingdom.Playground
         // visible return trip below, instead of the bee just vanishing at wherever it was.
         private readonly HashSet<Guid> lastKnownCombatPatrolEncounterIds = new HashSet<Guid>();
         private readonly Dictionary<Guid, CombatPatrolReturnTrip> combatPatrolReturnTrips = new Dictionary<Guid, CombatPatrolReturnTrip>();
+        // Mission M021 (2026-08-26) : composition reelle engagee (CommittedTroops), conservee par
+        // EncounterId meme apres la disparition de la rencontre des ActiveEncounters - necessaire
+        // pour que la marche de retour connaisse la composition d'avant-combat une fois la
+        // rencontre reclamee. Purgee en meme temps que combatPatrolTargetWorldCoordByEncounterId.
+        private readonly Dictionary<Guid, Dictionary<string, long>> combatPatrolCommittedTroopsByEncounterId = new Dictionary<Guid, Dictionary<string, long>>();
+        // Echantillon visuel (familie -> nombre de sprites a afficher) calcule une seule fois par
+        // rencontre active tant que sa composition ne change pas - evite de refaire l'allocation
+        // proportionnelle a chaque frame (mission M021, objectif performance).
+        private readonly Dictionary<Guid, List<(string Family, int Count)>> combatPatrolOutboundVisualSampleCache = new Dictionary<Guid, List<(string Family, int Count)>>();
         // World-units-per-second the return march "flies" at - closer targets come home sooner,
         // farther ones take longer (demande de Jeff, 2026-08-25). Placeholder speed/bounds until a
         // real travel-time model (player level/researched upgrades) exists; see
@@ -4459,10 +4468,17 @@ namespace BeeKingdom.Playground
         {
             public readonly float StartedAtUnscaledTime;
             public readonly float Duration;
-            public CombatPatrolReturnTrip(float startedAtUnscaledTime, float duration)
+            // Mission M021 : composition de survivants (calculee une seule fois au debut du
+            // trajet retour - voir DrawCombatPatrolMarch) et champion meneur, fixes pour toute la
+            // duree de l'animation de retour.
+            public readonly List<(string Family, int Count)> VisualSample;
+            public readonly string LeaderChampionId;
+            public CombatPatrolReturnTrip(float startedAtUnscaledTime, float duration, List<(string Family, int Count)> visualSample, string leaderChampionId)
             {
                 StartedAtUnscaledTime = startedAtUnscaledTime;
                 Duration = duration;
+                VisualSample = visualSample;
+                LeaderChampionId = leaderChampionId;
             }
         }
 
@@ -4476,6 +4492,10 @@ namespace BeeKingdom.Playground
         {
             CombatPatrolScreenModel model = HiveViewProductUiPresenter.PeekCombatPatrolModelForWorldMap();
             IReadOnlyList<RemoteCombatPatrolActiveEncounter> encounters = model?.ActiveEncounters ?? Array.Empty<RemoteCombatPatrolActiveEncounter>();
+            // Mission M021 : chef de formation - le champion actuellement assigne (portee ruche
+            // entiere, pas par marche - aucun lien serveur par rencontre n'existe) est resolu une
+            // seule fois par frame et applique a toutes les marches visibles.
+            string marchLeaderChampionId = ResolveMarchLeaderChampionId();
 
             var seenIds = new HashSet<Guid>();
             foreach (RemoteCombatPatrolActiveEncounter encounter in encounters)
@@ -4486,6 +4506,7 @@ namespace BeeKingdom.Playground
                     combatPatrolTargetWorldCoordByEncounterId[encounter.EncounterId] = pendingCombatPatrolLaunchTarget.Value;
                     pendingCombatPatrolLaunchTarget = null;
                 }
+                combatPatrolCommittedTroopsByEncounterId[encounter.EncounterId] = encounter.CommittedTroops;
             }
 
             WorldHiveNode from = SelectedHive();
@@ -4499,7 +4520,27 @@ namespace BeeKingdom.Playground
                 if (!combatPatrolTargetWorldCoordByEncounterId.TryGetValue(knownId, out Vector2 lastTargetWorldCoord)) continue;
                 float distance = Vector2.Distance(from.WorldCoord, lastTargetWorldCoord);
                 float duration = Mathf.Clamp(distance / CombatPatrolReturnTripWorldUnitsPerSecond, CombatPatrolReturnTripMinDuration, CombatPatrolReturnTripMaxDuration);
-                combatPatrolReturnTrips[knownId] = new CombatPatrolReturnTrip(Time.unscaledTime, duration);
+                // Mission M021 : la marche de retour doit representer les survivants reels, pas la
+                // composition d'avant-combat. Si le recu de reclamation a ete conserve (reclamation
+                // manuelle ou automatique - voir CombatPatrolPanelController.RememberClaimReceipt),
+                // on en deduit les survivants (engages - pertes definitives ; les blessees rentrent
+                // bel et bien, elles recuperent ensuite - voir CombatPatrolResolution.Recovering).
+                // Sinon, repli honnete sur la composition engagee (ni invente, ni fausse un score).
+                combatPatrolCommittedTroopsByEncounterId.TryGetValue(knownId, out Dictionary<string, long> committed);
+                Dictionary<string, long> returnComposition = committed;
+                if (HiveViewProductUiPresenter.TryGetCombatPatrolClaimReceiptForWorldMap(knownId, out RemoteCombatPatrolClaimReceipt receipt) && receipt != null)
+                {
+                    var survivors = new Dictionary<string, long>(StringComparer.Ordinal);
+                    foreach (string family in CombatFamilyOrder)
+                    {
+                        long committedCount = committed != null ? committed.GetValueOrDefault(family) : 0L;
+                        long permanentLoss = receipt.PermanentLosses != null ? receipt.PermanentLosses.GetValueOrDefault(family) : 0L;
+                        survivors[family] = Math.Max(0L, committedCount - permanentLoss);
+                    }
+                    returnComposition = survivors;
+                }
+                List<(string Family, int Count)> returnSample = ComputeMarchVisualSample(returnComposition);
+                combatPatrolReturnTrips[knownId] = new CombatPatrolReturnTrip(Time.unscaledTime, duration, returnSample, marchLeaderChampionId);
             }
             lastKnownCombatPatrolEncounterIds.Clear();
             foreach (Guid id in seenIds) lastKnownCombatPatrolEncounterIds.Add(id);
@@ -4507,7 +4548,13 @@ namespace BeeKingdom.Playground
             List<Guid> stale = null;
             foreach (Guid known in combatPatrolTargetWorldCoordByEncounterId.Keys)
                 if (!seenIds.Contains(known) && !combatPatrolReturnTrips.ContainsKey(known)) (stale ??= new List<Guid>()).Add(known);
-            if (stale != null) foreach (Guid key in stale) combatPatrolTargetWorldCoordByEncounterId.Remove(key);
+            if (stale != null)
+                foreach (Guid key in stale)
+                {
+                    combatPatrolTargetWorldCoordByEncounterId.Remove(key);
+                    combatPatrolCommittedTroopsByEncounterId.Remove(key);
+                    combatPatrolOutboundVisualSampleCache.Remove(key);
+                }
 
             foreach (RemoteCombatPatrolActiveEncounter encounter in encounters)
             {
@@ -4527,9 +4574,15 @@ namespace BeeKingdom.Playground
                 // (combatPatrolReturnTrips ci-dessous) declenche a la fin reelle du combat.
                 float marchProgress = t;
                 Vector2 marker = Bezier(a, control, b, marchProgress);
+                Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, marchProgress + 0.02f)) - marker;
 
                 DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
-                DrawCombatMarchBee(marker);
+                if (!combatPatrolOutboundVisualSampleCache.TryGetValue(encounter.EncounterId, out List<(string Family, int Count)> outboundSample))
+                {
+                    outboundSample = ComputeMarchVisualSample(encounter.CommittedTroops);
+                    combatPatrolOutboundVisualSampleCache[encounter.EncounterId] = outboundSample;
+                }
+                DrawMarchFormation(marker, tangent, outboundSample, marchLeaderChampionId);
 
                 // Cliquer sur sa propre troupe en marche ouvre la fenetre de composition +
                 // rappel (demande de Jeff, 2026-08-26). DrawCombatPatrolMarch ne dessine QUE les
@@ -4557,9 +4610,10 @@ namespace BeeKingdom.Playground
                 Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
                 float marchProgress = 1f - returnT; // heading back from the target (1) to the hive (0)
                 Vector2 marker = Bezier(a, control, b, marchProgress);
+                Vector2 tangent = marker - Bezier(a, control, b, Mathf.Min(1f, marchProgress + 0.02f));
 
                 DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
-                DrawCombatMarchBee(marker);
+                DrawMarchFormation(marker, tangent, trip.Value.VisualSample, trip.Value.LeaderChampionId);
             }
             if (finishedTrips != null)
             {
@@ -4567,6 +4621,8 @@ namespace BeeKingdom.Playground
                 {
                     combatPatrolReturnTrips.Remove(id);
                     combatPatrolTargetWorldCoordByEncounterId.Remove(id);
+                    combatPatrolCommittedTroopsByEncounterId.Remove(id);
+                    combatPatrolOutboundVisualSampleCache.Remove(id);
                 }
             }
         }
@@ -4639,29 +4695,207 @@ namespace BeeKingdom.Playground
             }
         }
 
+        // Mission M021 (2026-08-26) : composition proportionnelle + formation + champion meneur.
+        // Ordre canonique des 3 familles de combat (guardians/wingrunners/darters) - partage par
+        // le calcul d'echantillon visuel et la deduction de survivants au retour.
+        private static readonly string[] CombatFamilyOrder = { "guardians", "wingrunners", "darters" };
+
+        // Convertit une composition reelle (potentiellement des centaines/milliers d'unites) en
+        // un echantillon visuel borne et proportionnel (objectif 1 de la mission M021) : chaque
+        // famille non-nulle recoit au moins un sprite, le reste est reparti au prorata par la
+        // methode du plus grand reste (aucune fraction de sprite, aucune famille fantome).
+        private static List<(string Family, int Count)> ComputeMarchVisualSample(IReadOnlyDictionary<string, long> composition)
+        {
+            var sample = new List<(string Family, int Count)>(CombatFamilyOrder.Length);
+            if (composition == null) return sample;
+
+            long total = 0L;
+            foreach (string family in CombatFamilyOrder) total += Math.Max(0L, composition.GetValueOrDefault(family));
+            if (total <= 0L) return sample;
+
+            var nonZero = new List<string>(CombatFamilyOrder.Length);
+            foreach (string family in CombatFamilyOrder) if (composition.GetValueOrDefault(family) > 0L) nonZero.Add(family);
+            if (nonZero.Count == 0) return sample;
+
+            int cap = Mathf.Max(MarchVisualCapForTotal(total), nonZero.Count); // >=1 sprite par famille non-nulle, regle absolue
+            int extra = Mathf.Max(0, cap - nonZero.Count);
+
+            var alloc = new Dictionary<string, int>(nonZero.Count, StringComparer.Ordinal);
+            var remainder = new Dictionary<string, float>(nonZero.Count, StringComparer.Ordinal);
+            foreach (string family in nonZero)
+            {
+                double share = (double)composition.GetValueOrDefault(family) / total * extra;
+                int floorShare = (int)Math.Floor(share);
+                alloc[family] = 1 + floorShare;
+                remainder[family] = (float)(share - floorShare);
+            }
+            int distributedExtra = 0;
+            foreach (string family in nonZero) distributedExtra += alloc[family] - 1;
+            int leftover = extra - distributedExtra;
+            if (leftover > 0)
+            {
+                var byRemainder = new List<string>(nonZero);
+                byRemainder.Sort((x, y) => remainder[y].CompareTo(remainder[x]));
+                for (int i = 0; i < leftover && i < byRemainder.Count; i++) alloc[byRemainder[i]]++;
+            }
+
+            foreach (string family in CombatFamilyOrder)
+                if (alloc.TryGetValue(family, out int count) && count > 0) sample.Add((family, count));
+            return sample;
+        }
+
+        // Densite de formation bornee (objectif 6) : petites armees restent lisibles (3-5),
+        // grandes armees plafonnent a 13 sprites max - les proportions comptent plus que le
+        // total absolu de sprites visibles.
+        private static int MarchVisualCapForTotal(long total)
+        {
+            if (total <= 8) return (int)Mathf.Clamp(total, 1, 5);
+            if (total <= 60) return 6;
+            if (total <= 400) return 9;
+            return 13;
+        }
+
+        // Sprite dedie par famille (objectif 3, mission M021) : les 3 familles de combat ont
+        // desormais leur propre corps (Voltigeuse et Lanceuse ajoutees le 2026-08-26 - voir
+        // Docs/AI/Missions/M021...) - meme paire d'ailes reutilisee pour toutes les familles
+        // (demande de Jeff). MarchFamilyTint ci-dessous reste le filet de securite si un sprite
+        // dedie venait a manquer/echouer au chargement.
+        private static string MarchFamilyBodyResource(string family)
+        {
+            switch (family)
+            {
+                case "wingrunners": return "WorldMapWave6Runtime/CombatMarch/CombatMarchBeeBody_Wingrunners";
+                case "darters": return "WorldMapWave6Runtime/CombatMarch/CombatMarchBeeBody_Darters";
+                default: return CombatMarchBeeBodyResource;
+            }
+        }
+
+        // Teinte de repli uniquement si le sprite dedie d'une famille ne charge pas (objectif 3) -
+        // les 3 familles ont maintenant un sprite reel, donc ce cas ne devrait plus se produire en
+        // temps normal ; conserve comme filet de securite plutot que de laisser un rendu blanc/gris.
+        private static Color MarchFamilyTint(string family)
+        {
+            switch (family)
+            {
+                case "darters": return new Color(0.80f, 1f, 0.78f, 1f);
+                default: return Color.white;
+            }
+        }
+
+        // Disposition en essaim compact (objectif 2, motif phyllotaxie/tournesol) plutot qu'une
+        // ligne rigide - deterministe par index (pas de scintillement d'une frame a l'autre),
+        // aplatie verticalement pour suggérer la perspective de la carte.
+        private static Vector2 MarchFormationOffset(int index, int total, float baseSpread)
+        {
+            if (total <= 1) return Vector2.zero;
+            const float goldenAngle = 137.50776f * Mathf.Deg2Rad;
+            float radius = baseSpread * Mathf.Sqrt((index + 0.5f) / total);
+            float angle = index * goldenAngle;
+            return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * 0.55f) * radius;
+        }
+
+        // Mission M021, objectif 4 : le champion actuellement assigne (portee ruche entiere -
+        // aucune donnee serveur ne lie un champion a UNE marche precise, voir le rapport de
+        // mission) est utilise comme meneur de formation reel s'il en existe un dont le role est
+        // pertinent en combat (Guardians/Wingrunners/Darters - jamais un champion Civilian comme
+        // Nectaria/Aurelia, qui n'a aucune place dans une marche militaire).
+        private static string ResolveMarchLeaderChampionId()
+        {
+            IReadOnlyList<string> assigned = HiveViewProductUiPresenter.PeekAssignedChampionBeeIdsForWorldMap();
+            for (int i = 0; i < assigned.Count; i++)
+            {
+                if (ChampionBeeCatalog.TryResolve(assigned[i], out ChampionBeeDefinition definition) && definition.Role != ChampionBeeRole.Civilian)
+                    return assigned[i];
+            }
+            return null;
+        }
+
+        // Meneur de formation (objectif 4) : portrait reel du champion assigne (Resources/
+        // PremiumBeeReference/ChampionBees/<id>.png - deja utilise par l'ecran Abeilles
+        // championnes), avec un halo dore pour rester "visuellement distinguable et legerement
+        // plus proeminent" que les troupes normales, comme demande.
+        private void DrawChampionMarchUnit(Vector2 position, string championBeeId)
+        {
+            const float haloRadius = 22f;
+            Color haloColor = new Color(1f, 0.84f, 0.35f, 0.35f + 0.15f * Mathf.Sin(animatedTime * 2.4f));
+            DrawCircle(position, haloRadius, haloColor, 16);
+
+            Texture2D portrait = RuntimeEntityTexture("PremiumBeeReference/ChampionBees/" + championBeeId);
+            if (portrait == null)
+            {
+                DrawCircle(position, 12f, new Color(1f, 0.84f, 0.35f, 0.95f), 14);
+                return;
+            }
+
+            const float size = 40f;
+            Rect rect = new Rect(position.x - size * 0.5f, position.y - size * 0.5f, size, size);
+            Color previousColor = GUI.color;
+            GUI.color = Color.white;
+            GUI.DrawTexture(rect, portrait, ScaleMode.ScaleToFit, true);
+            GUI.color = previousColor;
+        }
+
+        // Formation complete (objectifs 2+3+4) : champion meneur legerement en avant de l'essaim
+        // (le long de la tangente de deplacement) puis les troupes normales en grappe compacte
+        // autour du centre de la marche. Filet de securite (echantillon vide, ex. donnees pas
+        // encore chargees) : conserve l'ancien rendu a une seule abeille plutot que de ne rien
+        // dessiner du tout.
+        private void DrawMarchFormation(Vector2 marker, Vector2 tangent, IReadOnlyList<(string Family, int Count)> sample, string leaderChampionId)
+        {
+            Vector2 forward = tangent.sqrMagnitude > 0.0001f ? tangent.normalized : Vector2.up;
+            if (!string.IsNullOrEmpty(leaderChampionId)) DrawChampionMarchUnit(marker + forward * 26f, leaderChampionId);
+
+            int totalUnits = 0;
+            if (sample != null) foreach ((string _, int count) in sample) totalUnits += count;
+            if (totalUnits <= 0) { DrawCombatMarchBee(marker); return; }
+
+            const float formationSpread = 24f;
+            int index = 0;
+            for (int s = 0; s < sample.Count; s++)
+            {
+                (string family, int count) = sample[s];
+                for (int i = 0; i < count; i++)
+                {
+                    Vector2 offset = MarchFormationOffset(index, totalUnits, formationSpread);
+                    DrawTroopMarchUnit(marker + offset, family, index * 1.7f);
+                    index++;
+                }
+            }
+        }
+
         // Abeille de la marche d'attaque (demande de Jeff, 2026-08-25) : remplace l'ancien
         // marqueur (simple cercle) par le sprite de la Gardienne, avec des ailes animees en
         // battement rapide (oscillation d'echelle/alpha a haute frequence, meme famille de
-        // pattern IMGUI que DrawFlightArc/DrawLine - aucun Animator necessaire).
-        private void DrawCombatMarchBee(Vector2 marker)
+        // pattern IMGUI que DrawFlightArc/DrawLine - aucun Animator necessaire). Filet de
+        // securite de DrawMarchFormation quand aucun echantillon n'est disponible.
+        private void DrawCombatMarchBee(Vector2 marker) => DrawTroopMarchUnit(marker, "guardians", marker.x * 0.01f);
+
+        // Mission M021 : generalisation de l'abeille de marche pour accepter une famille (choisit
+        // le sprite dedie s'il existe, sinon retombe sur le corps Gardienne + une teinte - voir
+        // MarchFamilyBodyResource/MarchFamilyTint) et un dephasage de battement d'ailes independant
+        // par unite (objectif 2 - "different wing animation phase") plutot qu'une seule abeille
+        // identique repetee. Les ailes restent communes a toutes les familles (demande de Jeff).
+        private void DrawTroopMarchUnit(Vector2 position, string family, float wingPhaseOffset)
         {
-            Texture2D body = RuntimeEntityTexture(CombatMarchBeeBodyResource);
+            Texture2D body = RuntimeEntityTexture(MarchFamilyBodyResource(family));
+            Color tint = Color.white;
+            if (body == null) { body = RuntimeEntityTexture(CombatMarchBeeBodyResource); tint = MarchFamilyTint(family); }
             Texture2D wings = RuntimeEntityTexture(CombatMarchBeeWingsResource);
             if (body == null)
             {
-                DrawCircle(marker, 7f, new Color(1f, 0.75f, 0.25f, 0.95f), 12);
+                DrawCircle(position, 7f, new Color(tint.r, tint.g, tint.b, 0.95f), 12);
                 return;
             }
 
             const float bodyWidth = 46f;
             float bodyHeight = bodyWidth * body.height / (float)body.width;
-            Vector2 bodyCenter = marker + new Vector2(0f, -bodyHeight * 0.18f);
+            Vector2 bodyCenter = position + new Vector2(0f, -bodyHeight * 0.18f);
             Rect bodyRect = new Rect(bodyCenter.x - bodyWidth * 0.5f, bodyCenter.y - bodyHeight * 0.5f, bodyWidth, bodyHeight);
 
             if (wings != null)
             {
                 const float wingFrequency = 32f;
-                float flap = Mathf.Abs(Mathf.Sin(animatedTime * wingFrequency + marker.x * 0.01f));
+                float flap = Mathf.Abs(Mathf.Sin(animatedTime * wingFrequency + wingPhaseOffset));
                 float wingScaleY = Mathf.Lerp(0.32f, 1f, flap);
                 float wingAlpha = Mathf.Lerp(0.55f, 0.95f, flap);
 
@@ -4673,14 +4907,14 @@ namespace BeeKingdom.Playground
                 Matrix4x4 matrix = GUI.matrix;
                 Color previousColor = GUI.color;
                 GUIUtility.ScaleAroundPivot(new Vector2(1f, wingScaleY), wingPivot);
-                GUI.color = new Color(1f, 1f, 1f, wingAlpha);
+                GUI.color = new Color(tint.r, tint.g, tint.b, wingAlpha);
                 GUI.DrawTexture(wingRect, wings, ScaleMode.ScaleToFit, true);
                 GUI.matrix = matrix;
                 GUI.color = previousColor;
             }
 
             Color bodyPreviousColor = GUI.color;
-            GUI.color = Color.white;
+            GUI.color = tint;
             GUI.DrawTexture(bodyRect, body, ScaleMode.ScaleToFit, true);
             GUI.color = bodyPreviousColor;
         }

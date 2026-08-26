@@ -64,6 +64,26 @@ switch (command)
         await RepairSquadReservationAsync(host.Services.GetRequiredService<SqlConnectionFactory>(), args[1], args.Contains("--apply"));
         break;
 
+    case "grant-resources":
+        if (args.Length < 4 || !long.TryParse(args[3], out long resourceDelta))
+        {
+            Console.Error.WriteLine("Usage: grant-resources <account-email-substring> <resource-key: honey|pollen|wax> <delta> [--apply]");
+            Environment.ExitCode = 2;
+            break;
+        }
+        await GrantResourcesAsync(host.Services.GetRequiredService<SqlConnectionFactory>(), args[1], args[2], resourceDelta, args.Contains("--apply"));
+        break;
+
+    case "set-building-level":
+        if (args.Length < 4 || !int.TryParse(args[3], out int buildingLevel))
+        {
+            Console.Error.WriteLine("Usage: set-building-level <account-email-substring> <building-key> <level> [--apply]");
+            Environment.ExitCode = 2;
+            break;
+        }
+        await SetBuildingLevelAsync(host.Services.GetRequiredService<SqlConnectionFactory>(), args[1], args[2], buildingLevel, args.Contains("--apply"));
+        break;
+
     case "grant-recall-tokens":
         if (args.Length < 3 || !long.TryParse(args[2], out long recallDelta))
         {
@@ -358,6 +378,182 @@ static async Task RepairSquadReservationAsync(SqlConnectionFactory connectionFac
     if (!apply)
     {
         Console.WriteLine("Dry run only - no write performed. Re-run with --apply to write this correction.");
+        return;
+    }
+
+    string correctedJson = JsonSerializer.Serialize(correctedState, jsonOptions);
+    await using (SqlCommand write = connection.CreateCommand())
+    {
+        write.CommandText = "UPDATE dbo.HivePlayerStates SET StateJson=@json, UpdatedAtUtc=SYSUTCDATETIME() WHERE PlayerId=@playerId AND HiveId=@hiveId";
+        write.Parameters.Add(new SqlParameter("@json", SqlDbType.NVarChar, -1) { Value = correctedJson });
+        write.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        write.Parameters.Add(new SqlParameter("@hiveId", SqlDbType.UniqueIdentifier) { Value = hiveId });
+        int rows = await write.ExecuteNonQueryAsync();
+        Console.WriteLine(rows == 1 ? "Applied: 1 row updated." : "Unexpected row count updated: " + rows);
+    }
+}
+
+// Fixe le niveau d'un batiment (demande de Jeff, 2026-08-26 - augmenter drastiquement la capacite
+// de population pour tester la Caserne passe par le niveau du batiment "nursery_cluster", seul
+// levier reel qui gouverne CombatRecruitmentService.ComputePopulationCapacity ; aucun champ de
+// capacite separe n'existe). Meme modele que les autres commandes grant-* : trouve le compte par
+// email, lit le JSON BRUT, fixe le niveau (valeur absolue, pas un delta), valide via
+// HiveStateMigrator.ToCurrent avant d'ecrire.
+static async Task SetBuildingLevelAsync(SqlConnectionFactory connectionFactory, string emailMatch, string buildingKey, int level, bool apply)
+{
+    if (level < 0) { Console.Error.WriteLine("Level must be >= 0."); Environment.ExitCode = 2; return; }
+    buildingKey = buildingKey.Trim();
+
+    JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
+    await using SqlConnection connection = connectionFactory.CreateConnection();
+    await connection.OpenAsync();
+
+    Guid playerId = Guid.Empty;
+    await using (SqlCommand find = connection.CreateCommand())
+    {
+        find.CommandText = "SELECT TOP 2 a.PlayerId, a.Email FROM dbo.AuthenticationAccounts a WHERE a.Email LIKE @Match;";
+        find.Parameters.Add(new SqlParameter("@Match", "%" + emailMatch + "%"));
+        var matches = new List<(Guid PlayerId, string Email)>();
+        await using (SqlDataReader reader = await find.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) matches.Add((reader.GetGuid(0), reader.GetString(1)));
+        }
+        if (matches.Count == 0) { Console.Error.WriteLine("No matching account found."); Environment.ExitCode = 1; return; }
+        if (matches.Count > 1) { Console.Error.WriteLine("More than one account matches - be more specific. Matches: " + string.Join(", ", matches.Select(m => m.Email))); Environment.ExitCode = 1; return; }
+        playerId = matches[0].PlayerId;
+        Console.WriteLine("Matched account: " + playerId + " " + matches[0].Email);
+    }
+
+    Guid hiveId = Guid.Empty;
+    string? json = null;
+    await using (SqlCommand read = connection.CreateCommand())
+    {
+        read.CommandText = "SELECT TOP 2 HiveId, StateJson FROM dbo.HivePlayerStates WHERE PlayerId=@playerId ORDER BY UpdatedAtUtc DESC;";
+        read.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        var rows = new List<(Guid HiveId, string Json)>();
+        await using (SqlDataReader reader = await read.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) rows.Add((reader.GetGuid(0), reader.GetString(1)));
+        }
+        if (rows.Count == 0) { Console.Error.WriteLine("No HivePlayerStates row found for PlayerId=" + playerId); Environment.ExitCode = 1; return; }
+        if (rows.Count > 1) Console.WriteLine("Warning: multiple hives found for this player - using the most recently updated one.");
+        hiveId = rows[0].HiveId;
+        json = rows[0].Json;
+    }
+
+    PlayerHiveState state = JsonSerializer.Deserialize<PlayerHiveState>(json, jsonOptions)!;
+    var buildingLevels = new Dictionary<string, int>(state.BuildingLevels ?? new Dictionary<string, int>(StringComparer.Ordinal), StringComparer.Ordinal);
+    int before = buildingLevels.GetValueOrDefault(buildingKey);
+    buildingLevels[buildingKey] = level;
+    PlayerHiveState correctedState = state with { BuildingLevels = buildingLevels };
+
+    try { HiveStateMigrator.ToCurrent(correctedState); }
+    catch (Exception validationError)
+    {
+        Console.Error.WriteLine("Corrected state fails validation, aborting without writing: " + validationError.Message);
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine($"PlayerId={playerId} HiveId={hiveId}");
+    Console.WriteLine($"  {buildingKey}: level {before} -> {level}");
+
+    if (!apply)
+    {
+        Console.WriteLine("Dry run only - no write performed. Re-run with --apply to write this change.");
+        return;
+    }
+
+    string correctedJson = JsonSerializer.Serialize(correctedState, jsonOptions);
+    await using (SqlCommand write = connection.CreateCommand())
+    {
+        write.CommandText = "UPDATE dbo.HivePlayerStates SET StateJson=@json, UpdatedAtUtc=SYSUTCDATETIME() WHERE PlayerId=@playerId AND HiveId=@hiveId";
+        write.Parameters.Add(new SqlParameter("@json", SqlDbType.NVarChar, -1) { Value = correctedJson });
+        write.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        write.Parameters.Add(new SqlParameter("@hiveId", SqlDbType.UniqueIdentifier) { Value = hiveId });
+        int rows = await write.ExecuteNonQueryAsync();
+        Console.WriteLine(rows == 1 ? "Applied: 1 row updated." : "Unexpected row count updated: " + rows);
+    }
+}
+
+// Octroi manuel de miel/pollen/cire (demande de Jeff, 2026-08-26 - tester la formation de marche
+// mixte necessite d'entrainer des Voltigeuses/Lanceuses, ce qui coute des ressources). Meme modele
+// que grant-recall-tokens : trouve le compte par email, lit le JSON BRUT, ajoute le delta au solde
+// (borne a la capacite existante, jamais negatif), valide via HiveStateMigrator.ToCurrent avant
+// d'ecrire. Sans --apply : affiche ce qui serait fait, n'ecrit rien.
+static async Task GrantResourcesAsync(SqlConnectionFactory connectionFactory, string emailMatch, string resourceKey, long delta, bool apply)
+{
+    resourceKey = resourceKey.Trim().ToLowerInvariant();
+    if (resourceKey is not ("honey" or "pollen" or "wax"))
+    {
+        Console.Error.WriteLine("Unknown resource key: " + resourceKey + " (expected honey, pollen, or wax)");
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
+    await using SqlConnection connection = connectionFactory.CreateConnection();
+    await connection.OpenAsync();
+
+    Guid playerId = Guid.Empty;
+    await using (SqlCommand find = connection.CreateCommand())
+    {
+        find.CommandText = "SELECT TOP 2 a.PlayerId, a.Email FROM dbo.AuthenticationAccounts a WHERE a.Email LIKE @Match;";
+        find.Parameters.Add(new SqlParameter("@Match", "%" + emailMatch + "%"));
+        var matches = new List<(Guid PlayerId, string Email)>();
+        await using (SqlDataReader reader = await find.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) matches.Add((reader.GetGuid(0), reader.GetString(1)));
+        }
+        if (matches.Count == 0) { Console.Error.WriteLine("No matching account found."); Environment.ExitCode = 1; return; }
+        if (matches.Count > 1) { Console.Error.WriteLine("More than one account matches - be more specific. Matches: " + string.Join(", ", matches.Select(m => m.Email))); Environment.ExitCode = 1; return; }
+        playerId = matches[0].PlayerId;
+        Console.WriteLine("Matched account: " + playerId + " " + matches[0].Email);
+    }
+
+    Guid hiveId = Guid.Empty;
+    string? json = null;
+    await using (SqlCommand read = connection.CreateCommand())
+    {
+        read.CommandText = "SELECT TOP 2 HiveId, StateJson FROM dbo.HivePlayerStates WHERE PlayerId=@playerId ORDER BY UpdatedAtUtc DESC;";
+        read.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        var rows = new List<(Guid HiveId, string Json)>();
+        await using (SqlDataReader reader = await read.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) rows.Add((reader.GetGuid(0), reader.GetString(1)));
+        }
+        if (rows.Count == 0) { Console.Error.WriteLine("No HivePlayerStates row found for PlayerId=" + playerId); Environment.ExitCode = 1; return; }
+        if (rows.Count > 1) Console.WriteLine("Warning: multiple hives found for this player - using the most recently updated one.");
+        hiveId = rows[0].HiveId;
+        json = rows[0].Json;
+    }
+
+    PlayerHiveState state = JsonSerializer.Deserialize<PlayerHiveState>(json, jsonOptions)!;
+    if (!state.Resources.TryGetValue(resourceKey, out ResourceBalance? balance))
+    {
+        Console.Error.WriteLine("Hive has no '" + resourceKey + "' balance entry - aborting.");
+        Environment.ExitCode = 1;
+        return;
+    }
+    long before = balance.Amount;
+    long after = Math.Max(0, Math.Min(balance.Capacity, before + delta));
+    var resources = new Dictionary<string, ResourceBalance>(state.Resources, StringComparer.Ordinal) { [resourceKey] = balance with { Amount = after } };
+    PlayerHiveState correctedState = state with { Resources = resources };
+
+    try { HiveStateMigrator.ToCurrent(correctedState); }
+    catch (Exception validationError)
+    {
+        Console.Error.WriteLine("Corrected state fails validation, aborting without writing: " + validationError.Message);
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine($"PlayerId={playerId} HiveId={hiveId}");
+    Console.WriteLine($"  {resourceKey}: {before} -> {after} (delta {delta}, capacity {balance.Capacity})");
+
+    if (!apply)
+    {
+        Console.WriteLine("Dry run only - no write performed. Re-run with --apply to write this change.");
         return;
     }
 

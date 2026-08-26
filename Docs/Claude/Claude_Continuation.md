@@ -40,6 +40,60 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M021 : composition proportionnelle + champion + retour realiste sur la marche (2026-08-26)
+
+**Mission M021 recue de Jeff sous forme de brief structure** (format "CEO validation", style deja
+utilise par Codex - voir `Docs/AI/Missions/`). Objectif : la marche de combat sur la carte du monde
+montrait toujours UNE seule abeille generique, quelle que soit la composition reelle de l'armee
+engagee. Implemente integralement, rapport complet dans
+`Docs/AI/Missions/M021-Real-March-Composition-Champion-Return-State.md` (17 sections requises par
+le brief, y compris les limites honnetement documentees plutot que masquees).
+
+**Composition proportionnelle et formation.** `ComputeMarchVisualSample` convertit la vraie
+composition (`CommittedTroops`) en un echantillon visuel borne (5 a 13 sprites selon la taille de
+l'armee) via la methode du plus grand reste - chaque famille non-nulle garde au moins 1 sprite
+(verifie : 1 Gardienne / 1000 Voltigeuses garde bien la Gardienne rare). Disposition en essaim
+compact (motif phyllotaxie/tournesol) autour du point de la courbe existante - aucun changement a
+la trajectoire, la vitesse ou les formules de combat.
+
+**Champion meneur.** Le champion actuellement assigne (portee ruche entiere - aucune donnee serveur
+ne lie un champion a une marche precise, limite documentee dans le rapport) mene la formation avec
+son vrai portrait et un halo dore, si son role est pertinent en combat (jamais un champion Civilian
+comme Nectaria/Aurelia).
+
+**Marche de retour realiste.** La reclamation automatique (troupes qui reviennent seules) jetait le
+recu de combat au lieu de le garder - corrige (cache borne de 16 recus recents,
+`RememberClaimReceipt`) pour que le retour affiche les vrais survivants (engages moins pertes
+definitives ; les blessees comptent comme rentrees, elles recuperent ensuite comme prevu par le
+jeu) au lieu de rejouer la composition de depart.
+
+**Assets reels ajoutes en cours de validation.** Jeff a fourni les corps Voltigeuse (`voltigeuse.png`,
+regenere avec fond transparent apres un premier essai a fond opaque) et Lanceuse (`lanceuse.png`,
+deja transparent), memes ailes reutilisees pour les 3 familles. Copies dans
+`Resources/WorldMapWave6Runtime/CombatMarch/CombatMarchBeeBody_{Wingrunners,Darters}.png` et
+branches - les 3 familles de combat ont desormais leur vrai sprite (plus de teinte de repli en
+usage normal).
+
+**Outils de test ajoutes a `BeeKingdom.Tools`** (meme modele dry-run/`--apply` que les commandes
+precedentes) : `grant-resources` (miel/pollen/cire) et `set-building-level` (niveau de batiment
+absolu - utilise pour porter `nursery_cluster` a 400, capacite de population au plafond 2000, seul
+levier reel qui la gouverne).
+
+Preuves : compilation Unity verifiee propre a chaque etape (`scriptCompilationFailed=False` via
+script-execute, plus fiable que console-get-logs qui a affiche une fausse erreur en cache une fois -
+voir piege de build plus bas dans ce document). Algorithme de composition teste en direct dans
+l'editeur (5 cas, tous corrects). **Valide manuellement par Jeff en Play Mode avec les 3 types de
+troupes melangees dans une meme marche : "j'ai testé avec les 3 types d'abeilles et ca fonctionne".**
+
+Ouvert / a faire ensuite : (1) le brief M021 demandait explicitement `Do NOT commit` - les
+changements de cette mission (rendu + outils) restent non commites, a confirmer avec Jeff ; (2) le
+champion reste une assignation globale a la ruche, pas par marche - un vrai lien par marche
+demanderait un ajout de schema serveur, explicitement hors scope de M021 ; (3) aucun sprite dedie
+"champion menant une marche" (portrait reutilise tel quel) ; (4) pas de difference de taille visuelle
+entre familles (hook laisse en place, pas de decision de design prise).
+
+---
+
 ## Jalon courant — Retour automatique des troupes, incident donnees production, abeilles ambiantes HiveMap, fenetre de rappel + jeton (2026-08-26)
 
 **Retour automatique des troupes (demande de Jeff).** Le joueur ne doit plus reclamer manuellement
