@@ -36211,11 +36211,16 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
                 TimeSpan remaining = model.RemainingAtRead;
                 GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 24f), remaining > TimeSpan.Zero ? BeeLocalization.Text("combat.patrol.in_progress", "En patrouille...") + " " + remaining.ToString(@"mm\:ss") : BeeLocalization.Text("combat.patrol.returned", "De retour"), smallStyle);
                 y += 30f;
-                GUI.enabled = model.CanClaim;
-                if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 40f), BeeLocalization.Text("combat.patrol.claim", "Reclamer"))) combatPatrolController.Claim();
+                // Retour visuel explicite pendant la mutation (demande de Jeff, 2026-08-26) : sans
+                // ca, un clic sur Rappeler/Reclamer semble ne rien faire pendant l'aller-retour
+                // reseau, et un second clic peut consommer un deuxieme jeton de rappel pour rien.
+                bool mutating = model.State == CombatPatrolScreenState.Mutating;
+                GUI.enabled = model.CanClaim && !mutating;
+                string claimLabel = mutating ? BeeLocalization.Text("combat.patrol.working", "...") : BeeLocalization.Text("combat.patrol.claim", "Reclamer");
+                if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 40f), claimLabel)) combatPatrolController.Claim();
                 y += 46f;
-                GUI.enabled = model.CanRecall;
-                string recallLabel = BeeLocalization.Text("combat.patrol.recall", "Rappeler") + " (" + model.RecallTokenCount.ToString(CultureInfo.InvariantCulture) + ")";
+                GUI.enabled = model.CanRecall && !mutating;
+                string recallLabel = (mutating ? BeeLocalization.Text("combat.patrol.working", "...") : BeeLocalization.Text("combat.patrol.recall", "Rappeler")) + " (" + model.RecallTokenCount.ToString(CultureInfo.InvariantCulture) + ")";
                 if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 34f), recallLabel)) combatPatrolController.Recall();
                 GUI.enabled = true;
                 y += 38f;

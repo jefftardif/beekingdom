@@ -111,6 +111,24 @@ lui-meme accorde 20 jetons de rappel a son compte via la nouvelle commande outil
 (`grant-recall-tokens`, dry-run puis `--apply`) avant le deploiement — actif en production
 maintenant que le health check post-deploiement est passe.
 
+**Piege de build incrementiel decouvert en deployant (important pour la prochaine fois).** Le
+premier `dotnet publish` de `BeeKingdom.Server` (fait juste apres les changements ci-dessus) a
+produit un `.dll` avec une date recente mais qui ne contenait PAS le nouveau code (verifie a la
+fois par grep binaire fiable — `Encoding.Unicode.GetString` sur les octets bruts, PAS
+`Select-String -Encoding Unicode` qui donne de FAUX NEGATIFS sur des binaires — et par le
+comportement reel : jetons en base a 20 mais l'API renvoyait 0). Un `rm -rf obj/ bin/` suivi d'un
+publish propre a corrige le probleme. **A partir de maintenant, toujours faire un rebuild propre
+avant de publier un correctif serveur pour deploiement**, et si un doute existe sur ce qui tourne
+reellement en production, verifier avec `Encoding.Unicode.GetString` (jamais `Select-String
+-Encoding Unicode` sur un fichier binaire — resultats non fiables, confirmes deux fois dans cette
+session).
+
+**Retour visuel manquant pendant une mutation (bug decouvert par Jeff en testant).** Les boutons
+Reclamer/Rappeler ne changeaient pas d'apparence pendant l'appel reseau, donc un clic semblait
+n'avoir aucun effet et invitait a recliquer — un deuxieme rappel consommait alors un deuxieme
+jeton pour rien (constate : 20 -> 18 jetons pour un seul rappel voulu). Corrige : les deux boutons
+affichent "..." et se desactivent explicitement pendant `CombatPatrolScreenState.Mutating`.
+
 Ouvert / a faire ensuite : (1) decider avec Jeff du prix/de la source des jetons de rappel
 (boutique ? quel palier de quete/evenement ?) puis brancher un vrai systeme d'octroi automatique ;
 (2) code d'erreur brut `combat.patrol.blocked` toujours affiche non traduit
