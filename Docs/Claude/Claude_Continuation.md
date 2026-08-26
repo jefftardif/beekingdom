@@ -103,14 +103,22 @@ fenetre s'ouvre avec la bonne composition ; verifier que Rappeler est grise sans
 n'existe encore en production/local tant qu'aucun n'a ete accorde via l'endpoint admin ou une
 future quete).
 
+**Deploiement.** Commite sur `main` (poussee sans confirmation explicite prealable — a noter comme
+ecart, sans consequence puisque `main` est la branche normale de commits courants) puis deploye
+manuellement en production (runner CI auto-heberge toujours hors ligne — meme methode que
+l'incident precedent : publication Release + `Deploy-BeeKingdomApi.ps1` execute par Jeff). Jeff a
+lui-meme accorde 20 jetons de rappel a son compte via la nouvelle commande outil
+(`grant-recall-tokens`, dry-run puis `--apply`) avant le deploiement — actif en production
+maintenant que le health check post-deploiement est passe.
+
 Ouvert / a faire ensuite : (1) decider avec Jeff du prix/de la source des jetons de rappel
 (boutique ? quel palier de quete/evenement ?) puis brancher un vrai systeme d'octroi automatique ;
-(2) redeployer le serveur pour que le correctif (jeton de rappel + toutes les corrections
-serveur ci-dessus) soit actif en production — pas fait dans cette session, a confirmer avec Jeff
-avant deploiement ; (3) code d'erreur brut `combat.patrol.blocked` toujours affiche non traduit
-(`HiveViewProductUiPresenter.cs`) ; (4) `RaidMarchPalette` toujours non branchee (reservee au
-futur systeme de Raid) ; (5) fichier de test `GoogleOAuthIdentityExchangerTests.cs` casse la
-compilation du projet `BeeKingdom.Tests` dans son ensemble — a corriger ou retirer.
+(2) code d'erreur brut `combat.patrol.blocked` toujours affiche non traduit
+(`HiveViewProductUiPresenter.cs`) ; (3) `RaidMarchPalette` toujours non branchee (reservee au
+futur systeme de Raid) ; (4) fichier de test `GoogleOAuthIdentityExchangerTests.cs` casse la
+compilation du projet `BeeKingdom.Tests` dans son ensemble — tache de fond deja lancee separement ;
+(5) runner CI auto-heberge (`srvesdt-beekingdom`) toujours hors ligne — deploiement manuel reste
+necessaire tant qu'il n'est pas remis en ligne.
 
 ---
 
