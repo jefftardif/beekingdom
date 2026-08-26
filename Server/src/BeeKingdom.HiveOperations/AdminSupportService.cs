@@ -14,6 +14,9 @@ public sealed record GrantCombatPatrolSlotCommand(Guid PlayerId, Guid HiveId, bo
 // Octroi manuel de jetons de rappel (demande de Jeff, 2026-08-26) : seul moyen d'en obtenir pour
 // l'instant en l'absence de boutique/systeme de quetes branche - voir CombatPatrolService.RecallItemId.
 public sealed record AdjustRecallTokensCommand(Guid PlayerId, Guid HiveId, long Delta, string Reason, long ExpectedRevision);
+// Fixe le niveau d'un batiment a une valeur absolue (portage de BeeKingdom.Tools set-building-level
+// vers l'outil de support web, demande de Jeff 2026-08-26).
+public sealed record SetBuildingLevelCommand(Guid PlayerId, Guid HiveId, string BuildingKey, int Level, string Reason, long ExpectedRevision);
 public sealed record AdminMutationResult(bool Succeeded, string Code, PlayerHiveState State);
 public sealed record AdminDiagnostics(
     Guid PlayerId, Guid HiveId, long Revision,
@@ -135,6 +138,28 @@ public sealed class AdminSupportService
             string details = "recall tokens: " + before.ToString(CultureInfo.InvariantCulture) + " -> " + after.ToString(CultureInfo.InvariantCulture) + " (delta " + command.Delta.ToString(CultureInfo.InvariantCulture) + ")";
             PlayerHiveState next = AppendAudit(state with { Revision = checked(state.Revision + 1), SpeedUps = items }, "combat_recall_tokens_adjust", details, command.Reason);
             result = new(true, "game.admin_recall_tokens_adjusted", next);
+            return next;
+        }, ct);
+        return result!;
+    }
+
+    public async Task<AdminMutationResult> SetBuildingLevelAsync(SetBuildingLevelCommand command, CancellationToken ct)
+    {
+        RequireRevision(command.ExpectedRevision);
+        RequireReason(command.Reason);
+        if (string.IsNullOrWhiteSpace(command.BuildingKey)) throw new ArgumentException("game.invalid_request");
+        if (command.Level < 0) throw new ArgumentException("game.invalid_request");
+        AdminMutationResult? result = null;
+        await repository.ExecuteAtomicallyAsync(command.PlayerId, command.HiveId, state =>
+        {
+            if (state.Revision != command.ExpectedRevision)
+            { result = new(false, "game.revision_conflict", state); return state; }
+            var buildingLevels = new Dictionary<string, int>(state.BuildingLevels ?? new Dictionary<string, int>(StringComparer.Ordinal), StringComparer.Ordinal);
+            int before = buildingLevels.GetValueOrDefault(command.BuildingKey);
+            buildingLevels[command.BuildingKey] = command.Level;
+            string details = command.BuildingKey + ": niveau " + before.ToString(CultureInfo.InvariantCulture) + " -> " + command.Level.ToString(CultureInfo.InvariantCulture);
+            PlayerHiveState next = AppendAudit(state with { Revision = checked(state.Revision + 1), BuildingLevels = buildingLevels }, "building_level_set", details, command.Reason);
+            result = new(true, "game.admin_building_level_set", next);
             return next;
         }, ct);
         return result!;

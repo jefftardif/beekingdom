@@ -499,6 +499,44 @@ Invoke-RestMethod `
 
 Do not present this endpoint as a live world map, territory system, alliance map, scouting feed, route execution, PvP surface, economy surface, ranking, matchmaking or synchronized Unity gameplay.
 
+## Internal Support Subdomain
+
+`internal-support.beekingdomgame.com` (Cloudflare DNS record created 2026-08-26) is a second
+hostname binding on the same already-deployed BeeKingdom.Server IIS site that serves
+`api-ops.beekingdomgame.com`. It is not a separate process or deployment - it exposes
+`/admin/ui` (see `AdminUiPage.cs`) under a friendlier internal hostname, gated by the same
+`AdminSupport` shared-secret described in the Admin Operations Security section, using a
+different key from `Ops__AdminKey`.
+
+Setup (run on the Windows Server 2025 box):
+
+1. In Cloudflare, set SSL/TLS mode to "Full (strict)" for the zone.
+2. In Cloudflare, generate an Origin Certificate for `internal-support.beekingdomgame.com`
+   (SSL/TLS > Origin Server > Create Certificate), download the certificate and private key,
+   and combine them into a `.pfx`:
+   ```powershell
+   openssl pkcs12 -export -out internal-support-origin.pfx -inkey origin.key -in origin.pem
+   ```
+3. Run:
+   ```powershell
+   .\Server\deploy\Add-InternalSupportSubdomain.ps1 -CertPfxPath C:\certs\internal-support-origin.pfx
+   ```
+   This finds the existing IIS site, imports the origin certificate, adds an HTTPS SNI
+   binding for the new hostname, generates a random `AdminSupport` key, stores only its
+   SHA-256 in the site's `web.config` (`AdminSupport__KeySha256`), and recycles the app pool.
+   The plaintext key is printed once to the console - store it in a password manager, it is
+   never written to disk or logged.
+
+Durability: this relies entirely on the existing IIS hosting for `api-ops.beekingdomgame.com`
+(W3SVC auto-starts on server reboot, ASP.NET Core Module auto-restarts the worker process on
+crash). No separate Windows Service or scheduled task is introduced.
+
+Access: `https://internal-support.beekingdomgame.com/admin/ui`, header
+`X-BeeKingdom-Support-Key: <key>`.
+
+Do not reuse the `Ops__AdminKey`/`Ops__MigrationApplyKey` value for `AdminSupport__Key`; keep
+these secrets distinct so they can be rotated independently (see `AdminSupportOptions.cs`).
+
 ## Rollback Strategy
 
 Package rollback:

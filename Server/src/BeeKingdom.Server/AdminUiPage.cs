@@ -64,6 +64,15 @@ public static class AdminUiPage
       <button onclick="adjustResource()">Ajuster</button>
     </div>
 
+    <h2>Batiments</h2>
+    <table id="buildings-table"></table>
+    <div class="row">
+      <input id="building-key" type="text" placeholder="cle du batiment (ex: nursery_cluster)" style="width:220px" />
+      <input id="building-level" type="number" min="0" placeholder="niveau" style="width:100px" />
+      <input id="building-reason" type="text" placeholder="motif (obligatoire)" style="width:240px" />
+      <button onclick="setBuildingLevel()">Fixer le niveau</button>
+    </div>
+
     <h2>Effectifs (roster)</h2>
     <table id="roster-table"></table>
     <div class="row">
@@ -168,6 +177,12 @@ function renderDiagnostics(diag) {
     const opt = document.createElement("option"); opt.value = key; opt.textContent = key; resSelect.appendChild(opt);
   });
 
+  const buildingsTable = document.getElementById("buildings-table");
+  buildingsTable.innerHTML = "<tr><th>Batiment</th><th>Niveau</th></tr>";
+  Object.keys(diag.buildingLevels || {}).forEach(function (key) {
+    buildingsTable.innerHTML += "<tr><td>" + key + "</td><td>" + diag.buildingLevels[key] + "</td></tr>";
+  });
+
   const rosterTable = document.getElementById("roster-table");
   rosterTable.innerHTML = "<tr><th>Famille</th><th>Effectif</th></tr>";
   Object.keys(diag.roster || {}).forEach(function (key) {
@@ -215,6 +230,24 @@ async function adjustRoster() {
     });
     document.getElementById("roster-delta").value = "";
     document.getElementById("roster-reason").value = "";
+    await refreshHive();
+  } catch (e) { document.getElementById("detail-error").textContent = "Erreur: " + e.message; }
+}
+
+async function setBuildingLevel() {
+  const key = document.getElementById("building-key").value.trim();
+  const level = parseInt(document.getElementById("building-level").value || "-1", 10);
+  const reason = document.getElementById("building-reason").value.trim();
+  if (!key) { document.getElementById("detail-error").textContent = "Une cle de batiment est requise."; return; }
+  if (level < 0) { document.getElementById("detail-error").textContent = "Niveau invalide."; return; }
+  if (!reason) { document.getElementById("detail-error").textContent = "Un motif est requis."; return; }
+  try {
+    await api("/admin/v1/players/" + currentPlayerId + "/hives/" + currentHiveId + "/buildings/level", {
+      method: "POST",
+      body: JSON.stringify({ buildingKey: key, level: level, reason: reason, expectedRevision: lastRevision })
+    });
+    document.getElementById("building-level").value = "";
+    document.getElementById("building-reason").value = "";
     await refreshHive();
   } catch (e) { document.getElementById("detail-error").textContent = "Erreur: " + e.message; }
 }
