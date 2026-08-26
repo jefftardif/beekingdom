@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BeeKingdom.Buildings.Interaction;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -79,6 +79,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapBuildingUpgradeClickBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapBuildingUpgradeClickBootstrap>();
+        }
+
         private void Update()
         {
             if (subscribedController != null) return;
@@ -116,7 +127,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             string highlightedType = HiveViewProductUiPresenter.HighlightedPrerequisiteBuildingTypeForExternalHost;
             if (string.IsNullOrEmpty(highlightedType) || subscribedController == null) return;
             Camera camera = Camera.main;

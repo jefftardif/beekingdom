@@ -39,6 +39,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapSettingsBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapSettingsBootstrap>();
+        }
+
         private void Start()
         {
             LivingHiveSettingsBridge.SetHandlers(
@@ -48,7 +59,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
-            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             HiveViewProductUiPresenter.DrawSettingsOverlayForExternalHost(Screen.width < 900);
         }
     }

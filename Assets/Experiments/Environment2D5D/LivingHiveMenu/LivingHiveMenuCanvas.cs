@@ -930,6 +930,12 @@ namespace BeeKingdom.LivingHiveMenu
 
         private void OnMoreRowClicked(string entry)
         {
+            if (string.Equals(entry, "Armée", System.StringComparison.Ordinal))
+            {
+                state.CloseActiveMenuPanel();
+                LivingHiveArmyBridge.OpenOverlay();
+                return;
+            }
             if (string.Equals(entry, "Parametres", System.StringComparison.Ordinal))
             {
                 // Close the Plus panel first: the real Settings overlay draws via IMGUI on

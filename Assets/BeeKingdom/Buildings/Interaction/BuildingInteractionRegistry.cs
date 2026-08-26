@@ -95,6 +95,11 @@ namespace BeeKingdom.Buildings.Interaction
             return go;
         }
 
+        public bool TryGetGameObjectByBuildingType(string buildingType, out GameObject go)
+        {
+            return _objectsByType.TryGetValue(buildingType, out go);
+        }
+
         public GameObject GetGameObjectByLegacyKey(string legacyKey)
         {
             GameObject go;

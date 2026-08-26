@@ -12,6 +12,7 @@ namespace BeeKingdom.Playground.Editor
         private const string MainDemoScenePath = "Assets/Scenes/SandboxPlayground.unity";
         private const string LivingHiveScenePath = "Assets/Scenes/LivingHive.unity";
         private const string Environment2D5DScenesFolder = "Assets/Experiments/Environment2D5D/";
+        private const string HiveMapScenePath = "Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_HiveMap_Test.unity";
         private const string Wave5Premium25x25ScenePath = "Assets/Scenes/WorldMapWave5Premium25x25Test.unity";
         private const string Wave6V3ECandidateScenePath = "Assets/Scenes/WorldMapWave6V3ECandidate.unity";
         private const string Wave6V2INativeAuditPreviewScenePath = "Assets/Scenes/WorldMapWave6V2INativeAuditPreview.unity";
@@ -54,6 +55,19 @@ namespace BeeKingdom.Playground.Editor
             SplashDevelopmentSceneConfig.DisableWave5PremiumMapMode();
             EditorSceneManager.OpenScene(LivingHiveScenePath, OpenSceneMode.Single);
             UseLivingHiveOnPlay();
+        }
+
+        [MenuItem("Bee Kingdom/Playground/Open HiveMap Scene")]
+        public static void OpenHiveMapScene()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                return;
+            }
+
+            SplashDevelopmentSceneConfig.DisableWave5PremiumMapMode();
+            EditorSceneManager.OpenScene(HiveMapScenePath, OpenSceneMode.Single);
+            UseHiveMapOnPlay();
         }
 
         [MenuItem("Bee Kingdom/Playground/Open Wave5 Premium 25x25 Test Scene")]
@@ -208,6 +222,13 @@ namespace BeeKingdom.Playground.Editor
         {
             SplashDevelopmentSceneConfig.DisableWave5PremiumMapMode();
             ConfigurePlayModeStartScene(LivingHiveScenePath);
+        }
+
+        [MenuItem("Bee Kingdom/Playground/Use HiveMap On Play")]
+        public static void UseHiveMapOnPlay()
+        {
+            SplashDevelopmentSceneConfig.DisableWave5PremiumMapMode();
+            ConfigurePlayModeStartScene(HiveMapScenePath);
         }
 
         [MenuItem("Bee Kingdom/Playground/Use Wave5 Premium 25x25 On Play")]

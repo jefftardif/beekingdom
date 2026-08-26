@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BeeKingdom.Gameplay.Communication;
 using BeeKingdom.Networking;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
@@ -34,6 +35,33 @@ namespace BeeKingdom.Playground
         private static ProtectedGameMutationOutbox gameplayMutationOutbox;
         private static Guid gameplayPlayerId;
 
+        private static bool sceneLoadedSubscribed;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RegisterSceneLoadedCallback()
+        {
+            if (sceneLoadedSubscribed) return;
+            sceneLoadedSubscribed = true;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!IsEnvironmentScene(scene)) return;
+            TryConfigureGameplayForActiveSession();
+        }
+
+        private static bool IsEnvironmentScene(Scene scene)
+        {
+            if (!scene.IsValid() || !scene.isLoaded) return false;
+            if (scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal)) return true;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root != null && root.name != null && root.name.StartsWith("Environment2D5D", StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
         // Direct read access to two already-instantiated server controllers, for HiveMap
         // bootstraps that want to consume them without going through
         // HiveViewProductUiPresenter's IMGUI bridge (see Docs/AI/Missions/
@@ -49,6 +77,8 @@ namespace BeeKingdom.Playground
             new UnavailableHiveDailyRoundPanelController();
         private static readonly IHiveMilestoneEventPanelController UnavailableMilestoneEventController =
             new UnavailableHiveMilestoneEventPanelController();
+        private static readonly IHiveResearchPanelController UnavailableResearchController =
+            new UnavailableHiveResearchPanelController();
 
         public static IHiveOfflineProductionPanelController OfflineProductionControllerForHiveMap =>
             offlineProductionController != null
@@ -69,6 +99,21 @@ namespace BeeKingdom.Playground
             milestoneEventController != null
                 ? (IHiveMilestoneEventPanelController)milestoneEventController
                 : UnavailableMilestoneEventController;
+
+        public static bool IsResearchControllerAvailableForExternalHost()
+        {
+            return researchController != null && researchController.IsConfigured;
+        }
+
+        public static IHiveResearchPanelController ResearchControllerForHiveMap =>
+            researchController != null
+                ? (IHiveResearchPanelController)researchController
+                : UnavailableResearchController;
+
+        public static IHiveDoctrineRecruitmentPanelController DoctrineRecruitmentControllerForHiveMap => doctrineRecruitmentController;
+        public static IHiveSquadReservationPanelController SquadReservationControllerForHiveMap => squadReservationController;
+        public static HivePerimeterSortiePanelController PerimeterSortieControllerForHiveMap => gameplayController;
+        public static CombatPatrolPanelController CombatPatrolControllerForHiveMap => combatPatrolController;
         private static Guid gameplayHiveId;
         private static IHiveChampionBeeClient championBeeClient;
         private static IHiveTroopTierClient troopTierClient;
@@ -121,6 +166,7 @@ namespace BeeKingdom.Playground
                         authorizationCode,
                         codeVerifier,
                         redirectUri,
+                        configuration.GoogleOAuthClientId,
                         Application.version,
                         GetOrCreateOpaqueInstallationId(),
                         configuration.Region),

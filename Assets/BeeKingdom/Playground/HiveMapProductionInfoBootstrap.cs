@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BeeKingdom.Buildings.Interaction;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -59,6 +59,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapProductionInfoBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapProductionInfoBootstrap>();
+        }
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
@@ -71,9 +82,9 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen ||
+            if (BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost ||
                 HiveMapActivitiesBootstrap.ModalOpenForExternalHost ||
-                HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+                HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;

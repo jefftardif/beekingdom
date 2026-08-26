@@ -106,6 +106,7 @@ namespace BeeKingdom.Tests.Editor
                     "authorization-code",
                     "code-verifier",
                     "http://127.0.0.1/callback",
+                    "google-client-id",
                     "1",
                     "device",
                     "CA"));

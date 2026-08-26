@@ -116,6 +116,17 @@ namespace BeeKingdom.Buildings.Interaction
             return false;
         }
 
+        public static void AutoStartForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+
+            BuildingInteractionController controller = FindOrCreateController(scene);
+            if (controller == null) return;
+
+            MaterializeInto(controller); // visuels + zones de clic + markers masqués
+        }
+
         private static string GetSidecarPathForScene(Scene scene)
         {
             // Cherche un contexte HiveMap dans la scène

@@ -81,6 +81,12 @@ namespace BeeKingdom.LivingHiveMenu
         {
             if (building == null) return;
             if (!string.Equals(building.BuildingType, BuildingTypes.Research, System.StringComparison.Ordinal)) return;
+            // The official server-backed Research overlay reproducibly freezes the Unity Editor
+            // main thread on open (M016E-CL). Root cause traced to a Unity Editor-internal
+            // stall (EditorResources.Load during an IMGUI repaint's GUISkin reload), most
+            // likely triggered by SentinelOne EDR intercepting Editor file I/O - not a bug in
+            // this code. Routing to the local-preview fallback window unconditionally until a
+            // SentinelOne exclusion for the project/Unity install is confirmed to fix it.
             BuildingWindowRouter.TryOpen(building);
         }
 

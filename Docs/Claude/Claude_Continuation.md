@@ -40,6 +40,266 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — Abeille animee sur la marche d'attaque + nettoyage M020 + bugs decouverts en testant (2026-08-25)
+
+**Animation d'ailes (demande initiale de Jeff).** `DrawCombatPatrolMarch` (dans
+`WorldMapMmoFullscreenFoundationBootstrap.cs`) dessinait le marqueur de patrouille comme un simple
+cercle procedural. Remplace par le sprite de la Gardienne (`DrawCombatMarchBee`), avec des ailes
+qui battent tres vite via oscillation d'echelle/alpha (`Mathf.Sin`, pas d'Animator - meme famille
+de pattern IMGUI que le reste du fichier). Assets : `Assets/BeeKingdom/Playground/Resources/
+WorldMapWave6Runtime/CombatMarch/CombatMarchBeeBody.png` et `CombatMarchBeeWings.png` (PNG
+transparents fournis par Jeff, generes via Gemini/Nano Banana en matchant le style blindage
+bleu/or existant).
+
+**Rendu du chemin "premium".** La marche etait une ligne droite unie. Remplacee par une courbe de
+Bezier (meme forme que `DrawFlightArc` pour la collecte) avec halo/coeur/filet dore qui respire et
+un essaim de braises/etincelles. Factorise dans une nouvelle struct `MarchPalette` + methode
+`DrawStyledMarchPath` reutilisable. Deux palettes definies : `CombatMarchPalette` (rouge/or,
+utilisee) et `RaidMarchPalette` (violet, validee visuellement par Jeff mais **non branchee** -
+reservee pour un futur systeme de Raid qui n'existe pas encore cote gameplay/serveur).
+
+**Nettoyage scaffold mort M020.** En verifiant la compilation, trouve un bloc de 383 lignes non
+commitees dans `CombatPatrolPresentation.cs` ("M020: WorldMap creature attack overlay") : une
+implementation parallele et inachevee (types dupliques, `record` sans le shim `IsExternalInit`,
+types manquants comme `ResourceBalance`/`BestiaryTierDefinition`, methodes stub
+`// Implementation will be added`). Confirme via `Docs/AI/Missions/M020-OC-*.md` que ce chantier
+a ete explicitement rejete par sa propre mission ("PATROL REUSED (as-is)... No new system
+needed") - jamais branche a une UI reelle (juste un stub `UnavailableCreatureAttackPanelController`
+inutilise). **Supprime entierement** (interface, classes, records, catalogue). Le bouton ATTAQUER
+de la carte du monde (`WorldMapMmoFullscreenFoundationBootstrap.DrawActionPanel`/
+`DrawActionPanelPortrait`) pointait vers ce chantier mort (`OpenCreatureAttackOverlayForWorldMap`)
+au lieu du vrai systeme fonctionnel (`OpenCombatPatrolOverlayForWorldMap`) - **c'etait un vrai
+bug en production** : appuyer sur ATTAQUER ouvrait un overlay invisible qui bloquait tous les
+clics sans jamais pouvoir se fermer (soft-lock). Corrige : les deux boutons appellent maintenant
+`OpenCombatPatrolOverlayForWorldMap`.
+
+**Autres bugs trouves et corriges en testant avec Jeff :**
+- `HivePerimeterSortieClient.CommitReservationWithReceiptAsync` validait la composition
+  d'escouade contre une constante locale figee (`InitialCapacity = 12`) au lieu de la capacite
+  reelle du serveur (16+). Toute escouade de 13+ troupes echouait avec `invalid_request` avant
+  meme d'atteindre le serveur. Corrige : ce garde-fou client ne verifie plus que la non-vacuite,
+  la capacite reelle reste l'autorite du serveur (deja le principe documente dans M019).
+- `HiveMapBarrackBootstrap.OnGUI`/`UpdateTrainingHighlight` plantait en boucle
+  (`KeyNotFoundException`) quand la Caserne n'etait pas enregistree dans
+  `BuildingInteractionRegistry` pour la scene courante. Ajoute
+  `TryGetGameObjectByBuildingType` (non-throwing) au registre et corrige les deux points d'appel.
+
+**Probleme ouvert, non resolu (hors de portee cote outillage MCP) :** le serveur de PRODUCTION
+(`api-ops.beekingdomgame.com`) rejette toujours `game.patrol_insufficient_troops` meme quand la
+troupe demandee est un sous-ensemble exact d'une escouade deja confirmee (`SquadReservation`).
+Le code source local (`Server/src/BeeKingdom.HiveOperations/CombatPatrolService.cs`,
+`isReservedSquadForPreview`) contient deja le contournement documente comme "fixe" dans
+`Docs/AI/Missions/M020-OC-*.md`, mais **ce correctif ne semble pas deploye en production** -
+verifie en direct via `script-execute`/reflection sur le client tournant (`HasReservation=True`,
+`ReservedGuardians=16`, mais le serveur repond quand meme `insufficient_troops` pour une demande
+identique de 16). Resultat : catch-22 reel pour le joueur - avec escouade reservee, le
+lancement echoue toujours cote serveur ; sans reservation, le bouton ATTAQUER se desactive
+(`Aucune escouade prete`). Pour visualiser l'animation avec Jeff, contourne en injectant une
+fausse rencontre active directement dans `HiveViewProductUiPresenter.combatPatrolController.Model`
+via `script-execute`/reflection (pas une vraie validation de combat). Prochaine session : soit
+redeployer le serveur avec le correctif deja ecrit (`Server/deploy/
+New-BeeKingdomStagingPackage.ps1`), soit investiguer pourquoi le deploiement documente comme fait
+ne l'est pas reellement - demande le feu vert de Jeff avant tout deploiement (infra live
+partagee).
+
+Preuves : compilation Unity verifiee 0 erreur apres chaque changement
+(`mcp__ai-game-developer__assets-refresh`). Etat live inspecte en direct via `script-execute`
+(reflection sur `combatPatrolController.Model`, `SquadReservationControllerForHiveMap.Model`) -
+logs horodates dans la console Unity. Rendu final (courbe rouge/or + abeille animee + essaim,
+et variante violette) confirme visuellement par Jeff via captures d'ecran.
+
+Prochain test utilisateur : recruter assez de troupes ou attendre le redeploiement serveur pour
+tenter un vrai lancement de patrouille (pas injecte) et confirmer que l'animation se declenche
+naturellement en jeu.
+
+Ouvert / a faire ensuite :
+1. Decider avec Jeff du redeploiement serveur (correctif `insufficient_troops` deja ecrit,
+   pas encore en production).
+2. Brancher `RaidMarchPalette` le jour ou un systeme de Raid existe reellement.
+3. `combat.patrol.blocked`/`Bloque: {BlockReason}` affiche encore le code brut serveur
+   (`HiveViewProductUiPresenter.cs:36304`) au lieu d'un texte traduit - viole la regle
+   "jamais de code machine brut" deja appliquee ailleurs (Armee/Sortie) ; pas touche cette
+   session, hors scope du bug demande.
+
+---
+
+## Jalon courant — Recherche officielle reactivee, gel identifie comme probleme d'environnement Unity (2026-08-25)
+
+Suite du jalon precedent. Le code de la fenetre Recherche officielle a ete nettoye (retrait de
+tout le scaffolding de debug `[M016E-FREEZE-PROBE]` dans
+`HiveMapResearchBootstrap.cs`, `HiveResearchPresentation.cs` et
+`HiveViewProductUiPresenter.cs`) et le routage conditionnel restaure dans
+`LivingHiveResearchHost.cs` (`OnBuildingClicked` route vers
+`LivingHiveResearchBridge.OpenOfficialOverlay()` quand disponible, sinon la fenetre locale). Les
+3 tests de `LivingHiveResearchBridgeTests.cs` retrouvent leurs assertions d'origine.
+
+**Le gel s'est reproduit** des la reactivation. Investigation en direct (Visual Studio attache
+pendant le gel reel, cote CPU a 0% confirmant une vraie attente bloquante) a trouve cette fois
+le thread principal bloque dans une pile d'appels **entierement interne a Unity** (aucune ligne
+BeeKingdom) :
+`GUIView:ProcessEvent -> ... -> IMGUIContainer:BeginContainerGUI -> GUIUtility.ResetGlobalState
+-> GUI.set_skin -> GUISkin.MakeCurrent -> EditorTextSettings.UpdateDefaultTextStyleSheet ->
+EditorGUIUtility.Load -> EditorResources.Load`. Ce chemin (rechargement de la feuille de style
+de texte par defaut) s'execute a chaque repaint IMGUI, pour n'importe quel panneau - pas
+specifique a Recherche. Un agent de securite d'entreprise (**SentinelOne EDR**, protection
+temps reel) tourne sur la machine et est le suspect principal pour l'interception/ralentissement
+des acces disque causant ce blocage, dans la continuite du blocage de `bee_backend.exe`
+(compilation) trouve la veille.
+
+**Point important** : cette classe de gel est strictement liee a l'editeur Unity
+(`UnityEditor.*`) et ne peut pas se produire dans une vraie build du jeu - ce code n'existe pas
+dans un joueur compile. Seuls les autres developpeurs/testeurs travaillant dans l'editeur avec
+un logiciel de securite similaire seraient exposes; aucun risque pour les joueurs finaux.
+
+**Verification en build tentee et abandonnee.** Un script de build dedie
+(`Assets/Editor/BeeKingdomHiveMapInternalBuild.cs`, menu `Bee Kingdom/Build/Build HiveMap
+Windows Debug EXE`) a ete cree pour compiler `Environment2D5D_HiveMap_Test` en Windows
+Standalone et verifier si le gel se reproduit hors editeur. Un vrai bug de compatibilite build a
+ete trouve et corrige au passage : `LivingHiveMenuVisuals.cs` (`LoadWorldMapIcon`) chargeait
+`world-map.png` via un chemin disque brut `Assets/...` (fonctionne seulement dans l'editeur, le
+dossier `Assets/` n'existe pas dans une build). Corrige en deplacant l'image vers
+`Assets/Experiments/Environment2D5D/LivingHiveMenu/Resources/world-map.png` et en chargeant via
+`Resources.Load<Texture2D>("world-map")`, seul point du genre trouve (les autres usages
+similaires dans le projet ont deja le bon patron `#if UNITY_EDITOR` + repli `Resources.Load`).
+Une fois ce bug corrige, la build a revele un probleme bien plus large : **aucun batiment ni
+menu ne s'affiche du tout** dans la scene HiveMap compilee en standalone - la scene n'a
+manifestement jamais ete testee comme build autonome et a plusieurs problemes d'initialisation
+propres aux builds (differents de l'editeur) non identifies. Sur decision de Jeff, cette piste de
+verification est abandonnee pour l'instant (chantier separe, hors scope du gel Recherche) - on
+revient a une reactivation directe dans l'editeur avec le diagnostic SentinelOne comme
+explication retenue.
+
+Preuves : gel reproduit et sa pile d'appels captee en direct (voir ci-dessus). Aucune preuve
+positive obtenue (le test en build n'a pas pu confirmer/infirmer a cause du probleme distinct
+"aucun batiment/menu").
+
+Prochain test utilisateur : relancer l'editeur Unity, Play Mode, se connecter avec Google (deja
+fonctionnel), cliquer sur le batiment Recherche. Si le gel se reproduit encore, essayer une
+exclusion Windows Defender/SentinelOne temporaire sur le dossier du projet et l'installation
+Unity si Jeff a les droits, ou impliquer l'IT/securite. Si un jour sans SentinelOne actif le
+clic fonctionne sans gel, le diagnostic est confirme.
+
+**Etat final de cette session** : le gel s'est reproduit une 3e fois apres reactivation propre
+(sans debogueur, code nettoye), confirmant que ce n'est pas un artefact de debogage - c'est
+reellement lie a l'ouverture de la fenetre officielle dans cet environnement. Sur decision de
+Jeff, le routage a ete redesactive (`LivingHiveResearchHost.OnBuildingClicked` route de nouveau
+inconditionnellement vers `BuildingWindowRouter.TryOpen` / fenetre locale, memes 3 tests
+qu'avant), le temps qu'une exclusion SentinelOne soit en place. Confirme fonctionnel par Jeff.
+Jeff a demande l'ajout de `Unity Hub.exe` aux exclusions SentinelOne - **a verifier**: ca ne
+couvre probablement pas `Unity.exe` (le vrai processus editeur ou le gel a ete trace) ni le
+dossier projet `C:\projets\beekingdomgame-master`, qui sont les chemins reellement impliques.
+
+**Bug additionnel trouve et corrige** : apres la desactivation du routage officiel, demarrer une
+recherche dans la fenetre locale n'apparaissait plus dans la barre de file d'attente. Cause :
+`OfficialResearchConfigured()` (`HiveViewProductUiPresenter.cs`, ~L20983) restait vrai tant
+qu'une session authentifiee existe (independant du routage de clic desactive dans
+`LivingHiveResearchHost`), donc la barre affichait l'etat officiel vide au lieu de l'etat local.
+Corrige en forcant `OfficialResearchConfigured()` a retourner `false` (ancienne logique
+commentee juste en dessous pour reactivation facile) - tous les consommateurs
+(`Official*Research*`) sont prefixes distinctement des autres systemes (Amelioration,
+Recrutement, etc.), donc ce changement est isole a Recherche uniquement. Confirme par Jeff :
+toutes les autres fenetres (Reserve, Atelier, Nurserie, Caserne, Amelioration) s'ouvrent
+normalement, et la file d'attente locale de Recherche fonctionne de nouveau.
+
+Ouvert / a faire ensuite :
+- Une fois l'exclusion SentinelOne elargie a `Unity.exe` et au dossier projet, reactiver le
+  routage officiel : revert de `LivingHiveResearchHost.cs` + les 3 tests vers la version
+  conditionnelle (meme diff que documente plus haut dans ce jalon), ET decommenter la vraie
+  logique de `OfficialResearchConfigured()` dans `HiveViewProductUiPresenter.cs` (~L20983).
+  Les deux doivent etre reactives ensemble pour rester coherents.
+- Chantier separe : rendre la scene `Environment2D5D_HiveMap_Test` fonctionnelle en build
+  Windows standalone (aucun batiment/menu ne s'affiche actuellement) - probablement plusieurs
+  autres chemins Resources/initialisation a corriger, au-dela du seul `world-map.png` deja
+  regle.
+- Le build de verification existe deja et est reutilisable :
+  `Bee Kingdom/Build/Build HiveMap Windows Debug EXE` dans le menu Unity, sortie dans
+  `Builds/Windows/HiveMap/BeeKingdom_HiveMap_Debug.exe`.
+
+---
+
+## Jalon courant — Connexion Google reparee, Recherche officielle desactivee (gel non resolu) (2026-08-24)
+
+**Connexion Google (production) — resolue completement.** Trois causes racines distinctes
+trouvees et corrigees en cascade sur `api-ops.beekingdomgame.com` :
+1. Horloge systeme du serveur derivee de ~25h (panne reseau du 2026-08-23) → validation JWT
+   Google rejetait tout id_token comme "not yet valid". Corrige via `w32tm /resync`.
+2. Migration `081_authentication_accounts_role.sql` (ajoute la colonne `Role` a
+   `dbo.AuthenticationAccounts`) existait sur disque mais n'etait jamais enregistree dans
+   `DatabaseCatalog.Migrations` (`Server/src/BeeKingdom.Database/DatabaseCatalog.cs`) — oubli
+   d'integration lors de son ajout. La colonne n'a donc jamais ete creee, causant
+   `Invalid column name 'Role'` a la creation de tout nouveau compte Google. Corrige en
+   enregistrant le script, puis migration appliquee en production via `BeeKingdom.Tools.exe migrate`.
+3. `MobileAccountSessionClient.cs` (`SafeAuthenticationCode`, ~L913) — une deuxieme liste de
+   filtrage cote client ne reconnaissait pas les codes deja-prefixes `auth.google_sign_in_failed`
+   et `auth.account_disabled` renvoyes par le serveur, les ecrasant systematiquement par le
+   message generique `auth.rejected`. C'est ce qui a masque les vraies causes ci-dessus pendant
+   une bonne partie de l'investigation. Corrige en ajoutant ces deux codes a la premiere liste
+   (deja-prefixee) de la methode.
+
+Egalement ajoute (a garder, utile pour tout futur incident serveur) : middleware de capture
+d'exceptions non gerees dans `Server/src/BeeKingdom.Server/Program.cs` (log complet dans
+`logs/unhandled-exceptions.log` a la racine du site IIS) et log dedie des echecs d'echange
+Google dans `AuthenticationService.cs` (`logs/google-exchange-failures.log`). Trois nouvelles
+commandes de diagnostic dans `BeeKingdom.Tools`
+(`Server/src/BeeKingdom.Tools/Program.cs`) : `list-schema-version`, `check-role-column`,
+`revoke-google-sessions <email>`.
+
+**Gel au clic sur le batiment Recherche — cause reelle non trouvee, contourne.** Investigation
+approfondie sur deux sessions (M016E-CL), y compris attache Visual Studio en direct sur le
+processus Unity gele pendant le gel reel (avec l'aide de Jeff a l'ecran, cote CPU a ~0% donc
+vraie attente bloquante, pas boucle infinie). Une premiere occurrence etait causee par une
+boite de dialogue "C# Debugger Attached" restee invisible (fenetre Unity minimisee hors-ecran) —
+resolue en la fermant, mais le gel s'est reproduit ensuite **sans aucun debogueur attache**,
+donc ce n'etait pas la vraie cause. Le vrai declencheur trouve via la fenetre Threads de VS :
+le thread principal etait bloque dans `UnityEditor.AppStatusBar:CheckProgressUnresponsive`,
+et la barre de statut Unity affichait "Compiling Scripts" en boucle (confirme par Jeff a
+l'ecran). Le processus `bee_backend.exe` (moteur de compilation incrementale d'Unity) tournait
+a 0% CPU, genuinely bloque. Tue ce processus a permis a Unity de se debloquer partiellement
+(logs a nouveau, camera/zoom fonctionnels) mais l'etat de session Recherche restait corrompu
+(clics batiments sans effet) jusqu'a un Stop/replay complet du Play Mode — et le gel s'est
+**quand meme reproduit** a une tentative propre suivante. Cause finale du gel de compilation
+elle-meme non identifiee (antivirus/OneDrive/verrou fichier suspecte mais pas confirme).
+
+Devant l'echec de deux sessions de debogage approfondi, decision de Jeff : desactiver la route
+vers la fenetre Recherche officielle (serveur) et revenir a la fenetre de prevision locale
+existante (fallback M011, deja dans le code) de facon inconditionnelle, en attendant de
+reconstruire la fenetre officielle de zero plus tard. `LivingHiveResearchHost.OnBuildingClicked`
+(`Assets/Experiments/Environment2D5D/LivingHiveMenu/LivingHiveResearchHost.cs`) route
+maintenant toujours vers `BuildingWindowRouter.TryOpen`, sans jamais appeler
+`LivingHiveResearchBridge.OpenOfficialOverlay()`. Tests mis a jour dans
+`LivingHiveResearchBridgeTests.cs` pour refleter ce nouveau comportement (2 tests renommes/
+inverses). Le code de la fenetre officielle (`HiveViewProductUiPresenter.DrawResearchOverlayForExternalHost`,
+`HiveMapResearchBootstrap.cs`) reste en place mais n'est plus jamais atteint depuis ce point
+d'entree — a nettoyer ou reconstruire lors d'un futur chantier Recherche.
+
+Note pour une future session : le module chat/temps reel (`Assets/BeeKingdom/Gameplay/Communication/`)
+a ete active cote serveur pendant cette session (`Chat__Enabled=true` en production) mais
+n'a jamais ete verifie fonctionnel de bout en bout — `ChatPersistenceGate` melange un verrou
+synchrone (`Enter()`, utilise seulement par les tests) et asynchrone (`EnterAsync()`, utilise
+partout ailleurs) sur la meme instance partagee (`ChatPendingPartitionRecovery.cs`,
+`VersionedChatPendingSendStore.cs`) — pas de bug confirme en jeu, mais un point de vigilance
+si un futur gel touche le chat.
+
+Preuves : connexion Google testee reussie de bout en bout par Jeff sur le build de production
+(compte cree, session active, dashboard AppPool + logs confirmes). Recherche testee ouverte
+avec succes par Jeff apres le contournement (fenetre locale).
+
+Prochain test utilisateur : aucun test supplementaire necessaire pour la connexion Google
+(deja confirmee). Pour Recherche, verifier que la fenetre locale affiche un contenu acceptable
+en attendant la reconstruction.
+
+Ouvert / a faire ensuite :
+- Reconstruire la fenetre Recherche officielle server-backed de zero (le code existant reste
+  en reference mais est suspect).
+- Identifier la vraie cause du gel de `bee_backend.exe`/compilation Unity si ca se reproduit
+  hors du contexte Recherche (pourrait affecter d'autres flux).
+- Retirer le code mort de la route officielle Recherche (`HiveMapResearchBootstrap.cs`,
+  `DrawResearchOverlayForExternalHost` et ses appelants) une fois la decision de reconstruction
+  prise.
+- Verifier le module chat de bout en bout avant de s'y fier (jamais teste avec un vrai compte).
+
+---
+
 ## Jalon courant — Chantier UI/HUD HiveMap, etape 1+2 : police, contour, fondus, roll-up (2026-08-19)
 
 Suite du jalon precedent du meme jour. Jeff a compare le HUD HiveMap a un HUD de reference

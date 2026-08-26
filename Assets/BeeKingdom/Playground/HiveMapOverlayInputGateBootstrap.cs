@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BeeKingdom.Buildings.Interaction;
 using BeeKingdom.LivingHiveMenu;
 using UnityEngine;
@@ -54,6 +54,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapOverlayInputGateBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapOverlayInputGateBootstrap>();
+        }
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
@@ -63,7 +74,7 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost
-                || LivingHiveResearchRuntime.IsModalOpen
+                || LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost
                 || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
                 || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
                 // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
@@ -75,7 +86,8 @@ namespace BeeKingdom.Playground
                 // M008-CX wave 2: same IMGUI input protection for the Genetics/Infirmary
                 // capability/status window; M009 extends it to Academy/Defense status.
                 // M013 extends that status window to Bank.
-                || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost;
+                || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost
+                || HiveMapArmyBootstrap.ModalOpenForExternalHost;
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller != null) controller.IsEnabled = !blocked;

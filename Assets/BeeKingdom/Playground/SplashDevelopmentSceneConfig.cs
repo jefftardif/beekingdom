@@ -13,6 +13,7 @@ namespace BeeKingdom.Playground
         public const string Wave5Premium25x25ScenePath = "Assets/Scenes/WorldMapWave5Premium25x25Test.unity";
         public const string LoginScenePath = SandboxScenePath;
         public const string HiveScenePath = "Assets/Scenes/LivingHive.unity";
+        public const string HiveMapScenePath = "Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_HiveMap_Test.unity";
         public const string Wave5PremiumMapModeKey = "BeeKingdom.Dev.WorldMapMode.Wave5Premium25x25";
 
         public static bool IsDevelopmentMenuVisible()
@@ -98,6 +99,7 @@ namespace BeeKingdom.Playground
                 "dev_splash_worldmap_wave6_exact_crop:true",
                 "dev_splash_worldmap_legacy_scene_path:" + LegacyWorldMapScenePath,
                 "dev_splash_hive_scene_path:" + HiveScenePath,
+                "dev_splash_hivemap_scene_path:" + HiveMapScenePath,
                 "dev_splash_wave6_terrain_scene_path:" + Wave6Premium50x50TerrainScenePath,
                 "dev_splash_wave5_premium_25x25_scene_path:" + Wave5Premium25x25ScenePath,
                 "dev_splash_scene_loads_by_exact_scene_name:true",

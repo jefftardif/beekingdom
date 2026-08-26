@@ -37,17 +37,48 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapQueueSidebarBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapQueueSidebarBootstrap>();
+        }
+
+        // M016E-CL freeze probe (temporary): once, catches the exact moment the queue sidebar
+        // draws (and periodically refreshes researchController) while an official Research
+        // session is configured, to rule in/out whether ResearchOverlayOpenForExternalHost is
+        // unexpectedly false right after Research should have opened.
+        private bool loggedSidebarDrawWhileResearchConfiguredOnce;
+
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            bool researchOpen = HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost;
             bool anyOverlayOpen = HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
-                || LivingHiveResearchRuntime.IsModalOpen
+                || LivingHiveResearchRuntime.IsModalOpen || researchOpen
                 || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
-                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost;
-            if (anyOverlayOpen) return;
+                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
+                || HiveMapArmyBootstrap.ModalOpenForExternalHost;
+            if (anyOverlayOpen)
+            {
+                loggedSidebarDrawWhileResearchConfiguredOnce = false;
+                return;
+            }
+
+            if (!loggedSidebarDrawWhileResearchConfiguredOnce &&
+                MobileAccountSessionRuntimeBootstrap.IsResearchControllerAvailableForExternalHost())
+            {
+                loggedSidebarDrawWhileResearchConfiguredOnce = true;
+                Debug.Log("[M016E-FREEZE-PROBE] queue sidebar drawing while official research configured, researchOpen=" + researchOpen
+                    + " localModalOpen=" + LivingHiveResearchRuntime.IsModalOpen + " t=" + Time.realtimeSinceStartup);
+            }
 
             HiveViewProductUiPresenter.DrawQueueSidebarForExternalHost(Screen.width < 900);
         }

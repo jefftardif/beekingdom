@@ -42,6 +42,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapAllianceBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapAllianceBootstrap>();
+        }
+
         private void Update()
         {
             // Polled rather than found once in Start(): BuildingInteractionController is
@@ -67,7 +78,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
-            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             HiveViewProductUiPresenter.DrawAllianceOverlayForExternalHost(Screen.width < 900);
             HiveViewProductUiPresenter.DrawAllianceUpgradeButtonForExternalHost();
         }

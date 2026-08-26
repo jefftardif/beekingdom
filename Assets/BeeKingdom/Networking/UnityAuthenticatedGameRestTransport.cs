@@ -49,78 +49,92 @@ namespace BeeKingdom.Networking
             if (upload != null && upload.Length > MaxRequestBytes)
                 throw InvalidResponse("game.request_too_large");
 
-            using (var webRequest = new UnityWebRequest(baseUrl + request.Path, request.Method))
+            var webRequest = new UnityWebRequest(baseUrl + request.Path, request.Method);
+            webRequest.timeout = timeoutSeconds;
+            webRequest.downloadHandler = new DownloadHandlerBuffer();
+            webRequest.SetRequestHeader("Accept", "application/json");
+            webRequest.SetRequestHeader("Authorization", "Bearer " + bearerAccessToken);
+            if (upload != null)
             {
-                webRequest.timeout = timeoutSeconds;
-                webRequest.downloadHandler = new DownloadHandlerBuffer();
-                webRequest.SetRequestHeader("Accept", "application/json");
-                webRequest.SetRequestHeader("Authorization", "Bearer " + bearerAccessToken);
-                if (upload != null)
-                {
-                    webRequest.uploadHandler = new UploadHandlerRaw(upload);
-                    webRequest.SetRequestHeader("Content-Type", "application/json");
-                }
+                webRequest.uploadHandler = new UploadHandlerRaw(upload);
+                webRequest.SetRequestHeader("Content-Type", "application/json");
+            }
 
-                UnityWebRequestAsyncOperation operation = webRequest.SendWebRequest();
-                var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                operation.completed += _ => completion.TrySetResult(true);
-                SynchronizationContext unityContext = SynchronizationContext.Current;
-                using (cancellationToken.Register(() =>
-                {
-                    if (unityContext != null) unityContext.Post(_ => webRequest.Abort(), null);
-                    else webRequest.Abort();
-                }))
+            UnityWebRequestAsyncOperation operation = webRequest.SendWebRequest();
+            var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            operation.completed += _ => completion.TrySetResult(true);
+            SynchronizationContext unityContext = SynchronizationContext.Current;
+
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            using (cts.Token.Register(() =>
+            {
+                if (operation.isDone) return;
+                if (unityContext != null)
+                    unityContext.Post(_ => { try { if (!operation.isDone) webRequest.Abort(); } catch { } }, null);
+                else
+                    try { if (!operation.isDone) webRequest.Abort(); } catch { };
+            }))
+            {
+                try
                 {
                     await completion.Task;
                 }
-                cancellationToken.ThrowIfCancellationRequested();
+                finally
+                {
+                    cts.Cancel();
+                }
+            }
+            cancellationToken.ThrowIfCancellationRequested();
 
-                byte[] responseBytes = webRequest.downloadHandler == null ? null : webRequest.downloadHandler.data;
-                if (responseBytes != null && responseBytes.Length > MaxResponseBytes)
-                    throw InvalidResponse("game.response_too_large");
-                string body = webRequest.downloadHandler == null ? string.Empty : webRequest.downloadHandler.text;
-                int statusCode = (int)webRequest.responseCode;
-                bool success = statusCode >= 200 && statusCode <= 299;
-                if (!success && webRequest.result != UnityWebRequest.Result.ProtocolError)
-                {
-                    connectionSignal?.Invoke(false);
-                    throw new AuthenticatedGameRestException(
-                        AuthenticatedGameRestError.NetworkFailure,
-                        "game.network_unavailable");
-                }
-                if (statusCode == 401)
-                    throw new AuthenticatedGameRestException(
-                        AuthenticatedGameRestError.Unauthorized,
-                        "game.session_required",
-                        statusCode);
-                if (!success)
-                    throw new AuthenticatedGameRestException(
-                        AuthenticatedGameRestError.RemoteRejected,
-                        ParseSafeErrorCode(body),
-                        statusCode);
+            byte[] responseBytes = webRequest.downloadHandler == null ? null : webRequest.downloadHandler.data;
+            if (responseBytes != null && responseBytes.Length > MaxResponseBytes)
+                throw InvalidResponse("game.response_too_large");
+            string body = webRequest.downloadHandler == null ? string.Empty : webRequest.downloadHandler.text;
+            int statusCode = (int)webRequest.responseCode;
+            bool success = statusCode >= 200 && statusCode <= 299;
+            if (!success && webRequest.result != UnityWebRequest.Result.ProtocolError)
+            {
+                connectionSignal?.Invoke(false);
+                throw new AuthenticatedGameRestException(
+                    AuthenticatedGameRestError.NetworkFailure,
+                    "game.network_unavailable");
+            }
+            if (statusCode == 401)
+                throw new AuthenticatedGameRestException(
+                    AuthenticatedGameRestError.Unauthorized,
+                    "game.session_required",
+                    statusCode);
+            if (!success)
+                throw new AuthenticatedGameRestException(
+                    AuthenticatedGameRestError.RemoteRejected,
+                    ParseSafeErrorCode(body),
+                    statusCode);
 
-                connectionSignal?.Invoke(true);
+            connectionSignal?.Invoke(true);
 
-                if (string.Equals(request.Method, "GET", StringComparison.Ordinal))
-                {
-                    string cacheControl = webRequest.GetResponseHeader("Cache-Control") ?? string.Empty;
-                    if (cacheControl.IndexOf("private", StringComparison.OrdinalIgnoreCase) < 0 ||
-                        cacheControl.IndexOf("no-store", StringComparison.OrdinalIgnoreCase) < 0)
-                        throw InvalidResponse("game.read_cache_boundary_missing");
-                }
+            if (string.Equals(request.Method, "GET", StringComparison.Ordinal))
+            {
+                string cacheControl = webRequest.GetResponseHeader("Cache-Control") ?? string.Empty;
+                if (cacheControl.IndexOf("private", StringComparison.OrdinalIgnoreCase) < 0 ||
+                    cacheControl.IndexOf("no-store", StringComparison.OrdinalIgnoreCase) < 0)
+                    throw InvalidResponse("game.read_cache_boundary_missing");
+            }
 
-                try
-                {
-                    return codec.Deserialize<T>(body);
-                }
-                catch (AuthenticatedGameRestException)
-                {
-                    throw;
-                }
-                catch
-                {
-                    throw InvalidResponse("game.response_invalid");
-                }
+            try
+            {
+                return codec.Deserialize<T>(body);
+            }
+            catch (AuthenticatedGameRestException)
+            {
+                throw;
+            }
+            catch
+            {
+                throw InvalidResponse("game.response_invalid");
+            }
+            finally
+            {
+                webRequest.Dispose();
             }
         }
 

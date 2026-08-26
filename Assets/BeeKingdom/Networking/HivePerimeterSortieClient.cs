@@ -407,7 +407,7 @@ namespace BeeKingdom.Networking
             RequireHive(hiveId);
             RequireRevision(expectedRevision);
             RequireKey(idempotencyKey, nameof(idempotencyKey));
-            Dictionary<string, long> copy = CopyAndValidateQuantities(quantities, InitialCapacity);
+            Dictionary<string, long> copy = CopyAndValidateQuantities(quantities);
             return SendReservationMutationAsync(
                 hiveId,
                 new AuthenticatedGameRestRequest(
@@ -1494,8 +1494,7 @@ namespace BeeKingdom.Networking
         }
 
         private static Dictionary<string, long> CopyAndValidateQuantities(
-            IReadOnlyDictionary<string, long> quantities,
-            int capacity)
+            IReadOnlyDictionary<string, long> quantities)
         {
             if (quantities == null || quantities.Count != Families.Length ||
                 Families.Any(family => !quantities.ContainsKey(family)) ||
@@ -1515,7 +1514,10 @@ namespace BeeKingdom.Networking
             {
                 throw InvalidRequest("The squad quantity total overflowed.");
             }
-            if (total <= 0 || total > capacity) throw InvalidRequest("The squad must contain between one and twelve bees.");
+            // Capacity is server-authoritative (RemoteSquadReservationSnapshot.Capacity), which can
+            // grow beyond the client's local InitialCapacity fallback constant - only reject a
+            // structurally empty squad here, let the server enforce the real ceiling.
+            if (total <= 0) throw InvalidRequest("The squad must contain at least one bee.");
             return copy;
         }
 

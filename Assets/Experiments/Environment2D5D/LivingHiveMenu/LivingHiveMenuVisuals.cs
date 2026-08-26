@@ -147,13 +147,9 @@ namespace BeeKingdom.LivingHiveMenu
 
         private static Texture2D LoadWorldMapIcon()
         {
-            string path = "Assets/Experiments/Environment2D5D/LivingHiveMenu/Icons/world-map.png";
-            Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { hideFlags = HideFlags.HideAndDontSave };
-            byte[] bytes = System.IO.File.ReadAllBytes(path);
-            ImageConversion.LoadImage(tex, bytes);
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode = TextureWrapMode.Clamp;
-            return tex;
+            // Loaded from a Resources folder (not a raw Assets/ file path) so it also resolves
+            // in a built player - the Assets/ source folder does not exist outside the Editor.
+            return Resources.Load<Texture2D>("world-map");
         }
 
         // ==================== Cache / fabrique de Sprite ====================

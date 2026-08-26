@@ -45,6 +45,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<LivingHiveChatBridgeBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<LivingHiveChatBridgeBootstrap>();
+        }
+
         private void Start()
         {
             LivingHiveChatBridge.SetSendHandler(body => LivingHiveChatRuntime.SendAsync(body));

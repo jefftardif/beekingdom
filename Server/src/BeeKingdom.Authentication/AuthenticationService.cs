@@ -93,9 +93,16 @@ public sealed class AuthenticationService : IAuthenticationService
                 request.RedirectUri,
                 cancellationToken);
         }
-        catch
+        catch (Exception exception)
         {
             Diagnostics.RecordFailure(Stopwatch.GetTimestamp() - start);
+            try
+            {
+                string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "google-exchange-failures.log");
+                string entry = $"{DateTimeOffset.UtcNow:O}{Environment.NewLine}{exception}{Environment.NewLine}{new string('-', 80)}{Environment.NewLine}";
+                File.AppendAllText(logPath, entry);
+            }
+            catch { }
             return AuthenticationResult.Failure("google_exchange_failed", "Google sign-in could not be completed.");
         }
 

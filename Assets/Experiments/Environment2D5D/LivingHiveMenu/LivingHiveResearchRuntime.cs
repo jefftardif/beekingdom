@@ -33,19 +33,34 @@ namespace BeeKingdom.LivingHiveMenu
 
         public static void EnsureRuntime(Scene scene)
         {
-            if (Root != null) return;
-            Root = new GameObject(RuntimeRootName);
-            SceneManager.MoveGameObjectToScene(Root, scene);
-            Window = Root.AddComponent<LivingHiveResearchWindow>();
-            Window.Build();
-            Host = new LivingHiveResearchHost(Window);
-            Host.HudRoot = LivingHiveMenuRuntime.Root;
-            Host.Register();
+            if (Root == null)
+            {
+                Root = new GameObject(RuntimeRootName);
+                SceneManager.MoveGameObjectToScene(Root, scene);
+                Window = Root.AddComponent<LivingHiveResearchWindow>();
+                Window.Build();
+                Host = new LivingHiveResearchHost(Window);
+                Host.HudRoot = LivingHiveMenuRuntime.Root;
+                Host.Register();
+            }
+            else if (Root.scene != scene)
+            {
+                SceneManager.MoveGameObjectToScene(Root, scene);
+                if (LivingHiveMenuRuntime.Root != null)
+                    Host.HudRoot = LivingHiveMenuRuntime.Root;
+            }
 
-            // Clic bâtiment -> ouverture Recherche. Le contrôleur réutilise le
-            // BuildingInteractionController existant (créé par BuildingRuntimeViewBootstrap).
+            // Re-attach to current scene's BuildingInteractionController after every scene load
+            // (handles M016C post-login transition where a new controller is created).
             BuildingInteractionController controller = BuildingInteractionController.FindOrCreate(scene);
             if (controller != null) Host.Attach(controller.Selection);
+            else
+            {
+                // Controller not yet created (race with BuildingRuntimeViewBootstrap) — will attach on next frame via Host polling,
+                // but try also to find any existing controller in loaded scenes.
+                BuildingInteractionController any = UnityEngine.Object.FindFirstObjectByType<BuildingInteractionController>();
+                if (any != null) Host.Attach(any.Selection);
+            }
         }
 
         public static void ResetRuntimeForProof()

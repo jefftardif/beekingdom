@@ -51,6 +51,7 @@ namespace BeeKingdom.LivingHiveMenu
         // Entrées du "Plus" (MoreMenuPanel) : ordre et libellés conformes au monolithe.
         public static readonly string[] MoreMenuEntries =
         {
+            "Armée",
             "Parametres",
             "Aide",
             "Support"

@@ -20,7 +20,7 @@ using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-	public static class HiveViewProductUiPresenter
+	public static partial class HiveViewProductUiPresenter
 	{
 		private enum ReferenceSurfaceMode
 		{
@@ -3386,6 +3386,43 @@ private static string courierToast = string.Empty;
             else OpenAllianceOverlayForExternalHost();
         }
 
+        public static bool ResearchOverlayOpenForExternalHost => activeHiveMenu == HiveMenuMode.Research;
+
+        public static void OpenResearchOverlayForExternalHost()
+        {
+            ActivateHiveMenu(HiveMenuMode.Research, "Recherche");
+        }
+
+        public static void CloseResearchOverlayForExternalHost()
+        {
+            activeHiveMenu = HiveMenuMode.Hive;
+            detailPanelClosed = true;
+            activeMainMenuId = string.Empty;
+        }
+
+        public static void ToggleResearchOverlayForExternalHost()
+        {
+            if (ResearchOverlayOpenForExternalHost) CloseResearchOverlayForExternalHost();
+            else OpenResearchOverlayForExternalHost();
+        }
+
+        // M016E-CL: the Open/Close/Toggle triplet above existed already, but nothing called
+        // DrawActiveHiveMenuPanel while activeHiveMenu == HiveMenuMode.Research once the player
+        // was past the splash screen (HiveMapSplashBootstrap only calls the full Draw() before hive
+        // entry) - so OpenResearchOverlayForExternalHost() correctly changed state, but the overlay
+        // never actually rendered. This is the missing draw call, mirroring
+        // DrawAllianceOverlayForExternalHost immediately below. Safe to call
+        // DrawActiveHiveMenuPanel directly here: this method only proceeds while
+        // ResearchOverlayOpenForExternalHost is true, and every other branch inside
+        // DrawActiveHiveMenuPanel is gated on a different activeMainMenuId/activeHiveMenu value
+        // that cannot be true at the same time.
+        public static void DrawResearchOverlayForExternalHost(bool compact)
+        {
+            if (!ResearchOverlayOpenForExternalHost) return;
+            EnsureStyles();
+            DrawActiveHiveMenuPanel(compact);
+        }
+
         public static void DrawAllianceOverlayForExternalHost(bool compact)
         {
             if (!AllianceOverlayOpenForExternalHost) return;
@@ -3422,18 +3459,21 @@ private static string courierToast = string.Empty;
         // EnsureSceneObjects() or the reference art.
         public static bool ManualProductionReadyForExternalHost(string hotspotId)
         {
-            // Same threshold split as DrawManualCollectionReadyMarkers: the server only
-            // requires >0 collectable whole units (see CanCollect), a much lower bar than
-            // the local-preview demo's CollectionReadyThreshold - without this branch the
-            // building was already collectible (and played the collect sound) well before
-            // the icon appeared for a server-backed account.
-            float readyThreshold = OfficialOfflineProductionConfigured() ? 1f : CollectionReadyThreshold;
-            return DisplayedPendingManualProduction(hotspotId) >= readyThreshold;
+            if (OfficialOfflineProductionConfigured())
+            {
+                HiveOfflineProductionScreenModel model = OfficialOfflineProductionModel();
+                // Authenticated: indicator must reflect server-authoritative CanCollect,
+                // not local pending amount. Prevents stale badge when PendingAmount >=1
+                // but CollectableWholeUnits==0 / capacity full / state not Ready.
+                return model != null && model.CanCollect(hotspotId);
+            }
+            return DisplayedPendingManualProduction(hotspotId) >= CollectionReadyThreshold;
         }
 
         public static void TickManualProductionForExternalHost(float deltaSeconds)
         {
-            AdvanceManualProductionForProof(deltaSeconds);
+            if (!OfficialOfflineProductionConfigured())
+                AdvanceManualProductionForProof(deltaSeconds);
             EnsureManualProductionRefreshedForExternalHost();
         }
 
@@ -4219,6 +4259,15 @@ private static string courierToast = string.Empty;
             // AwaitingCompletion server-side, so it just sits at "0s" instead of switching
             // to "A reclamer" until something else happens to trigger a refresh.
             RefreshDoctrineRecruitmentIfDueOrJustFinished();
+            // Same gap for research: without this, researchController.Refresh() is otherwise
+            // only called from inside the Research window's own Start/Complete/Refresh
+            // buttons, so a card's "A valider" state stays frozen once the window is closed.
+            if (OfficialResearchConfigured() && researchController != null && !researchController.IsBusy &&
+                NowForUi() - officialResearchQueueLastLiveRefreshAt > 5f)
+            {
+                officialResearchQueueLastLiveRefreshAt = NowForUi();
+                researchController.Refresh();
+            }
 
             HiveBuildingUpgradeScreenModel officialUpgrade = OfficialBuildingUpgradeConfigured() ? OfficialBuildingUpgradeModel() : null;
             HiveResearchScreenModel officialResearch = OfficialResearchConfigured() ? OfficialResearchModel() : null;
@@ -5489,6 +5538,30 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 : BeeLocalization.Text("splash.message.local_preview", "Aperçu non officiel · simulation locale");
             SetReferenceSurfaceModeForProof("hive");
             BeginGuidedCollectionTutorial();
+            LoadHiveMapScene();
+        }
+
+        private static void LoadHiveMapScene()
+        {
+            string scenePath = SplashDevelopmentSceneConfig.HiveMapScenePath;
+#if UNITY_EDITOR
+            if (!SplashDevelopmentSceneConfig.IsSceneEnabledInBuildSettings(scenePath))
+            {
+                UnityEditor.EditorBuildSettings.scenes = new[]
+                {
+                    new UnityEditor.EditorBuildSettingsScene(scenePath, true)
+                }.Concat(UnityEditor.EditorBuildSettings.scenes).ToArray();
+            }
+#endif
+            string message;
+            if (SplashDevelopmentSceneConfig.TryOpenScene(scenePath, out message))
+            {
+                SetSplashAuthMessage(message, false);
+            }
+            else
+            {
+                SetSplashAuthMessage("Echec chargement HiveMap: " + message, true);
+            }
         }
 
         private static void SkipActOneTutorialForDevelopment()
@@ -5559,6 +5632,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             localPreviewLoopMessage = BeeLocalization.Text("splash.message.local_preview", "Aperçu non officiel · simulation locale");
             SetReferenceSurfaceModeForProof("hive");
             localPreviewSessionPrompt = "Developpement : Acte I termine, jeu libre.";
+            LoadHiveMapScene();
         }
 
         private static Rect TutorialSkipTutorialButtonRect(Rect tutorialPanel, bool portrait)
@@ -10398,16 +10472,16 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 || chatScreenOpen
                 || activeHiveMenu == HiveMenuMode.Research
                 || activeHiveMenu == HiveMenuMode.Alliance
-                || allianceMemberProfileOpen
+|| allianceMemberProfileOpen
                 || !string.IsNullOrEmpty(allianceActionPanelOpen)
                 || allianceChatDrawerOpen
-				|| speedUpWindowOpen
-				|| bestiaryCodexOverlayOpen
-				|| milestoneEventOverlayOpen
-				|| combatPatrolOverlayOpen
-				|| referenceDetailInfoPopupOpen
-				|| communicationPanelOpen
-				|| strategicPathPanelOpen
+                || speedUpWindowOpen
+                || bestiaryCodexOverlayOpen
+                || milestoneEventOverlayOpen
+                || combatPatrolOverlayOpen
+                || referenceDetailInfoPopupOpen
+                || communicationPanelOpen
+                || strategicPathPanelOpen
                 || !string.IsNullOrEmpty(activeMainMenuId);
         }
 
@@ -20906,9 +20980,16 @@ public static string[] ConnectionTruthForProof()
             DrawRuntimeWorkerBee(carrierRect, 0.18f, alpha * 0.94f, NowForUi(), false);
         }
 
+        // M016E-CL: the official Research overlay freezes the Unity Editor on open, so
+        // LivingHiveResearchHost.OnBuildingClicked routes unconditionally to the local-preview
+        // window regardless of session availability. Every other Official*Research* consumer
+        // (queue sidebar, ready markers, hotspot badges) must agree with that, or they show
+        // stale/empty official state while the player is actually using the local-preview
+        // queue. Force this false until the official overlay is re-enabled.
         private static bool OfficialResearchConfigured()
         {
-            return researchController != null && researchController.IsConfigured;
+            return false;
+            // return researchController != null && researchController.IsConfigured;
         }
 
         private static bool OfficialHiveStockConfigured()
@@ -30364,11 +30445,18 @@ if (leftNavigationTexture == null)
                 return;
             }
             EnsureLocalPreviewQueueJournalLoaded();
-            DrawMenuHeader(
+            if (DrawMenuHeader(
                 panel,
                 "research",
                 BeeLocalization.Text("research.menu.title", "Recherche"),
-                BeeLocalization.Text("research.menu.subtitle", "Deux études complémentaires de la colonie"));
+                BeeLocalization.Text("research.menu.subtitle", "Deux études complémentaires de la colonie"),
+                true))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                AudioManager.Instance?.PlayMenuClose();
+                CloseResearchOverlayForExternalHost();
+                return;
+            }
 
             float disclosureY = panel.y + 58f;
             GUI.Label(
@@ -30417,11 +30505,18 @@ if (leftNavigationTexture == null)
 
         private static void DrawOfficialResearchMenuPanel(Rect panel, bool compact)
         {
-            DrawMenuHeader(
+            if (DrawMenuHeader(
                 panel,
                 "research",
                 BeeLocalization.Text("research.menu.title", "Recherche"),
-                BeeLocalization.Text("research.official.menu.subtitle", "Études persistantes de la colonie"));
+                BeeLocalization.Text("research.official.menu.subtitle", "Études persistantes de la colonie"),
+                true))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                AudioManager.Instance?.PlayMenuClose();
+                CloseResearchOverlayForExternalHost();
+                return;
+            }
 
             float disclosureY = panel.y + 58f;
             GUI.Label(
@@ -35912,13 +36007,44 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
             }
         }
 
-        internal static void OpenCombatPatrolOverlayForWorldMap(int tier)
+        internal static async void OpenCombatPatrolOverlayForWorldMap(int tier)
         {
             AudioManager.Instance?.PlayMenuOpen();
             combatPatrolOverlayOpen = true;
             combatPatrolController.ClearSelection();
             combatPatrolController.SelectTier(Mathf.Clamp(tier, 1, 7));
             combatPatrolController.Refresh();
+            await System.Threading.Tasks.Task.Delay(600);
+            var squad = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
+            if (squad != null && squad.HasReservation)
+            {
+                try
+                {
+                    var model = combatPatrolController.Model;
+                    if (model != null)
+                    {
+                        model.AvailableRoster = new System.Collections.Generic.Dictionary<string, long>
+                        {
+                            ["guardians"] = squad.RosterGuardians,
+                            ["wingrunners"] = squad.RosterWingrunners,
+                            ["darters"] = squad.RosterDarters
+                        };
+                    }
+                }
+                catch { }
+                combatPatrolController.AdjustDraft("guardians", -1000);
+                combatPatrolController.AdjustDraft("wingrunners", -1000);
+                combatPatrolController.AdjustDraft("darters", -1000);
+                if (squad.ReservedGuardians > 0) combatPatrolController.AdjustDraft("guardians", (int)squad.ReservedGuardians);
+                if (squad.ReservedWingrunners > 0) combatPatrolController.AdjustDraft("wingrunners", (int)squad.ReservedWingrunners);
+                if (squad.ReservedDarters > 0) combatPatrolController.AdjustDraft("darters", (int)squad.ReservedDarters);
+            }
+        }
+
+        private static async System.Threading.Tasks.Task RefreshCombatPatrolAsync()
+        {
+            combatPatrolController.Refresh();
+            await System.Threading.Tasks.Task.Delay(600);
         }
 
         // Opens the overlay pre-focused on one already-launched encounter (from the queue strip).
@@ -36180,7 +36306,8 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
                 }
             }
 
-            bool championRequirementMet = model.DraftTotal <= 0 || localPreviewAssignedChampionBeeIds.Count > 0;
+            bool hasSquadForChampion = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model?.HasReservation ?? false;
+            bool championRequirementMet = model.DraftTotal <= 0 || localPreviewAssignedChampionBeeIds.Count > 0 || hasSquadForChampion;
             if (!championRequirementMet)
             {
                 GUI.Label(
@@ -40992,7 +41119,10 @@ public static void ResetMissionsStateForProof()
         }
 
         private static float officialProductionDetailLastLiveRefreshAt = -100f;
-
+        // M016E-CL: dedicated timer for the queue sidebar's research card periodic refresh - kept
+        // separate from officialProductionDetailLastLiveRefreshAt above so construction's refresh
+        // cadence never resets research's (or vice versa).
+        private static float officialResearchQueueLastLiveRefreshAt = -100f;
         private static void DrawOfficialProductionDetail(Rect panel, ReferenceHiveHotspot hotspot, bool compact)
         {
             // Le panneau reste ouvert plusieurs minutes pendant que la production

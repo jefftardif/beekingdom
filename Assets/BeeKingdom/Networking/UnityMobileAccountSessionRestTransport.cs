@@ -98,6 +98,7 @@ namespace BeeKingdom.Networking
                 authorizationCode = request.AuthorizationCode,
                 codeVerifier = request.CodeVerifier,
                 redirectUri = request.RedirectUri,
+                oauthClientId = request.OAuthClientId,
                 clientVersion = request.ClientVersion,
                 deviceIdentifier = request.DeviceIdentifier,
                 region = request.Region
@@ -371,6 +372,7 @@ namespace BeeKingdom.Networking
             public string authorizationCode;
             public string codeVerifier;
             public string redirectUri;
+            public string oauthClientId;
             public string clientVersion;
             public string deviceIdentifier;
             public string region;

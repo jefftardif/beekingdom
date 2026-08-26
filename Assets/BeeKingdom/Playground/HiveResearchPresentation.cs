@@ -461,7 +461,10 @@ namespace BeeKingdom.Playground
             {
                 if (!disposed) Model = HiveResearchPresentation.Error(snapshot, clock.Elapsed, "unexpected", string.Empty);
             }
-            finally { busy = false; }
+            finally
+            {
+                busy = false;
+            }
         }
 
         private async Task StartCoreAsync(string researchId)

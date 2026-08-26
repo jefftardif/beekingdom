@@ -178,6 +178,27 @@ WebApplication app = builder.Build();
 
 app.Use(async (context, next) =>
 {
+    try
+    {
+        await next();
+    }
+    catch (Exception exception)
+    {
+        string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "unhandled-exceptions.log");
+        string entry = $"{DateTimeOffset.UtcNow:O} {context.Request.Method} {context.Request.Path}{context.Request.QueryString}{Environment.NewLine}{exception}{Environment.NewLine}{new string('-', 80)}{Environment.NewLine}";
+        try { await File.AppendAllTextAsync(logPath, entry); } catch { }
+        app.Logger.LogError(exception, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+        if (!context.Response.HasStarted)
+        {
+            context.Response.Clear();
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsJsonAsync(new { code = "server.unhandled_exception", message = "server.unhandled_exception" });
+        }
+    }
+});
+
+app.Use(async (context, next) =>
+{
     if (context.Request.Path.StartsWithSegments("/game/v1") && HttpMethods.IsGet(context.Request.Method))
     {
         context.Response.Headers.CacheControl = "private, no-store";

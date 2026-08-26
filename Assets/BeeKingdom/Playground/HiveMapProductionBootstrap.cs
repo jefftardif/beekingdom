@@ -51,6 +51,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapProductionBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapProductionBootstrap>();
+        }
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
@@ -70,7 +81,7 @@ namespace BeeKingdom.Playground
 
         private void OnBuildingClicked(BuildingDefinition building)
         {
-            if (LivingHiveResearchRuntime.IsModalOpen || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+            if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (building == null || !IsTrackedBuildingType(building.BuildingType)) return;
             string hotspotId = BuildingMappingTable.GetByBuildingType(building.BuildingType).LegacyKey;
             HiveViewProductUiPresenter.CollectManualProductionForExternalHost(hotspotId);
@@ -88,7 +99,7 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (LivingHiveResearchRuntime.IsModalOpen || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+            if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;

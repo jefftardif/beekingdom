@@ -72,7 +72,7 @@ namespace BeeKingdom.Playground.Editor
             HiveViewProductUiPresenter.ConfigureMobileAccountSessionForRuntime(
                 client,
                 (email, password) => new MobileAccountLoginRequest(email, password, "1", "opaque", "test"),
-                (authorizationCode, codeVerifier, redirectUri) => new GoogleLoginRequest(authorizationCode, codeVerifier, redirectUri, "1", "opaque", "test"),
+                (authorizationCode, codeVerifier, redirectUri) => new GoogleLoginRequest(authorizationCode, codeVerifier, redirectUri, "google-client-id", "1", "opaque", "test"),
                 "google-client-id");
             try
             {

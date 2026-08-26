@@ -36,6 +36,8 @@ namespace BeeKingdom.Playground
         private const string RuntimeEntityResourceRoot = "WorldMapRuntimeEntitiesWave1";
         private const string RuntimeResourcePremiumRoot = "WorldMapRuntimeEntitiesWave6Premium";
         private const string Wave6RuntimePlacementMaskResource = "WorldMapRuntimePlacement/wave6_wave5method_12288_placement_mask";
+        private const string CombatMarchBeeBodyResource = "WorldMapWave6Runtime/CombatMarch/CombatMarchBeeBody";
+        private const string CombatMarchBeeWingsResource = "WorldMapWave6Runtime/CombatMarch/CombatMarchBeeWings";
 
         [SerializeField] private bool useV3DPreviewRuntimePackageForPlayMode;
         [SerializeField] private bool useV3ECandidateRuntimePackageForPlayMode;
@@ -3495,6 +3497,8 @@ namespace BeeKingdom.Playground
                 data.Resources.Add(new WorldResourceNode("res_pollen_core", "Pollen", ResourceKind.Pollen, RuntimePlacementPointAvoidingBearDen(data.Chunk, ChunkLocalWorld(data.Chunk, 0.29f, 0.35f), RuntimePlacementFamily.Resource, ResourceKind.Pollen, 521), 120));
                 data.Resources.Add(new WorldResourceNode("res_water_core", "Eau", ResourceKind.Water, RuntimePlacementPointAvoidingBearDen(data.Chunk, ChunkLocalWorld(data.Chunk, 0.18f, 0.64f), RuntimePlacementFamily.Resource, ResourceKind.Water, 531), 80));
                 data.Bestiary.Add(new WorldBestiaryNode("beast_t3_core_demo", BestiaryLabel(3, 1), 3, 1, RuntimePlacementPointAvoidingBearDen(data.Chunk, ChunkLocalWorld(data.Chunk, 0.78f, 0.66f), RuntimePlacementFamily.Bestiary, ResourceKind.Pollen, 541), BestiaryRole(3)));
+                // M020: Araignée placée à côté de la ruche du joueur — visible immédiatement (ChunkLocalWorld direct, pas de mask, à 0.52,0.52 juste à côté de la ruche 0.48,0.54)
+                data.Bestiary.Add(new WorldBestiaryNode("spider_next_to_hive", "Araignée", 2, 1, ChunkLocalWorld(data.Chunk, 0.52f, 0.52f), BestiaryRole(2)));
             }
             else if (data.Chunk == center + new Vector2Int(1, 0))
             {
@@ -4472,14 +4476,125 @@ namespace BeeKingdom.Playground
                 Vector2 b = WorldToScreen(targetWorldCoord);
                 if (!IsOnScreen(a, 420f) && !IsOnScreen(b, 420f)) continue;
 
-                DrawLine(a, b, new Color(1f, 0.55f, 0.2f, 0.85f), 3f);
+                Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
                 double totalSeconds = (encounter.EndsAtUtc - encounter.StartedAtUtc).TotalSeconds;
                 double elapsedSeconds = (DateTimeOffset.UtcNow - encounter.StartedAtUtc).TotalSeconds;
                 float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
                 float marchProgress = Mathf.PingPong(t * 2f, 1f);
-                Vector2 marker = Vector2.Lerp(a, b, marchProgress);
-                DrawCircle(marker, 7f, new Color(1f, 0.75f, 0.25f, 0.95f), 12);
+                Vector2 marker = Bezier(a, control, b, marchProgress);
+
+                DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
+                DrawCombatMarchBee(marker);
             }
+        }
+
+        // Palette de rendu "premium" pour un chemin de marche (halo, coeur, filet qui respire,
+        // essaim de braises/etincelles) - factorisee depuis DrawCombatPatrolMarch (demande de
+        // Jeff, 2026-08-25) pour que RaidMarchPalette reste prete a etre reutilisee par un futur
+        // systeme de raid sans dupliquer le code de rendu. Raid n'existe pas encore cote
+        // gameplay/serveur - seule la palette visuelle est conservee ici.
+        private readonly struct MarchPalette
+        {
+            public readonly Color Halo;
+            public readonly Color Core;
+            public readonly Color Filament;
+            public readonly Color SparkColor;
+            public readonly Color EmberColor;
+
+            public MarchPalette(Color halo, Color core, Color filament, Color sparkColor, Color emberColor)
+            {
+                Halo = halo;
+                Core = core;
+                Filament = filament;
+                SparkColor = sparkColor;
+                EmberColor = emberColor;
+            }
+        }
+
+        private static readonly MarchPalette CombatMarchPalette = new MarchPalette(
+            halo: new Color(0.55f, 0.04f, 0.05f, 0.28f),
+            core: new Color(0.90f, 0.14f, 0.10f, 0.92f),
+            filament: new Color(1f, 0.80f, 0.35f, 0.55f),
+            sparkColor: new Color(1f, 0.86f, 0.42f, 0.75f),
+            emberColor: new Color(0.95f, 0.28f, 0.14f, 0.62f));
+
+        // Reserve pour le futur systeme de Raid (aucune fonctionnalite branchee cote gameplay) -
+        // meme rendu que CombatMarchPalette, teinte violette validee par Jeff le 2026-08-25.
+        private static readonly MarchPalette RaidMarchPalette = new MarchPalette(
+            halo: new Color(0.30f, 0.05f, 0.55f, 0.28f),
+            core: new Color(0.55f, 0.16f, 0.92f, 0.92f),
+            filament: new Color(0.86f, 0.62f, 1f, 0.55f),
+            sparkColor: new Color(0.90f, 0.72f, 1f, 0.75f),
+            emberColor: new Color(0.58f, 0.20f, 0.90f, 0.62f));
+
+        private void DrawStyledMarchPath(Vector2 a, Vector2 control, Vector2 b, float marchProgress, MarchPalette palette)
+        {
+            float pulse = 0.5f + 0.5f * Mathf.Sin(animatedTime * 2.2f);
+            DrawBezier(a, control, b, new Color(palette.Halo.r, palette.Halo.g, palette.Halo.b, palette.Halo.a + pulse * 0.06f), 11f, 40);
+            DrawBezier(a, control, b, palette.Core, 4f, 40);
+            DrawBezier(a, control, b, new Color(palette.Filament.r, palette.Filament.g, palette.Filament.b, palette.Filament.a + pulse * 0.35f), 1.4f, 40);
+
+            const int swarmCount = 10;
+            for (int i = 0; i < swarmCount; i++)
+            {
+                float st = Mathf.Repeat(marchProgress + i * 0.028f - 0.12f, 1f);
+                Vector2 p = Bezier(a, control, b, st);
+                Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, st + 0.02f)) - p;
+                Vector2 side = tangent.sqrMagnitude > 0.01f ? new Vector2(-tangent.y, tangent.x).normalized : Vector2.up;
+                p += side * Mathf.Sin(animatedTime * 7f + i) * 4f;
+                bool spark = i % 3 == 0;
+                float flicker = 0.55f + 0.45f * Mathf.Sin(animatedTime * 9f + i * 1.7f);
+                Color emberColor = spark
+                    ? new Color(palette.SparkColor.r, palette.SparkColor.g, palette.SparkColor.b, palette.SparkColor.a * flicker)
+                    : new Color(palette.EmberColor.r, palette.EmberColor.g, palette.EmberColor.b, palette.EmberColor.a * flicker);
+                DrawCircle(p, spark ? 3.2f : 4.6f, emberColor, 10);
+            }
+        }
+
+        // Abeille de la marche d'attaque (demande de Jeff, 2026-08-25) : remplace l'ancien
+        // marqueur (simple cercle) par le sprite de la Gardienne, avec des ailes animees en
+        // battement rapide (oscillation d'echelle/alpha a haute frequence, meme famille de
+        // pattern IMGUI que DrawFlightArc/DrawLine - aucun Animator necessaire).
+        private void DrawCombatMarchBee(Vector2 marker)
+        {
+            Texture2D body = RuntimeEntityTexture(CombatMarchBeeBodyResource);
+            Texture2D wings = RuntimeEntityTexture(CombatMarchBeeWingsResource);
+            if (body == null)
+            {
+                DrawCircle(marker, 7f, new Color(1f, 0.75f, 0.25f, 0.95f), 12);
+                return;
+            }
+
+            const float bodyWidth = 46f;
+            float bodyHeight = bodyWidth * body.height / (float)body.width;
+            Vector2 bodyCenter = marker + new Vector2(0f, -bodyHeight * 0.18f);
+            Rect bodyRect = new Rect(bodyCenter.x - bodyWidth * 0.5f, bodyCenter.y - bodyHeight * 0.5f, bodyWidth, bodyHeight);
+
+            if (wings != null)
+            {
+                const float wingFrequency = 32f;
+                float flap = Mathf.Abs(Mathf.Sin(animatedTime * wingFrequency + marker.x * 0.01f));
+                float wingScaleY = Mathf.Lerp(0.32f, 1f, flap);
+                float wingAlpha = Mathf.Lerp(0.55f, 0.95f, flap);
+
+                float wingWidth = bodyWidth * 1.35f;
+                float wingHeight = wingWidth * wings.height / (float)wings.width;
+                Vector2 wingPivot = bodyCenter + new Vector2(0f, -bodyHeight * 0.10f);
+                Rect wingRect = new Rect(wingPivot.x - wingWidth * 0.5f, wingPivot.y - wingHeight * 0.5f, wingWidth, wingHeight);
+
+                Matrix4x4 matrix = GUI.matrix;
+                Color previousColor = GUI.color;
+                GUIUtility.ScaleAroundPivot(new Vector2(1f, wingScaleY), wingPivot);
+                GUI.color = new Color(1f, 1f, 1f, wingAlpha);
+                GUI.DrawTexture(wingRect, wings, ScaleMode.ScaleToFit, true);
+                GUI.matrix = matrix;
+                GUI.color = previousColor;
+            }
+
+            Color bodyPreviousColor = GUI.color;
+            GUI.color = Color.white;
+            GUI.DrawTexture(bodyRect, body, ScaleMode.ScaleToFit, true);
+            GUI.color = bodyPreviousColor;
         }
 
         private void DrawFlightArc(WorldFlightRecord flight, bool highlight)
@@ -4725,11 +4840,23 @@ namespace BeeKingdom.Playground
                     MiniLabel(new Color(1f, 0.80f, 0.30f, 1f), 10, TextAnchor.MiddleLeft));
                 rareSightingOffset = 16f;
             }
-            GUI.enabled = beast != null;
-            if (GUI.Button(new Rect(panel.x + 14f, panel.y + 232f + rareSightingOffset, panel.width - 28f, 30f), "Patrouiller"))
+            var squadForAttack = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
+            bool hasSquadForAttack = squadForAttack != null && squadForAttack.HasReservation;
+            bool canAttack = beast != null && hasSquadForAttack;
+            string attackLabel = !hasSquadForAttack ? "Aucune escouade prête" : "ATTAQUER";
+            GUI.enabled = canAttack;
+            if (GUI.Button(new Rect(panel.x + 14f, panel.y + 232f + rareSightingOffset, panel.width - 28f, 30f), attackLabel))
             {
-                pendingCombatPatrolLaunchTarget = beast.WorldCoord;
                 HiveViewProductUiPresenter.OpenCombatPatrolOverlayForWorldMap(beast.Tier);
+            }
+            if (beast != null && !hasSquadForAttack)
+            {
+                GUI.Label(new Rect(panel.x + 14f, panel.y + 266f + rareSightingOffset, panel.width - 28f, 20f), "Préparez une escouade avant d'attaquer.", MiniLabel(new Color(1f, 0.70f, 0.30f, 1f), 10, TextAnchor.MiddleLeft));
+                if (GUI.Button(new Rect(panel.x + 14f, panel.y + 288f + rareSightingOffset, panel.width - 28f, 24f), "Ouvrir Armée"))
+                {
+                    if (SplashDevelopmentSceneConfig.IsSceneEnabledInBuildSettings(SplashDevelopmentSceneConfig.HiveMapScenePath))
+                        SplashDevelopmentSceneConfig.TryOpenScene(SplashDevelopmentSceneConfig.HiveMapScenePath, out _);
+                }
             }
 
             GUI.enabled = true;
@@ -4767,11 +4894,18 @@ namespace BeeKingdom.Playground
                 : "aucun";
             GUI.Label(new Rect(panel.x + 12f, panel.y + 140f, panel.width - 24f, 18f), "Bestiaire: " + bestiaryLabelPortrait,
                 MiniLabel(beastIsRareSightingPortrait ? new Color(1f, 0.80f, 0.30f, 1f) : new Color(1f, 0.90f, 0.62f, 1f), 10, TextAnchor.MiddleLeft));
-            GUI.enabled = beast != null;
-            if (GUI.Button(new Rect(panel.x + 12f, panel.y + 160f, panel.width - 24f, 30f), "Patrouiller"))
+            var squadForAttackPortrait = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
+            bool hasSquadForAttackPortrait = squadForAttackPortrait != null && squadForAttackPortrait.HasReservation;
+            bool canAttackPortrait = beast != null && hasSquadForAttackPortrait;
+            string attackLabelPortrait = !hasSquadForAttackPortrait ? "Aucune escouade prête" : "ATTAQUER";
+            GUI.enabled = canAttackPortrait;
+            if (GUI.Button(new Rect(panel.x + 12f, panel.y + 160f, panel.width - 24f, 30f), attackLabelPortrait))
             {
-                pendingCombatPatrolLaunchTarget = beast.WorldCoord;
                 HiveViewProductUiPresenter.OpenCombatPatrolOverlayForWorldMap(beast.Tier);
+            }
+            if (beast != null && !hasSquadForAttackPortrait)
+            {
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 194f, panel.width - 24f, 16f), "Préparez une escouade avant d'attaquer.", MiniLabel(new Color(1f, 0.70f, 0.30f, 1f), 9, TextAnchor.MiddleLeft));
             }
 
             GUI.enabled = true;
@@ -4918,10 +5052,15 @@ namespace BeeKingdom.Playground
             GUI.Label(new Rect(rect.x + 12f, y, rect.width - 24f, 58f), "Tiers: R1 pauvre, R2 moyen, R3 riche\nMenaces: T1 solo -> T7 raid\nFiltres = overlays seulement, terrain intact", MiniLabel(new Color(1f, 0.92f, 0.62f, 1f), 10, TextAnchor.UpperLeft));
         }
 
+        private bool worldMapReturnInProgress;
+
         private void OpenLivingHiveFromWorldMap()
         {
+            if (worldMapReturnInProgress) return;
             if (!HiveViewProductUiPresenter.TryBeginGuidedWorldMapReturnForRuntime()) return;
-            if (SplashDevelopmentSceneConfig.TryOpenScene(SplashDevelopmentSceneConfig.HiveScenePath, out string message)) return;
+            worldMapReturnInProgress = true;
+            if (SplashDevelopmentSceneConfig.TryOpenScene(SplashDevelopmentSceneConfig.HiveMapScenePath, out string message)) return;
+            worldMapReturnInProgress = false;
             mapToolsStatus = message;
             status = message;
         }

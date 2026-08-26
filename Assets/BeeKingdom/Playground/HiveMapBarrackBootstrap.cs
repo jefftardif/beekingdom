@@ -43,6 +43,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindFirstObjectByType<HiveMapBarrackBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapBarrackBootstrap>();
+        }
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
@@ -82,9 +93,9 @@ namespace BeeKingdom.Playground
                     if (trainingHighlight != null) trainingHighlight.Hide();
                 }
                 else if (subscribedController != null
-                    && BuildingCatalog.TryGetByLegacyKey(BuildingLegacyKeys.GuardPost, out BuildingDefinition definition))
+                    && BuildingCatalog.TryGetByLegacyKey(BuildingLegacyKeys.GuardPost, out BuildingDefinition definition)
+                    && subscribedController.Registry.TryGetGameObjectByBuildingType(BuildingTypes.Barrack, out GameObject target))
                 {
-                    GameObject target = subscribedController.Registry.GetGameObjectByBuildingType(BuildingTypes.Barrack);
                     if (target != null)
                     {
                         if (trainingHighlight == null) trainingHighlight = target.AddComponent<BuildingSelectionHighlight>();
@@ -102,7 +113,7 @@ namespace BeeKingdom.Playground
 
         private void OnBuildingClicked(BuildingDefinition building)
         {
-            if (LivingHiveResearchRuntime.IsModalOpen || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+            if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (building == null || !string.Equals(building.BuildingType, BuildingTypes.Barrack, StringComparison.Ordinal)) return;
             // Jeff's request: tapping the Barrack while troops are ready claims them
             // directly instead of opening the full window - only falls through to opening
@@ -113,7 +124,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
-            if (LivingHiveResearchRuntime.IsModalOpen || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost) return;
+            if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             bool compact = Screen.width < 900;
             HiveViewProductUiPresenter.DrawBarrackOverlayForExternalHost(compact);
             // Same OnGUI call as the panel it opens from, so it always draws on top of it -
@@ -124,10 +135,10 @@ namespace BeeKingdom.Playground
             // closed - only meaningful when the player hasn't already opened the window
             // (which shows its own status), and only once the building's runtime GameObject
             // and camera are actually available.
-            if (subscribedController != null)
+            if (subscribedController != null
+                && subscribedController.Registry.TryGetGameObjectByBuildingType(BuildingTypes.Barrack, out GameObject go))
             {
                 Camera camera = Camera.main;
-                GameObject go = subscribedController.Registry.GetGameObjectByBuildingType(BuildingTypes.Barrack);
                 if (camera != null && go != null)
                 {
                     Rect rect = ScreenRectFor(go, camera);

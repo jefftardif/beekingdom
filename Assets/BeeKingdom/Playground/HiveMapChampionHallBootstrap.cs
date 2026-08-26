@@ -44,6 +44,17 @@ namespace BeeKingdom.Playground
             return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
         }
 
+        public static void InitializeForScene(Scene scene)
+        {
+            if (!Application.isPlaying) return;
+            if (!IsEnvironmentScene(scene)) return;
+            if (FindAnyObjectByType<HiveMapChampionHallBootstrap>() != null) return;
+
+            GameObject root = new GameObject(RuntimeRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<HiveMapChampionHallBootstrap>();
+        }
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
@@ -69,7 +80,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
-            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost) return;
+            if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (!OverlayOpenForExternalHost) return;
             BuildingDefinition building = selectedBuilding;
             if (building == null)

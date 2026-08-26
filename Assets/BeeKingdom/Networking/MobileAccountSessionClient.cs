@@ -126,6 +126,7 @@ namespace BeeKingdom.Networking
             string authorizationCode,
             string codeVerifier,
             string redirectUri,
+            string oauthClientId,
             string clientVersion,
             string deviceIdentifier,
             string region)
@@ -133,6 +134,7 @@ namespace BeeKingdom.Networking
             AuthorizationCode = authorizationCode ?? string.Empty;
             CodeVerifier = codeVerifier ?? string.Empty;
             RedirectUri = redirectUri ?? string.Empty;
+            OAuthClientId = oauthClientId ?? string.Empty;
             ClientVersion = clientVersion ?? string.Empty;
             DeviceIdentifier = deviceIdentifier ?? string.Empty;
             Region = region ?? string.Empty;
@@ -141,6 +143,7 @@ namespace BeeKingdom.Networking
         public string AuthorizationCode { get; }
         public string CodeVerifier { get; }
         public string RedirectUri { get; }
+        public string OAuthClientId { get; }
         public string ClientVersion { get; }
         public string DeviceIdentifier { get; }
         public string Region { get; }
@@ -366,7 +369,7 @@ namespace BeeKingdom.Networking
             CancellationToken cancellationToken = default(CancellationToken))
         {
             if (request == null || string.IsNullOrWhiteSpace(request.AuthorizationCode) || string.IsNullOrWhiteSpace(request.CodeVerifier) ||
-                string.IsNullOrWhiteSpace(request.RedirectUri) || string.IsNullOrWhiteSpace(request.ClientVersion) ||
+                string.IsNullOrWhiteSpace(request.RedirectUri) || string.IsNullOrWhiteSpace(request.OAuthClientId) || string.IsNullOrWhiteSpace(request.ClientVersion) ||
                 string.IsNullOrWhiteSpace(request.DeviceIdentifier) || string.IsNullOrWhiteSpace(request.Region))
                 throw new MobileAccountSessionException(MobileAccountSessionError.InvalidRequest, "auth.invalid_request");
             return CompleteLoginAsync(ct => transport.LoginWithGoogleAsync(request, ct), cancellationToken);
@@ -913,7 +916,9 @@ namespace BeeKingdom.Networking
                 string.Equals(remoteCode, "auth.rate_limited", StringComparison.Ordinal) ||
                 string.Equals(remoteCode, "auth.session_limit", StringComparison.Ordinal) ||
                 string.Equals(remoteCode, "auth.unavailable", StringComparison.Ordinal) ||
-                string.Equals(remoteCode, "auth.invalid_request", StringComparison.Ordinal))
+                string.Equals(remoteCode, "auth.invalid_request", StringComparison.Ordinal) ||
+                string.Equals(remoteCode, "auth.google_sign_in_failed", StringComparison.Ordinal) ||
+                string.Equals(remoteCode, "auth.account_disabled", StringComparison.Ordinal))
                 return remoteCode;
             if (string.Equals(remoteCode, "invalid_credentials", StringComparison.Ordinal) ||
                 string.Equals(remoteCode, "account_locked", StringComparison.Ordinal) ||

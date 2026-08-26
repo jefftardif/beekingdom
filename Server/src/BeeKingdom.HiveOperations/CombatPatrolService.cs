@@ -44,13 +44,15 @@ public sealed class CombatPatrolService
         long totalRequested = requested.Values.Sum();
         IReadOnlyDictionary<string, long> availableRoster = ComputeAvailableRoster(state);
         bool hasSlot = patrol.ActiveEncounters.Count < TotalSlots(patrol);
+        IReadOnlyDictionary<string, long> reservedForPreview = state.SquadReservation?.Reserved;
+        bool isReservedSquadForPreview = reservedForPreview != null && Families.All(f => requested.GetValueOrDefault(f) <= reservedForPreview.GetValueOrDefault(f)) && requested.Values.Sum() > 0 && requested.Values.Sum() <= reservedForPreview.Values.Sum();
         string? blockReason = !hasSlot
             ? "game.patrol_no_slot_available"
             : cooldownActive
                 ? "game.patrol_cooldown_active"
                 : totalRequested <= 0 || totalRequested > capacity
                     ? "game.patrol_invalid_composition"
-                    : Families.Any(f => requested.GetValueOrDefault(f) > availableRoster.GetValueOrDefault(f))
+                    : !isReservedSquadForPreview && Families.Any(f => requested.GetValueOrDefault(f) > availableRoster.GetValueOrDefault(f))
                         ? "game.patrol_insufficient_troops"
                         : !meetsPower
                             ? "game.patrol_underpowered"
@@ -92,7 +94,9 @@ public sealed class CombatPatrolService
             if (totalRequested <= 0 || totalRequested > capacity)
             { result = new(false, "game.patrol_invalid_composition", Snapshot(state)); return state; }
             IReadOnlyDictionary<string, long> availableRoster = ComputeAvailableRoster(state);
-            if (Families.Any(f => requested.GetValueOrDefault(f) > availableRoster.GetValueOrDefault(f)))
+            IReadOnlyDictionary<string, long> reserved = state.SquadReservation?.Reserved;
+            bool isReservedSquad = reserved != null && Families.All(f => requested.GetValueOrDefault(f) <= reserved.GetValueOrDefault(f)) && requested.Values.Sum() > 0 && requested.Values.Sum() <= reserved.Values.Sum();
+            if (!isReservedSquad && Families.Any(f => requested.GetValueOrDefault(f) > availableRoster.GetValueOrDefault(f)))
             { result = new(false, "game.patrol_insufficient_troops", Snapshot(state)); return state; }
             ChampionCombatContribution championContribution = ChampionBeeCatalog.CombatContribution(state.ChampionBees);
             TroopTierCombatContribution troopTierContribution = TroopTierCatalog.CombatContribution(state.TroopTierProgress);
