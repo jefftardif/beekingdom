@@ -4,6 +4,7 @@
     <ProjectReference Include="..\BeeKingdom.Infrastructure\BeeKingdom.Infrastructure.csproj" />
     <ProjectReference Include="..\BeeKingdom.Persistence\BeeKingdom.Persistence.csproj" />
     <ProjectReference Include="..\BeeKingdom.Database\BeeKingdom.Database.csproj" />
+    <ProjectReference Include="..\BeeKingdom.HiveOperations\BeeKingdom.HiveOperations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

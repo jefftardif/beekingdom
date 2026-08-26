@@ -1103,6 +1103,19 @@ app.MapPost("/admin/v1/players/{playerId:guid}/hives/{hiveId:guid}/combat-patrol
     catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
 });
 
+app.MapPost("/admin/v1/players/{playerId:guid}/hives/{hiveId:guid}/combat-patrol/recall-tokens/adjust", async (HttpContext context, Guid playerId, Guid hiveId, IOptions<AdminSupportOptions> adminOptions, AdminSupportService admin, AdminAdjustRecallTokensHttpRequest request, CancellationToken ct) =>
+{
+    IResult? authorization = AuthorizeAdminSupport(context, adminOptions.Value);
+    if (authorization is not null) return authorization;
+    if (request is null || string.IsNullOrWhiteSpace(request.Reason) || request.ExpectedRevision < 0) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        AdminMutationResult result = await admin.AdjustRecallTokensAsync(new(playerId, hiveId, request.Delta, request.Reason, request.ExpectedRevision), ct);
+        return result.Succeeded ? Results.Ok(result.State) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.admin_conflict");
+    }
+    catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
+});
+
 // Bootstrap-only: grants/revokes the Admin (and, if ever needed directly, Moderator) role
 // on an account. Shared-secret gated like the rest of this admin surface - deliberately NOT
 // reachable from inside the game. Once an account holds Admin, it can grant/revoke
@@ -2741,6 +2754,7 @@ public sealed record AdminPlayerHivesResponse(IReadOnlyList<Guid> HiveIds);
 public sealed record AdminResourceAdjustHttpRequest(string Resource, long Delta, string Reason, long ExpectedRevision);
 public sealed record AdminRosterAdjustHttpRequest(string Family, long Delta, string Reason, long ExpectedRevision);
 public sealed record AdminGrantSlotHttpRequest(bool Premium, string Reason, long ExpectedRevision);
+public sealed record AdminAdjustRecallTokensHttpRequest(long Delta, string Reason, long ExpectedRevision);
 public sealed record AdminSetRoleHttpRequest(AccountRole Role, string Reason);
 public sealed record AccountRoleAssignHttpRequest(Guid TargetAccountId, AccountRole Role);
 public sealed record AccountRoleLookupResult(Guid AccountId, string? DisplayName, string Email, AccountRole Role);

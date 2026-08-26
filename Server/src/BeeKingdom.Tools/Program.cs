@@ -1,4 +1,6 @@
 using System.Data;
+using System.Text.Json;
+using BeeKingdom.HiveOperations;
 using BeeKingdom.Infrastructure.DependencyInjection;
 using BeeKingdom.Persistence.DependencyInjection;
 using BeeKingdom.Persistence.Migrations;
@@ -50,6 +52,26 @@ switch (command)
             break;
         }
         await RevokeGoogleSessionsAsync(host.Services.GetRequiredService<SqlConnectionFactory>(), args[1]);
+        break;
+
+    case "repair-squad-reservation":
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: repair-squad-reservation <hive-id-guid> [--apply]");
+            Environment.ExitCode = 2;
+            break;
+        }
+        await RepairSquadReservationAsync(host.Services.GetRequiredService<SqlConnectionFactory>(), args[1], args.Contains("--apply"));
+        break;
+
+    case "grant-recall-tokens":
+        if (args.Length < 3 || !long.TryParse(args[2], out long recallDelta))
+        {
+            Console.Error.WriteLine("Usage: grant-recall-tokens <account-email-substring> <delta> [--apply]");
+            Environment.ExitCode = 2;
+            break;
+        }
+        await GrantRecallTokensAsync(host.Services.GetRequiredService<SqlConnectionFactory>(), args[1], recallDelta, args.Contains("--apply"));
         break;
 
     default:
@@ -247,5 +269,186 @@ static async Task ProbeGoogleAccountAsync(SqlConnectionFactory connectionFactory
         parameter.ParameterName = name;
         parameter.Value = value;
         command.Parameters.Add(parameter);
+    }
+}
+
+// Fixe une ruche dont SquadReservation.Reserved depasse DoctrineRoster.Counts - invariant
+// verifie par HiveStateMigrator.ToCurrent (ligne 46-47), viole par une session de tests
+// automatises trop rapide le 2026-08-25 (Lancer/Reclamer en rafale sur un CombatPatrol reel).
+// Lit le JSON BRUT (sans passer par ToCurrent, qui jetterait avant meme de pouvoir lire),
+// ramene chaque famille reservee a ne pas depasser l'effectif reel, et efface la reservation
+// (ReservationId=null) si tout retombe a 0 - seule combinaison valide selon le meme invariant.
+// Sans --apply : affiche ce qui serait corrige, n'ecrit rien.
+static async Task RepairSquadReservationAsync(SqlConnectionFactory connectionFactory, string hiveIdRaw, bool apply)
+{
+    if (!Guid.TryParse(hiveIdRaw, out Guid hiveId))
+    {
+        Console.Error.WriteLine("Invalid hive id: " + hiveIdRaw);
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
+    await using SqlConnection connection = connectionFactory.CreateConnection();
+    await connection.OpenAsync();
+
+    string? json = null;
+    Guid playerId = Guid.Empty;
+    await using (SqlCommand read = connection.CreateCommand())
+    {
+        read.CommandText = "SELECT PlayerId, StateJson FROM dbo.HivePlayerStates WHERE HiveId=@hiveId";
+        read.Parameters.Add(new SqlParameter("@hiveId", SqlDbType.UniqueIdentifier) { Value = hiveId });
+        await using SqlDataReader reader = await read.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            Console.Error.WriteLine("No HivePlayerStates row found for HiveId=" + hiveId);
+            Environment.ExitCode = 1;
+            return;
+        }
+        playerId = reader.GetGuid(0);
+        json = reader.GetString(1);
+    }
+
+    PlayerHiveState state = JsonSerializer.Deserialize<PlayerHiveState>(json, jsonOptions)!;
+    if (state.SquadReservation is null)
+    {
+        Console.WriteLine("No SquadReservation on this hive - nothing to repair.");
+        return;
+    }
+
+    Dictionary<string, long> rosterCounts = state.DoctrineRoster?.Counts ?? new Dictionary<string, long>();
+    Dictionary<string, long> reserved = state.SquadReservation.Reserved;
+    var corrected = new Dictionary<string, long>(reserved.Comparer);
+    bool changed = false;
+    foreach ((string family, long count) in reserved)
+    {
+        long cap = rosterCounts.GetValueOrDefault(family);
+        long clamped = Math.Min(count, cap);
+        corrected[family] = clamped;
+        if (clamped != count) changed = true;
+        Console.WriteLine($"  {family}: reserved={count} roster={cap} -> {clamped}");
+    }
+
+    if (!changed)
+    {
+        Console.WriteLine("Reserved already within roster bounds - nothing to repair (the invalid state may be elsewhere).");
+        return;
+    }
+
+    long correctedTotal = corrected.Values.Sum();
+    string? correctedReservationId = correctedTotal > 0 ? state.SquadReservation.ReservationId : null;
+    SquadReservationState correctedReservation = state.SquadReservation with { Reserved = corrected, ReservationId = correctedReservationId };
+    PlayerHiveState correctedState = state with { SquadReservation = correctedReservation };
+
+    // Sanity check locally before writing anything: the corrected state must actually pass the
+    // same validation that is currently rejecting the stored one.
+    try { HiveStateMigrator.ToCurrent(correctedState); }
+    catch (Exception validationError)
+    {
+        Console.Error.WriteLine("Corrected state still fails validation, aborting without writing: " + validationError.Message);
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine($"PlayerId={playerId} HiveId={hiveId}");
+    Console.WriteLine(correctedReservationId is null
+        ? "Reservation total dropped to 0 -> clearing ReservationId as well (required by the same invariant)."
+        : "Reservation kept (total still > 0) with clamped per-family counts.");
+
+    if (!apply)
+    {
+        Console.WriteLine("Dry run only - no write performed. Re-run with --apply to write this correction.");
+        return;
+    }
+
+    string correctedJson = JsonSerializer.Serialize(correctedState, jsonOptions);
+    await using (SqlCommand write = connection.CreateCommand())
+    {
+        write.CommandText = "UPDATE dbo.HivePlayerStates SET StateJson=@json, UpdatedAtUtc=SYSUTCDATETIME() WHERE PlayerId=@playerId AND HiveId=@hiveId";
+        write.Parameters.Add(new SqlParameter("@json", SqlDbType.NVarChar, -1) { Value = correctedJson });
+        write.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        write.Parameters.Add(new SqlParameter("@hiveId", SqlDbType.UniqueIdentifier) { Value = hiveId });
+        int rows = await write.ExecuteNonQueryAsync();
+        Console.WriteLine(rows == 1 ? "Applied: 1 row updated." : "Unexpected row count updated: " + rows);
+    }
+}
+
+// Octroi manuel de jetons de rappel de patrouille (demande de Jeff, 2026-08-26) - seul moyen d'en
+// obtenir en l'absence de boutique/systeme de quetes branche. Trouve le compte par email (comme
+// revoke-google-sessions), lit le JSON BRUT de sa ruche, ajoute le delta au meme dictionnaire
+// generique deja utilise par CombatPatrolService.RecallItemId (state.SpeedUps), valide via
+// HiveStateMigrator.ToCurrent avant d'ecrire. Sans --apply : affiche ce qui serait fait, n'ecrit rien.
+static async Task GrantRecallTokensAsync(SqlConnectionFactory connectionFactory, string emailMatch, long delta, bool apply)
+{
+    JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
+    await using SqlConnection connection = connectionFactory.CreateConnection();
+    await connection.OpenAsync();
+
+    Guid playerId = Guid.Empty;
+    await using (SqlCommand find = connection.CreateCommand())
+    {
+        find.CommandText = "SELECT TOP 2 a.PlayerId, a.Email FROM dbo.AuthenticationAccounts a WHERE a.Email LIKE @Match;";
+        find.Parameters.Add(new SqlParameter("@Match", "%" + emailMatch + "%"));
+        var matches = new List<(Guid PlayerId, string Email)>();
+        await using (SqlDataReader reader = await find.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) matches.Add((reader.GetGuid(0), reader.GetString(1)));
+        }
+        if (matches.Count == 0) { Console.Error.WriteLine("No matching account found."); Environment.ExitCode = 1; return; }
+        if (matches.Count > 1) { Console.Error.WriteLine("More than one account matches - be more specific. Matches: " + string.Join(", ", matches.Select(m => m.Email))); Environment.ExitCode = 1; return; }
+        playerId = matches[0].PlayerId;
+        Console.WriteLine("Matched account: " + playerId + " " + matches[0].Email);
+    }
+
+    Guid hiveId = Guid.Empty;
+    string? json = null;
+    await using (SqlCommand read = connection.CreateCommand())
+    {
+        read.CommandText = "SELECT TOP 2 HiveId, StateJson FROM dbo.HivePlayerStates WHERE PlayerId=@playerId ORDER BY UpdatedAtUtc DESC;";
+        read.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        var rows = new List<(Guid HiveId, string Json)>();
+        await using (SqlDataReader reader = await read.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) rows.Add((reader.GetGuid(0), reader.GetString(1)));
+        }
+        if (rows.Count == 0) { Console.Error.WriteLine("No HivePlayerStates row found for PlayerId=" + playerId); Environment.ExitCode = 1; return; }
+        if (rows.Count > 1) Console.WriteLine("Warning: multiple hives found for this player - using the most recently updated one.");
+        hiveId = rows[0].HiveId;
+        json = rows[0].Json;
+    }
+
+    PlayerHiveState state = JsonSerializer.Deserialize<PlayerHiveState>(json, jsonOptions)!;
+    var items = new Dictionary<string, int>(state.SpeedUps ?? new Dictionary<string, int>(StringComparer.Ordinal), StringComparer.Ordinal);
+    long before = items.GetValueOrDefault(CombatPatrolService.RecallItemId);
+    long after = Math.Max(0, before + delta);
+    items[CombatPatrolService.RecallItemId] = (int)Math.Min(after, int.MaxValue);
+    PlayerHiveState correctedState = state with { SpeedUps = items };
+
+    try { HiveStateMigrator.ToCurrent(correctedState); }
+    catch (Exception validationError)
+    {
+        Console.Error.WriteLine("Corrected state fails validation, aborting without writing: " + validationError.Message);
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine($"PlayerId={playerId} HiveId={hiveId}");
+    Console.WriteLine($"  recall tokens: {before} -> {after} (delta {delta})");
+
+    if (!apply)
+    {
+        Console.WriteLine("Dry run only - no write performed. Re-run with --apply to write this change.");
+        return;
+    }
+
+    string correctedJson = JsonSerializer.Serialize(correctedState, jsonOptions);
+    await using (SqlCommand write = connection.CreateCommand())
+    {
+        write.CommandText = "UPDATE dbo.HivePlayerStates SET StateJson=@json, UpdatedAtUtc=SYSUTCDATETIME() WHERE PlayerId=@playerId AND HiveId=@hiveId";
+        write.Parameters.Add(new SqlParameter("@json", SqlDbType.NVarChar, -1) { Value = correctedJson });
+        write.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        write.Parameters.Add(new SqlParameter("@hiveId", SqlDbType.UniqueIdentifier) { Value = hiveId });
+        int rows = await write.ExecuteNonQueryAsync();
+        Console.WriteLine(rows == 1 ? "Applied: 1 row updated." : "Unexpected row count updated: " + rows);
     }
 }

@@ -100,6 +100,7 @@ public sealed class CombatPatrolServiceTests
             var service = new CombatPatrolService(repo, clock);
             CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 2, 18, 0, 0, 0, "launch"), default);
             Guid encounterId = launch.Snapshot.ActiveEncounters[0].EncounterId;
+            await repo.ExecuteAtomicallyAsync(p, h, s => s with { SpeedUps = new Dictionary<string, int> { [CombatPatrolService.RecallItemId] = 1 } });
 
             CombatPatrolResult recall = await service.RecallAsync(new(p, h, encounterId, 1, "recall"), default);
 

@@ -59,6 +59,7 @@ namespace BeeKingdom.Playground
             HiveMapSettingsBootstrap.InitializeForScene(scene);
             HiveMapUnsupportedBuildingBootstrap.InitializeForScene(scene);
             HiveMapArmyBootstrap.InitializeForScene(scene);
+            HiveMapAmbientBeesBootstrap.InitializeForScene(scene);
             LivingHiveChatBridgeBootstrap.InitializeForScene(scene);
         }
     }

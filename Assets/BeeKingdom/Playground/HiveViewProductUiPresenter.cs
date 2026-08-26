@@ -36059,6 +36059,12 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
         // without depending on the panel controller's full interface.
         internal static CombatPatrolScreenModel PeekCombatPatrolModelForWorldMap() => combatPatrolController?.Model;
 
+        // Permet a la carte du monde de relire l'etat de patrouille pendant que le joueur reste
+        // simplement sur la carte (demande de Jeff, 2026-08-25 : "la troupe doit revenir toute
+        // seule") sans passer par l'ouverture de l'Armee/de la fenetre Patrouille - chaque relecture
+        // reclame automatiquement (AutoClaimFinishedEncountersAsync) toute rencontre terminee.
+        internal static void RefreshCombatPatrolForWorldMap() => combatPatrolController?.Refresh();
+
         internal static void DrawCombatPatrolOverlayForWorldMap()
         {
             DrawCombatPatrolQueueStrip();
@@ -36209,9 +36215,16 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
                 if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 40f), BeeLocalization.Text("combat.patrol.claim", "Reclamer"))) combatPatrolController.Claim();
                 y += 46f;
                 GUI.enabled = model.CanRecall;
-                if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 34f), BeeLocalization.Text("combat.patrol.recall", "Rappeler"))) combatPatrolController.Recall();
+                string recallLabel = BeeLocalization.Text("combat.patrol.recall", "Rappeler") + " (" + model.RecallTokenCount.ToString(CultureInfo.InvariantCulture) + ")";
+                if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 34f), recallLabel)) combatPatrolController.Recall();
                 GUI.enabled = true;
-                y += 42f;
+                y += 38f;
+                if (model.RecallTokenCount <= 0)
+                {
+                    GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), BeeLocalization.Text("combat.patrol.recall_no_token", "Aucun jeton de rappel"), tinyLabelStyle);
+                    y += 20f;
+                }
+                y += 4f;
                 if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 30f), BeeLocalization.Text("combat.patrol.back_to_composer", "Retour a la composition"))) combatPatrolController.ClearSelection();
                 if (model.State == CombatPatrolScreenState.Error)
                     GUI.Label(new Rect(panel.x + 12f, panel.yMax - 46f, panel.width - 24f, 34f), BeeLocalization.Text("combat.patrol.error", "Erreur") + ": " + model.ErrorCode, tinyLabelStyle);

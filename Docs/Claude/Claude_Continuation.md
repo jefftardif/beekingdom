@@ -40,6 +40,80 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — Retour automatique des troupes, incident donnees production, abeilles ambiantes HiveMap, fenetre de rappel + jeton (2026-08-26)
+
+**Retour automatique des troupes (demande de Jeff).** Le joueur ne doit plus reclamer manuellement
+une patrouille terminee. `CombatPatrolPresentation.RefreshCoreAsync` reclame automatiquement toute
+patrouille dont le temps est ecoule (boucle bornee, snapshot re-applique a chaque cycle). Cote
+carte, une nouvelle animation de retour (duree proportionnelle a la distance ruche-cible, bornee
+1.5s-10s, vitesse placeholder en attendant un vrai modele lie au niveau/competences du joueur) fait
+visuellement revenir l'abeille au lieu de la faire disparaitre.
+
+**Bug de marche corrige : l'abeille "repartait tout de suite".** La marche aller utilisait un
+PingPong qui faisait un aller-retour automatique dans les 50 premiers % de la duree du combat, en
+plus du vrai systeme de retour ci-dessus — les deux animations se chevauchaient. Corrige : la
+marche aller progresse simplement de 0 a 1 sur toute la duree et reste sur la cible jusqu'a la
+resolution reelle. Les petites etincelles qui tracent le chemin (auparavant collees a la vitesse de
+l'abeille) filent maintenant en boucle continue independante, plus rapide, pour bien montrer toute
+la route.
+
+**Incident de donnees production (cause par mes propres tests automatises).** Des appels rapproches
+et automatises (Claim/Refresh/Launch via reflexion live dans l'editeur) ont provoque une
+desynchronisation reelle en base : `SquadReservation.Reserved` (gardiennes) a depasse
+`DoctrineRoster.Counts`, bloquant toute lecture de l'etat de la ruche du joueur (validation stricte
+de `HiveStateMigrator.ToCurrent`). Diagnostique et corrige via un outil CLI dedie (dry-run par
+defaut, `--apply` explicite), ecrit et publie pour que Jeff l'execute lui-meme contre la production
+apres verification. Execute avec succes par Jeff : `reserved=16 roster=14 -> 14`, 1 ligne corrigee.
+**Lecon retenue : ne plus enchainer des mutations automatisees rapprochees contre la production —
+paceer ou eviter completement ce type de test.**
+
+**Abeilles ambiantes sur le hub HiveMap (demande de Jeff).** Petites abeilles decoratives sur le
+fond `hivebg.png` : des volantes (arc de vol, entre le palais et des batiments satellites) et des
+ouvrieres qui marchent au sol. Premiere version des marcheuses utilisait les positions reelles des
+batiments (donnees sidecar) comme trajet — corrige apres retour de Jeff ("tu les fais marcher entre
+les chemins, pas sur eux") : l'illustration de fond a ses propres chemins peints, independants des
+positions de batiments reelles (verifie en comparant l'image et les coordonnees sidecar — aucune
+correspondance fiable). Calibration mesuree en jeu (bounds du GameObject `FrontalBackdrop` : le
+fond couvre le monde X in [-50,50], Y in [0,100] a Z=30) puis les ouvrieres marchent desormais sur
+la grande allee centrale verticale — seul chemin non ambigu de l'illustration — sur des voies
+paralleles pour eviter la superposition.
+
+**Fenetre de composition + rappel a jeton (demande de Jeff).** Cliquer sur sa propre troupe en
+marche sur la carte ouvre desormais la fenetre existante de patrouille (composition, temps
+restant, bouton Reclamer). Le bouton Rappeler existait deja cote client/serveur mais etait
+entierement gratuit et sans aucune fenetre pour y acceder depuis la marche visible sur la carte.
+Deux changements : (1) un hotspot cliquable sur l'abeille en marche ouvre la fenetre ; (2) rappeler
+une troupe avant la fin du combat consomme desormais un jeton de rappel (nouveau code d'erreur
+serveur si aucun jeton disponible). Reutilise le dictionnaire generique deja persiste et deja
+valide (`state.SpeedUps`, itemId -> quantite) plutot que d'ajouter un nouveau champ au modele —
+aucun risque de migration sur les donnees de production existantes vu l'incident ci-dessus. Aucune
+boutique n'existe encore pour acheter ces jetons ; seul un nouvel endpoint admin audite permet pour
+l'instant d'en accorder (representant "gagne via quete/evenement" en attendant un vrai systeme de
+quetes/boutique — decision de prix/design a prendre avec Jeff).
+
+Preuves : suite `BeeKingdom.HiveOperations.Tests` (filtre CombatPatrol) 28/28 apres mise a jour du
+test de rappel pour accorder un jeton avant l'appel ; build complet du serveur sans erreur ; Unity
+recompile sans erreur apres chaque changement (verifie via les logs editeur). Le projet de tests
+d'integration `BeeKingdom.Tests` ne compile pas dans son ensemble a cause d'un fichier pre-existant
+non lie a ce travail (`GoogleOAuthIdentityExchangerTests.cs`, deja present avant cette session) —
+signale separement, pas corrige ici.
+
+Prochain test utilisateur : en jeu, cliquer sur sa propre troupe en marche pour verifier que la
+fenetre s'ouvre avec la bonne composition ; verifier que Rappeler est grise sans jeton (aucun jeton
+n'existe encore en production/local tant qu'aucun n'a ete accorde via l'endpoint admin ou une
+future quete).
+
+Ouvert / a faire ensuite : (1) decider avec Jeff du prix/de la source des jetons de rappel
+(boutique ? quel palier de quete/evenement ?) puis brancher un vrai systeme d'octroi automatique ;
+(2) redeployer le serveur pour que le correctif (jeton de rappel + toutes les corrections
+serveur ci-dessus) soit actif en production — pas fait dans cette session, a confirmer avec Jeff
+avant deploiement ; (3) code d'erreur brut `combat.patrol.blocked` toujours affiche non traduit
+(`HiveViewProductUiPresenter.cs`) ; (4) `RaidMarchPalette` toujours non branchee (reservee au
+futur systeme de Raid) ; (5) fichier de test `GoogleOAuthIdentityExchangerTests.cs` casse la
+compilation du projet `BeeKingdom.Tests` dans son ensemble — a corriger ou retirer.
+
+---
+
 ## Jalon courant — Abeille animee sur la marche d'attaque + nettoyage M020 + bugs decouverts en testant (2026-08-25)
 
 **Animation d'ailes (demande initiale de Jeff).** `DrawCombatPatrolMarch` (dans

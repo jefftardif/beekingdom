@@ -79,6 +79,9 @@ namespace BeeKingdom.Playground
         // lequel est la region precise ciblee ce cycle - null si l'evenement actif n'est pas
         // une menace de combat.
         public int? WorldEventFeaturedTier { get; set; }
+        // Jeton de rappel (demande de Jeff, 2026-08-26) : rappeler une troupe en marche avant la
+        // fin du combat consomme un jeton - voir CombatPatrolService.RecallItemId cote serveur.
+        public long RecallTokenCount { get; set; }
 
         public int UsedSlots => ActiveEncounters?.Count ?? 0;
         public bool HasFreeSlot => UsedSlots < TotalSlots;
@@ -98,7 +101,7 @@ namespace BeeKingdom.Playground
             SelectedEncounterId.HasValue ? ActiveEncounters?.FirstOrDefault(e => e.EncounterId == SelectedEncounterId.Value) : null;
 
         public bool CanClaim => SelectedEncounter != null && State == CombatPatrolScreenState.ClaimReady;
-        public bool CanRecall => SelectedEncounter != null && (State == CombatPatrolScreenState.Active || State == CombatPatrolScreenState.ClaimReady);
+        public bool CanRecall => SelectedEncounter != null && (State == CombatPatrolScreenState.Active || State == CombatPatrolScreenState.ClaimReady) && RecallTokenCount > 0;
         public bool CanPurchaseResourceSlot => ResourcePurchasedSlots < 2 && NextResourceSlotCost != null;
         public bool CanGrantPremiumSlot => PremiumPurchasedSlots < 2;
 
@@ -245,6 +248,8 @@ namespace BeeKingdom.Playground
                 RemoteCombatPatrolSnapshot snapshot = await client.ReadAsync(hiveId, lifetime.Token);
                 if (disposed) return;
                 ApplySnapshot(snapshot);
+                await AutoClaimFinishedEncountersAsync();
+                if (disposed) return;
                 if (Model.Debrief == null && Model.SelectedEncounterId == null)
                     await RefreshPreviewCoreAsync();
             }
@@ -334,6 +339,35 @@ namespace BeeKingdom.Playground
             finally { busy = false; }
         }
 
+        // Troupes qui reviennent d'elles-memes (demande de Jeff, 2026-08-25) : avant, une
+        // patrouille terminee restait "ClaimReady" indefiniment - le joueur devait ouvrir la
+        // file de patrouille et cliquer Reclamer manuellement pour liberer le slot ET ses
+        // troupes, sinon elles restaient marquees assignees pour toujours. Desormais, chaque
+        // fois qu'on relit l'etat serveur, on reclame silencieusement toute rencontre deja
+        // terminee - le joueur n'a plus jamais besoin de reclamer a la main. Pas de Debrief
+        // ouvert automatiquement (pas d'interruption) - le resultat reste consultable via la
+        // file de patrouille comme avant pour une reclamation manuelle.
+        private async Task AutoClaimFinishedEncountersAsync()
+        {
+            for (int guard = 0; guard < 8; guard++)
+            {
+                RemoteCombatPatrolActiveEncounter ready = null;
+                foreach (RemoteCombatPatrolActiveEncounter encounter in Model.ActiveEncounters)
+                {
+                    if (DateTimeOffset.UtcNow >= encounter.EndsAtUtc) { ready = encounter; break; }
+                }
+                if (ready == null) return;
+                try
+                {
+                    RemoteCombatPatrolMutationResponse response = await client.ClaimAsync(hiveId, ready.EncounterId, Model.Revision, NewKey("auto-claim"), lifetime.Token);
+                    if (disposed) return;
+                    ApplySnapshot(response.Snapshot);
+                }
+                catch (CombatPatrolClientException) { return; }
+                catch (Exception) { return; }
+            }
+        }
+
         private async Task RecallCoreAsync()
         {
             RemoteCombatPatrolActiveEncounter target = Model.SelectedEncounter;
@@ -401,6 +435,7 @@ namespace BeeKingdom.Playground
             Model.WorldEvent = snapshot.WorldEvent;
             Model.WorldEventFeaturedTier = snapshot.WorldEventFeaturedTier;
             Model.NextResourceSlotCost = snapshot.NextResourceSlotCost;
+            Model.RecallTokenCount = snapshot.RecallTokenCount;
 
             if (Model.SelectedEncounterId.HasValue && Model.Debrief == null && Model.ActiveEncounters.All(e => e.EncounterId != Model.SelectedEncounterId.Value))
                 Model.SelectedEncounterId = null;
@@ -441,6 +476,7 @@ namespace BeeKingdom.Playground
                 case "game.patrol_invalid_composition": return "patrol_invalid_composition";
                 case "game.patrol_insufficient_troops": return "patrol_insufficient_troops";
                 case "game.patrol_slot_limit_reached": return "patrol_slot_limit_reached";
+                case "game.patrol_recall_requires_item": return "patrol_recall_requires_item";
                 case "game.insufficient_resources": return "insufficient_resources";
                 case "game.revision_conflict": return "revision_conflict";
                 case "game.idempotency_conflict": return "idempotency_conflict";

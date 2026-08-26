@@ -115,6 +115,7 @@ namespace BeeKingdom.Networking
         public int FeaturedTier { get; set; }
         public RemoteActiveWorldEvent WorldEvent { get; set; }
         public int? WorldEventFeaturedTier { get; set; }
+        public long RecallTokenCount { get; set; }
     }
 
     public sealed class RemoteCombatPatrolPreview

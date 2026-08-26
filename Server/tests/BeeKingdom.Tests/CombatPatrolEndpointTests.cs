@@ -140,6 +140,7 @@ public sealed class CombatPatrolEndpointTests
             var launch = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/launch", new { tier = 2, guardians = 18, wingrunners = 0, darters = 0, expectedRevision = 0, idempotencyKey = "launch" });
             var launched = await launch.Content.ReadFromJsonAsync<CombatPatrolMutationResponse>(ReadOptions);
             var encounterId = launched!.Snapshot.ActiveEncounters[0].EncounterId;
+            await factory.Services.GetRequiredService<IHiveStateRepository>().ExecuteAtomicallyAsync(player, hive, s => s with { SpeedUps = new Dictionary<string, int> { [CombatPatrolService.RecallItemId] = 1 } });
 
             var release = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/squad-reservation/release", new { expectedRevision = 0, idempotencyKey = "release-during-patrol" });
             Assert.That(release.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));

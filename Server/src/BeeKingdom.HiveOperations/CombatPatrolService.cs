@@ -10,13 +10,21 @@ public sealed record ClaimCombatPatrolCommand(Guid PlayerId, Guid HiveId, Guid E
 public sealed record RecallCombatPatrolCommand(Guid PlayerId, Guid HiveId, Guid EncounterId, long ExpectedRevision, string IdempotencyKey);
 public sealed record PurchaseCombatPatrolResourceSlotCommand(Guid PlayerId, Guid HiveId, long ExpectedRevision, string IdempotencyKey);
 public sealed record GrantCombatPatrolPremiumSlotCommand(Guid PlayerId, Guid HiveId, long ExpectedRevision, string IdempotencyKey);
-public sealed record CombatPatrolSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyList<CombatPatrolActiveEncounter> ActiveEncounters, IReadOnlyDictionary<int, DateTimeOffset> TierCooldownEndsAtUtc, IReadOnlyList<CombatPatrolRecoveringBatch> Recovering, IReadOnlyDictionary<string, long> AvailableRoster, int Capacity, int TotalSlots, int ResourcePurchasedSlots, int PremiumPurchasedSlots, (long Honey, long Pollen)? NextResourceSlotCost, CombatPatrolClaimReceipt? ClaimReceipt = null, int FeaturedTier = 0, ActiveWorldEvent? WorldEvent = null, int? WorldEventFeaturedTier = null);
+public sealed record CombatPatrolSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyList<CombatPatrolActiveEncounter> ActiveEncounters, IReadOnlyDictionary<int, DateTimeOffset> TierCooldownEndsAtUtc, IReadOnlyList<CombatPatrolRecoveringBatch> Recovering, IReadOnlyDictionary<string, long> AvailableRoster, int Capacity, int TotalSlots, int ResourcePurchasedSlots, int PremiumPurchasedSlots, (long Honey, long Pollen)? NextResourceSlotCost, CombatPatrolClaimReceipt? ClaimReceipt = null, int FeaturedTier = 0, ActiveWorldEvent? WorldEvent = null, int? WorldEventFeaturedTier = null, long RecallTokenCount = 0);
 public sealed record CombatPatrolResult(bool Succeeded, string Code, CombatPatrolSnapshot Snapshot, CombatPatrolClaimReceipt? ClaimReceipt = null);
 
 public sealed class CombatPatrolService
 {
     public const string ContractVersion = "phase-combat-patrol-v2";
     private const int MaxReceipts = 128;
+    // Jeton de rappel (demande de Jeff, 2026-08-26) : rappeler une troupe en marche avant la fin
+    // du combat consomme un jeton, gagnable via quete/evenement ou (plus tard) achetable en
+    // boutique - aucune boutique n'existe encore, donc pour l'instant seul un octroi admin audite
+    // (endpoint /admin/.../combat-patrol/recall-tokens/grant) ou un futur hook de quete peut en
+    // accorder. Reutilise le dictionnaire generique state.SpeedUps (deja itemId -> quantite,
+    // deja valide structurellement par HiveStateMigrator) plutot que d'ajouter un nouveau champ
+    // au modele persiste - aucun risque de migration sur les donnees de production existantes.
+    public const string RecallItemId = "combat_recall_token";
     private static readonly string[] Families = ["guardians", "wingrunners", "darters"];
     private readonly IHiveStateRepository repository;
     private readonly IServerClock clock;
@@ -223,6 +231,8 @@ public sealed class CombatPatrolService
             { result = new(false, "game.revision_conflict", Snapshot(state)); return state; }
             if (resolve && now < active.EndsAtUtc)
             { result = new(false, "game.patrol_not_complete", Snapshot(state)); return state; }
+            if (!resolve && (state.SpeedUps?.GetValueOrDefault(RecallItemId) ?? 0) < 1)
+            { result = new(false, "game.patrol_recall_requires_item", Snapshot(state)); return state; }
             if (!CombatPatrolCatalog.TryGet(active.Tier, out BestiaryTierDefinition tier))
                 throw new InvalidDataException("Unknown combat patrol tier in active encounter.");
             if (patrol.Revision == long.MaxValue) throw new InvalidDataException("combat patrol revision overflow");
@@ -307,8 +317,14 @@ public sealed class CombatPatrolService
                     championContribution.ContributingBeeIds, strategicPathId, worldEventApplied, dailyFocusApplied);
             }
 
+            Dictionary<string, int>? nextSpeedUps = state.SpeedUps;
+            if (!resolve)
+            {
+                nextSpeedUps = new Dictionary<string, int>(state.SpeedUps ?? new Dictionary<string, int>(StringComparer.Ordinal), StringComparer.Ordinal);
+                nextSpeedUps[RecallItemId] = nextSpeedUps.GetValueOrDefault(RecallItemId) - 1;
+            }
             var nextPatrol = patrol with { Revision = patrol.Revision + 1, ActiveEncounters = remainingEncounters, Receipts = receipts, TierCooldownEndsAtUtc = tierCooldowns, ClaimReceipts = claimReceipts, Recovering = recovering };
-            var next = state with { Revision = checked(state.Revision + 1), Resources = nextResources, DoctrineRoster = nextRoster, CombatPatrol = nextPatrol, BestiaryCodex = nextBestiaryCodex };
+            var next = state with { Revision = checked(state.Revision + 1), Resources = nextResources, DoctrineRoster = nextRoster, CombatPatrol = nextPatrol, BestiaryCodex = nextBestiaryCodex, SpeedUps = nextSpeedUps };
             result = new(true, code, Snapshot(next, claimReceipt), claimReceipt);
             return next;
         }, ct);
@@ -360,7 +376,8 @@ public sealed class CombatPatrolService
             ? CombatPatrolCatalog.ResourceSlotCosts[patrol.ResourcePurchasedSlots]
             : null;
         ActiveWorldEvent worldEvent = WorldEventCatalog.Active(now);
-        return new(state.PlayerId, state.HiveId, ContractVersion, patrol.Revision, now, patrol.ActiveEncounters, patrol.TierCooldownEndsAtUtc, patrol.Recovering ?? new List<CombatPatrolRecoveringBatch>(), availableRoster, capacity, totalSlots, patrol.ResourcePurchasedSlots, patrol.PremiumPurchasedSlots, nextResourceCost, claimReceipt, DailyFocusCatalog.FeaturedCombatTier(now), worldEvent, WorldEventFeaturedTier(worldEvent, now));
+        long recallTokenCount = state.SpeedUps?.GetValueOrDefault(RecallItemId) ?? 0;
+        return new(state.PlayerId, state.HiveId, ContractVersion, patrol.Revision, now, patrol.ActiveEncounters, patrol.TierCooldownEndsAtUtc, patrol.Recovering ?? new List<CombatPatrolRecoveringBatch>(), availableRoster, capacity, totalSlots, patrol.ResourcePurchasedSlots, patrol.PremiumPurchasedSlots, nextResourceCost, claimReceipt, DailyFocusCatalog.FeaturedCombatTier(now), worldEvent, WorldEventFeaturedTier(worldEvent, now), recallTokenCount);
     }
 
     // Localisation de l'evenement mondial (demande de Jeff, 2026-08-01) : parmi les paliers qui

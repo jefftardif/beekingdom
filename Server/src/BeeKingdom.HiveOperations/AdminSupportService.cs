@@ -11,6 +11,9 @@ namespace BeeKingdom.HiveOperations;
 public sealed record AdjustResourceCommand(Guid PlayerId, Guid HiveId, string Resource, long Delta, string Reason, long ExpectedRevision);
 public sealed record AdjustRosterCommand(Guid PlayerId, Guid HiveId, string Family, long Delta, string Reason, long ExpectedRevision);
 public sealed record GrantCombatPatrolSlotCommand(Guid PlayerId, Guid HiveId, bool Premium, string Reason, long ExpectedRevision);
+// Octroi manuel de jetons de rappel (demande de Jeff, 2026-08-26) : seul moyen d'en obtenir pour
+// l'instant en l'absence de boutique/systeme de quetes branche - voir CombatPatrolService.RecallItemId.
+public sealed record AdjustRecallTokensCommand(Guid PlayerId, Guid HiveId, long Delta, string Reason, long ExpectedRevision);
 public sealed record AdminMutationResult(bool Succeeded, string Code, PlayerHiveState State);
 public sealed record AdminDiagnostics(
     Guid PlayerId, Guid HiveId, long Revision,
@@ -111,6 +114,27 @@ public sealed class AdminSupportService
             string details = (command.Premium ? "premium" : "resource") + " combat patrol slot granted (" + (current + 1) + ")";
             PlayerHiveState next = AppendAudit(state with { Revision = checked(state.Revision + 1), CombatPatrol = nextPatrol }, "combat_patrol_slot_grant", details, command.Reason);
             result = new(true, "game.admin_slot_granted", next);
+            return next;
+        }, ct);
+        return result!;
+    }
+
+    public async Task<AdminMutationResult> AdjustRecallTokensAsync(AdjustRecallTokensCommand command, CancellationToken ct)
+    {
+        RequireRevision(command.ExpectedRevision);
+        RequireReason(command.Reason);
+        AdminMutationResult? result = null;
+        await repository.ExecuteAtomicallyAsync(command.PlayerId, command.HiveId, state =>
+        {
+            if (state.Revision != command.ExpectedRevision)
+            { result = new(false, "game.revision_conflict", state); return state; }
+            var items = new Dictionary<string, int>(state.SpeedUps ?? new Dictionary<string, int>(StringComparer.Ordinal), StringComparer.Ordinal);
+            long before = items.GetValueOrDefault(CombatPatrolService.RecallItemId);
+            long after = Math.Max(0, before + command.Delta);
+            items[CombatPatrolService.RecallItemId] = (int)Math.Min(after, int.MaxValue);
+            string details = "recall tokens: " + before.ToString(CultureInfo.InvariantCulture) + " -> " + after.ToString(CultureInfo.InvariantCulture) + " (delta " + command.Delta.ToString(CultureInfo.InvariantCulture) + ")";
+            PlayerHiveState next = AppendAudit(state with { Revision = checked(state.Revision + 1), SpeedUps = items }, "combat_recall_tokens_adjust", details, command.Reason);
+            result = new(true, "game.admin_recall_tokens_adjusted", next);
             return next;
         }, ct);
         return result!;

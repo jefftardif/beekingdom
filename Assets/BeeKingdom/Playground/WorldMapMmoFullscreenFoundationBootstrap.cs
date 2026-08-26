@@ -89,6 +89,7 @@ namespace BeeKingdom.Playground
         private float collectionTimer;
         private float officialWorldResourceRefreshTimer;
         private float worldPresenceRefreshTimer;
+        private float combatPatrolRefreshTimer;
         private int nextFlightId = 1;
         private bool debugChunkOverlay;
         private bool stress50x50ModeEnabled;
@@ -215,6 +216,7 @@ namespace BeeKingdom.Playground
             UpdateCollectionFlight();
             UpdateOfficialWorldResourceCollectionPolling();
             UpdateWorldPresencePolling();
+            UpdateCombatPatrolPolling();
             if (localLab != null) localLab.Update(Time.deltaTime);
             currentZoom = Mathf.Lerp(currentZoom, targetZoom, 1f - Mathf.Exp(-ZoomDamping * Time.deltaTime));
             currentWorldCenter = Vector2.Lerp(currentWorldCenter, targetWorldCenter, 1f - Mathf.Exp(-PanDamping * Time.deltaTime));
@@ -4440,16 +4442,40 @@ namespace BeeKingdom.Playground
         // gone (claimed/recalled).
         private readonly Dictionary<Guid, Vector2> combatPatrolTargetWorldCoordByEncounterId = new Dictionary<Guid, Vector2>();
         private Vector2? pendingCombatPatrolLaunchTarget;
+        // Tracks which encounters were drawn last frame so a disappearance (auto-claimed by
+        // CombatPatrolPanelController.AutoClaimFinishedEncountersAsync) can be turned into a
+        // visible return trip below, instead of the bee just vanishing at wherever it was.
+        private readonly HashSet<Guid> lastKnownCombatPatrolEncounterIds = new HashSet<Guid>();
+        private readonly Dictionary<Guid, CombatPatrolReturnTrip> combatPatrolReturnTrips = new Dictionary<Guid, CombatPatrolReturnTrip>();
+        // World-units-per-second the return march "flies" at - closer targets come home sooner,
+        // farther ones take longer (demande de Jeff, 2026-08-25). Placeholder speed/bounds until a
+        // real travel-time model (player level/researched upgrades) exists; see
+        // Docs/Claude/Claude_Continuation.md for the follow-up.
+        private const float CombatPatrolReturnTripWorldUnitsPerSecond = 90f;
+        private const float CombatPatrolReturnTripMinDuration = 1.5f;
+        private const float CombatPatrolReturnTripMaxDuration = 10f;
+
+        private readonly struct CombatPatrolReturnTrip
+        {
+            public readonly float StartedAtUnscaledTime;
+            public readonly float Duration;
+            public CombatPatrolReturnTrip(float startedAtUnscaledTime, float duration)
+            {
+                StartedAtUnscaledTime = startedAtUnscaledTime;
+                Duration = duration;
+            }
+        }
 
         // Own-player only: draws a marching line + marker from the hive to each active patrol's
-        // target (several can be in flight at once). Seeing OTHER players' marching troops would
-        // require a shared/synchronized world state that does not exist in this project yet —
-        // out of scope here (see Docs/Claude/Claude_Continuation.md).
+        // target (several can be in flight at once), plus a short return-trip animation once a
+        // patrol resolves and is auto-claimed (demande de Jeff, 2026-08-25 : "elle attaque puis
+        // revient" - the troop should be seen coming home, not just vanish). Seeing OTHER
+        // players' marching troops would require a shared/synchronized world state that does not
+        // exist in this project yet — out of scope here (see Docs/Claude/Claude_Continuation.md).
         private void DrawCombatPatrolMarch()
         {
             CombatPatrolScreenModel model = HiveViewProductUiPresenter.PeekCombatPatrolModelForWorldMap();
-            IReadOnlyList<RemoteCombatPatrolActiveEncounter> encounters = model?.ActiveEncounters;
-            if (encounters == null || encounters.Count == 0) { combatPatrolTargetWorldCoordByEncounterId.Clear(); return; }
+            IReadOnlyList<RemoteCombatPatrolActiveEncounter> encounters = model?.ActiveEncounters ?? Array.Empty<RemoteCombatPatrolActiveEncounter>();
 
             var seenIds = new HashSet<Guid>();
             foreach (RemoteCombatPatrolActiveEncounter encounter in encounters)
@@ -4461,14 +4487,27 @@ namespace BeeKingdom.Playground
                     pendingCombatPatrolLaunchTarget = null;
                 }
             }
-            List<Guid> stale = null;
-            foreach (Guid known in combatPatrolTargetWorldCoordByEncounterId.Keys)
-                if (!seenIds.Contains(known)) (stale ??= new List<Guid>()).Add(known);
-            if (stale != null) foreach (Guid key in stale) combatPatrolTargetWorldCoordByEncounterId.Remove(key);
 
             WorldHiveNode from = SelectedHive();
-            if (from == null) return;
+            if (from == null) { combatPatrolReturnTrips.Clear(); return; }
             Vector2 a = WorldToScreen(from.WorldCoord);
+
+            foreach (Guid knownId in lastKnownCombatPatrolEncounterIds)
+            {
+                if (seenIds.Contains(knownId)) continue;
+                if (combatPatrolReturnTrips.ContainsKey(knownId)) continue;
+                if (!combatPatrolTargetWorldCoordByEncounterId.TryGetValue(knownId, out Vector2 lastTargetWorldCoord)) continue;
+                float distance = Vector2.Distance(from.WorldCoord, lastTargetWorldCoord);
+                float duration = Mathf.Clamp(distance / CombatPatrolReturnTripWorldUnitsPerSecond, CombatPatrolReturnTripMinDuration, CombatPatrolReturnTripMaxDuration);
+                combatPatrolReturnTrips[knownId] = new CombatPatrolReturnTrip(Time.unscaledTime, duration);
+            }
+            lastKnownCombatPatrolEncounterIds.Clear();
+            foreach (Guid id in seenIds) lastKnownCombatPatrolEncounterIds.Add(id);
+
+            List<Guid> stale = null;
+            foreach (Guid known in combatPatrolTargetWorldCoordByEncounterId.Keys)
+                if (!seenIds.Contains(known) && !combatPatrolReturnTrips.ContainsKey(known)) (stale ??= new List<Guid>()).Add(known);
+            if (stale != null) foreach (Guid key in stale) combatPatrolTargetWorldCoordByEncounterId.Remove(key);
 
             foreach (RemoteCombatPatrolActiveEncounter encounter in encounters)
             {
@@ -4480,11 +4519,55 @@ namespace BeeKingdom.Playground
                 double totalSeconds = (encounter.EndsAtUtc - encounter.StartedAtUtc).TotalSeconds;
                 double elapsedSeconds = (DateTimeOffset.UtcNow - encounter.StartedAtUtc).TotalSeconds;
                 float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
-                float marchProgress = Mathf.PingPong(t * 2f, 1f);
+                // Marche aller uniquement : progresse de la ruche (0) vers la cible (1) sur toute
+                // la duree du combat puis reste sur place (t=1) jusqu'a la resolution reelle.
+                // Bug corrige le 2026-08-26 (retour de Jeff : "elle repart tout de suite") - un
+                // Mathf.PingPong(t*2,1) ici faisait un aller-retour automatique dans les 50
+                // premiers % de la duree, qui se superposait au vrai systeme de retour
+                // (combatPatrolReturnTrips ci-dessous) declenche a la fin reelle du combat.
+                float marchProgress = t;
                 Vector2 marker = Bezier(a, control, b, marchProgress);
 
                 DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
                 DrawCombatMarchBee(marker);
+
+                // Cliquer sur sa propre troupe en marche ouvre la fenetre de composition +
+                // rappel (demande de Jeff, 2026-08-26). DrawCombatPatrolMarch ne dessine QUE les
+                // marches du joueur local (voir commentaire sur la methode) donc tout hotspot ici
+                // est necessairement sa propre troupe - aucune verification de proprietaire requise.
+                const float hotspotSize = 64f;
+                Rect hotspot = new Rect(marker.x - hotspotSize * 0.5f, marker.y - hotspotSize * 0.5f, hotspotSize, hotspotSize);
+                if (GUI.Button(hotspot, GUIContent.none, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    HiveViewProductUiPresenter.OpenCombatPatrolEncounterForWorldMap(encounter.EncounterId);
+                }
+            }
+
+            if (combatPatrolReturnTrips.Count == 0) return;
+            List<Guid> finishedTrips = null;
+            foreach (KeyValuePair<Guid, CombatPatrolReturnTrip> trip in combatPatrolReturnTrips)
+            {
+                float returnT = Mathf.Clamp01((Time.unscaledTime - trip.Value.StartedAtUnscaledTime) / trip.Value.Duration);
+                if (returnT >= 1f) { (finishedTrips ??= new List<Guid>()).Add(trip.Key); continue; }
+                if (!combatPatrolTargetWorldCoordByEncounterId.TryGetValue(trip.Key, out Vector2 targetWorldCoord)) { (finishedTrips ??= new List<Guid>()).Add(trip.Key); continue; }
+                Vector2 b = WorldToScreen(targetWorldCoord);
+                if (!IsOnScreen(a, 420f) && !IsOnScreen(b, 420f)) continue;
+
+                Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
+                float marchProgress = 1f - returnT; // heading back from the target (1) to the hive (0)
+                Vector2 marker = Bezier(a, control, b, marchProgress);
+
+                DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
+                DrawCombatMarchBee(marker);
+            }
+            if (finishedTrips != null)
+            {
+                foreach (Guid id in finishedTrips)
+                {
+                    combatPatrolReturnTrips.Remove(id);
+                    combatPatrolTargetWorldCoordByEncounterId.Remove(id);
+                }
             }
         }
 
@@ -4535,9 +4618,14 @@ namespace BeeKingdom.Playground
             DrawBezier(a, control, b, new Color(palette.Filament.r, palette.Filament.g, palette.Filament.b, palette.Filament.a + pulse * 0.35f), 1.4f, 40);
 
             const int swarmCount = 10;
+            // Les etincelles filent en boucle continue le long de TOUTE la route, a une vitesse
+            // propre (independante de la marche reelle de l'abeille, qui prend plusieurs
+            // secondes) - corrige le 2026-08-26 (retour de Jeff : les cercles doivent montrer
+            // la route, pas rester colles a l'abeille).
+            const float swarmFlowSpeed = 0.55f; // boucles completes par seconde sur toute la courbe
             for (int i = 0; i < swarmCount; i++)
             {
-                float st = Mathf.Repeat(marchProgress + i * 0.028f - 0.12f, 1f);
+                float st = Mathf.Repeat(animatedTime * swarmFlowSpeed + i * (1f / swarmCount), 1f);
                 Vector2 p = Bezier(a, control, b, st);
                 Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, st + 0.02f)) - p;
                 Vector2 side = tangent.sqrMagnitude > 0.01f ? new Vector2(-tangent.y, tangent.x).normalized : Vector2.up;
@@ -4847,6 +4935,7 @@ namespace BeeKingdom.Playground
             GUI.enabled = canAttack;
             if (GUI.Button(new Rect(panel.x + 14f, panel.y + 232f + rareSightingOffset, panel.width - 28f, 30f), attackLabel))
             {
+                pendingCombatPatrolLaunchTarget = beast.WorldCoord;
                 HiveViewProductUiPresenter.OpenCombatPatrolOverlayForWorldMap(beast.Tier);
             }
             if (beast != null && !hasSquadForAttack)
@@ -4901,6 +4990,7 @@ namespace BeeKingdom.Playground
             GUI.enabled = canAttackPortrait;
             if (GUI.Button(new Rect(panel.x + 12f, panel.y + 160f, panel.width - 24f, 30f), attackLabelPortrait))
             {
+                pendingCombatPatrolLaunchTarget = beast.WorldCoord;
                 HiveViewProductUiPresenter.OpenCombatPatrolOverlayForWorldMap(beast.Tier);
             }
             if (beast != null && !hasSquadForAttackPortrait)
@@ -5392,6 +5482,21 @@ namespace BeeKingdom.Playground
             if (worldPresenceRefreshTimer < 12f) return;
             worldPresenceRefreshTimer = 0f;
             HiveViewProductUiPresenter.RefreshWorldPresenceForWorldMap();
+        }
+
+        // Meme principe que UpdateOfficialWorldResourceCollectionPolling, pour les patrouilles de
+        // combat (demande de Jeff, 2026-08-25 : "la troupe doit revenir toute seule" sans avoir a
+        // rouvrir l'Armee/la fenetre Patrouille) - ne relit que pendant qu'une patrouille est
+        // effectivement active, chaque relecture reclame automatiquement (cote controller) toute
+        // rencontre deja terminee.
+        private void UpdateCombatPatrolPolling()
+        {
+            CombatPatrolScreenModel model = HiveViewProductUiPresenter.PeekCombatPatrolModelForWorldMap();
+            if (model == null || model.ActiveEncounters == null || model.ActiveEncounters.Count == 0) return;
+            combatPatrolRefreshTimer += Time.deltaTime;
+            if (combatPatrolRefreshTimer < 3f) return;
+            combatPatrolRefreshTimer = 0f;
+            HiveViewProductUiPresenter.RefreshCombatPatrolForWorldMap();
         }
 
         private void StartLocalCollectionFlight()
