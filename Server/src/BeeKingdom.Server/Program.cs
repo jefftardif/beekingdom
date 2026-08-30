@@ -1767,12 +1767,15 @@ app.MapPost("/accounts", (AccountManager accounts, CreateAccountRequest request,
     return Results.Ok(accounts.CreateAccount(request));
 });
 
-// Local-dev-only helper: no HTTP path otherwise exists to create login credentials
-// (IAccountCredentialStore.CreateEmailAccount is only ever called from server-side test
-// fixtures). Never reachable outside Development with DevTools:AllowDevAccountSeeding=true.
-app.MapPost("/dev/seed-account", (IHostEnvironment environment, IOptions<DevToolsOptions> devTools, IAccountCredentialStore credentials, DevSeedAccountRequest request) =>
+// Compte de test : cree des identifiants email/mot de passe directement
+// (IAccountCredentialStore.CreateEmailAccount n'est sinon jamais appelable que
+// depuis les fixtures de test cote serveur). Gate uniquement par
+// DevTools:AllowDevAccountSeeding - laisse volontairement actif en production
+// (demande explicite de Jeff le 2026-08-29, pour pouvoir creer des comptes
+// fictifs de test directement sur api-ops sans redeploiement a chaque fois).
+app.MapPost("/dev/seed-account", (IOptions<DevToolsOptions> devTools, IAccountCredentialStore credentials, DevSeedAccountRequest request) =>
 {
-    if (environment.IsProduction() || !devTools.Value.AllowDevAccountSeeding) return Results.NotFound();
+    if (!devTools.Value.AllowDevAccountSeeding) return Results.NotFound();
     if (request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest(new { error = "invalid_request" });
     if (credentials.TryGetByEmail(request.Email, out _)) return Results.Conflict(new { error = "already_exists" });
