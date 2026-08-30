@@ -2685,11 +2685,12 @@ static PlayerHiveState CreateInitialHiveState(Guid playerId, Guid hiveId) => new
     // La vraie limite de stockage vient desormais du niveau de batiment (voir
     // HiveOfflineProductionService.EffectiveCapacity) - cette capacite fixe n'est
     // plus qu'un plafond de securite tres large, plus jamais le facteur limitant.
+    // Bootstrap Alpha : ressources initiales permettant la premiere boucle (upgrade guard_post 1→2 : 972 honey / 251 wax).
     new Dictionary<string, ResourceBalance>
     {
-        ["honey"] = new(0, 1_000_000_000),
-        ["pollen"] = new(0, 1_000_000_000),
-        ["wax"] = new(0, 1_000_000_000)
+        ["honey"] = new(1500, 1_000_000_000),
+        ["pollen"] = new(500, 1_000_000_000),
+        ["wax"] = new(500, 1_000_000_000)
     },
      new Dictionary<string, int> { ["honey_reserve"] = 1, ["guard_post"] = 1 },
      [],
