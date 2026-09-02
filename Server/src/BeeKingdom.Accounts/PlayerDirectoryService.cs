@@ -33,8 +33,15 @@ public sealed class PlayerDirectoryService : IPlayerDirectoryService
         this.credentials = credentials;
     }
 
-    // Deliberately rejects an empty/too-short query rather than returning "everyone" - a blank q=""
-    // must never be a trivial way to extract the whole player base (M043B brief, Privacy section).
+    // M043R-CL: was BeeKingdom.Accounts-only, so real Google/onboarded players (who only ever get
+    // a row in BeeKingdom.Authentication.AuthenticationAccounts, never in this project's own
+    // Account record - see M043P) were invisible to search even though GetByPlayerId already knew
+    // them. Merges the authoritative source (real onboarded players) with the legacy source
+    // (synthetic/seeded test accounts that only exist here), deduplicated by PlayerId with the
+    // same identity precedence M043P established for GetByPlayerId: authoritative wins on
+    // conflict. Still deliberately rejects an empty/too-short query rather than returning
+    // "everyone" - a blank q="" must never be a trivial way to extract the whole player base
+    // (M043B brief, Privacy section).
     public IReadOnlyList<PlayerPublicIdentity> Search(string displayNameContains, int offset, int limit)
     {
         string trimmed = (displayNameContains ?? string.Empty).Trim();
@@ -44,12 +51,25 @@ public sealed class PlayerDirectoryService : IPlayerDirectoryService
         int safeOffset = Math.Max(0, offset);
         int safeLimit = Math.Clamp(limit <= 0 ? 20 : limit, 1, MaxLimit);
 
-        return accounts.QueryAccount(new AccountQuery(DisplayNameContains: trimmed))
+        IEnumerable<PlayerPublicIdentity> legacy = accounts.QueryAccount(new AccountQuery(DisplayNameContains: trimmed))
             .Where(account => account.Profile.Status == AccountStatus.Active)
-            .OrderBy(account => account.Profile.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(ToPublicIdentity);
+
+        IEnumerable<PlayerPublicIdentity> authoritative = credentials.SearchByDisplayName(trimmed)
+            .Where(account => account.IsOnboarded && !string.IsNullOrWhiteSpace(account.DisplayName))
+            .Select(account => new PlayerPublicIdentity(account.PlayerId, account.DisplayName));
+
+        var merged = new Dictionary<PlayerId, PlayerPublicIdentity>();
+        foreach (PlayerPublicIdentity identity in legacy) merged[identity.PlayerId] = identity;
+        foreach (PlayerPublicIdentity identity in authoritative) merged[identity.PlayerId] = identity;
+
+        // Prefix matches first (e.g. "St" -> "Stara" ranks above a hypothetical "Allstar"), then
+        // alphabetical - a nicer default than raw insertion order for a player-facing search list.
+        return merged.Values
+            .OrderByDescending(identity => identity.DisplayName.StartsWith(trimmed, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(identity => identity.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Skip(safeOffset)
             .Take(safeLimit)
-            .Select(ToPublicIdentity)
             .ToArray();
     }
 

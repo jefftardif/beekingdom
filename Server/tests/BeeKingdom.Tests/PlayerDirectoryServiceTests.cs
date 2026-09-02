@@ -184,4 +184,140 @@ public sealed class PlayerDirectoryServiceTests
 
         Assert.That(resolved, Is.Null);
     }
+
+    // ---------------- M043R-CL: authoritative Search() merges AuthenticationAccounts ----------------
+
+    // The exact production shape reported by the CEO: a real, onboarded Google player ("Stara")
+    // who exists ONLY in AuthenticationAccounts (never created via IAccountService) - Search()
+    // used to be BeeKingdom.Accounts-only and returned nothing for this player.
+    private static AuthenticationAccount CreateAuthOnlyPlayer(IAccountCredentialStore credentials, string googleSubjectId, string email, string displayName, bool isOnboarded = true)
+    {
+        AuthenticationAccount account = credentials.CreateGoogleAccount(googleSubjectId, email) with
+        {
+            DisplayName = displayName,
+            IsOnboarded = isOnboarded
+        };
+        credentials.Save(account);
+        return account;
+    }
+
+    [Test]
+    public void Search_FindsAuthOnlyOnboardedPlayer_ExactStaraRuntimeContract()
+    {
+        (IPlayerDirectoryService directory, _, IAccountCredentialStore credentials) = CreateDirectory();
+        AuthenticationAccount stara = CreateAuthOnlyPlayer(credentials, "google-subject-stara", "stara@bee.test", "Stara");
+
+        var byPrefix = directory.Search("St", 0, 20);
+        var byCaseInsensitive = directory.Search("stara", 0, 20);
+
+        Assert.That(byPrefix.Select(r => r.DisplayName), Does.Contain("Stara"));
+        Assert.That(byPrefix.Single(r => r.DisplayName == "Stara").PlayerId, Is.EqualTo(stara.PlayerId));
+        Assert.That(byCaseInsensitive.Select(r => r.DisplayName), Does.Contain("Stara"));
+    }
+
+    [Test]
+    public void Search_MatchesPartialContainsAnywhereInName()
+    {
+        (IPlayerDirectoryService directory, _, IAccountCredentialStore credentials) = CreateDirectory();
+        CreateAuthOnlyPlayer(credentials, "google-subject-star2", "star2@bee.test", "Stara");
+
+        var results = directory.Search("star", 0, 20);
+
+        Assert.That(results.Select(r => r.DisplayName), Does.Contain("Stara"));
+    }
+
+    [Test]
+    public void Search_ExcludesNotYetOnboardedAuthenticationPlayer()
+    {
+        (IPlayerDirectoryService directory, _, IAccountCredentialStore credentials) = CreateDirectory();
+        CreateAuthOnlyPlayer(credentials, "google-subject-pending", "pending2@bee.test", "Pendingbee", isOnboarded: false);
+
+        var results = directory.Search("Pending", 0, 20);
+
+        Assert.That(results, Is.Empty);
+    }
+
+    [Test]
+    public void Search_ExcludesAuthenticationPlayerWithEmptyDisplayName()
+    {
+        (IPlayerDirectoryService directory, _, IAccountCredentialStore credentials) = CreateDirectory();
+        // Onboarded but somehow blank name (defensive - should never reach search results).
+        CreateAuthOnlyPlayer(credentials, "google-subject-blank", "blank@bee.test", string.Empty);
+
+        var results = directory.Search("be", 0, 20);
+
+        Assert.That(results, Is.Empty);
+    }
+
+    [Test]
+    public void Search_LegacyOnlyAccount_StillFound()
+    {
+        // A synthetic/seeded test account that only exists in BeeKingdom.Accounts, never through
+        // real Google onboarding - must keep working exactly as before this fix.
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
+        AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("LegacyScout", "legacyscout@bee.test"));
+        accounts.ReactivateAccount(created.Profile.AccountId);
+
+        var results = directory.Search("Legacy", 0, 20);
+
+        Assert.That(results.Select(r => r.DisplayName), Does.Contain("LegacyScout"));
+    }
+
+    [Test]
+    public void Search_SamePlayerIdInBothSources_DeduplicatesAndAuthoritativeNameWins()
+    {
+        // The exact identity-precedence shape from M043P: an Account record exists (possibly with
+        // a stale/empty name) and an onboarded AuthenticationAccount exists for the SAME PlayerId -
+        // Search must return exactly one row, using the authoritative name.
+        (IPlayerDirectoryService directory, AccountManager accounts, IAccountCredentialStore credentials) = CreateDirectory();
+        AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("Dupe", "dupe@bee.test"));
+        accounts.ReactivateAccount(created.Profile.AccountId);
+        AuthenticationAccount authAccount = credentials.CreateGoogleAccount("google-subject-dupe", "dupe@bee.test") with
+        {
+            PlayerId = created.Profile.PlayerId,
+            DisplayName = "RealDupeName",
+            IsOnboarded = true
+        };
+        credentials.Save(authAccount);
+
+        var results = directory.Search("Dupe", 0, 20).Where(r => r.PlayerId == created.Profile.PlayerId).ToArray();
+
+        Assert.That(results.Length, Is.EqualTo(1));
+        Assert.That(results[0].DisplayName, Is.EqualTo("RealDupeName"));
+    }
+
+    [Test]
+    public void Search_ResultLimitStillEnforcedWithMergedSources()
+    {
+        (IPlayerDirectoryService directory, AccountManager accounts, IAccountCredentialStore credentials) = CreateDirectory();
+        for (int i = 0; i < 3; i++)
+        {
+            AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("MergeLegacy" + i, $"mergelegacy{i}@bee.test"));
+            accounts.ReactivateAccount(created.Profile.AccountId);
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            CreateAuthOnlyPlayer(credentials, "google-subject-merge" + i, $"mergeauth{i}@bee.test", "MergeAuth" + i);
+        }
+
+        var results = directory.Search("Merge", 0, 4);
+
+        Assert.That(results.Count, Is.LessThanOrEqualTo(4));
+    }
+
+    [Test]
+    public void Search_NeverExposesEmailOrAuthProviderData()
+    {
+        // Same structural guarantee as Search_ResultsNeverExposePrivateAccountData, re-asserted for
+        // the merged authoritative+legacy path specifically - PlayerPublicIdentity's shape alone
+        // makes leaking email/GoogleSubjectId/PasswordHash structurally impossible.
+        (IPlayerDirectoryService directory, _, IAccountCredentialStore credentials) = CreateDirectory();
+        CreateAuthOnlyPlayer(credentials, "google-subject-private", "private@bee.test", "PrivacyCheck");
+
+        var results = directory.Search("Privacy", 0, 20);
+
+        Assert.That(results, Is.Not.Empty);
+        System.Reflection.PropertyInfo[] properties = typeof(PlayerPublicIdentity).GetProperties();
+        Assert.That(properties.Select(p => p.Name), Is.EquivalentTo(new[] { "PlayerId", "DisplayName" }));
+    }
 }
