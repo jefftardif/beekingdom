@@ -12,6 +12,8 @@ using BeeKingdom.Chat.Repositories;
 using BeeKingdom.Infrastructure.Time;
 using BeeKingdom.Shared.ValueObjects;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BeeKingdom.Tests;
 
@@ -146,5 +148,58 @@ public sealed class AllianceChatIntegrationTests
         alliances.Kick(leader, member);
 
         Assert.Throws<UnauthorizedAccessException>(() => chatManager.EnsureCanRead(member, conversationId));
+    }
+
+    // ---------------- M043Q-CL: real sender DisplayName snapshot ----------------
+
+    private sealed class StubChatSenderDisplayNameResolver : IChatSenderDisplayNameResolver
+    {
+        private readonly Dictionary<Guid, string> names;
+        public StubChatSenderDisplayNameResolver(Dictionary<Guid, string> names) { this.names = names; }
+        public string? ResolveDisplayName(Guid playerId) => names.TryGetValue(playerId, out string? name) ? name : null;
+    }
+
+    [Test]
+    public async Task SendMessage_UsesResolvedDisplayNameWhenResolverIsWired()
+    {
+        var allianceRepository = new InMemoryAllianceRepository();
+        var chatRepository = new InMemoryChatRepository();
+        var resolver = new LocalChatAudienceResolver(
+            Options.Create(new ChatOptions { MaxPrivateRecipients = 20 }),
+            new AllianceMembershipResolver(allianceRepository));
+        PlayerId leader = PlayerId.New();
+        var senderResolver = new StubChatSenderDisplayNameResolver(new Dictionary<Guid, string> { [leader.Value] = "QueenBee" });
+        var chatService = new ChatService(chatRepository, resolver, new NoopChatRealtimeDispatcher(), new SystemClock(), Options.Create(new ChatOptions { Enabled = true }), senderResolver);
+        var chatManager = new ChatManager(chatService);
+        var alliances = new AllianceService(
+            allianceRepository, new InMemoryAllianceActivityRepository(), new InMemoryAllianceDiplomacyRepository(), new InMemoryAllianceWarRepository(),
+            Options.Create(new AllianceOptions { Enabled = true, MaxMembers = 100 }), chatManager, chatRepository);
+        AllianceEntity alliance = alliances.CreateAlliance(leader, new CreateAllianceRequest("Golden Hive", "GLD", "", "fr-CA", "", AllianceJoinMode.Open, "create-1")).Alliance;
+
+        SendChatMessageResult result = await chatManager.SendMessageAsync(leader, alliance.ChatConversationId!.Value, new SendChatMessageRequest("send-1", "hello", null, null, null, null, DateTimeOffset.UtcNow));
+
+        Assert.That(result.Message.SenderDisplayNameSnapshot, Is.EqualTo("QueenBee"));
+    }
+
+    [Test]
+    public async Task SendMessage_FallsBackToPlayerIdWhenResolverHasNoName()
+    {
+        var allianceRepository = new InMemoryAllianceRepository();
+        var chatRepository = new InMemoryChatRepository();
+        var resolver = new LocalChatAudienceResolver(
+            Options.Create(new ChatOptions { MaxPrivateRecipients = 20 }),
+            new AllianceMembershipResolver(allianceRepository));
+        PlayerId leader = PlayerId.New();
+        var senderResolver = new StubChatSenderDisplayNameResolver(new Dictionary<Guid, string>());
+        var chatService = new ChatService(chatRepository, resolver, new NoopChatRealtimeDispatcher(), new SystemClock(), Options.Create(new ChatOptions { Enabled = true }), senderResolver);
+        var chatManager = new ChatManager(chatService);
+        var alliances = new AllianceService(
+            allianceRepository, new InMemoryAllianceActivityRepository(), new InMemoryAllianceDiplomacyRepository(), new InMemoryAllianceWarRepository(),
+            Options.Create(new AllianceOptions { Enabled = true, MaxMembers = 100 }), chatManager, chatRepository);
+        AllianceEntity alliance = alliances.CreateAlliance(leader, new CreateAllianceRequest("Golden Hive", "GLD", "", "fr-CA", "", AllianceJoinMode.Open, "create-1")).Alliance;
+
+        SendChatMessageResult result = await chatManager.SendMessageAsync(leader, alliance.ChatConversationId!.Value, new SendChatMessageRequest("send-1", "hello", null, null, null, null, DateTimeOffset.UtcNow));
+
+        Assert.That(result.Message.SenderDisplayNameSnapshot, Is.EqualTo($"player:{leader.Value:N}"));
     }
 }

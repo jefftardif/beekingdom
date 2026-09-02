@@ -33,6 +33,11 @@ public static class AccountServiceCollectionExtensions
         // Communication/Friends/mail recipient selection later) - see PlayerDirectoryService.cs.
         services.AddSingleton<IPlayerDirectoryService, PlayerDirectoryService>();
 
+        // M043Q-CL: real IChatSenderDisplayNameResolver, registered AFTER AddBeeKingdomChat's own
+        // NullChatSenderDisplayNameResolver default (see Program.cs ordering) so this wins for
+        // single-instance resolution - same pattern as IAllianceMembershipResolver.
+        services.AddSingleton<BeeKingdom.Chat.Audience.IChatSenderDisplayNameResolver, PlayerDirectoryChatSenderDisplayNameResolver>();
+
         return services;
     }
 }

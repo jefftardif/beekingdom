@@ -9,6 +9,11 @@
          POST /auth/display-name) instead of the disconnected, never-populated DisplayName on
          this project's own Account record. No cycle: Authentication never references Accounts. -->
     <ProjectReference Include="..\BeeKingdom.Authentication\BeeKingdom.Authentication.csproj" />
+    <!-- M043Q-CL: real implementation of BeeKingdom.Chat's IChatSenderDisplayNameResolver seam -
+         resolves each message's SenderDisplayNameSnapshot from the same authoritative source
+         (PlayerDirectoryService, see M043P) Alliance names already use. No cycle: BeeKingdom.Chat
+         never references BeeKingdom.Accounts. -->
+    <ProjectReference Include="..\BeeKingdom.Chat\BeeKingdom.Chat.csproj" />
   </ItemGroup>
 
   <ItemGroup>

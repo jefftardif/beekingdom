@@ -39,18 +39,20 @@ public sealed class ChatService : IChatService
     private readonly IChatRealtimeDispatcher realtime;
     private readonly IServerClock clock;
     private readonly ChatOptions options;
+    private readonly IChatSenderDisplayNameResolver senderDisplayNameResolver;
     private readonly Dictionary<Guid,Queue<DateTimeOffset>> messageAttemptsByPlayer=new();
     private readonly Dictionary<Guid,Queue<DateTimeOffset>> messageAttemptsByConversation=new();
     private readonly object rateSync=new();
     private DateTimeOffset nextReceiptPurgeUtc=DateTimeOffset.MinValue;
 
-    public ChatService(IChatRepository repository, IChatAudienceResolver audienceResolver, IChatRealtimeDispatcher realtime, IServerClock clock, IOptions<ChatOptions> options)
+    public ChatService(IChatRepository repository, IChatAudienceResolver audienceResolver, IChatRealtimeDispatcher realtime, IServerClock clock, IOptions<ChatOptions> options, IChatSenderDisplayNameResolver? senderDisplayNameResolver = null)
     {
         this.repository = repository;
         this.audienceResolver = audienceResolver;
         this.realtime = realtime;
         this.clock = clock;
         this.options = options.Value;
+        this.senderDisplayNameResolver = senderDisplayNameResolver ?? new NullChatSenderDisplayNameResolver();
     }
 
     public ChatCapabilities GetCapabilities()
@@ -234,6 +236,14 @@ public sealed class ChatService : IChatService
         IReadOnlyList<ChatMention> mentions = (request.Mentions ?? Array.Empty<ChatMentionInput>())
             .Select(mention => new ChatMention(new PlayerId(mention.PlayerId), mention.Label))
             .ToArray();
+        // M043Q-CL: was unconditionally "player:{id}" - never the real, onboarded DisplayName
+        // (BeeKingdom.Authentication.AuthenticationAccounts via PlayerDirectoryService, the same
+        // authoritative source M043P wired Alliance member/journal names to). A null resolver
+        // result (not wired up, or the sender has no onboarded name yet) keeps the exact previous
+        // safe fallback string - never fabricates a name.
+        string senderDisplayNameSnapshot = senderDisplayNameResolver.ResolveDisplayName(playerId.Value) is { Length: > 0 } resolvedName
+            ? resolvedName
+            : $"player:{playerId.Value:N}";
         ChatMessage message = new(
             Guid.NewGuid(),
             conversationId,
@@ -241,7 +251,7 @@ public sealed class ChatService : IChatService
             conversation.WorldId,
             conversation.ChannelType,
             playerId,
-            $"player:{playerId.Value:N}",
+            senderDisplayNameSnapshot,
             request.Body.Trim(),
             request.ContentParts ?? [new ChatContentPart("text", request.Body.Trim(), null, null, null, null, null)],
             mentions,
