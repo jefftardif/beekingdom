@@ -842,10 +842,11 @@ public sealed class HttpEndpointTests
             Assert.That(payload.RootElement.GetProperty("destructive").GetBoolean(), Is.True);
             Assert.That(payload.RootElement.GetProperty("executableByEndpoint").GetBoolean(), Is.False);
             Assert.That(payload.RootElement.GetProperty("requiresBackup").GetBoolean(), Is.True);
-            Assert.That(scripts.GetArrayLength(), Is.EqualTo(10));
-            Assert.That(scripts[0].GetProperty("name").GetString(), Is.EqualTo("070_rollback_hive_operations.sql"));
-            Assert.That(scripts[1].GetProperty("name").GetString(), Is.EqualTo("064_rollback_chat_contract_bounds.sql"));
-            Assert.That(scripts[5].GetProperty("name").GetString(), Is.EqualTo("060_rollback_chat_messaging.sql"));
+            Assert.That(scripts.GetArrayLength(), Is.EqualTo(11));
+            Assert.That(scripts[0].GetProperty("name").GetString(), Is.EqualTo("090_rollback_alliance_platform.sql"));
+            Assert.That(scripts[1].GetProperty("name").GetString(), Is.EqualTo("070_rollback_hive_operations.sql"));
+            Assert.That(scripts[2].GetProperty("name").GetString(), Is.EqualTo("064_rollback_chat_contract_bounds.sql"));
+            Assert.That(scripts[6].GetProperty("name").GetString(), Is.EqualTo("060_rollback_chat_messaging.sql"));
         });
     }
 

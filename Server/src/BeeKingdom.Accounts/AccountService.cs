@@ -15,6 +15,7 @@ public interface IAccountService
     AccountDiagnostics Diagnostics { get; }
     AccountRecord CreateAccount(CreateAccountRequest request);
     AccountRecord? GetAccount(Guid accountId);
+    AccountRecord? GetAccountByPlayerId(PlayerId playerId);
     AccountRecord UpdateProfile(Guid accountId, string displayName, string? language, string? timeZone, string? country);
     AccountRecord UpdatePreferences(Guid accountId, AccountPreferences preferences);
     AccountRecord SuspendAccount(Guid accountId);
@@ -64,6 +65,7 @@ public sealed class AccountService : IAccountService
     }
 
     public AccountRecord? GetAccount(Guid accountId) => repository.Get(accountId);
+    public AccountRecord? GetAccountByPlayerId(PlayerId playerId) => repository.GetByPlayerId(playerId);
 
     public AccountRecord UpdateProfile(Guid accountId, string displayName, string? language, string? timeZone, string? country)
     {

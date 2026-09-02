@@ -29,6 +29,9 @@ public static class AccountServiceCollectionExtensions
         services.AddSingleton<IAccountEventSink, InMemoryAccountEventSink>();
         services.AddSingleton<IAccountService, AccountService>();
         services.AddSingleton<AccountManager>();
+        // M043B-CL: generic player search/lookup, reusable by any domain (Alliance invites today,
+        // Communication/Friends/mail recipient selection later) - see PlayerDirectoryService.cs.
+        services.AddSingleton<IPlayerDirectoryService, PlayerDirectoryService>();
 
         return services;
     }

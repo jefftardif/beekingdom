@@ -1,0 +1,14 @@
+IF OBJECT_ID(N'dbo.AllianceWarDeclareReceipts', N'U') IS NOT NULL DROP TABLE dbo.AllianceWarDeclareReceipts;
+IF OBJECT_ID(N'dbo.AllianceWars', N'U') IS NOT NULL DROP TABLE dbo.AllianceWars;
+IF OBJECT_ID(N'dbo.AllianceDiplomacyProposalReceipts', N'U') IS NOT NULL DROP TABLE dbo.AllianceDiplomacyProposalReceipts;
+IF OBJECT_ID(N'dbo.AllianceDiplomaticRelations', N'U') IS NOT NULL DROP TABLE dbo.AllianceDiplomaticRelations;
+IF OBJECT_ID(N'dbo.AllianceActivityDedupe', N'U') IS NOT NULL DROP TABLE dbo.AllianceActivityDedupe;
+IF OBJECT_ID(N'dbo.AllianceActivityEvents', N'U') IS NOT NULL DROP TABLE dbo.AllianceActivityEvents;
+IF OBJECT_ID(N'dbo.AllianceActivitySequences', N'U') IS NOT NULL DROP TABLE dbo.AllianceActivitySequences;
+IF OBJECT_ID(N'dbo.AllianceInvitationReceipts', N'U') IS NOT NULL DROP TABLE dbo.AllianceInvitationReceipts;
+IF OBJECT_ID(N'dbo.AllianceInvitations', N'U') IS NOT NULL DROP TABLE dbo.AllianceInvitations;
+IF OBJECT_ID(N'dbo.AllianceApplicationReceipts', N'U') IS NOT NULL DROP TABLE dbo.AllianceApplicationReceipts;
+IF OBJECT_ID(N'dbo.AllianceApplications', N'U') IS NOT NULL DROP TABLE dbo.AllianceApplications;
+IF OBJECT_ID(N'dbo.AllianceMemberships', N'U') IS NOT NULL DROP TABLE dbo.AllianceMemberships;
+IF OBJECT_ID(N'dbo.AllianceCreateReceipts', N'U') IS NOT NULL DROP TABLE dbo.AllianceCreateReceipts;
+IF OBJECT_ID(N'dbo.Alliances', N'U') IS NOT NULL DROP TABLE dbo.Alliances;

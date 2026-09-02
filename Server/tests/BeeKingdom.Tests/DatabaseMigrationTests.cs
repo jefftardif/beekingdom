@@ -91,6 +91,7 @@ public sealed class DatabaseMigrationTests
         {
             Assert.That(names, Is.EqualTo(new[]
             {
+                "090_rollback_alliance_platform.sql",
                 "070_rollback_hive_operations.sql",
                 "064_rollback_chat_contract_bounds.sql",
                 "063_rollback_chat_moderation_idempotency.sql",
