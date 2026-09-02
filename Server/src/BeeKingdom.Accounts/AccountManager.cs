@@ -15,6 +15,7 @@ public sealed class AccountManager
     public AccountDiagnostics Diagnostics => service.Diagnostics;
     public AccountRecord CreateAccount(CreateAccountRequest request) => service.CreateAccount(request);
     public AccountRecord? GetAccount(Guid accountId) => service.GetAccount(accountId);
+    public AccountRecord? GetAccountByPlayerId(BeeKingdom.Shared.ValueObjects.PlayerId playerId) => service.GetAccountByPlayerId(playerId);
     public AccountRecord UpdateProfile(Guid accountId, string displayName, string? language = null, string? timeZone = null, string? country = null) => service.UpdateProfile(accountId, displayName, language, timeZone, country);
     public AccountRecord UpdatePreferences(Guid accountId, AccountPreferences preferences) => service.UpdatePreferences(accountId, preferences);
     public AccountRecord SuspendAccount(Guid accountId) => service.SuspendAccount(accountId);

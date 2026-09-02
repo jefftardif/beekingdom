@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\src\BeeKingdom.Shared\BeeKingdom.Shared.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Authentication\BeeKingdom.Authentication.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Chat\BeeKingdom.Chat.csproj" />
+    <ProjectReference Include="..\..\src\BeeKingdom.Alliance\BeeKingdom.Alliance.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Accounts\BeeKingdom.Accounts.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Gateway\BeeKingdom.Gateway.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Colony\BeeKingdom.Colony.csproj" />

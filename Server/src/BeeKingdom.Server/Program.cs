@@ -1,6 +1,10 @@
 using BeeKingdom.Accounts;
 using BeeKingdom.Accounts.DependencyInjection;
 using BeeKingdom.Accounts.Models;
+using BeeKingdom.Alliance;
+using BeeKingdom.Alliance.Configuration;
+using BeeKingdom.Alliance.DependencyInjection;
+using BeeKingdom.Alliance.Models;
 using BeeKingdom.Authentication;
 using BeeKingdom.Authentication.DependencyInjection;
 using BeeKingdom.Authentication.Models;
@@ -59,6 +63,7 @@ builder.Services
     .AddBeeKingdomPersistence(builder.Configuration)
     .AddBeeKingdomAuthentication(builder.Configuration)
     .AddBeeKingdomChat(builder.Configuration)
+    .AddBeeKingdomAlliance(builder.Configuration)
     .AddBeeKingdomAccounts(builder.Configuration)
     .AddBeeKingdomGateway(builder.Configuration)
     .AddBeeKingdomColony(builder.Configuration)
@@ -628,6 +633,33 @@ app.MapPost("/game/v1/hives/{hiveId}/research/{researchId}/start", async (HttpCo
 app.MapPost("/game/v1/hives/{hiveId}/research/{operationId}/complete", async (HttpContext context,string hiveId,string operationId,AuthenticationManager authentication,IHiveStateRepository repository,BeeKingdom.HiveOperations.IServerClock clock,IOptions<LivingHiveResearchOptions> configured,IOptions<HiveDailyRoundOptions> daily,ResearchMutationRequest request,CancellationToken ct)=>
 {
     if(!configured.Value.Enabled)return GameError(503,"game.unavailable","game.error.unavailable");TokenValidationResult auth=AuthenticateGameRequest(context,authentication);if(!auth.IsValid)return GameError(401,"game.session_required","game.error.session_required");if(!TryParseGameResourceId(hiveId,out Guid hive)||!Guid.TryParse(operationId,out Guid op)||request is null)return GameError(400,"game.invalid_request","game.error.invalid_request");if(request.ExpectedRevision<0||string.IsNullOrWhiteSpace(request.IdempotencyKey)||request.IdempotencyKey.Trim()!=request.IdempotencyKey||request.IdempotencyKey.Length>256)return GameError(400,"game.invalid_request","game.error.invalid_request");var result=await new HiveOperationService(repository,clock,Array.Empty<BuildingOperationDefinition>()).CompleteResearchAsync(new(auth.PlayerId!.Value,hive,op,request.ExpectedRevision,request.IdempotencyKey),ct);if(!result.Succeeded)return GameError(409,"game."+result.Code,"game.error.conflict");var state=result.State;return Results.Ok(new ResearchResponse(new(auth.PlayerId.Value,hive,request.IdempotencyKey,op,result.ResearchId,result.RevisionAfter,result.AcceptedAtUtc,"game.research_completed"),BuildResearchSnapshot(state,clock.UtcNow,configured.Value.CatalogVersion,configured.Value.Catalog)));
+});
+
+// M037 — FTUE Tutorial persistence (chapter/step, idempotent, no SQL migration)
+app.MapGet("/game/v1/hives/{hiveId}/tutorial", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, CancellationToken ct) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    PlayerHiveState state = await repository.ReadAsync(auth.PlayerId!.Value, hive, ct);
+    if (state is null) return GameError(404, "game.hive_not_found", "game.error.not_found");
+    var t = state.Tutorial;
+    return Results.Ok(new TutorialProgressResponse(t?.ChapterKey ?? string.Empty, t?.SafeResumeStepKey ?? string.Empty, t?.LastObservedStepKey ?? string.Empty, t?.UpdatedAtUtc ?? DateTimeOffset.MinValue, state.Revision));
+});
+app.MapPost("/game/v1/hives/{hiveId}/tutorial/progress", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, SaveTutorialProgressHttpRequest request, CancellationToken ct) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    if (request.ExpectedRevision < 0 || string.IsNullOrWhiteSpace(request.IdempotencyKey) || request.IdempotencyKey.Trim() != request.IdempotencyKey || request.IdempotencyKey.Length > 256) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    string chapter = request.ChapterKey?.Trim() ?? string.Empty;
+    string safe = request.SafeResumeStepKey?.Trim() ?? string.Empty;
+    string last = request.LastObservedStepKey?.Trim() ?? string.Empty;
+    if (chapter.Length > 128 || safe.Length > 128 || last.Length > 128) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    var result = await new HiveOperationService(repository, clock, Array.Empty<BuildingOperationDefinition>()).SaveTutorialProgressAsync(new(auth.PlayerId!.Value, hive, request.ExpectedRevision, chapter, safe, last, request.IdempotencyKey), ct);
+    if (!result.Succeeded) return GameError(result.Code == "invalid_request" ? 400 : 409, "game." + result.Code, "game.error.conflict");
+    var nt = result.State.Tutorial;
+    return Results.Ok(new TutorialProgressResponse(nt?.ChapterKey ?? string.Empty, nt?.SafeResumeStepKey ?? string.Empty, nt?.LastObservedStepKey ?? string.Empty, nt?.UpdatedAtUtc ?? clock.UtcNow, result.State.Revision));
 });
 
 app.MapGet("/game/v1/hives/{hiveId}/champion-bees", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<ChampionBeeProgressionOptions> configured, CancellationToken ct) =>
@@ -1394,6 +1426,243 @@ app.MapPost("/chat/v1/alliances/{allianceId:guid}/announcements", async (HttpCon
     return await ExecuteChatAsync(context, async () => Results.Ok(await chat.SendAllianceAnnouncementAsync(auth.PlayerId, allianceId, request, cancellationToken)));
 });
 
+// ==================== Player Directory (M043B-CL) ====================
+// Generic, reusable player search - NOT Alliance-specific (see BeeKingdom.Accounts.
+// PlayerDirectoryService). Auth-required; never exposes email/status/auth-provider data. A blank
+// or too-short query is rejected (400), not silently treated as "list everyone".
+
+app.MapGet("/game/v1/players/search", (HttpContext context, AuthenticationManager authentication, BeeKingdom.Accounts.IPlayerDirectoryService directory, string? q, int? offset, int? limit) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "game.session_required", "game.error.session_required");
+    try
+    {
+        return Results.Ok(directory.Search(q ?? string.Empty, offset ?? 0, limit ?? 20));
+    }
+    catch (ArgumentException)
+    {
+        return GameError(StatusCodes.Status400BadRequest, "game.invalid_request", "game.error.invalid_request");
+    }
+});
+
+// ==================== Alliance (M041-CL) ====================
+// Auth/path-parsing/error-mapping mirrors the existing /game/v1/* family (AuthenticateGameRequest,
+// TryParseGameResourceId, GameError) - Alliance is a gameplay domain, not chat, even though it
+// links to Chat for the alliance conversation. See AllianceService.cs for the exception vocabulary
+// this ExecuteAlliance wrapper maps to HTTP status codes.
+
+app.MapPost("/alliance/v1/alliances", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, CreateAllianceRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.CreateAlliance(auth.PlayerId, request)));
+});
+
+app.MapGet("/alliance/v1/membership/mine", (HttpContext context, AuthenticationManager authentication, AllianceService alliances) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() =>
+        Results.Ok(BeeKingdom.Alliance.Models.MyAllianceOverviewResponse.From(alliances.GetMyAlliance(auth.PlayerId))));
+});
+
+app.MapGet("/alliance/v1/alliances/search", (HttpContext context, AllianceService alliances, string? nameOrTag, string? language, string? joinMode, int? offset, int? limit) =>
+{
+    AllianceJoinMode? parsedJoinMode = Enum.TryParse<AllianceJoinMode>(joinMode, true, out var jm) ? jm : null;
+    return ExecuteAlliance(() => Results.Ok(alliances.Search(new AllianceSearchQuery(nameOrTag, language, parsedJoinMode, offset ?? 0, limit ?? 20))));
+});
+
+app.MapGet("/alliance/v1/alliances/{allianceId:guid}", (AllianceService alliances, Guid allianceId) =>
+    ExecuteAlliance(() => Results.Ok(alliances.GetPublicProfile(new AllianceId(allianceId)))));
+
+app.MapGet("/alliance/v1/alliances/by-slug/{slug}", (AllianceService alliances, string slug) =>
+    ExecuteAlliance(() =>
+    {
+        BeeKingdom.Alliance.Models.AllianceEntity? entity = alliances.GetBySlug(slug);
+        return entity == null ? AllianceError(404, "alliance.not_found") : Results.Ok(alliances.GetPublicProfile(entity.AllianceId));
+    }));
+
+app.MapGet("/alliance/v1/alliances/{allianceId:guid}/activity/public", (AllianceService alliances, Guid allianceId, long? beforeSequence, int? limit) =>
+    ExecuteAlliance(() => Results.Ok(alliances.ListPublicActivity(new AllianceId(allianceId), beforeSequence, limit ?? 30))));
+
+app.MapGet("/alliance/v1/alliances/{allianceId:guid}/activity", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid allianceId, long? beforeSequence, int? limit) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.ListActivity(auth.PlayerId, new AllianceId(allianceId), beforeSequence, limit ?? 30)));
+});
+
+app.MapGet("/alliance/v1/alliances/{allianceId:guid}/members", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid allianceId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.ListMembers(auth.PlayerId, new AllianceId(allianceId))));
+});
+
+app.MapPost("/alliance/v1/alliances/{allianceId:guid}/join", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid allianceId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.JoinOpen(auth.PlayerId, new AllianceId(allianceId))));
+});
+
+app.MapPost("/alliance/v1/alliances/{allianceId:guid}/applications", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid allianceId, SubmitApplicationRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.SubmitApplication(auth.PlayerId, new AllianceId(allianceId), request)));
+});
+
+app.MapGet("/alliance/v1/applications/pending", (HttpContext context, AuthenticationManager authentication, AllianceService alliances) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.ListPendingApplicationsForMyAlliance(auth.PlayerId)));
+});
+
+app.MapPost("/alliance/v1/applications/{applicationId:guid}/cancel", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid applicationId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.CancelApplication(auth.PlayerId, applicationId)));
+});
+
+app.MapPost("/alliance/v1/applications/{applicationId:guid}/accept", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid applicationId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.AcceptApplication(auth.PlayerId, applicationId)));
+});
+
+app.MapPost("/alliance/v1/applications/{applicationId:guid}/reject", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid applicationId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.RejectApplication(auth.PlayerId, applicationId)));
+});
+
+app.MapPost("/alliance/v1/alliances/{allianceId:guid}/invitations", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid allianceId, CreateInvitationRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.CreateInvitation(auth.PlayerId, new AllianceId(allianceId), request)));
+});
+
+app.MapGet("/alliance/v1/invitations/mine", (HttpContext context, AuthenticationManager authentication, AllianceService alliances) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.ListMyInvitations(auth.PlayerId)));
+});
+
+app.MapPost("/alliance/v1/invitations/{invitationId:guid}/accept", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid invitationId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.AcceptInvitation(auth.PlayerId, invitationId)));
+});
+
+app.MapPost("/alliance/v1/invitations/{invitationId:guid}/decline", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid invitationId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.DeclineInvitation(auth.PlayerId, invitationId)));
+});
+
+app.MapPost("/alliance/v1/invitations/{invitationId:guid}/revoke", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid invitationId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.RevokeInvitation(auth.PlayerId, invitationId)));
+});
+
+app.MapPost("/alliance/v1/membership/leave", (HttpContext context, AuthenticationManager authentication, AllianceService alliances) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    // M043-CL: a bare Results.Ok() writes an empty response body, which the Unity codec's
+    // Deserialize<T> explicitly rejects as malformed (even for T=object) - always return a small
+    // real JSON body from a mutation endpoint a typed client will actually parse.
+    return ExecuteAlliance(() => { alliances.Leave(auth.PlayerId); return Results.Ok(new { success = true }); });
+});
+
+app.MapPost("/alliance/v1/membership/{targetPlayerId:guid}/kick", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid targetPlayerId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => { alliances.Kick(auth.PlayerId, new PlayerId(targetPlayerId)); return Results.Ok(new { success = true }); });
+});
+
+app.MapPost("/alliance/v1/membership/{targetPlayerId:guid}/promote", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid targetPlayerId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.Promote(auth.PlayerId, new PlayerId(targetPlayerId))));
+});
+
+app.MapPost("/alliance/v1/membership/{targetPlayerId:guid}/demote", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid targetPlayerId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.Demote(auth.PlayerId, new PlayerId(targetPlayerId))));
+});
+
+app.MapPost("/alliance/v1/membership/{targetPlayerId:guid}/transfer-leadership", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid targetPlayerId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.TransferLeadership(auth.PlayerId, new PlayerId(targetPlayerId))));
+});
+
+app.MapPost("/alliance/v1/alliances/dissolve", (HttpContext context, AuthenticationManager authentication, AllianceService alliances) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.Dissolve(auth.PlayerId)));
+});
+
+app.MapPost("/alliance/v1/alliances/profile", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, UpdateAllianceProfileRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.UpdateProfile(auth.PlayerId, request)));
+});
+
+app.MapPost("/alliance/v1/diplomacy/{targetAllianceId:guid}/propose", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid targetAllianceId, ProposeDiplomacyRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.ProposeRelation(auth.PlayerId, new AllianceId(targetAllianceId), request)));
+});
+
+app.MapPost("/alliance/v1/diplomacy/{proposerAllianceId:guid}/accept", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid proposerAllianceId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.RespondToRelation(auth.PlayerId, new AllianceId(proposerAllianceId), true)));
+});
+
+app.MapPost("/alliance/v1/diplomacy/{proposerAllianceId:guid}/reject", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid proposerAllianceId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.RespondToRelation(auth.PlayerId, new AllianceId(proposerAllianceId), false)));
+});
+
+app.MapPost("/alliance/v1/diplomacy/{otherAllianceId:guid}/cancel", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, Guid otherAllianceId) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.CancelRelation(auth.PlayerId, new AllianceId(otherAllianceId))));
+});
+
+app.MapPost("/alliance/v1/war/declare", (HttpContext context, AuthenticationManager authentication, AllianceService alliances, DeclareWarRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return ExecuteAlliance(() => Results.Ok(alliances.DeclareWar(auth.PlayerId, request)));
+});
+
 app.MapGet("/ops/migrations/pending", async (HttpContext context, IOptions<OpsSecurityOptions> ops, IMigrationRunner migrations, CancellationToken cancellationToken) =>
 {
     IResult? authorization = AuthorizeOps(context, ops.Value);
@@ -2086,6 +2355,41 @@ static async Task<IResult> ExecuteChatAsync(HttpContext context, Func<Task<IResu
 
 static IResult ChatError(int statusCode,string code,string message,int? retryAfterSeconds=null)
     => Results.Json(new ChatTranslationError(code,message,retryAfterSeconds),statusCode:statusCode);
+
+// M041-CL: AllianceService's exception vocabulary (see its top-of-file comment) mapped to HTTP.
+// InvalidOperationException.Message is a stable machine code forwarded as-is to the client for
+// codes not explicitly enumerated here, so a new domain error added to the service later doesn't
+// require touching this wrapper too - it just surfaces as a generic 409 with the real code string.
+static IResult ExecuteAlliance(Func<IResult> action)
+{
+    try
+    {
+        return action();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return AllianceError(403, "alliance.forbidden");
+    }
+    catch (KeyNotFoundException)
+    {
+        return AllianceError(404, "alliance.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return AllianceError(400, "alliance.invalid_request");
+    }
+    catch (InvalidOperationException exception) when (exception.Message == "alliance_disabled")
+    {
+        return AllianceError(503, "alliance.unavailable");
+    }
+    catch (InvalidOperationException exception)
+    {
+        return AllianceError(409, "alliance." + exception.Message);
+    }
+}
+
+static IResult AllianceError(int statusCode, string code)
+    => Results.Json(new AllianceErrorEnvelope(code), statusCode: statusCode);
 
 static ResearchReadSnapshot BuildResearchSnapshot(PlayerHiveState state, DateTimeOffset now, string catalogVersion, IReadOnlyList<string> configuredCatalog)
 {
@@ -2781,6 +3085,8 @@ public sealed record CombatPatrolMutationResponse(CombatPatrolSnapshot Snapshot,
 public sealed record DevSeedAccountRequest(string Email, string Password);
 public sealed record GoogleLoginHttpRequest(string AuthorizationCode, string CodeVerifier, string RedirectUri, string ClientVersion, string DeviceIdentifier, string Region);
 public sealed record ChampionBeeMutationHttpRequest(long ExpectedRevision, string IdempotencyKey);
+public sealed record SaveTutorialProgressHttpRequest(string ChapterKey, string SafeResumeStepKey, string LastObservedStepKey, long ExpectedRevision, string IdempotencyKey);
+public sealed record TutorialProgressResponse(string ChapterKey, string SafeResumeStepKey, string LastObservedStepKey, DateTimeOffset UpdatedAtUtc, long Revision);
 public sealed record SetChampionBeeAssignmentHttpRequest(List<string> BeeIds, long ExpectedRevision, string IdempotencyKey);
 public sealed record ChampionBeeSnapshotResponse(Dictionary<string, int> Levels, List<string> AssignedBeeIds, int MaxAssigned, long Revision);
 public sealed record ChampionBeeMutationResponse(bool Succeeded, string Code, string BeeId, int Level, List<string> AssignedBeeIds, long Revision);
@@ -2793,4 +3099,5 @@ public sealed record SetBuildingLevelHttpRequest(string BuildingKey, int Level);
 public sealed record GrantResourceHttpRequest(string ResourceKey, long Amount);
 public sealed record SetDisplayNameHttpRequest(string DisplayName);
 public sealed record GameErrorEnvelope(string Code, string Message, int? RetryAfterSeconds);
+public sealed record AllianceErrorEnvelope(string Code);
 public sealed record AuthenticationUnavailableEnvelope(string Code, string Message);

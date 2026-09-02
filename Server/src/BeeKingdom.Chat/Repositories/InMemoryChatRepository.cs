@@ -102,6 +102,36 @@ public sealed class InMemoryChatRepository : IChatRepository
         }
     }
 
+    public ChatConversationParticipant UpsertParticipant(ChatConversationParticipant participant)
+    {
+        lock (sync)
+        {
+            if (!participantsByConversation.TryGetValue(participant.ConversationId, out List<ChatConversationParticipant>? participants))
+            {
+                participants = new List<ChatConversationParticipant>();
+                participantsByConversation[participant.ConversationId] = participants;
+            }
+
+            int index = participants.FindIndex(item => item.PlayerId == participant.PlayerId);
+            if (index >= 0) participants[index] = participant;
+            else participants.Add(participant);
+            return participant;
+        }
+    }
+
+    public ChatConversationParticipant? RemoveParticipant(Guid conversationId, PlayerId playerId, DateTimeOffset removedAtUtc)
+    {
+        lock (sync)
+        {
+            if (!participantsByConversation.TryGetValue(conversationId, out List<ChatConversationParticipant>? participants)) return null;
+            int index = participants.FindIndex(item => item.PlayerId == playerId);
+            if (index < 0) return null;
+            ChatConversationParticipant removed = participants[index] with { RemovedAtUtc = removedAtUtc, CanRead = false, CanWrite = false };
+            participants[index] = removed;
+            return removed;
+        }
+    }
+
     public long NextSequence(Guid conversationId)
     {
         lock (sync)
