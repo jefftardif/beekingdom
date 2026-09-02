@@ -40,6 +40,859 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M043J/K/L/M/N-CL : Alliance Center enfin fonctionnel de bout en bout (2026-09-02)
+
+Suite directe de M043I (persistance SQL). Le CEO a certifié Alliance Center
+en Play Mode et a trouvé **quatre bugs distincts, tous latents depuis M041**,
+jamais révélés avant ce soir car aucune session précédente n'avait jamais
+eu de vraie alliance à charger de bout en bout :
+
+1. **M043J** : `UnityAuthenticatedGameRestTransport.ValidateRequest`
+   n'acceptait que les routes `/game/v1/` — toute requête Alliance
+   (`/alliance/v1/`) était rejetée côté client avant tout envoi réseau.
+   Corrigé (liste blanche de préfixes). Deuxième bug trouvé dans la
+   foulée : le middleware serveur `Cache-Control` n'était appliqué qu'aux
+   routes `/game/v1` — corrigé aussi (`Program.cs`).
+2. **M043K** : le code d'erreur "safe" (`ParseSafeErrorCode`) n'acceptait
+   que les préfixes `game.` — tout rejet légitime `alliance.*` devenait un
+   `invalid_response` générique. Corrigé.
+3. **M043L** : `CreateAllianceWireRequest` (et 3 autres DTO de requête)
+   utilisent des champs publics C#, jamais sérialisés par défaut par
+   `System.Text.Json` — chaque requête Create/SubmitApplication/
+   CreateInvitation/UpdateProfile partait avec un corps `{}` vide. Corrigé
+   (`IncludeFields = true` sur le codec).
+4. **M043M** : le serveur sérialise les enums en chaînes
+   (`JsonStringEnumConverter`), le client n'avait aucun convertisseur
+   miroir — toute réponse contenant un enum réel (JoinMode, Status, Role)
+   plantait au parsing. Corrigé (`JsonStringEnumConverter` ajouté au
+   codec).
+5. **M043N** : `AllianceClient`/`AllianceCenterPresentation` utilisaient
+   `.ConfigureAwait(false)` partout — en Unity, ça fait reprendre
+   l'exécution hors du thread principal, ce qui plante la construction
+   d'un deuxième `UnityWebRequest` dans une chaîne d'appels (ex.
+   `RefreshCoreAsync`). Corrigé (suppression de tous les
+   `ConfigureAwait(false)` dans ces deux fichiers).
+
+**Preuves** : chaque bug a été prouvé par capture HTTP réelle/exception
+exacte en direct (jamais par élimination), sans jamais créer d'alliance au
+nom du CEO ni modifier ses données. L'alliance "BeeKingdom Alpha" créée
+par le CEO à la tentative #3 est réelle, saine (Leader, chat lié, activité)
+et s'affiche maintenant correctement — **confirmé visuellement par le
+CEO** (capture d'écran : tableau de bord complet, onglets, activité "a
+fondé l'alliance").
+
+Commits : `afa04d5` (M043J), `531504b` (M043K), `be49fe1` (M043L),
+`7ddec8d` (M043M), `7ebcc87` (M043N). Tous poussés sur `main`. Découverte
+notable : `AllianceClient.cs` et `AllianceCenterPresentation.cs` n'avaient
+jamais été commités à git avant M043N (lacune depuis M041-M043B) — commité
+maintenant avec tout leur contenu historique.
+
+Prochain test utilisateur : explorer les autres onglets d'Alliance Center
+(Membres, Chat, Recherches, Guerre) — non testés ce soir, pourraient
+révéler d'autres instances du même patron de bugs (même codec partagé
+donc probablement déjà couverts, mais à vérifier en usage réel).
+
+Ouvert / a faire ensuite : restaurer `git stash@{0}` (changement
+`LivingHiveResearch` en attente, sans lien avec Alliance) ; envisager de
+committer aussi le reste des fichiers Playground modifiés/non-suivis
+laissés de côté ce soir (hors périmètre de cette mission) ; auditer si
+d'autres clients réseau du projet utilisent aussi `.ConfigureAwait(false)`
+de façon dangereuse (pattern copié de `HiveResearchClient` — non vérifié
+ce soir, hors périmètre).
+
+---
+
+## Jalon courant — M043I-CL : Alliance SQL Server Persistence + Enablement Prod (2026-09-02)
+
+**Contexte** : le CEO a decide d'activer `Alliance.Enabled=true` en production
+(M043H). Premiere tentative de deploiement : crash total du serveur IIS
+(HTTP 500.30 "app failed to start"). Root cause PROUVEE apres inspection
+directe des variables d'environnement du pool `BeeKingdomApi` (`appcmd list
+apppool`) : la prod tourne reellement sur `Persistence__Provider=SqlServer`
+(via variable d'environnement IIS, pas le `"InMemory"` du fichier
+`appsettings.Production.json` du depot). Le module Alliance (M042) n'avait
+qu'une persistance JSON durable et lancait volontairement un `throw` au
+demarrage si SqlServer etait detecte — ce `throw` est synchrone dans
+`Program.cs` avant `app.Run()`, donc il faisait planter TOUT le serveur, pas
+seulement Alliance.
+
+**Correction** : implementation SQL complete pour Alliance — migration
+`090_alliance_platform.sql` (14 tables : Alliances, Memberships,
+Applications, Invitations, ActivityEvents/Sequences/Dedupe,
+DiplomaticRelations, Wars + tous les recus d'idempotence) et 4 nouveaux
+repositories (`SqlAllianceRepository`, `SqlAllianceActivityRepository`,
+`SqlAllianceDiplomacyRepository`, `SqlAllianceWarRepository`), meme patron
+ADO.NET brut que Chat/Accounts/Colony. `AllianceServiceCollectionExtensions`
+bascule maintenant entre Sql* et DurableJson* selon
+`PersistenceOptions.UsesSqlServer`, au lieu de planter.
+
+**Incident et recuperation** : premier deploiement (`c34b9d2`) a cause une
+panne reelle (smoke test GitHub Actions en echec, confirme par `curl` direct
+→ page IIS 500.30). Revert immediat (`041baa1`) pousse sur `deploy`,
+production restauree en < 5 min, confirmee saine avant tout diagnostic plus
+approfondi. Deuxieme tentative apres la correction SQL (`91978f1`) :
+deploiement reussi, smoke test vert.
+
+**Cles Ops perdues et regenerees** : `Ops:AdminKey` et `Ops:MigrationApplyKey`
+etaient introuvables (jamais stockees dans le depot par design — seul le
+hash SHA256 est configure sur le pool IIS). Regenerees toutes les deux avec
+le CEO en session (nouvelles valeurs sauvegardees dans son gestionnaire de
+mots de passe), hash mis a jour via `appcmd set config .../environmentVariables`
++ recyclage du pool. Migration appliquee via `POST
+/ops/migrations/apply` avec les deux cles.
+
+Preuves : build serveur complet 0 erreur ; suite de tests serveur complete
+456/456 verts (2 tests casses par l'ajout legitime du script 090 corriges :
+`RollbackCatalogDropsTablesInReverseDependencyOrder`,
+`CatalogSqlMatchesCheckedInScriptFiles` dans `DatabaseMigrationTests.cs` /
+`HttpEndpointTests.cs`). Verification prod post-migration :
+`GET /` → 200 Healthy ; `GET /alliance/v1/alliances/search` → 200
+`{"items":[],"totalCount":0}` (tables SQL creees et fonctionnelles, aucune
+alliance existante). `Diplomacy`/`War` restent `false`. Aucune alliance CEO
+creee, aucune donnee de compte modifiee.
+
+Prochain test utilisateur : ouvrir Alliance Center en jeu (compte reel, pas
+juste l'API) et confirmer que la creation/recherche/rejoindre une alliance
+fonctionne de bout en bout maintenant que la persistance SQL est reelle.
+
+Ouvert / a faire ensuite : rapport de mission `Docs/AI/Missions/
+M043H-CL-...` / `M043I-CL-...` pas encore ecrit (a faire en debut de
+prochaine session si le CEO le demande) ; changement `LivingHiveResearch`
+en attente restait dans `git stash` au moment du push — verifier qu'il n'a
+pas ete perdu (`git stash list`).
+
+---
+
+## Jalon courant — M043E-CL : Alliance NoAlliance Runtime Fix (2026-09-01/02)
+
+**Echec de certification Play Mode #1 du CEO** : Alliance Center s'ouvre
+mais affiche la coquille IN_ALLIANCE avec donnees vides/par defaut (Chef: —,
+RÔLE: Membre, "Quitter l'alliance") pour un compte qui n'a jamais cree ni
+rejoint d'alliance. Rapport complet : `Docs/AI/Missions/
+M043E-CL-Alliance-NoAlliance-Runtime-Fix.md`.
+
+**Cause racine PROUVEE** (par trace directe du code, pas par supposition) :
+le contrat serveur (`GET /alliance/v1/membership/mine`) et le mapping du
+controleur (`RefreshCoreAsync`) sont tous deux CORRECTS — prouve par un
+nouveau test serveur (`MyAllianceOverviewWireContractTests.cs`, 3/3, montre
+que la reponse reelle pour "pas d'alliance" est exactement `{"hasAlliance":
+false}`, sans cles "alliance"/"membership" du tout) et un nouveau test
+Unity utilisant le VRAI `SystemTextGameJsonCodec` (pas le mock qui
+contourne le JSON) contre cette chaine exacte. Le vrai bug est dans
+`HiveViewProductUiPresenter.DrawAllianceHeadquartersScreen` : la logique de
+branchement ne traitait explicitement que 2 cas (`NoAlliance`, et
+`(Loading||NotConfigured)&&!HasAlliance`) — TOUT le reste (notamment
+`Error`, `Mutating`, ou un etat perime avec `HasAlliance=true`) tombait
+directement dans le dessin complet de la coquille IN_ALLIANCE avec un
+Overview null, masque par les valeurs de repli "—" deja construites en
+M043. Facteur contributif reel mais secondaire : `alliancePlayerRole`
+n'etait jamais reinitialise dans le cas "pas d'alliance", restant a sa
+valeur par defaut statique "membre" — explique le texte "RÔLE : Membre"
+precis observe (PAS un bug d'enum `AllianceRole.Member=0` qui se ferait
+passer pour un vrai role, cette hypothese est explicitement infirmee).
+
+**Fix applique** (2 changements cibles, `HiveViewProductUiPresenter.cs`
+seulement, rien cote serveur) : branchement explicite par etat dans
+`DrawAllianceHeadquartersScreen` (Ready → toujours valide par construction;
+Error/Mutating avec un Overview valide anterieur → retry-en-place;
+Error/Mutating/Loading/NotConfigured SANS Overview valide → ecran
+NoAlliance/Loading, jamais la coquille) ; reset de `alliancePlayerRole` a
+vide dans `SyncAllianceRuntimeStateFromController` quand pas d'alliance.
+
+**IMPORTANT — non confirme cette session** : la connexion MCP Unity Editor
+etait injoignable ("Unable to connect", pas juste occupee) pendant toute
+cette mission, malgre plusieurs tentatives. Le fix n'a PAS ete compile ni
+teste en direct dans Unity. Preuve apportee uniquement par trace directe du
+code + tests serveur reels (456/456 verts, 464 total). **Premiere chose a
+faire en reprenant : ouvrir Unity, assets-refresh, lancer
+`AllianceClientTests` (12 tests attendus) avant de considerer ce fix pret
+pour le retest CEO.**
+
+Aucune alliance n'a ete creee pour le CEO. Prochain test attendu une fois
+Unity confirme : le CEO ferme et rouvre Alliance Center → doit voir l'ecran
+NO_ALLIANCE (RECHERCHER/CRÉER/INVITATIONS), jamais la coquille avec des
+tirets.
+
+**Mise a jour (M043G-CL)** : le CEO a valide humainement l'ecran NO_ALLIANCE
+(M043E fonctionne), puis a rencontre une NOUVELLE erreur "invalid_response"
+avec bouton Réessayer en explorant (RECHERCHER/CRÉER). Cause racine PROUVEE :
+le client Unity du CEO pointe vers le VRAI serveur de production
+(`https://api-ops.beekingdomgame.com`, confirme en direct via script-execute
+sur le resource `MobileAccountSessionRuntime`), ou `Alliance.Enabled=false`
+(intentionnel, documente depuis M041/M042, PAS touche). `Search`/`Create`
+sont donc correctement rejetes par le serveur (503,
+`{"code":"alliance.unavailable"}`) — mais `AllianceCenterPanelController.
+StableError` cherchait la mauvaise chaine (`"alliance.alliance_disabled"`
+au lieu du vrai `"alliance.unavailable"` que le serveur envoie depuis
+toujours), donc ce rejet legitime tombait sur le libelle generique
+"invalid_response" au lieu du vrai motif. Le rafraichissement initial
+NO_ALLIANCE lui-meme (`GetMyAlliance`/`ListMyInvitations`) n'est PAS gate
+par ce flag — confirme, ce n'etait pas la cause de l'erreur initiale.
+
+**Fix** : `StableError` reecrit pour extraire directement le vrai code
+serveur (retire le prefixe "alliance.") au lieu d'une liste blanche qui
+avait deja derive — corrige aussi les cas 403/404/400 jamais couverts.
+Aucun code serveur touche, aucun flag de production modifie (decision
+produit reservee a Jeff). 2 nouveaux tests Unity prouvant que le vrai
+SafeCode survit jusqu'au controleur. `HiveMapBuildSettingsRegressionTests`
+a de nouveau derive en cours de session (LivingHive revenu en tete) — meme
+mecanisme M043D, corrige avec la meme procedure deja approuvee, 5/5 vert.
+Serveur : 455/464 sur deux runs, 1 echec flaky different a chaque fois
+(deja documente, confirme non-Alliance en isolation). **READY FOR CEO
+NO_ALLIANCE RETEST #2** — avec la mise en garde que Search/Create resteront
+correctement refuses en production tant que le flag reste desactive (ce qui
+est le comportement voulu, juste avec un message correct maintenant).
+
+**Mise a jour (M043F-CL) — confirme** : Unity reconnecte, compilation
+propre (0 erreur CS), `AllianceClientTests` 12/12 (incluant les 2 tests
+JSON M043E), `PlayerDirectoryClientTests` 7/7.
+`HiveMapBuildSettingsRegressionTests` a d'abord echoue 3/5 — LivingHive
+etait redevenue la premiere scene activee (meme mecanisme auto-perpetuant
+que M043D, retriggeré par la reouverture d'Unity avec LivingHive comme
+scene active — rien a voir avec M043E). Corrige avec la meme procedure deja
+approuvee en M043D (memoire live + fichier disque), re-teste : 5/5 vert,
+stable apres un nouvel assets-refresh. **READY FOR CEO NO_ALLIANCE
+RETEST.**
+
+---
+
+## Jalon courant — M043C-CL : Alliance Center Compile & Test Certification (2026-09-01)
+
+Unity a repondu cette session (contrairement a la fin de M043B). Aucune
+nouvelle fonctionnalite : objectif unique = certifier M043B avant le test
+Play Mode du CEO. Rapport complet : `Docs/AI/Missions/
+M043C-CL-Alliance-Center-Compile-Test-Certification.md`.
+
+Compilation Unity confirmee propre (0 erreur CS, deux passes assets-refresh).
+Tests Unity manquants de M043B ajoutes et tous verts : nouveau
+`PlayerDirectoryClientTests.cs` (7/7 — recherche authentifiee, DTO reel,
+requete trop courte rejetee AVANT tout appel transport, reponse malformee,
+gate de session fermee, retry apres 401 avec le bon token), extensions a
+`AllianceClientTests.cs` (+3, 10/10 total — `ListPendingApplicationsAsync`,
+parsing DisplayName membres/candidatures, fallback jamais invente si absent).
+
+Serveur : 452/453 reussis, 8 ignores, 461 total, sur deux runs — chaque run
+a vu échouer un test DIFFERENT (une fois `GameWorkshopBatchQualification...`,
+une fois `AllianceAnnouncementRequiresLeaderRoleAndFanOutParticipants`),
+confirmant la meme categorie de flakiness sous parallelisme deja documentee
+depuis M041 — le second, re-lance seul, passe proprement (1/1). Aucune
+regression reelle liee a Alliance/PlayerDirectory/Chat.
+
+Sweep final : "ALLIANCE PRIME", "Le chat arrive au prochain sprint",
+`BuildAllianceMemberRoster` (le code, pas juste le nom en commentaire) —
+zero occurrence dans le runtime Alliance Center.
+
+**Verdict : READY FOR CEO PLAY MODE CERTIFICATION.** Aucun Play Mode humain
+fait a la place du CEO (instruction explicite de ne pas le faire).
+
+---
+
+## Jalon courant — M043D-CL : LivingHive Runtime Regression (URGENT, corrige) (2026-09-01)
+
+**Symptome rapporte par Jeff** : le CEO a lance le jeu et s'est retrouve dans
+la vieille scene `LivingHive.unity` au lieu du vrai HiveMap. Routage attendu :
+Auth → HiveMap → WorldMap → HiveMap. Rapport complet :
+`Docs/AI/Missions/M043D-CL-LivingHive-Runtime-Regression.md`.
+
+**Cause racine PROUVEE** : `ProjectSettings/EditorBuildSettings.asset` avait
+derive, non commite, loin du dernier etat connu bon (commit `ed1512e`
+"Align build configuration with HiveMap", 2026-08-20 — voir aussi
+`Docs/AI/Missions/M012-OC-HiveMap-Build-Configuration-Alignment.md`). Ce
+fichier montrait deja "Modified" dans `git status` AVANT meme le debut du
+travail M041-M043B — **rien a voir avec le travail Alliance**, confirme avec
+preuve directe (`MobileAccountSessionRuntimeBootstrap.cs`, modifie par
+M043/M043B, ne contient AUCUN code de chargement de scene). Etat corrompu :
+`LivingHive.unity` active a l'index 0, `Environment2D5D_HiveMap_Test.unity`
+(le vrai HiveMap de production) et `Environment2D5D_SpatialV3.unity`
+completement absents de la liste.
+
+Mecanisme demontre de la derive : `Assets/BeeKingdom/Playground/Editor/
+PlaygroundPlayModeStartScene.cs` (`[InitializeOnLoad]`, outil de confort dev
+preexistant, PAS nouveau) se relance a CHAQUE recompilation de script et,
+si LivingHive est la scene active/de demarrage courante, la reconfirme et
+appelle `EnsureSceneEnabled` qui PREPEND LivingHive active en tete de
+`EditorBuildSettings.scenes` sans dedoublonnage ni garantie de preserver les
+autres entrees — exactement le mode de defaillance deja documente par M012.
+
+**Fix applique** : `git checkout HEAD -- ProjectSettings/
+EditorBuildSettings.asset` (le fichier seul, rien d'autre) puis
+reinjection du meme etat connu-bon directement dans la memoire live de
+l'editeur (`EditorBuildSettings.scenes = ...` via script-execute, car
+l'editeur garde son propre etat en memoire independamment du fichier disque
+tant qu'il tourne). Etat final confirme identique aux deux niveaux (fichier
++ memoire live) : HiveMap index 0 active, LivingHive index 4 desactive
+(disponible QA/editeur), WorldMap canonique preserve.
+
+**Garde de regression ajoutee** : `Assets/BeeKingdom/Tests/Editor/
+HiveMapBuildSettingsRegressionTests.cs` (5 tests EditMode, testent le GUID
+de scene pas juste le chemin/nom) — tous les 5 ont echoue contre l'etat
+corrompu (confirme avant le fix), tous les 5 passent maintenant. Aucun code
+Alliance touche.
+
+Preuves : `assets-refresh` propre (0 erreur CS), 5/5 nouveaux tests verts,
+`AllianceClientTests` (M043/M043B) toujours 7/7 vert (confirme que rien
+d'Alliance n'a ete touche par ce fix).
+
+**Prochain test humain requis (obligatoire avant de reprendre M043C)** :
+le CEO relance le jeu, se connecte, doit atterrir dans HiveMap (pas
+LivingHive). Si le lancement se fait via un executable Windows/Android deja
+compile (pas l'editeur), cet executable a ete package avec l'ancienne
+configuration corrompue et doit etre **recompile** avant de retester — ce
+fix corrige la source de verite (editeur/config), pas un binaire deja
+construit.
+
+**M043C (certification Alliance) reste en pause jusqu'a confirmation de ce
+retest par Jeff**, comme demande explicitement dans la mission M043D.
+
+**Addendum — verification propriete runtime Alliance (meme mission)** : le
+CEO craignait que M041-M043B ait accidentellement construit Alliance contre
+le runtime LivingHive legacy. Verifie par inspection directe (pas par
+inference sur les noms de fichiers) : scene LivingHive.unity ouverte
+inspectee en direct (3 objets racine : "Living Hive Demo"/"Main Camera"/
+"Sun", un seul composant `LivingHiveDemoBootstrap`, zero reference Alliance).
+`MobileAccountSessionRuntimeBootstrap`/`HiveMapAllianceBootstrap` sont tous
+deux verrouilles sur `scene.name.StartsWith("Environment2D5D")` — le nom de
+scene de LivingHive ne satisfait jamais cette condition, celui de HiveMap
+(`Environment2D5D_HiveMap_Test`) la satisfait toujours. Seul site
+d'instanciation de `AllianceClient`/`AllianceCenterPanelController`/
+`PlayerDirectoryClient` dans tout le projet : `MobileAccountSessionRuntimeBootstrap.cs`
+lignes 360-365, derriere ce meme verrou. Alliance = 100% proprietaire de
+HiveMap, zero couplage LivingHive, confirme avec preuve directe (section
+"Alliance Runtime Ownership" du rapport M043D).
+
+---
+
+## Jalon courant — M043B-CL : Alliance Center Functional Closeout (2026-09-01 / nuit)
+
+**Mission de nuit** (suite directe de M043) : fermer les 3 trous fonctionnels
+identifies par M043 avant toute certification CEO en Play Mode — actions de
+membres (Promote/Demote/Kick/Transfer), vraie recherche de joueur + invitation,
+vrai pont chat d'alliance. Rapport complet :
+`Docs/AI/Missions/M043B-CL-Alliance-Center-Functional-Closeout.md`.
+
+**Mise a jour** : la connexion MCP Unity Editor etait devenue non responsive
+en cours de session (assets-refresh/script-execute/console-get-logs
+echouaient tous), mais Jeff a rouvert l'editeur et demande de relancer
+assets-refresh — **compilation confirmee propre** (0 erreur CS), et les 7
+tests Unity existants de M043 (`AllianceClientTests.cs`) tournent toujours au
+vert (aucune regression). Le blocage de compilation est leve.
+
+**Cote serveur (testé, vert)** : nouveau `PlayerDirectoryService`
+(`BeeKingdom.Accounts`, generique — pas specifique aux alliances) +
+`PlayerPublicIdentity` (`BeeKingdom.Shared`, PlayerId+DisplayName seulement,
+jamais d'email) + endpoint `GET /game/v1/players/search` (rejette une
+requete vide/trop courte — impossible d'extraire toute la base joueurs).
+`AllianceService.ListPendingApplicationsForMyAlliance` (le trou documente
+par M043 — AllianceId toujours derive du VRAI membership de l'acteur, jamais
+un parametre client) + endpoint `GET /alliance/v1/applications/pending`.
+`AllianceMemberSummary`/`AllianceApplicationView`/le Leader de
+`GetPublicProfile` ont maintenant un vrai DisplayName resolu en batch
+serveur (jamais N+1 depuis Unity) — le Leader affichait litteralement
+`LeaderPlayerId.ToString()` avant cette session. 16 nouveaux tests serveur,
+tous verts (461 total, 452-453 reussis selon le run — 1 echec flaky
+non-lie, deja documente comme categorie connue en M041/M042, pas ignore).
+
+**Cote Unity (code ecrit, compilation NON confirmee)** : nouveau
+`PlayerDirectoryClient.cs` (generique, meme patron que AllianceClient/
+HiveResearchClient). `AllianceCenterPanelController` (M043) gagne
+`SearchPlayersForInvite`/`InvitePlayerSearchResults` sans dupliquer la
+recherche dans AllianceClient. Dans `HiveViewProductUiPresenter.cs` : les
+boutons Promote/Demote/Kick/Transfer remplacent les placeholders "sera
+disponible avec les roles serveur" (visibilite calquee sur
+AlliancePermissionPolicy, jamais contre soi-meme, confirmation en 2 clics
+pour Kick/Transfer) ; le panneau "invite" a une vraie recherche + invitation
+reelle (et le bug ou n'importe quel Membre pouvait ouvrir ce panneau a ete
+corrige au passage) ; les candidatures pendantes s'affichent sous le roster
+reel avec Accepter/Rejeter ; et le tiroir de chat d'alliance
+(`DrawAllianceChatDrawer`) est reecrit pour utiliser le vrai
+`LivingHiveChatRuntime` (systeme Communication reel construit en M042) au
+lieu du texte "Le chat arrive au prochain sprint" — aucun controle de
+membership local, le serveur M042 reste seul autoritaire.
+
+Preuves : `dotnet test` — 452-453/453 non-flaky reussis, 8 ignores, 461
+total. Unity : `assets-refresh` confirme propre (0 erreur CS), sonde
+`script-execute` confirme que tous les nouveaux types se chargent sans
+exception, et `AllianceClientTests.cs` (7 tests M043) tourne 7/7 au vert.
+
+Prochain test utilisateur : en jeu, ouvrir Alliance Center, tester
+Promote/Demote/Kick/Transfer sur un vrai membre, chercher et inviter un vrai
+joueur, ouvrir l'onglet Chat et envoyer un message reel.
+
+Ouvert / a faire ensuite (ordre de priorite) :
+1. Ajouter les tests Unity manquants (PlayerDirectoryClient, wire contracts
+   applications/DisplayName) dans `Assets/BeeKingdom/Tests/Editor/
+   AllianceClientTests.cs`.
+2. Validation Play Mode reelle contre un serveur reel (jamais faite, ni en
+   M043 ni ici) — c'est le seul vrai blocage restant avant certification CEO.
+3. M042 Part 5 (ingestion d'activite gameplay reelle) reste entierement a
+   faire, toujours.
+
+---
+
+## Jalon courant — M043-CL : Alliance Center Real Unity Integration (fenetre reelle, plus de fake data) (2026-09-01 / nuit)
+
+**Mission de nuit** (suite directe de M042) : brancher la fenetre Alliance
+Center existante (`HiveViewProductUiPresenter.DrawAllianceHeadquartersScreen`)
+sur le vrai backend, retirer "ALLIANCE PRIME"/"NEX"/le roster fictif/l'activite
+simulee. Rapport complet :
+`Docs/AI/Missions/M043-CL-Alliance-Center-Real-Unity-Integration.md`.
+
+**Bugs reels trouves et corriges avant meme de pouvoir commencer le UI** :
+`AllianceClient.cs` (cree en M041, jamais reellement teste contre le serveur)
+deserialisait directement dans le mauvais type pour 5 endpoints (Create/Join/
+AcceptApplication/AcceptInvitation/TransferLeadership) — le serveur retourne
+en realite un wrapper (`CreateAllianceResult{Alliance,...}` etc.), et
+System.Text.Json ne levait AUCUNE exception, remplissait juste l'objet avec
+des valeurs par defaut (Guid.Empty, null) en silence. Egalement : Leave/Kick
+retournaient un corps HTTP vide cote serveur, que le codec JSON Unity rejette
+toujours comme malformed. Les deux corriges (nouveaux wrappers `Remote*Result`
+cote Unity + `Results.Ok(new { success = true })` cote serveur), avec 7
+nouveaux tests Unity (`AllianceClientTests.cs`, tous verts) qui verifient le
+VRAI type demande au transport, pas juste "ca ne plante pas".
+
+**Nouveau endpoint serveur** : `GET /alliance/v1/membership/mine` (+
+`AllianceService.GetMyAlliance`) — aucun endpoint n'existait pour savoir "dans
+quelle alliance suis-je" sans deja connaitre un AllianceId. 3 nouveaux tests
+serveur.
+
+**Fenetre Unity reellement branchee** : nouveau
+`Assets/BeeKingdom/Playground/AllianceCenterPresentation.cs` (meme patron que
+`HiveResearchPresentation.cs` — modele/etat/controleur), instancie dans
+`MobileAccountSessionRuntimeBootstrap` (meme cycle de vie que Research :
+construction/refresh/teardown sur perte de session). Ecran NO_ALLIANCE reel
+(Rechercher/Creer/Invitations, formulaire de creation fonctionnel). Overview,
+roster de membres (tri Chef/Officier/Membre), et journal d'activite tous
+branches sur les vraies donnees serveur — tout champ sans equivalent serveur
+(niveau, puissance, presence en ligne...) affiche "—", jamais une valeur
+inventee. Leave/Dissolve reels avec confirmation en deux clics. Role du
+joueur (`alliancePlayerRole`) desormais synchronise depuis le serveur a
+chaque frame (le bouton de bascule locale "RÔLE (TEST)" a ete retire).
+
+**PAS fait cette session** (documente honnetement dans le rapport, section
+23) : boutons Promote/Demote/Kick/Transfer sur les lignes de membres (le
+controleur les expose deja, testes, juste aucun bouton ne les appelle
+encore) ; pont vers le vrai chat d'alliance M042 (le champ
+`ChatConversationId` a ete ajoute cote client, mais l'onglet Chat affiche
+toujours l'ancien texte "prochain sprint") ; recherche de joueur pour
+inviter (aucun systeme de recherche de joueur reel n'existe nulle part dans
+ce depot — documente, pas invente) ; onglets Diplomatie/Guerre toujours des
+placeholders "A VENIR" (honnete, mais pas la "integration minimale" demandee
+si le temps le permettait).
+
+Preuves : serveur — **437 reussis / 0 echec / 8 ignores / 445 total**
+(`dotnet test`). Unity — compilation projet entiere propre (0 erreur CS,
+verifie deux fois via `assets-refresh`), `AllianceClientTests.cs` **7/7
+reussis** via le vrai Test Runner Unity. Une tentative de test au niveau du
+controleur (`AllianceCenterPanelController`) a du etre abandonnee : le
+dossier `Assets/BeeKingdom/Tests/` compile dans son propre
+`BeeKingdom.Tests.asmdef`, qui ne peut structurellement pas referencer
+l'assembly par defaut `Assembly-CSharp` ou vit `AllianceCenterPresentation.cs`
+— contrainte Unity documentee ailleurs dans ce meme projet
+(`LivingHiveResearchBridgeTests.cs`). Une execution complete du run EditMode
+(1464 tests) a timeout deux fois via le round-trip MCP — non confirmee, mais
+la compilation propre du projet entier est la preuve de substitution
+pratique utilisee.
+
+Prochain test utilisateur : ouvrir Alliance Center en jeu avec un vrai compte
+connecte — verifier NO_ALLIANCE → Creer → Overview reel → Membres reels →
+Journal reel → Quitter/Dissoudre. **CEO PLAY MODE VALIDATION PENDING** —
+aucun clic reel en Play Mode contre un serveur reel n'a ete fait cette
+session (voir rapport section 21).
+
+Ouvert / a faire ensuite (ordre de priorite, voir rapport section 23) :
+1. Boutons Promote/Demote/Kick/Transfer sur `DrawAllianceMemberRow`/
+   `DrawAllianceMemberProfile*` (le controleur est deja pret).
+2. Pont chat reel : rediriger `DrawAllianceChatDrawer`/le bouton "chat" de
+   la barre d'actions rapides vers `Alliance.ChatConversationId` via le vrai
+   module Communication (M042).
+3. Decision produit : nouveau endpoint de recherche de joueur, ou accepter
+   un flux d'invitation par identifiant partage a la place.
+4. M042 Part 5 (ingestion d'activite gameplay reelle — Building Upgrade/
+   Research/Combat/Gathering) reste entierement a faire, toujours.
+
+---
+
+## Jalon courant — M042-CL : Alliance Platform Integration (chat + persistance durable, nuit sans supervision) (2026-09-01 / nuit)
+
+**Mission de nuit confiee par Jeff** (suite immediate de M041, "brancher le
+cerveau Alliance au jeu"), brief tres long en 9 parties. Cette session a
+livre un sous-ensemble complet et teste : Part 3 (chat d'alliance reel,
+creation + synchronisation de membres + autorite serveur sur les roles) et
+Part 4 (persistance durable JSON pour toutes les sous-parties Alliance,
+validee par un vrai test de redemarrage). **Parts 1, 2, 5, 6 (partiel), 7, 8
+n'ont PAS ete commencees** — la fenetre Unity Alliance Center affiche
+toujours des donnees fictives ("ALLIANCE PRIME"/"NEX"). Rapport complet,
+honnete sur ce qui manque : `Docs/AI/Missions/M042-CL-Alliance-Platform-Integration.md`.
+
+**Chat d'alliance (Part 3)** : `AllianceService.CreateAlliance` cree
+maintenant une vraie conversation `ChatChannelType.Alliance` via
+`ChatManager`, idempotente (retry ne duplique jamais). Join/Kick/Leave/
+Promote/Demote/TransferLeadership/Dissolve synchronisent reellement les
+participants du chat (nouvelles methodes `IChatRepository.UpsertParticipant`/
+`RemoveParticipant`). Securite : `LocalChatAudienceResolver` ne fait plus
+JAMAIS confiance a un role d'alliance declare par le client pour les canaux
+Alliance/Leaders — le role reel vient desormais de
+`IAllianceMembershipResolver` (interface vivant dans `BeeKingdom.Chat.Audience`
+pour eviter une reference circulaire Chat->Alliance ; implementee par
+`BeeKingdom.Alliance.Integration.AllianceMembershipResolver`, qui interroge
+`IAllianceRepository.GetActiveMembership`). Deux tests HTTP bout-en-bout
+preexistants qui testaient l'ancien comportement insecure ont ete reecrits
+pour creer une vraie alliance via les endpoints reels au lieu de declarer un
+role fictif.
+
+**Persistance durable (Part 4)** : `DurableJsonAlliance*Repository` (un par
+sous-domaine : core, activite, diplomatie, guerre), meme pattern que
+`DurableJsonHiveStateRepository` (fichier JSON par agregat, ecriture atomique).
+Chaque repository durable enveloppe une instance `InMemoryAlliance*Repository`
+privee pour toute la logique (deja testee), et ajoute uniquement
+l'ecriture/rechargement disque. Si `Persistence:Provider=SqlServer` est
+configure, `AddBeeKingdomAlliance` leve une exception explicite plutot que de
+retomber silencieusement sur JSON sous un nom qui pretend SQL — aucune
+migration SQL commencee (decision CEO/GPT requise, comme demande).
+
+Preuves : `dotnet test` depuis `Server/tests/BeeKingdom.Tests` — **434
+reussis / 0 echec / 8 ignores / 442 total**, aucune regression sur les 35
+tests M041. Tests cles nouveaux : `AllianceChatIntegrationTests.cs` (5 tests,
+dont un qui prouve qu'un membre exclu perd reellement l'acces au canal),
+`AllianceDurablePersistenceTests.cs` (2 tests, dont un test de redemarrage
+reel — nouveaux repositories au meme chemin disque), `ChatAudienceResolverTests.cs`
+reecrit (6 tests sur la nouvelle autorite serveur).
+
+Prochain test utilisateur : aucun cote Unity pour l'instant (rien n'a change
+visuellement — la fenetre Alliance Center est toujours fictive). Cote
+serveur, `dotnet test` depuis `Server/tests/BeeKingdom.Tests` doit rester vert.
+
+Ouvert / a faire ensuite (dans l'ordre, voir section "Prochaine session" du
+rapport M042 pour le detail) :
+1. Part 1A : instancier `AllianceClient` (existe depuis M041, jamais
+   instancie) dans `MobileAccountSessionRuntimeBootstrap.cs`, meme patron
+   que `HiveResearchClient` (`client.Gate, client, gameTransport`).
+2. Part 1E-1H : brancher `HiveViewProductUiPresenter.DrawAllianceHeadquartersScreen`
+   sur ce client (retirer `BuildAllianceMemberRoster()` et les valeurs
+   codees en dur).
+3. Part 5 : brancher `IAllianceActivityPublisher.PublishForPlayerAsync(...)`
+   sur les vrais points de completion Building Upgrade/Research d'abord
+   (plus simples), puis Combat/Gathering.
+4. Parts 2, 6 (approfondir), 7, 8 restent entierement a faire.
+
+---
+
+## Jalon courant — M041-CL : Alliance Platform Core (socle serveur-autoritaire, nuit sans supervision) (2026-08-31 / nuit)
+
+**Mission de nuit confiee par Jeff avant de dormir** ("continue si tu veux"),
+brief tres long et detaille exigeant un socle Alliance server-authoritative
+complet (aggregate, membership, roles/permissions, join/candidature/
+invitation, promotion/kick/leave, transfert de leadership, dissolution,
+activity feed, fondations diplomatie/guerre) + branchement de la fenetre
+Unity Alliance existante + preparation de contrats Web. Rapport complet :
+`Docs/AI/Missions/M041-CL-Alliance-Platform-Core.md`, architecture :
+`Docs/Alliance/ALLIANCE_PLATFORM_ARCHITECTURE.md`.
+
+**Inventaire prealable (agent Explore)** : la fenetre Alliance existe deja
+(bouton `ALLIANCE_CENTER` → `HiveMapAllianceBootstrap.cs` →
+`HiveViewProductUiPresenter.DrawAllianceHeadquartersScreen`, IMGUI) mais est
+**100% locale/fake** — nom code en dur `"ALLIANCE PRIME"`, roster de membres
+code en dur, activite simulee cote client, tiroir de chat affichant
+litteralement "Le chat arrive au prochain sprint…". Aucun domaine serveur
+Alliance n'existait avant cette session (seulement des DTO stubs jamais
+cables). Le systeme de chat `ChatChannelType.Alliance` est reel cote
+transport mais fait confiance a un role d'alliance **declare par le client**
+(pas verifie serveur) — point d'amelioration naturel maintenant qu'un vrai
+modele de membership existe.
+
+**Nouveau module serveur `BeeKingdom.Alliance`** (projet complet, cable dans
+`Program.cs` avec 25 endpoints REST `/alliance/v1/*`) : `AllianceEntity`
+(Aggregate Root, pas "un PlayerId avec une liste de membres"),
+`AllianceMembership`, `AllianceApplication`, `AllianceInvitation`,
+`AlliancePermissionPolicy` (permissions centralisees, jamais de `if(role==...)`
+disperse), `AllianceActivityEvent` (feed structure — Type/Actor/Target/
+Payload, jamais de phrase pre-localisee, pour la future page Web),
+`AllianceDiplomaticRelation` (NAP/Ally/Hostile/War, cle canonique par paire),
+`AllianceWar` (relation ENTRE alliances, pas "joueur A attaque joueur B").
+Toutes les operations testees et servi-autoritaires : invariant
+un-joueur-une-alliance, capacite re-verifiee a l'acceptation (pas seulement
+a la soumission), idempotence par recu `(PlayerId, ClientRequestId)` partout,
+`Revision` optimistic concurrency sur le profil.
+
+**Test empirique important fait cette nuit** : verification directe en Play
+Mode (avant que Jeff se couche, dans le cadre du bug d'occlusion FTUE — voir
+jalon M040X ci-dessous) qu'IMGUI l'emporte toujours sur un Canvas uGUI
+Overlay quel que soit le sortingOrder — implique que le futur branchement de
+la fenetre Alliance (elle-meme IMGUI) doit rester en IMGUI, pas de migration
+uGUI a envisager pour elle non plus.
+
+**Bonus fin de session** : `Assets/BeeKingdom/Networking/AllianceClient.cs`
+cree (meme patron exact que `HiveResearchClient.cs`), compile sans erreur
+cote Unity. Couvre Create/Search/Profil/Membres/Join/Candidatures/
+Invitations/Kick-Promote-Demote-Transfer/Dissolve/Activite. Diplomatie/Guerre
+pas couvertes cote client (onglets correspondants encore "bientot
+disponible" dans la fenetre existante, rien a y brancher).
+
+Preuves : `Server/tests/BeeKingdom.Tests/AllianceServiceTests.cs` — 35 tests,
+tous verts en isolation et en parallele. Suite complete serveur 422/422 en
+isolation (2 tests pre-existants sans rapport avec Alliance sont flaky sous
+parallelisme complet — signale honnetement dans le rapport, pas une
+regression introduite). Compilation Unity et serveur verifiees propres a
+chaque etape (jamais suppose).
+
+**Ce qui n'a PAS ete fait** (honnete, voir verdict complet dans le rapport) :
+la fenetre Unity existante n'a PAS ete branchee sur ce backend — elle affiche
+toujours des donnees codees en dur. Aucune validation runtime/visuelle n'a
+eu lieu. `ChatConversationId` n'est pas encore auto-lie a la creation
+d'alliance. Aucune persistance SQL (in-memory seulement,
+`SQL_PRODUCTION_MIGRATION_PENDING`). Aucun depot Web n'existe dans ce repo
+(confirme par l'inventaire) — les contrats sont prets a etre consommes par
+un futur depot, pas plus.
+
+Flag `Alliance:Enabled=true` en dev/base config, `false` explicitement en
+production (conservateur).
+
+Prochain test utilisateur : rien a tester visuellement tant que la fenetre
+n'est pas branchee — la prochaine session doit commencer par ca (voir
+bloqueur #1 du rapport M041-CL, deja avec le chemin de fix minimal ecrit).
+
+Ouvert / a faire ensuite :
+- Brancher `HiveViewProductUiPresenter.DrawAllianceHeadquartersScreen`
+  (onglets `overview`/`members` d'abord) sur `AllianceClient.cs`, meme patron
+  que `OfficialResearchModel()`/`OfficialBuildingUpgradeModel()`.
+- Lier `ChatConversationId` a la vraie conversation Chat a la creation
+  d'alliance.
+- Envisager de faire verifier le role de chat par le vrai modele Alliance
+  au lieu du role declare par le client dans `LocalChatAudienceResolver`.
+- Persistance SQL pour les 4 repositories Alliance (aucune migration cette
+  nuit, comme demande).
+- Investiguer/corriger a l'occasion la flakiness de parallelisme des 2 tests
+  pre-existants signales (hors scope Alliance).
+
+---
+
+## Jalon courant — M040-CL : playthrough FTUE reel PART2 (Recherche + Collecte + bug occlusion resolu) (2026-08-31)
+
+**Mission M040-CL en cours** (rapport principal en construction :
+`Docs/AI/Missions/M040-CL-Alpha-FTUE-Real-Player-Journey.md`, encore
+incomplet — sections 8+ a finir). Session longue, plusieurs bugs reels
+trouves et corriges via un vrai playthrough (clics humains de Jeff, jamais
+de mutation reflection).
+
+**Recherche officielle — bug de fiabilite reel corrige.** `revision_conflict`
+survenait presque systematiquement au clic "Lancer" car `Revision` est
+globale a la ruche (bouge a chaque tick de production), pas specifique a la
+recherche — le cache client etait presque toujours perime. Corrige dans
+`HiveResearchPresentation.cs` (`HiveResearchPanelController.StartCoreAsync`/
+`CompleteCoreAsync`) : sur `revision_conflict`, rafraichissement silencieux
++ une seule retentative automatique et transparente (le joueur ne voit
+jamais l'erreur). Recherche `tempered_combs_i` demarree et terminee pour de
+vrai en jeu (serveur confirme : `Completed=tempered_combs_i`).
+
+**Sondage auto de la fenetre Recherche.** Le sondage periodique (5s) qui
+detecte la fin du minuteur etait desactive pendant que la fenetre Recherche
+elle-meme etait ouverte (l'exact moment ou il faut qu'il tourne) — bouton
+restait bloque sur "Actualiser" au lieu de "Terminer". Corrige
+(`HiveMapResearchBootstrap.OnGUI` + nouvelle methode `HiveViewProductUiPresenter.
+RefreshResearchIfOverlayOpenAndDue`). Le rafraichissement est desormais
+"silencieux" (`HiveResearchPanelController.RefreshQuietly`, nouvelle methode
+sur `IHiveResearchPanelController`) pour ne plus faire clignoter toute la
+fenetre en etat "Chargement" toutes les 5s (regression signalee par Jeff,
+corrigee dans la meme session).
+
+**Zoom carte du monde traversant les fenetres premium.** `HandleWorldMapGestures`
+(zoom molette de l'apercu carte du monde) n'avait aucune protection contre
+les panneaux premium ouverts, contrairement a `HandleReferenceHiveGestures`
+deja corrige lors d'une session precedente — ajoute `PremiumUiBlocksWorldInput()`
+en garde.
+
+**Bug d'occlusion FTUE — abeilles/icone de collecte par-dessus le dialogue.**
+Root cause reelle (voir rapport dedie `Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md`) :
+deux `OnGUI` IMGUI distincts (`TutorialDialoguePresenter` vs
+`HiveMapProductionBootstrap`) a ordre d'execution egal (0), Unity ne
+garantit pas leur ordre de dessin relatif. **Deux tentatives par ordre
+d'execution ont echoue empiriquement** (attribut `[DefaultExecutionOrder]`
+jamais applique en pratique ; `MonoImporter.SetExecutionOrder` force et
+verifie persiste `32000` mais le bug persistait quand meme apres un vrai
+redemarrage Play Mode). Corrige finalement par vrai decoupage IMGUI
+(`GUI.BeginGroup`/`EndGroup`) dans `HiveMapProductionBootstrap.OnGUI` :
+occlusion pixel-perfect a la bordure reelle du panneau, rien n'est
+desactive/cache par un booleen — les abeilles continuent de voler
+normalement, juste coupees visuellement en traversant la zone du panneau.
+Confirme par Jeff en Play Mode reel apres plusieurs allers-retours.
+
+Preuves : `Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md` (tableau
+PASS complet) ; recherche server-confirmee (`Completed=tempered_combs_i`,
+`Honey=348→1141` apres collecte reelle, `ActiveOperation=null` apres
+Terminer) ; compilation verifiee propre (`scriptCompilationFailed=False`)
+apres chaque etape.
+
+Prochain test utilisateur : continuer le playthrough M040 la ou il en est
+(FTUE au step `training_intro`, Honey=1141/Pollen=908/Wax=671 environ) —
+Entrainement (Caserne, darters/Lanceuses), puis Armee, puis fin de PART2.
+
+**Suite de la meme session (Jeff parti dormir, "continue si tu veux") :**
+occlusion FTUE approfondie — le portrait de Striga/Zephyra (qui deborde
+volontairement au-dessus du panneau) se faisait couper par la Caserne
+ouverte derriere lui. **Test empirique demande par Jeff** ("reglons ca une
+fois pour toutes") : IMGUI vs uGUI `Canvas` (`Screen Space - Overlay`,
+`sortingOrder=32000`) — deux carres crees en Play Mode reel, **IMGUI gagne
+toujours**, confirme visuellement. Migrer le dialogue vers uGUI aurait donc
+fait l'inverse de l'effet recherche (dialogue derriere tous les autres
+panneaux IMGUI) — piste ecartee sur preuve. Fix retenu : nouveau
+`HiveViewProductUiPresenter.AnyModalOpenForExternalHost` (reprend la liste
+deja maintenue dans `HiveMapOverlayInputGateBootstrap`) ; le portrait bascule
+automatiquement en cadrage contenu (ne deborde plus) des qu'une fenetre est
+ouverte, redevient premium/debordant sinon. Le decoupage `GUI.BeginGroup`
+(bande du panneau uniquement, pas la zone du portrait — ca recreait le meme
+bug en revelant le decor brut derriere la transparence du portrait) etendu a
+`HiveMapResearchBootstrap` et `HiveMapArmyBootstrap` en plus de Production/
+Barrack. Royal Palace/Construction/Alliance pas touches (chemins `OnGUI` a
+sorties anticipees multiples, risque de `BeginGroup`/`EndGroup` desapparies).
+Rapport complet : `Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md`.
+
+**Tests de regression ajoutes** (`SandboxLivingHiveOfficialResearchTests.cs`) :
+4 nouveaux tests pour le retry silencieux sur `revision_conflict` (Start ET
+Complete, plus le cas "conflit deux fois de suite → erreur reelle, pas de
+boucle infinie") et pour `RefreshQuietly` (ne doit jamais montrer l'etat
+Loading). En les executant reellement (`RunAllAssertions()` appele en
+direct, sans passer par le Test Runner qui aurait exige d'arreter le Play
+Mode de Jeff), **2 bugs preexistants non lies a cette session ont ete
+trouves et corriges au passage** :
+1. `MonotonicProjectionNeverAuthorizesCompletion` utilisait `Is.Zero` sur un
+   `TimeSpan` (NUnit ne le gere pas correctement) → corrige en
+   `Is.EqualTo(TimeSpan.Zero)`.
+2. `OfficialResearchActionRectsForProof` (calcul des rects d'action mobile)
+   ne connaissait pas le `GUI.BeginScrollView` ajoute plus tot dans cette
+   meme session — il supposait encore les 10 items du catalogue empiles sans
+   defilement, debordant l'ecran mobile (907px de contenu sur 844px
+   disponibles). Corrige pour ne retourner que les cartes reellement
+   visibles au chargement (scroll=0), en coordonnees ecran absolues,
+   miroir exact de `RegisterScreenRect` dans le vrai code de dessin.
+
+Tous les tests de `SandboxLivingHiveOfficialResearchTests` passent
+maintenant (verifie en executant reellement, pas juste compile). Les tests
+`FtueTutorialEngineTests`/`FtueHiveCorePart2Tests` (M037/M038, format Test
+Runner standard, pas invocables directement) compilent proprement mais
+n'ont pas ete executes cette session (aurait exige d'arreter le Play Mode
+actif de Jeff — a faire au prochain lancement batchmode).
+
+Ouvert / a faire ensuite :
+- Finir `Docs/AI/Missions/M040-CL-Alpha-FTUE-Real-Player-Journey.md`
+  (sections 8+, verdict final A-V).
+- Le meme bug d'occlusion existe probablement sur la vue "reference hive"
+  (scene `LivingHive`, `DrawManualCollectionReadyMarkers`/
+  `DrawBuildingUpgradeReadyMarkers`) — jamais observe ni corrige cette
+  session, meme technique (`GUI.BeginGroup`) a appliquer si Jeff le
+  constate un jour. Meme chose pour Royal Palace/Construction/Alliance,
+  volontairement pas touches (voir raison ci-dessus).
+- Executer la suite de tests automatises complete (M037/M038/M039 + les
+  nouveaux tests M040/M040X) en batchmode une fois la session Play Mode
+  fermee — jamais `-quit` combine a `-runTests`.
+- Reprendre le playthrough M040 a `ftue.core2.training_select_highlight`
+  (Caserne ouverte, choisir Lanceuses, lancer l'entrainement) — bloque sur
+  un vrai clic humain de Jeff, volontairement pas simule.
+
+---
+
+## Jalon courant — UI FTUE : portrait de Championne dans le dialogue (2026-08-31)
+
+**Mission ciblee, purement visuelle, distincte de M039** (rapport dedie :
+`Docs/AI/Missions/RAP-UI-FTUE-Dialogue-Champion-Portrait.md`). Le panneau de
+dialogue FTUE affichait une simple initiale ("S") pour identifier le
+personnage qui parle ; remplace par le vrai portrait de la Championne,
+choisi automatiquement via le `championId` deja present dans le modele FTUE
+(aucun texte hardcode).
+
+**Assets reutilises, aucun genere.** `Resources/WorldMapWave6Runtime/CombatMarch/
+ChampionMarchBody_striga.png` et `..._zephyra.png` (deja utilises par les
+visuels de marche de combat sur la carte du monde) — PNG transparents, pose
+dynamique, bien plus adaptes que les icones `ChampionBees/*.png` a fond
+opaque. Mapping `championId -> chemin Resources` dans un dictionnaire
+statique de `TutorialDialoguePresenter` ; fallback propre vers l'ancien badge
+a initiale pour toute Championne sans portrait (Ambra/Aurelia/Nectaria
+aujourd'hui) — le FTUE ne casse jamais faute d'asset.
+
+**Mise en page premium** : le personnage deborde au-dessus du panneau depuis
+le coin inferieur-gauche (`GUI.DrawTexture` + `ScaleMode.ScaleToFit`, aspect
+et transparence preserves, aucune interception de clic puisque ce n'est
+qu'un dessin IMGUI sans controle). Nom de la Championne affiche en majuscules
+au-dessus du texte de dialogue. Deux corrections demandees par Jeff en cours
+de revue live, toutes deux appliquees et confirmees a l'ecran : (1) la ligne
+d'accent orange ne traverse plus le portrait (deplacee pour ne longer que la
+partie texte/boutons), (2) le fond du panneau est maintenant plein et opaque
+(`GUI.Box` laissait transparaitre l'ecran derriere a cause de l'alpha bakee
+du skin par defaut — remplace par un `DrawTexture` sur `Texture2D.whiteTexture`).
+
+Seul fichier touche : `Assets/BeeKingdom/Tutorial/Runtime/TutorialDialoguePresenter.cs`.
+Verifie en Play Mode reel (Striga puis Zephyra, forces via reflexion pour ne
+pas perturber la vraie progression FTUE), confirme visuellement par Jeff en
+direct ("J'adore !!!! Ca commence vraiment a ressembler a un jeu premium !!!").
+Aucun commit, aucun push.
+
+Prochain test utilisateur : rien de plus a verifier sur ce point precis ; a
+revoir seulement si une future Championne rejoint le FTUE sans portrait
+`ChampionMarchBody_*` disponible.
+
+---
+
+## Jalon courant — M039-CL : cause racine + correctif invalid_response Building Upgrade compte neuf (2026-08-31)
+
+**Mission recue pendant que l'ecran de Jeff etait verrouille** ("Fais ce que tu peux avec
+l'ecran verrouillee, je reviens de diner dans 1h") — investigation et correctif faits entierement
+par lecture de code statique + tests automatises reels, sans Play Mode (impossible : ecran
+verrouille + Editeur Unity interactif de Jeff detenait deja le verrou du projet, confirme par un
+echec de connexion MCP et un echec de lancement Unity en batchmode). Rapport complet (15 sections +
+verdict A-M) : `Docs/AI/Missions/M039-CL-Fresh-Account-Building-Upgrade-Invalid-Response.md`.
+
+**Cause racine prouvee.** `SupportedBuildings` dans `HiveBuildingUpgradeClient.cs` etait une liste
+blanche codee en dur de 4 batiments (`honey_storage, wax_workshop, warehouse_cells,
+administration_core`), jamais mise a jour depuis que le catalogue serveur reel est passe a 14
+batiments. `ValidateSnapshot` (validation client post-deserialisation) rejette **tout** le snapshot
+des qu'une seule offre reference un batiment absent de cette liste. Un compte neuf a `guard_post`
+au niveau 1 (bootstrap `CreateInitialHiveState`), dans la plage couverte par le catalogue -> une
+offre `guard_post` est toujours presente -> chaque `GET /building-upgrades` echouait pour un compte
+neuf, quel que soit le panneau ouvert (Caserne ou Palais Royal, meme snapshot rejete dans les deux
+cas). Categorie du bug : (B) reponse serveur valide, validation client trop restrictive - pas un
+probleme d'auth, de DTO, de deserialisation ni d'etat initial incomplet.
+
+**Correctifs.** `SupportedBuildings` etendu aux 14 batiments exacts du catalogue serveur (miroir de
+`OfficialUpgradeBuildingIds` deja utilise cote UI). Bouton "Ameliorer" de la Caserne
+(`DrawBarrackTopBar`) : `enabled` code en dur a `true` remplace par
+`OfficialBuildingUpgradeActionEnabled("guard_post")` (etat reel du modele, retry preserve en etat
+Erreur).
+
+**Preuves.** 3 nouveaux tests de regression : 2 cote client
+(`HiveBuildingUpgradeClientTests.cs` — reproduction exacte du snapshot compte neuf + garde-fou sur
+les 14 batiments du catalogue), 1 cote serveur bout-en-bout
+(`BuildingUpgradeEndpointTests.cs::FreshAccountGetIncludesGuardPostOfferAndStartDebitsExactlyOnce`
+— aucun seed manuel, vrai `CreateInitialHiveState`, GET reussi + offre guard_post confirmee, Start
+reel, debit exact 972 honey/251 wax une seule fois, ActiveOperation cree, idempotence verifiee).
+Suite serveur complete : **387/387 reussis**, 0 echec (`dotnet test`, mesure directe). Suite Unity
+EditMode (client, FTUE M037/M038) **non executee cette session** — bloquee par le verrou de projet.
+
+**MISE A JOUR (meme jour, ecran deverrouille) : clic humain reel CONFIRME REUSSI.** Jeff a
+reconnecte sa session Play Mode et clique lui-meme sur le vrai bouton "N.1 Ameliorer" de la
+Caserne (compte a l'etat bootstrap : 1500 honey / 500 pollen / 500 wax, tous batiments niveau 1).
+Preuve serveur lue par reflexion juste apres le clic : `ActiveOperation=guard_post 1->2,
+Status=Running, StartedAtUtc=17:43:00, CompletesAtUtc=17:46:00` (3 min exactes),
+`Balances=honey=528 (-972); wax=249 (-251)` (debit exact, une seule fois), confirme visuellement
+par Jeff ("Construction / En cours / 1 min 53 s"). La FTUE a reellement avance :
+`FtueProgress.LastCompletedStepId=ftue.intro.upgrade_started`,
+`CurrentStepId=ftue.intro.timer_dialogue`, horodatee exactement au meme instant que
+`ActiveOperation.StartedAtUtc` — preuve que l'avancement vient du vrai succes serveur, pas d'un
+evenement fabrique. **REAL_UPGRADE_FRESH_ACCOUNT = PASS.** Le blocage Building Upgrade de M039 est
+FERME (Verdict L = OUI dans le rapport, mis a jour).
+
+Reste non fait cette session : la suite EditMode Unity (M037/M038/M039) n'a pas pu tourner (verrou
+de projet — l'Editeur interactif de Jeff reste ouvert en permanence, meme en Play Mode, empechant
+tout lancement batchmode en parallele) — a relancer au prochain arret de l'Editeur. Un log
+diagnostique `[M016E-FREEZE-PROBE]` est apparu deux fois sans aucun signe de gel reel — a surveiller,
+non bloquant.
+
+Ouvert / a faire ensuite : reprendre M038C (Objectif 9 de M039) exactement ou elle s'etait
+arretee — Part1 -> Part2 : suite du dialogue du minuteur, Recherche avec vigilance sur le gel
+historique M016E, Collecte, Entrainement, Armee — sans reecrire ces systemes, en s'arretant
+immediatement sur tout nouveau blocage reel decouvert. Puis relancer la suite EditMode complete
+pour confirmer M037 (11/11), M038 (18/18) et les 2 nouveaux tests M039.
+
+---
+
 ## Jalon courant — M021 : composition proportionnelle + champion + retour realiste sur la marche (2026-08-26)
 
 **Mission M021 recue de Jeff sous forme de brief structure** (format "CEO validation", style deja
