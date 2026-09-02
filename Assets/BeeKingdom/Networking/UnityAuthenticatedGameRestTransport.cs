@@ -186,10 +186,12 @@ namespace BeeKingdom.Networking
             return "game.rejected";
         }
 
+        private static readonly string[] AllowedErrorCodePrefixes = { "game.", "alliance." };
+
         private static bool IsSafeGameCode(string code)
         {
             if (string.IsNullOrWhiteSpace(code) || code.Length > 96 ||
-                !code.StartsWith("game.", StringComparison.Ordinal)) return false;
+                !StartsWithAny(code, AllowedErrorCodePrefixes)) return false;
             for (int index = 0; index < code.Length; index++)
             {
                 char value = code[index];
@@ -224,11 +226,13 @@ namespace BeeKingdom.Networking
             return new AuthenticatedGameRestException(AuthenticatedGameRestError.InvalidResponse, code);
         }
 
-        private static bool StartsWithAllowedPrefix(string path)
+        private static bool StartsWithAllowedPrefix(string path) => StartsWithAny(path, AllowedPathPrefixes);
+
+        private static bool StartsWithAny(string value, string[] prefixes)
         {
-            foreach (string prefix in AllowedPathPrefixes)
+            foreach (string prefix in prefixes)
             {
-                if (path.StartsWith(prefix, StringComparison.Ordinal)) return true;
+                if (value.StartsWith(prefix, StringComparison.Ordinal)) return true;
             }
             return false;
         }
