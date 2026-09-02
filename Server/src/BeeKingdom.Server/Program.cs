@@ -1697,6 +1697,28 @@ app.MapPost("/ops/migrations/apply", async (HttpContext context, IOptions<OpsSec
     return Results.Ok(new { status = "Applied" });
 });
 
+// M043Q-CL: narrow, read-only support lookup (email -> real onboarded DisplayName only, nothing
+// else) - gated by the same Ops:AdminKey already live in production for /ops/migrations/*, not by
+// AdminSupportOptions (disabled in prod by design; that surface also exposes mutation endpoints,
+// disproportionate for a single read). Never returns PlayerId/AccountId/status.
+app.MapGet("/ops/players/lookup-display-name", (HttpContext context, string? email, IOptions<OpsSecurityOptions> ops, IAccountCredentialStore accounts) =>
+{
+    IResult? authorization = AuthorizeOps(context, ops.Value);
+    if (authorization != null)
+    {
+        return authorization;
+    }
+
+    if (string.IsNullOrWhiteSpace(email))
+    {
+        return Results.BadRequest(new { code = "game.invalid_request", message = "game.error.invalid_request" });
+    }
+
+    return accounts.TryGetByEmail(email, out AuthenticationAccount account)
+        ? Results.Ok(new { email = account.Email, displayName = account.DisplayName, isOnboarded = account.IsOnboarded })
+        : Results.NotFound(new { code = "game.not_found", message = "game.error.not_found" });
+});
+
 app.MapGet("/ops/migrations/rollback-plan", (HttpContext context, IOptions<OpsSecurityOptions> ops) =>
 {
     IResult? authorization = AuthorizeOps(context, ops.Value);
