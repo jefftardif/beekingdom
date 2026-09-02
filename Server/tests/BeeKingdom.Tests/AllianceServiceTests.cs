@@ -34,6 +34,33 @@ public sealed class AllianceServiceTests
     // ---------------- Create ----------------
 
     [Test]
+    public void CreateAlliance_AcceptsRealCeoPayloadUnderProductionDefaultOptions()
+    {
+        // M043L-CL: uses the AllianceOptions property-initializer defaults (no override), exactly
+        // matching production (appsettings.json/appsettings.Production.json only set
+        // Enabled/DiplomacyEnabled/WarEnabled/MaxMembers, never Name/Tag/Description bounds) - and
+        // the exact CEO Create form values captured live from the Play Mode session during the
+        // alliance.invalid_request investigation. This passing test is what proved the server's own
+        // validation was never the problem - the real bug was the request body serializing to "{}"
+        // client-side (see UnityAuthenticatedGameRestContracts.SystemTextGameJsonCodec, IncludeFields).
+        var options = Options.Create(new AllianceOptions { Enabled = true, MaxMembers = 100 });
+        var service = new AllianceService(
+            new InMemoryAllianceRepository(),
+            new InMemoryAllianceActivityRepository(),
+            new InMemoryAllianceDiplomacyRepository(),
+            new InMemoryAllianceWarRepository(),
+            options);
+        PlayerId leader = NewPlayer();
+        var request = new CreateAllianceRequest(
+            "BeeKingdom Alpha", "BKA", "Alliance officielle de test Alpha BeeKingdom",
+            "fr-CA", "", AllianceJoinMode.InviteOnly, "mobile-alliance-create-" + Guid.NewGuid().ToString("N"));
+
+        CreateAllianceResult result = service.CreateAlliance(leader, request);
+
+        Assert.That(result.Alliance.Name, Is.EqualTo("BeeKingdom Alpha"));
+    }
+
+    [Test]
     public void CreateAlliance_MakesCreatorLeaderAndIsIdempotent()
     {
         AllianceService service = CreateService();

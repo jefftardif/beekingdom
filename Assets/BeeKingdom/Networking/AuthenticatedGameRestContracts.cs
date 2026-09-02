@@ -49,7 +49,14 @@ namespace BeeKingdom.Networking
                 PropertyNameCaseInsensitive = true,
                 AllowTrailingCommas = false,
                 ReadCommentHandling = JsonCommentHandling.Disallow,
-                MaxDepth = 32
+                MaxDepth = 32,
+                // M043L-CL: several wire request DTOs (CreateAllianceWireRequest,
+                // SubmitApplicationWireRequest, CreateInvitationWireRequest, UpdateProfileWireRequest)
+                // declare their data as public fields, not properties - System.Text.Json ignores
+                // fields entirely unless told otherwise, so every one of them was silently
+                // serializing to "{}" and the server was rejecting the resulting all-null/all-default
+                // request body (e.g. alliance.invalid_request from a null ClientRequestId).
+                IncludeFields = true
             };
             options.Converters.Add(new BeeGuidJsonConverter());
         }
