@@ -74,8 +74,34 @@ namespace BeeKingdom.Tests.Editor
             TestContext.WriteLine("[M043L] Exact serialized request JSON: " + json);
             Assert.That(json, Does.Contain("\"name\":\"BeeKingdom Alpha\""));
             Assert.That(json, Does.Contain("\"tag\":\"BKA\""));
-            Assert.That(json, Does.Contain("\"joinMode\":2"));
+            // M043M-CL: the codec now mirrors the server's JsonStringEnumConverter, so enums
+            // serialize as their name ("InviteOnly"), not the raw ordinal - this used to be "2".
+            Assert.That(json, Does.Contain("\"joinMode\":\"InviteOnly\""));
             Assert.That(result.Name, Is.EqualTo("BeeKingdom Alpha"));
+        }
+
+        [Test]
+        public void GetMyAllianceAsync_RealProductionResponseJson_DeserializesEveryEnumCorrectly()
+        {
+            // M043M-CL: this is the EXACT raw response body captured live from production for the
+            // CEO's real "BeeKingdom Alpha" alliance (GET /alliance/v1/membership/mine), byte for
+            // byte. It proves the fix for the actual bug: the server's enums serialize as strings
+            // (JsonStringEnumConverter), but this codec never had a matching converter, so every
+            // enum field here (joinMode, status, role) threw JsonException the moment a real,
+            // non-default value came back - invisible until M043L made Create finally succeed.
+            const string productionJson = "{\"hasAlliance\":true,\"alliance\":{\"allianceId\":{\"value\":\"cd93fe58-97fd-45d1-9a19-f617ff555558\"},\"name\":\"BeeKingdom Alpha\",\"tag\":\"BKA\",\"description\":\"Alliance officielle de test Alpha BeeKingdom\",\"language\":\"fr-CA\",\"emblemKey\":\"\",\"joinMode\":\"InviteOnly\",\"status\":\"Active\",\"createdAtUtc\":\"2026-09-02T18:28:19.15+00:00\",\"createdByPlayerId\":{\"value\":\"da420f03-f0cf-4cb6-8328-297f83af34a7\"},\"leaderPlayerId\":{\"value\":\"da420f03-f0cf-4cb6-8328-297f83af34a7\"},\"memberCount\":1,\"maxMembers\":100,\"publicSlug\":\"beekingdom-alpha\",\"chatConversationId\":\"55067743-0e24-47d1-9512-3b890cb6da31\",\"revision\":1,\"disbandedAtUtc\":null},\"membership\":{\"allianceId\":{\"value\":\"cd93fe58-97fd-45d1-9a19-f617ff555558\"},\"playerId\":{\"value\":\"da420f03-f0cf-4cb6-8328-297f83af34a7\"},\"role\":\"Leader\",\"joinedAtUtc\":\"2026-09-02T18:28:19.15+00:00\",\"invitedByPlayerId\":null,\"applicationId\":null,\"lastRoleChangedAtUtc\":\"2026-09-02T18:28:19.15+00:00\",\"removedAtUtc\":null,\"revision\":1}}";
+
+            var codec = new SystemTextGameJsonCodec();
+            RemoteMyAllianceOverview result = codec.Deserialize<RemoteMyAllianceOverview>(productionJson);
+
+            Assert.That(result.HasAlliance, Is.True);
+            Assert.That(result.Alliance.Name, Is.EqualTo("BeeKingdom Alpha"));
+            Assert.That(result.Alliance.Tag, Is.EqualTo("BKA"));
+            Assert.That(result.Alliance.JoinMode, Is.EqualTo(RemoteAllianceJoinMode.InviteOnly));
+            Assert.That(result.Alliance.Status, Is.EqualTo(RemoteAllianceStatus.Active));
+            Assert.That(result.Alliance.MemberCount, Is.EqualTo(1));
+            Assert.That(result.Alliance.ChatConversationId, Is.EqualTo(Guid.Parse("55067743-0e24-47d1-9512-3b890cb6da31")));
+            Assert.That(result.Membership.Role, Is.EqualTo(RemoteAllianceRole.Leader));
         }
 
         [Test]
@@ -321,3 +347,4 @@ namespace BeeKingdom.Tests.Editor
         }
     }
 }
+

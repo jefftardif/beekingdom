@@ -59,6 +59,13 @@ namespace BeeKingdom.Networking
                 IncludeFields = true
             };
             options.Converters.Add(new BeeGuidJsonConverter());
+            // M043M-CL: the server serializes every enum as a string (Program.cs registers
+            // builder.Services.ConfigureHttpJsonOptions with a plain JsonStringEnumConverter()), but
+            // this codec never mirrored that - every enum response field (AllianceJoinMode,
+            // AllianceStatus, AllianceRole, etc.) failed to deserialize the moment a real value other
+            // than the JSON default ever came back. Invisible until now because no successful
+            // AllianceEntity had ever round-tripped through this codec before M043L fixed Create.
+            options.Converters.Add(new JsonStringEnumConverter());
         }
 
         public string Serialize<T>(T value)
