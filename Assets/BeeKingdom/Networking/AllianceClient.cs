@@ -1,0 +1,554 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace BeeKingdom.Networking
+{
+    // M041-CL: mirrors HiveResearchClient.cs's structure/session-transport plumbing exactly
+    // (MobileAccountSessionGate, IGameAccountSessionSource, IAuthenticatedGameRestTransport,
+    // single-refresh-on-401 retry). Response validation here is intentionally lighter than
+    // HiveResearchClient's exhaustive per-field bounds checking - Alliance has ~15 distinct
+    // response shapes vs research's 1, and the server side (AllianceService, tested) already
+    // rejects anything structurally invalid; this client checks identity/shape sanity (never
+    // trusts a null where a value is required) but not exhaustive numeric bounds. Endpoints match
+    // Server/src/BeeKingdom.Server/Program.cs's /alliance/v1/* family - see
+    // Docs/Alliance/ALLIANCE_PLATFORM_ARCHITECTURE.md section 20 for the full route list.
+    //
+    // Diplomacy/War endpoints deliberately NOT wrapped here yet - the existing Alliance Center
+    // window's "diplomacy"/"war" tabs are still coming-soon placeholders (see M041-CL mission
+    // report section 2), so there is nothing to wire them to today. Add DiplomacyProposeAsync/
+    // DeclareWarAsync etc. here, mirroring the pattern below, when those tabs get real content.
+    //
+    // M043N-CL: no .ConfigureAwait(false) anywhere in this file, deliberately - Unity's
+    // UnityWebRequest (built by UnityAuthenticatedGameRestTransport) can only be constructed on
+    // the main thread. ConfigureAwait(false) lets a continuation resume on a thread-pool thread
+    // instead of via Unity's SynchronizationContext, so any caller chaining two or more awaited
+    // client calls (e.g. AllianceCenterPanelController.RefreshCoreAsync) would crash the second
+    // UnityWebRequest with "Create can only be called from the main thread." Proven live: the
+    // CEO's first successful Alliance ever exposed this the moment RefreshCoreAsync had a real
+    // multi-call chain to walk (GetMyAlliance -> ListMembers -> ...) instead of exiting early on
+    // NoAlliance after a single call.
+
+    public enum RemoteAllianceRole { Member = 0, Officer = 1, Leader = 2 }
+    public enum RemoteAllianceJoinMode { Open = 0, Application = 1, InviteOnly = 2 }
+    public enum RemoteAllianceStatus { Active = 0, Disbanded = 1 }
+    public enum RemoteAllianceApplicationStatus { Pending = 0, Accepted = 1, Rejected = 2, Cancelled = 3 }
+    public enum RemoteAllianceInvitationStatus { Pending = 0, Accepted = 1, Declined = 2, Revoked = 3 }
+    public enum RemoteAllianceActivityVisibility { Public = 0, MembersOnly = 1, OfficersOnly = 2, SystemPrivate = 3 }
+
+    public enum RemoteAllianceActivityType
+    {
+        AllianceCreated = 0, MemberJoined = 1, MemberLeft = 2, MemberKicked = 3, MemberPromoted = 4,
+        MemberDemoted = 5, LeadershipTransferred = 6, ProfileUpdated = 7,
+        PlayerBuildingUpgraded = 100, PlayerResearchCompleted = 101, PlayerAttackStarted = 102,
+        PlayerAttackWon = 103, PlayerAttackLost = 104, CreatureDefeated = 105, GatheringCompleted = 106,
+        AllianceWarDeclared = 200, AllianceWarEnded = 201, AllianceDiplomacyChanged = 202,
+        AllianceTerritoryCaptured = 300, AllianceBuildingUpgraded = 301, AllianceTechnologyCompleted = 302
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceLeaderSummary
+    {
+        public Guid PlayerId { get; set; }
+        public string DisplayName { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceDiplomacySummary
+    {
+        public int AllyCount { get; set; }
+        public int NonAggressionPactCount { get; set; }
+        public int HostileCount { get; set; }
+        public int ActiveWarCount { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAlliancePublicProfile
+    {
+        public Guid AllianceId { get; set; }
+        public string Name { get; set; }
+        public string Tag { get; set; }
+        public string Description { get; set; }
+        public string Language { get; set; }
+        public string EmblemKey { get; set; }
+        public int MemberCount { get; set; }
+        public int MaxMembers { get; set; }
+        public RemoteAllianceLeaderSummary Leader { get; set; }
+        public RemoteAllianceStatus Status { get; set; }
+        public DateTimeOffset CreatedAtUtc { get; set; }
+        public RemoteAllianceJoinMode JoinMode { get; set; }
+        public string PublicSlug { get; set; }
+        public RemoteAllianceDiplomacySummary Diplomacy { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceSummary
+    {
+        public Guid AllianceId { get; set; }
+        public string Name { get; set; }
+        public string Tag { get; set; }
+        public string EmblemKey { get; set; }
+        public string Language { get; set; }
+        public RemoteAllianceJoinMode JoinMode { get; set; }
+        public int MemberCount { get; set; }
+        public int MaxMembers { get; set; }
+        public string PublicSlug { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceSearchPage
+    {
+        public List<RemoteAllianceSummary> Items { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceMemberSummary
+    {
+        public Guid PlayerId { get; set; }
+        // M043B-CL: real display name, batch-resolved server-side (never N+1 from Unity) - see
+        // AllianceService.ListMembers / PlayerDirectoryService. Empty string, not null, when the
+        // server has no account record to resolve (should not happen for a real active member).
+        public string DisplayName { get; set; }
+        public RemoteAllianceRole Role { get; set; }
+        public DateTimeOffset JoinedAtUtc { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceMembership
+    {
+        public Guid AllianceId { get; set; }
+        public Guid PlayerId { get; set; }
+        public RemoteAllianceRole Role { get; set; }
+        public DateTimeOffset JoinedAtUtc { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceEntity
+    {
+        public Guid AllianceId { get; set; }
+        public string Name { get; set; }
+        public string Tag { get; set; }
+        public string Description { get; set; }
+        public string Language { get; set; }
+        public string EmblemKey { get; set; }
+        public RemoteAllianceJoinMode JoinMode { get; set; }
+        public RemoteAllianceStatus Status { get; set; }
+        public DateTimeOffset CreatedAtUtc { get; set; }
+        public Guid CreatedByPlayerId { get; set; }
+        public Guid LeaderPlayerId { get; set; }
+        public int MemberCount { get; set; }
+        public int MaxMembers { get; set; }
+        public string PublicSlug { get; set; }
+        // M043-CL: forward reference to the real alliance chat conversation created in M042
+        // (AllianceService.CreateOrLinkAllianceChat) - null until the chat link succeeds (best-effort,
+        // see AllianceService.cs).
+        public Guid? ChatConversationId { get; set; }
+        public long Revision { get; set; }
+    }
+
+    // M043-CL: wrapper shapes matching the server's *Result records field-for-field
+    // (Models/AllianceContracts.cs) - the M041 client wrongly deserialized several endpoints'
+    // responses directly into the "inner" DTO (e.g. RemoteAllianceEntity) when the server actually
+    // wraps it (e.g. CreateAllianceResult{Alliance,Deduplicated}); System.Text.Json silently produced
+    // an all-default/empty object instead of throwing, so this went undetected until traced against
+    // real server responses. Fixed by deserializing into these wrappers and unwrapping explicitly.
+    [Serializable] public sealed class RemoteCreateAllianceResult { public RemoteAllianceEntity Alliance { get; set; } public bool Deduplicated { get; set; } }
+    [Serializable] public sealed class RemoteJoinOpenAllianceResult { public RemoteAllianceEntity Alliance { get; set; } public RemoteAllianceMembership Membership { get; set; } }
+    [Serializable] public sealed class RemoteApplicationDecisionResult { public RemoteAllianceApplication Application { get; set; } public RemoteAllianceMembership Membership { get; set; } }
+    [Serializable] public sealed class RemoteInvitationDecisionResult { public RemoteAllianceInvitation Invitation { get; set; } public RemoteAllianceMembership Membership { get; set; } }
+    [Serializable] public sealed class RemoteLeadershipTransferResult { public RemoteAllianceEntity Alliance { get; set; } public RemoteAllianceMembership PreviousLeader { get; set; } public RemoteAllianceMembership NewLeader { get; set; } }
+
+    // M043-CL: matches the server's MyAllianceOverviewResponse(bool, AllianceEntity?, Membership?) -
+    // the ONLY way to discover NO_ALLIANCE vs IN_ALLIANCE without already knowing an AllianceId.
+    // Always a 200 OK with HasAlliance=false rather than a bare JSON null body.
+    [Serializable] public sealed class RemoteMyAllianceOverview { public bool HasAlliance { get; set; } public RemoteAllianceEntity Alliance { get; set; } public RemoteAllianceMembership Membership { get; set; } }
+
+    [Serializable]
+    public sealed class RemoteAllianceApplication
+    {
+        public Guid ApplicationId { get; set; }
+        public Guid AllianceId { get; set; }
+        public Guid PlayerId { get; set; }
+        public RemoteAllianceApplicationStatus Status { get; set; }
+        public DateTimeOffset SubmittedAtUtc { get; set; }
+        public string Message { get; set; }
+    }
+
+    // M043B-CL: matches the server's AllianceApplicationView - real DisplayName, batch-resolved
+    // server-side, for the Leader/Officer application review UI.
+    [Serializable]
+    public sealed class RemoteAllianceApplicationView
+    {
+        public Guid ApplicationId { get; set; }
+        public Guid AllianceId { get; set; }
+        public Guid PlayerId { get; set; }
+        public string DisplayName { get; set; }
+        public RemoteAllianceApplicationStatus Status { get; set; }
+        public DateTimeOffset SubmittedAtUtc { get; set; }
+        public string Message { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceInvitation
+    {
+        public Guid InvitationId { get; set; }
+        public Guid AllianceId { get; set; }
+        public Guid InvitedPlayerId { get; set; }
+        public Guid InvitedByPlayerId { get; set; }
+        public RemoteAllianceInvitationStatus Status { get; set; }
+        public DateTimeOffset CreatedAtUtc { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceActivityPayload
+    {
+        public string EntityKey { get; set; }
+        public string EntityName { get; set; }
+        public int? Level { get; set; }
+        public string Result { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceActivityEvent
+    {
+        public Guid ActivityId { get; set; }
+        public Guid AllianceId { get; set; }
+        public RemoteAllianceActivityType Type { get; set; }
+        public DateTimeOffset OccurredAtUtc { get; set; }
+        public Guid? ActorPlayerId { get; set; }
+        public Guid? TargetPlayerId { get; set; }
+        public Guid? RelatedAllianceId { get; set; }
+        public RemoteAllianceActivityVisibility Visibility { get; set; }
+        public RemoteAllianceActivityPayload Payload { get; set; }
+        public long Sequence { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceActivityPage
+    {
+        public List<RemoteAllianceActivityEvent> Items { get; set; }
+        public long? NextBeforeSequence { get; set; }
+    }
+
+    // ---- wire request bodies (match the server's Models/AllianceContracts.cs records field-for-field) ----
+    [Serializable] public sealed class CreateAllianceWireRequest { public string Name, Tag, Description, Language, EmblemKey, ClientRequestId; public RemoteAllianceJoinMode JoinMode; }
+    [Serializable] public sealed class SubmitApplicationWireRequest { public string Message, ClientRequestId; }
+    [Serializable] public sealed class CreateInvitationWireRequest { public Guid InvitedPlayerId; public string ClientRequestId; }
+    [Serializable] public sealed class UpdateProfileWireRequest { public string Description, Language, EmblemKey; public RemoteAllianceJoinMode? JoinMode; public long ExpectedRevision; }
+
+    public interface IAllianceClient
+    {
+        Task<RemoteMyAllianceOverview> GetMyAllianceAsync(CancellationToken cancellationToken = default);
+        Task<RemoteAllianceEntity> CreateAllianceAsync(string name, string tag, string description, string language, string emblemKey, RemoteAllianceJoinMode joinMode, string clientRequestId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceSearchPage> SearchAsync(string nameOrTag, string language, RemoteAllianceJoinMode? joinMode, int offset, int limit, CancellationToken cancellationToken = default);
+        Task<RemoteAlliancePublicProfile> GetProfileAsync(Guid allianceId, CancellationToken cancellationToken = default);
+        Task<RemoteAlliancePublicProfile> GetProfileBySlugAsync(string slug, CancellationToken cancellationToken = default);
+        Task<List<RemoteAllianceMemberSummary>> ListMembersAsync(Guid allianceId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceActivityPage> ListPublicActivityAsync(Guid allianceId, long? beforeSequence, int limit, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceActivityPage> ListActivityAsync(Guid allianceId, long? beforeSequence, int limit, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceMembership> JoinOpenAsync(Guid allianceId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceApplication> SubmitApplicationAsync(Guid allianceId, string message, string clientRequestId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceApplication> CancelApplicationAsync(Guid applicationId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceApplication> AcceptApplicationAsync(Guid applicationId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceApplication> RejectApplicationAsync(Guid applicationId, CancellationToken cancellationToken = default);
+        Task<List<RemoteAllianceApplicationView>> ListPendingApplicationsAsync(CancellationToken cancellationToken = default);
+        Task<RemoteAllianceInvitation> CreateInvitationAsync(Guid allianceId, Guid invitedPlayerId, string clientRequestId, CancellationToken cancellationToken = default);
+        Task<List<RemoteAllianceInvitation>> ListMyInvitationsAsync(CancellationToken cancellationToken = default);
+        Task<RemoteAllianceInvitation> AcceptInvitationAsync(Guid invitationId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceInvitation> DeclineInvitationAsync(Guid invitationId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceInvitation> RevokeInvitationAsync(Guid invitationId, CancellationToken cancellationToken = default);
+        Task LeaveAsync(CancellationToken cancellationToken = default);
+        Task KickAsync(Guid targetPlayerId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceMembership> PromoteAsync(Guid targetPlayerId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceMembership> DemoteAsync(Guid targetPlayerId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceEntity> TransferLeadershipAsync(Guid targetPlayerId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceEntity> DissolveAsync(CancellationToken cancellationToken = default);
+        Task<RemoteAllianceEntity> UpdateProfileAsync(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode, long expectedRevision, CancellationToken cancellationToken = default);
+    }
+
+    public sealed class AllianceClient : IAllianceClient
+    {
+        private const string BasePath = "/alliance/v1";
+        private readonly MobileAccountSessionGate sessionGate;
+        private readonly IGameAccountSessionSource sessionSource;
+        private readonly IAuthenticatedGameRestTransport transport;
+
+        public AllianceClient(
+            MobileAccountSessionGate sessionGate,
+            IGameAccountSessionSource sessionSource,
+            IAuthenticatedGameRestTransport transport)
+        {
+            this.sessionGate = sessionGate ?? throw new ArgumentNullException(nameof(sessionGate));
+            this.sessionSource = sessionSource ?? throw new ArgumentNullException(nameof(sessionSource));
+            this.transport = transport ?? throw new ArgumentNullException(nameof(transport));
+        }
+
+        public Task<RemoteMyAllianceOverview> GetMyAllianceAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteMyAllianceOverview>("GET", BasePath + "/membership/mine", null, cancellationToken);
+
+        public async Task<RemoteAllianceEntity> CreateAllianceAsync(string name, string tag, string description, string language, string emblemKey, RemoteAllianceJoinMode joinMode, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireKey(clientRequestId);
+            RemoteCreateAllianceResult result = await SendAsync<RemoteCreateAllianceResult>("POST", BasePath + "/alliances",
+                new CreateAllianceWireRequest { Name = name, Tag = tag, Description = description, Language = language, EmblemKey = emblemKey, JoinMode = joinMode, ClientRequestId = clientRequestId },
+                cancellationToken);
+            return result.Alliance;
+        }
+
+        public Task<RemoteAllianceSearchPage> SearchAsync(string nameOrTag, string language, RemoteAllianceJoinMode? joinMode, int offset, int limit, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string query = "?offset=" + offset + "&limit=" + limit;
+            if (!string.IsNullOrWhiteSpace(nameOrTag)) query += "&nameOrTag=" + Uri.EscapeDataString(nameOrTag);
+            if (!string.IsNullOrWhiteSpace(language)) query += "&language=" + Uri.EscapeDataString(language);
+            if (joinMode.HasValue) query += "&joinMode=" + joinMode.Value;
+            return SendAsync<RemoteAllianceSearchPage>("GET", BasePath + "/alliances/search" + query, null, cancellationToken);
+        }
+
+        public Task<RemoteAlliancePublicProfile> GetProfileAsync(Guid allianceId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            return SendAsync<RemoteAlliancePublicProfile>("GET", BasePath + "/alliances/" + allianceId.ToString("D"), null, cancellationToken);
+        }
+
+        public Task<RemoteAlliancePublicProfile> GetProfileBySlugAsync(string slug, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (string.IsNullOrWhiteSpace(slug)) throw InvalidRequest("A slug is required.");
+            return SendAsync<RemoteAlliancePublicProfile>("GET", BasePath + "/alliances/by-slug/" + Uri.EscapeDataString(slug), null, cancellationToken);
+        }
+
+        public Task<List<RemoteAllianceMemberSummary>> ListMembersAsync(Guid allianceId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            return SendAsync<List<RemoteAllianceMemberSummary>>("GET", BasePath + "/alliances/" + allianceId.ToString("D") + "/members", null, cancellationToken);
+        }
+
+        public Task<RemoteAllianceActivityPage> ListPublicActivityAsync(Guid allianceId, long? beforeSequence, int limit, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            string query = "?limit=" + limit + (beforeSequence.HasValue ? "&beforeSequence=" + beforeSequence.Value : "");
+            return SendAsync<RemoteAllianceActivityPage>("GET", BasePath + "/alliances/" + allianceId.ToString("D") + "/activity/public" + query, null, cancellationToken);
+        }
+
+        public Task<RemoteAllianceActivityPage> ListActivityAsync(Guid allianceId, long? beforeSequence, int limit, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            string query = "?limit=" + limit + (beforeSequence.HasValue ? "&beforeSequence=" + beforeSequence.Value : "");
+            return SendAsync<RemoteAllianceActivityPage>("GET", BasePath + "/alliances/" + allianceId.ToString("D") + "/activity" + query, null, cancellationToken);
+        }
+
+        public async Task<RemoteAllianceMembership> JoinOpenAsync(Guid allianceId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            RemoteJoinOpenAllianceResult result = await SendAsync<RemoteJoinOpenAllianceResult>("POST", BasePath + "/alliances/" + allianceId.ToString("D") + "/join", null, cancellationToken);
+            return result.Membership;
+        }
+
+        public Task<RemoteAllianceApplication> SubmitApplicationAsync(Guid allianceId, string message, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            RequireKey(clientRequestId);
+            return SendAsync<RemoteAllianceApplication>("POST", BasePath + "/alliances/" + allianceId.ToString("D") + "/applications",
+                new SubmitApplicationWireRequest { Message = message ?? string.Empty, ClientRequestId = clientRequestId }, cancellationToken);
+        }
+
+        public Task<RemoteAllianceApplication> CancelApplicationAsync(Guid applicationId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(applicationId);
+            return SendAsync<RemoteAllianceApplication>("POST", BasePath + "/applications/" + applicationId.ToString("D") + "/cancel", null, cancellationToken);
+        }
+
+        public async Task<RemoteAllianceApplication> AcceptApplicationAsync(Guid applicationId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(applicationId);
+            RemoteApplicationDecisionResult result = await SendAsync<RemoteApplicationDecisionResult>("POST", BasePath + "/applications/" + applicationId.ToString("D") + "/accept", null, cancellationToken);
+            return result.Application;
+        }
+
+        public Task<RemoteAllianceApplication> RejectApplicationAsync(Guid applicationId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(applicationId);
+            return SendAsync<RemoteAllianceApplication>("POST", BasePath + "/applications/" + applicationId.ToString("D") + "/reject", null, cancellationToken);
+        }
+
+        public Task<RemoteAllianceInvitation> CreateInvitationAsync(Guid allianceId, Guid invitedPlayerId, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(allianceId);
+            RequireId(invitedPlayerId);
+            RequireKey(clientRequestId);
+            return SendAsync<RemoteAllianceInvitation>("POST", BasePath + "/alliances/" + allianceId.ToString("D") + "/invitations",
+                new CreateInvitationWireRequest { InvitedPlayerId = invitedPlayerId, ClientRequestId = clientRequestId }, cancellationToken);
+        }
+
+        public Task<List<RemoteAllianceInvitation>> ListMyInvitationsAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<List<RemoteAllianceInvitation>>("GET", BasePath + "/invitations/mine", null, cancellationToken);
+
+        public Task<List<RemoteAllianceApplicationView>> ListPendingApplicationsAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<List<RemoteAllianceApplicationView>>("GET", BasePath + "/applications/pending", null, cancellationToken);
+
+        public async Task<RemoteAllianceInvitation> AcceptInvitationAsync(Guid invitationId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(invitationId);
+            RemoteInvitationDecisionResult result = await SendAsync<RemoteInvitationDecisionResult>("POST", BasePath + "/invitations/" + invitationId.ToString("D") + "/accept", null, cancellationToken);
+            return result.Invitation;
+        }
+
+        public Task<RemoteAllianceInvitation> DeclineInvitationAsync(Guid invitationId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(invitationId);
+            return SendAsync<RemoteAllianceInvitation>("POST", BasePath + "/invitations/" + invitationId.ToString("D") + "/decline", null, cancellationToken);
+        }
+
+        public Task<RemoteAllianceInvitation> RevokeInvitationAsync(Guid invitationId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(invitationId);
+            return SendAsync<RemoteAllianceInvitation>("POST", BasePath + "/invitations/" + invitationId.ToString("D") + "/revoke", null, cancellationToken);
+        }
+
+        public Task LeaveAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<object>("POST", BasePath + "/membership/leave", null, cancellationToken);
+
+        public Task KickAsync(Guid targetPlayerId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(targetPlayerId);
+            return SendAsync<object>("POST", BasePath + "/membership/" + targetPlayerId.ToString("D") + "/kick", null, cancellationToken);
+        }
+
+        public Task<RemoteAllianceMembership> PromoteAsync(Guid targetPlayerId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(targetPlayerId);
+            return SendAsync<RemoteAllianceMembership>("POST", BasePath + "/membership/" + targetPlayerId.ToString("D") + "/promote", null, cancellationToken);
+        }
+
+        public Task<RemoteAllianceMembership> DemoteAsync(Guid targetPlayerId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(targetPlayerId);
+            return SendAsync<RemoteAllianceMembership>("POST", BasePath + "/membership/" + targetPlayerId.ToString("D") + "/demote", null, cancellationToken);
+        }
+
+        public async Task<RemoteAllianceEntity> TransferLeadershipAsync(Guid targetPlayerId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(targetPlayerId);
+            RemoteLeadershipTransferResult result = await SendAsync<RemoteLeadershipTransferResult>("POST", BasePath + "/membership/" + targetPlayerId.ToString("D") + "/transfer-leadership", null, cancellationToken);
+            return result.Alliance;
+        }
+
+        public Task<RemoteAllianceEntity> DissolveAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteAllianceEntity>("POST", BasePath + "/alliances/dissolve", null, cancellationToken);
+
+        public Task<RemoteAllianceEntity> UpdateProfileAsync(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode, long expectedRevision, CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteAllianceEntity>("POST", BasePath + "/alliances/profile",
+                new UpdateProfileWireRequest { Description = description, Language = language, EmblemKey = emblemKey, JoinMode = joinMode, ExpectedRevision = expectedRevision }, cancellationToken);
+
+        // ---------------- plumbing (mirrors HiveResearchClient) ----------------
+
+        private async Task<T> SendAsync<T>(string method, string path, object body, CancellationToken cancellationToken)
+        {
+            SessionContext context = await RequireSessionAsync(cancellationToken);
+            var request = body == null
+                ? new AuthenticatedGameRestRequest(method, path)
+                : new AuthenticatedGameRestRequest(method, path, body);
+            return await SendWithSingleAuthenticationRefreshAsync<T>(request, context, cancellationToken);
+        }
+
+        private async Task<SessionContext> RequireSessionAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!sessionGate.CanSubmitLogin)
+                throw new HivePerimeterClientException(HivePerimeterClientError.NotConfigured, "Official account session transport is not ready.");
+
+            var refreshable = sessionSource as IRefreshableGameAccountSessionSource;
+            if (refreshable != null)
+            {
+                try { return RequireUsableSession(await refreshable.GetFreshSessionAsync(cancellationToken)); }
+                catch (OperationCanceledException) { throw; }
+                catch (MobileAccountSessionException exception) { throw MapSessionFailure(exception); }
+            }
+
+            GameAccountSession session;
+            if (!sessionSource.TryGetSession(out session)) session = null;
+            return RequireUsableSession(session);
+        }
+
+        private async Task<T> SendWithSingleAuthenticationRefreshAsync<T>(AuthenticatedGameRestRequest request, SessionContext context, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await transport.SendAsync<T>(request, context.AccessToken, cancellationToken);
+            }
+            catch (AuthenticatedGameRestException exception)
+            {
+                if (exception.Error != AuthenticatedGameRestError.Unauthorized) throw MapTransportFailure(exception);
+            }
+
+            var refreshable = sessionSource as IRefreshableGameAccountSessionSource;
+            if (refreshable == null)
+                throw new HivePerimeterClientException(HivePerimeterClientError.AuthenticationRequired, "The game session was rejected.");
+
+            GameAccountSession replacement;
+            try { replacement = await refreshable.RefreshAfterUnauthorizedAsync(context.AccessToken, cancellationToken); }
+            catch (OperationCanceledException) { throw; }
+            catch (MobileAccountSessionException exception) { throw MapSessionFailure(exception); }
+
+            if (replacement == null || replacement.PlayerId != context.PlayerId ||
+                string.IsNullOrWhiteSpace(replacement.AccessToken) || replacement.AccessToken.Length > 8192)
+            {
+                await refreshable.InvalidateUnauthorizedSessionAsync(context.AccessToken, cancellationToken);
+                throw InvalidResponse("The refreshed game session changed identity.");
+            }
+
+            try
+            {
+                return await transport.SendAsync<T>(request, replacement.AccessToken, cancellationToken);
+            }
+            catch (AuthenticatedGameRestException exception)
+            {
+                if (exception.Error == AuthenticatedGameRestError.Unauthorized)
+                {
+                    await refreshable.InvalidateUnauthorizedSessionAsync(replacement.AccessToken, cancellationToken);
+                    throw new HivePerimeterClientException(HivePerimeterClientError.AuthenticationRequired, "The refreshed game session was rejected.");
+                }
+                throw MapTransportFailure(exception);
+            }
+        }
+
+        private static SessionContext RequireUsableSession(GameAccountSession session)
+        {
+            if (session == null || session.PlayerId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(session.AccessToken) || session.AccessToken.Length > 8192)
+                throw new HivePerimeterClientException(HivePerimeterClientError.AuthenticationRequired, "An official account session is required.");
+            return new SessionContext(session.PlayerId, session.AccessToken);
+        }
+
+        private static HivePerimeterClientException MapSessionFailure(MobileAccountSessionException exception)
+        {
+            if (exception.Error == MobileAccountSessionError.TransportFailure)
+                return new HivePerimeterClientException(HivePerimeterClientError.TransportFailure, exception.SafeCode);
+            if (exception.Error == MobileAccountSessionError.NotConfigured)
+                return new HivePerimeterClientException(HivePerimeterClientError.NotConfigured, exception.SafeCode);
+            return new HivePerimeterClientException(HivePerimeterClientError.AuthenticationRequired, exception.SafeCode);
+        }
+
+        private static HivePerimeterClientException MapTransportFailure(AuthenticatedGameRestException exception)
+        {
+            if (exception.Error == AuthenticatedGameRestError.NetworkFailure)
+                return new HivePerimeterClientException(HivePerimeterClientError.TransportFailure, exception.SafeCode);
+            if (exception.Error == AuthenticatedGameRestError.Unauthorized)
+                return new HivePerimeterClientException(HivePerimeterClientError.AuthenticationRequired, exception.SafeCode);
+            return InvalidResponse(exception.SafeCode);
+        }
+
+        private static void RequireId(Guid value) { if (value == Guid.Empty) throw InvalidRequest("An identifier is required."); }
+        private static void RequireKey(string value) { if (string.IsNullOrWhiteSpace(value) || value.Trim() != value || value.Length > 256) throw InvalidRequest("The idempotency key must contain between one and 256 trimmed characters."); }
+        private static HivePerimeterClientException InvalidRequest(string message) => new HivePerimeterClientException(HivePerimeterClientError.InvalidRequest, message);
+        private static HivePerimeterClientException InvalidResponse(string message) => new HivePerimeterClientException(HivePerimeterClientError.InvalidResponse, message);
+
+        private sealed class SessionContext
+        {
+            public SessionContext(Guid playerId, string accessToken) { PlayerId = playerId; AccessToken = accessToken; }
+            public Guid PlayerId { get; }
+            public string AccessToken { get; }
+        }
+    }
+}
