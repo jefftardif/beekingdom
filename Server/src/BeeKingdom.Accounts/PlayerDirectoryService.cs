@@ -1,4 +1,5 @@
 using BeeKingdom.Accounts.Models;
+using BeeKingdom.Authentication.Providers;
 using BeeKingdom.Shared.ValueObjects;
 
 namespace BeeKingdom.Accounts;
@@ -24,10 +25,12 @@ public sealed class PlayerDirectoryService : IPlayerDirectoryService
     public const int MaxLimit = 50;
 
     private readonly IAccountService accounts;
+    private readonly IAccountCredentialStore credentials;
 
-    public PlayerDirectoryService(IAccountService accounts)
+    public PlayerDirectoryService(IAccountService accounts, IAccountCredentialStore credentials)
     {
         this.accounts = accounts;
+        this.credentials = credentials;
     }
 
     // Deliberately rejects an empty/too-short query rather than returning "everyone" - a blank q=""
@@ -50,8 +53,21 @@ public sealed class PlayerDirectoryService : IPlayerDirectoryService
             .ToArray();
     }
 
+    // M043P-CL: the real, onboarded public name (POST /auth/display-name) lives in
+    // BeeKingdom.Authentication's AuthenticationAccounts, not on this project's own Account
+    // record - that field exists but the real Google-auth onboarding flow never writes to it, so
+    // every real player showed up as a truncated PlayerId everywhere (Alliance dashboard, Journal
+    // actor names, member roster). Authoritative source checked first; the Accounts-based lookup
+    // remains as a fallback for any account that only exists there (e.g. synthetic/seeded test
+    // accounts created directly via IAccountService, never through real Google onboarding).
     public PlayerPublicIdentity? GetByPlayerId(PlayerId playerId)
     {
+        if (credentials.TryGetByPlayerId(playerId, out AuthenticationAccount authAccount)
+            && authAccount.IsOnboarded && !string.IsNullOrWhiteSpace(authAccount.DisplayName))
+        {
+            return new PlayerPublicIdentity(playerId, authAccount.DisplayName);
+        }
+
         AccountRecord? account = accounts.GetAccountByPlayerId(playerId);
         return account == null ? null : ToPublicIdentity(account);
     }

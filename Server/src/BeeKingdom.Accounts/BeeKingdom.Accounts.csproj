@@ -4,6 +4,11 @@
     <ProjectReference Include="..\BeeKingdom.Shared\BeeKingdom.Shared.csproj" />
     <ProjectReference Include="..\BeeKingdom.Infrastructure\BeeKingdom.Infrastructure.csproj" />
     <ProjectReference Include="..\BeeKingdom.Persistence\BeeKingdom.Persistence.csproj" />
+    <!-- M043P-CL: PlayerDirectoryService resolves the real, onboarded public DisplayName from
+         BeeKingdom.Authentication's AuthenticationAccounts (the authoritative source, set via
+         POST /auth/display-name) instead of the disconnected, never-populated DisplayName on
+         this project's own Account record. No cycle: Authentication never references Accounts. -->
+    <ProjectReference Include="..\BeeKingdom.Authentication\BeeKingdom.Authentication.csproj" />
   </ItemGroup>
 
   <ItemGroup>

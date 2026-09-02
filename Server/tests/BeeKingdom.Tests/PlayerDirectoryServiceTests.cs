@@ -3,6 +3,8 @@ using BeeKingdom.Accounts.Configuration;
 using BeeKingdom.Accounts.Events;
 using BeeKingdom.Accounts.Models;
 using BeeKingdom.Accounts.Repositories;
+using BeeKingdom.Authentication.Providers;
+using BeeKingdom.Authentication.Security;
 using BeeKingdom.Infrastructure.Time;
 using BeeKingdom.Shared.ValueObjects;
 using Microsoft.Extensions.Options;
@@ -16,7 +18,7 @@ public sealed class PlayerDirectoryServiceTests
 {
     private sealed class FixedClock : IServerClock { public DateTimeOffset UtcNow => DateTimeOffset.UtcNow; }
 
-    private static (IPlayerDirectoryService Directory, AccountManager Accounts) CreateDirectory()
+    private static (IPlayerDirectoryService Directory, AccountManager Accounts, IAccountCredentialStore Credentials) CreateDirectory()
     {
         var options = Options.Create(new AccountOptions
         {
@@ -26,13 +28,14 @@ public sealed class PlayerDirectoryServiceTests
         });
         var service = new AccountService(new InMemoryAccountRepository(), new InMemoryAccountEventSink(), new FixedClock(), options);
         var manager = new AccountManager(service);
-        return (new PlayerDirectoryService(service), manager);
+        var credentials = new InMemoryAccountCredentialStore(new Pbkdf2PasswordHasher());
+        return (new PlayerDirectoryService(service, credentials), manager, credentials);
     }
 
     [Test]
     public void Search_FindsRealDisplayNameCaseInsensitively()
     {
-        (IPlayerDirectoryService directory, AccountManager accounts) = CreateDirectory();
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
         AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("QueenBee", "queen@bee.test"));
         accounts.ReactivateAccount(created.Profile.AccountId); // PendingVerification -> Active so Search (Active-only) finds it
 
@@ -46,7 +49,7 @@ public sealed class PlayerDirectoryServiceTests
     [Test]
     public void Search_RejectsBlankQuery_CannotExtractWholePlayerBase()
     {
-        (IPlayerDirectoryService directory, AccountManager accounts) = CreateDirectory();
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
         AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("QueenBee", "queen@bee.test"));
         accounts.ReactivateAccount(created.Profile.AccountId);
 
@@ -67,7 +70,7 @@ public sealed class PlayerDirectoryServiceTests
     [Test]
     public void Search_RespectsPaginationAndLimit()
     {
-        (IPlayerDirectoryService directory, AccountManager accounts) = CreateDirectory();
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
         for (int i = 0; i < 5; i++)
         {
             AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("Scout" + i, $"scout{i}@bee.test"));
@@ -88,7 +91,7 @@ public sealed class PlayerDirectoryServiceTests
     [Test]
     public void GetByPlayerIds_BatchResolvesWithoutOneCallPerPlayer()
     {
-        (IPlayerDirectoryService directory, AccountManager accounts) = CreateDirectory();
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
         AccountRecord a = accounts.CreateAccount(new CreateAccountRequest("Alpha", "alpha@bee.test"));
         AccountRecord b = accounts.CreateAccount(new CreateAccountRequest("Beta", "beta@bee.test"));
 
@@ -102,11 +105,83 @@ public sealed class PlayerDirectoryServiceTests
     [Test]
     public void Search_DoesNotReturnInactiveAccounts()
     {
-        (IPlayerDirectoryService directory, AccountManager accounts) = CreateDirectory();
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
         accounts.CreateAccount(new CreateAccountRequest("Dormant", "dormant@bee.test")); // stays PendingVerification
 
         var results = directory.Search("Dormant", 0, 20);
 
         Assert.That(results, Is.Empty);
+    }
+
+    // ---------------- M043P-CL: authoritative DisplayName resolution ----------------
+
+    [Test]
+    public void GetByPlayerId_PrefersOnboardedAuthenticationDisplayNameOverAccountRecord()
+    {
+        // The real Google-auth onboarding flow (POST /auth/display-name) writes ONLY to
+        // AuthenticationAccounts - it never touches the separate BeeKingdom.Accounts record. This
+        // is the exact production shape that showed the CEO as a truncated PlayerId everywhere:
+        // an Account record exists with an empty/irrelevant DisplayName, while the real, onboarded
+        // name lives in AuthenticationAccounts.
+        (IPlayerDirectoryService directory, AccountManager accounts, IAccountCredentialStore credentials) = CreateDirectory();
+        AccountRecord created = accounts.CreateAccount(new CreateAccountRequest(string.Empty, "queen@bee.test"));
+        accounts.ReactivateAccount(created.Profile.AccountId);
+
+        AuthenticationAccount authAccount = credentials.CreateGoogleAccount("google-subject-1", "queen@bee.test") with
+        {
+            PlayerId = created.Profile.PlayerId,
+            DisplayName = "QueenBee",
+            IsOnboarded = true
+        };
+        credentials.Save(authAccount);
+
+        PlayerPublicIdentity? resolved = directory.GetByPlayerId(created.Profile.PlayerId);
+
+        Assert.That(resolved, Is.Not.Null);
+        Assert.That(resolved!.DisplayName, Is.EqualTo("QueenBee"));
+    }
+
+    [Test]
+    public void GetByPlayerId_FallsBackToAccountRecordWhenNoAuthenticationAccountExists()
+    {
+        // A synthetic/seeded test account created directly via IAccountService, never through the
+        // real Google onboarding flow - must keep working exactly as before.
+        (IPlayerDirectoryService directory, AccountManager accounts, _) = CreateDirectory();
+        AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("SeededScout", "scout@bee.test"));
+
+        PlayerPublicIdentity? resolved = directory.GetByPlayerId(created.Profile.PlayerId);
+
+        Assert.That(resolved, Is.Not.Null);
+        Assert.That(resolved!.DisplayName, Is.EqualTo("SeededScout"));
+    }
+
+    [Test]
+    public void GetByPlayerId_IgnoresNotYetOnboardedAuthenticationAccount()
+    {
+        // A player mid-login who has not chosen a name yet (IsOnboarded=false) must not surface a
+        // null/empty DisplayName in place of whatever the Account record already has.
+        (IPlayerDirectoryService directory, AccountManager accounts, IAccountCredentialStore credentials) = CreateDirectory();
+        AccountRecord created = accounts.CreateAccount(new CreateAccountRequest("PendingName", "pending@bee.test"));
+        AuthenticationAccount authAccount = credentials.CreateGoogleAccount("google-subject-2", "pending@bee.test") with
+        {
+            PlayerId = created.Profile.PlayerId,
+            IsOnboarded = false
+        };
+        credentials.Save(authAccount);
+
+        PlayerPublicIdentity? resolved = directory.GetByPlayerId(created.Profile.PlayerId);
+
+        Assert.That(resolved, Is.Not.Null);
+        Assert.That(resolved!.DisplayName, Is.EqualTo("PendingName"));
+    }
+
+    [Test]
+    public void GetByPlayerId_UnknownPlayer_ReturnsNullWithoutCrashing()
+    {
+        (IPlayerDirectoryService directory, _, _) = CreateDirectory();
+
+        PlayerPublicIdentity? resolved = directory.GetByPlayerId(PlayerId.New());
+
+        Assert.That(resolved, Is.Null);
     }
 }

@@ -82,6 +82,15 @@ public sealed class InMemoryAccountCredentialStore : IAccountCredentialStore
         }
     }
 
+    public bool TryGetByPlayerId(PlayerId playerId, out AuthenticationAccount account)
+    {
+        lock (sync)
+        {
+            account = accountsByEmail.Values.FirstOrDefault(a => a.PlayerId == playerId)!;
+            return account != null;
+        }
+    }
+
     public bool IsDisplayNameTaken(Guid worldId, string displayName, Guid excludingAccountId)
     {
         lock (sync)

@@ -127,6 +127,28 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         return true;
     }
 
+    public bool TryGetByPlayerId(PlayerId playerId, out AuthenticationAccount account)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT AccountId, PlayerId, Email, PasswordHash, SecurityState, FailedAttempts, LockedUntilUtc, GoogleSubjectId, DisplayName, IsOnboarded, Role
+            FROM dbo.AuthenticationAccounts
+            WHERE PlayerId = @PlayerId;
+            """;
+        Add(command, "@PlayerId", playerId.Value);
+        using IDataReader reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            account = null!;
+            return false;
+        }
+
+        account = ReadAccount(reader);
+        return true;
+    }
+
     public bool IsDisplayNameTaken(Guid worldId, string displayName, Guid excludingAccountId)
     {
         using IDbConnection connection = connectionFactory.CreateConnection();
