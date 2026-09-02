@@ -204,7 +204,12 @@ app.Use(async (context, next) =>
 
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/game/v1") && HttpMethods.IsGet(context.Request.Method))
+    // M043J-CL: the Unity client's shared transport enforces this cache boundary on every GET
+    // response regardless of domain, not just Hive gameplay - Alliance ("/alliance/v1") was added
+    // without extending this middleware, so every AllianceClient GET was rejected client-side with
+    // "game.read_cache_boundary_missing" even though the server itself was healthy.
+    if ((context.Request.Path.StartsWithSegments("/game/v1") || context.Request.Path.StartsWithSegments("/alliance/v1"))
+        && HttpMethods.IsGet(context.Request.Method))
     {
         context.Response.Headers.CacheControl = "private, no-store";
         context.Response.Headers.Pragma = "no-cache";

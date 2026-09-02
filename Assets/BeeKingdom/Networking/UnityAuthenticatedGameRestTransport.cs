@@ -11,6 +11,13 @@ namespace BeeKingdom.Networking
         private const int MaxRequestBytes = 512 * 1024;
         private const int MaxResponseBytes = 1024 * 1024;
 
+        // M043J-CL: this transport is shared across every domain client (Hive gameplay,
+        // Alliance, future Communication groups, etc.), not just "/game/v1/" - the original
+        // single-prefix check silently rejected every AllianceClient call client-side, before
+        // any network request was ever sent, which is why no server-side fix (config, SQL
+        // persistence) ever resolved the recurring "invalid_response" errors.
+        private static readonly string[] AllowedPathPrefixes = { "/game/v1/", "/alliance/v1/" };
+
         private readonly string baseUrl;
         private readonly int timeoutSeconds;
         private readonly IGameJsonCodec codec;
@@ -198,7 +205,7 @@ namespace BeeKingdom.Networking
             if ((!string.Equals(request.Method, "GET", StringComparison.Ordinal) &&
                  !string.Equals(request.Method, "POST", StringComparison.Ordinal)) ||
                 string.IsNullOrWhiteSpace(request.Path) || request.Path.Length > 512 ||
-                !request.Path.StartsWith("/game/v1/", StringComparison.Ordinal) ||
+                !StartsWithAllowedPrefix(request.Path) ||
                 request.Path.IndexOf("..", StringComparison.Ordinal) >= 0 ||
                 request.Path.IndexOf("://", StringComparison.Ordinal) >= 0)
                 throw InvalidResponse("game.request_invalid");
@@ -215,6 +222,15 @@ namespace BeeKingdom.Networking
         private static AuthenticatedGameRestException InvalidResponse(string code)
         {
             return new AuthenticatedGameRestException(AuthenticatedGameRestError.InvalidResponse, code);
+        }
+
+        private static bool StartsWithAllowedPrefix(string path)
+        {
+            foreach (string prefix in AllowedPathPrefixes)
+            {
+                if (path.StartsWith(prefix, StringComparison.Ordinal)) return true;
+            }
+            return false;
         }
 
         public sealed class ErrorWire
