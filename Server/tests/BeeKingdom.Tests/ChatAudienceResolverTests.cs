@@ -46,108 +46,53 @@ public sealed class ChatAudienceResolverTests
         });
     }
 
-    // M042-CL: alliance/leaders channel access is now server-authoritative - the client-declared
-    // "requesterRole" string on the wire is no longer trusted at all. These tests now drive
-    // access purely through a fake IAllianceMembershipResolver, matching what the real
-    // BeeKingdom.Alliance-backed resolver will report from actual server-side membership rows.
-
     [Test]
-    public void NonMemberIsDeniedAllianceChannel()
+    public void AllianceAndLeadersChannelsUseResolverRoleGate()
     {
-        LocalChatAudienceResolver resolver = CreateResolver(new FakeAllianceMembershipResolver());
-        ChatAudienceDecision decision = resolver.ResolveConversationAccess(Requester, AllianceRequest());
+        LocalChatAudienceResolver resolver = CreateResolver();
 
-        Assert.That(decision.Allowed, Is.False);
-        Assert.That(decision.ReasonCode, Is.EqualTo("alliance_membership_required"));
+        ChatAudienceDecision allianceWithoutRole = resolver.ResolveConversationAccess(Requester, AllianceRequest(null));
+        ChatAudienceDecision allianceMember = resolver.ResolveConversationAccess(Requester, AllianceRequest("member"));
+        ChatAudienceDecision leadersMember = resolver.ResolveConversationAccess(Requester, LeadersRequest("member"));
+        ChatAudienceDecision leadersOfficer = resolver.ResolveConversationAccess(Requester, LeadersRequest("officer"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(allianceWithoutRole.Allowed, Is.False);
+            Assert.That(allianceWithoutRole.ReasonCode, Is.EqualTo("alliance_membership_required"));
+            Assert.That(allianceMember.Allowed, Is.True);
+            Assert.That(allianceMember.RequesterRole, Is.EqualTo(ChatPermissionRole.Member));
+            Assert.That(leadersMember.Allowed, Is.False);
+            Assert.That(leadersMember.ReasonCode, Is.EqualTo("alliance_leader_role_required"));
+            Assert.That(leadersOfficer.Allowed, Is.True);
+            Assert.That(leadersOfficer.RequesterRole, Is.EqualTo(ChatPermissionRole.Officer));
+        });
     }
 
     [Test]
-    public void RealMemberIsAllowedAllianceChannelWithServerRole()
+    public void AllianceAnnouncementsRequireOfficerOrLeader()
     {
-        var fake = new FakeAllianceMembershipResolver();
-        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Member);
-        LocalChatAudienceResolver resolver = CreateResolver(fake);
-
-        ChatAudienceDecision decision = resolver.ResolveConversationAccess(Requester, AllianceRequest());
-
-        Assert.That(decision.Allowed, Is.True);
-        Assert.That(decision.RequesterRole, Is.EqualTo(ChatPermissionRole.Member));
-    }
-
-    [Test]
-    public void ClientDeclaredRoleIsIgnoredCompletely()
-    {
-        // No membership registered in the fake resolver at all - even though the request claims
-        // "leader" on the wire, access must still be denied. This is the exact regression this
-        // change exists to prevent.
-        LocalChatAudienceResolver resolver = CreateResolver(new FakeAllianceMembershipResolver());
-        ChatAudienceDecision decision = resolver.ResolveConversationAccess(Requester, AllianceRequest("leader"));
-
-        Assert.That(decision.Allowed, Is.False);
-        Assert.That(decision.ReasonCode, Is.EqualTo("alliance_membership_required"));
-    }
-
-    [Test]
-    public void KickedMemberLosesChatAccess()
-    {
-        var fake = new FakeAllianceMembershipResolver();
-        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Member);
-        LocalChatAudienceResolver resolver = CreateResolver(fake);
-        Assert.That(resolver.ResolveConversationAccess(Requester, AllianceRequest()).Allowed, Is.True, "sanity check before kick");
-
-        fake.RemoveRole(AllianceId, Requester.Value); // simulates AllianceService.Kick clearing the membership
-        ChatAudienceDecision afterKick = resolver.ResolveConversationAccess(Requester, AllianceRequest());
-
-        Assert.That(afterKick.Allowed, Is.False);
-        Assert.That(afterKick.ReasonCode, Is.EqualTo("alliance_membership_required"));
-    }
-
-    [Test]
-    public void LeaderRoleComesFromServerMembershipForLeadersChannel()
-    {
-        var fake = new FakeAllianceMembershipResolver();
-        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Member);
-        LocalChatAudienceResolver resolver = CreateResolver(fake);
-
-        ChatAudienceDecision memberInLeaders = resolver.ResolveConversationAccess(Requester, LeadersRequest());
-        Assert.That(memberInLeaders.Allowed, Is.False, "a plain Member must not reach the Leaders channel");
-        Assert.That(memberInLeaders.ReasonCode, Is.EqualTo("alliance_leader_role_required"));
-
-        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Officer);
-        ChatAudienceDecision officerInLeaders = resolver.ResolveConversationAccess(Requester, LeadersRequest());
-        Assert.That(officerInLeaders.Allowed, Is.True);
-        Assert.That(officerInLeaders.RequesterRole, Is.EqualTo(ChatPermissionRole.Officer));
-    }
-
-    [Test]
-    public void AllianceAnnouncementsRequireOfficerOrLeaderFromServerMembership()
-    {
-        var fake = new FakeAllianceMembershipResolver();
+        LocalChatAudienceResolver resolver = CreateResolver();
         Guid member = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
-        LocalChatAudienceResolver resolver = CreateResolver(fake);
 
-        // No membership at all - claiming "leader" on the wire must not matter.
-        ChatAudienceDecision noMembership = resolver.ResolveAnnouncementAccess(Requester, AllianceId, AnnouncementRequest("leader", member));
-        Assert.That(noMembership.Allowed, Is.False);
-        Assert.That(noMembership.ReasonCode, Is.EqualTo("alliance_leader_role_required"));
+        ChatAudienceDecision memberDecision = resolver.ResolveAnnouncementAccess(Requester, AllianceId, AnnouncementRequest("member", member));
+        ChatAudienceDecision leaderDecision = resolver.ResolveAnnouncementAccess(Requester, AllianceId, AnnouncementRequest("leader", member));
 
-        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Member);
-        ChatAudienceDecision memberDecision = resolver.ResolveAnnouncementAccess(Requester, AllianceId, AnnouncementRequest(null, member));
-        Assert.That(memberDecision.Allowed, Is.False);
-        Assert.That(memberDecision.ReasonCode, Is.EqualTo("alliance_leader_role_required"));
-
-        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Leader);
-        ChatAudienceDecision leaderDecision = resolver.ResolveAnnouncementAccess(Requester, AllianceId, AnnouncementRequest(null, member));
-        Assert.That(leaderDecision.Allowed, Is.True);
-        Assert.That(leaderDecision.Participants.Select(player => player.Value), Is.EquivalentTo(new[] { Requester.Value, member }));
+        Assert.Multiple(() =>
+        {
+            Assert.That(memberDecision.Allowed, Is.False);
+            Assert.That(memberDecision.ReasonCode, Is.EqualTo("alliance_leader_role_required"));
+            Assert.That(leaderDecision.Allowed, Is.True);
+            Assert.That(leaderDecision.Participants.Select(player => player.Value), Is.EquivalentTo(new[] { Requester.Value, member }));
+        });
     }
 
-    private static LocalChatAudienceResolver CreateResolver(IAllianceMembershipResolver? allianceMembership = null)
+    private static LocalChatAudienceResolver CreateResolver()
     {
-        return new LocalChatAudienceResolver(Options.Create(new ChatOptions { MaxPrivateRecipients = 20 }), allianceMembership);
+        return new LocalChatAudienceResolver(Options.Create(new ChatOptions { MaxPrivateRecipients = 20 }));
     }
 
-    private static CreateChatConversationRequest AllianceRequest(string? requesterRole = null)
+    private static CreateChatConversationRequest AllianceRequest(string? requesterRole)
     {
         return new CreateChatConversationRequest(
             ChatChannelType.Alliance,
@@ -160,7 +105,7 @@ public sealed class ChatAudienceResolverTests
             requesterRole);
     }
 
-    private static CreateChatConversationRequest LeadersRequest(string? requesterRole = null)
+    private static CreateChatConversationRequest LeadersRequest(string requesterRole)
     {
         return new CreateChatConversationRequest(
             ChatChannelType.Leaders,
@@ -173,7 +118,7 @@ public sealed class ChatAudienceResolverTests
             requesterRole);
     }
 
-    private static CreateAllianceAnnouncementRequest AnnouncementRequest(string? requesterRole, Guid member)
+    private static CreateAllianceAnnouncementRequest AnnouncementRequest(string requesterRole, Guid member)
     {
         return new CreateAllianceAnnouncementRequest(
             GameServerId,
@@ -182,16 +127,5 @@ public sealed class ChatAudienceResolverTests
             [member],
             "announcement_001",
             requesterRole);
-    }
-
-    // Stands in for BeeKingdom.Alliance's real AllianceMembershipResolver (wrapping
-    // IAllianceRepository.GetActiveMembership) without this test project depending on the
-    // Alliance module - exactly mirrors the interface's real contract.
-    private sealed class FakeAllianceMembershipResolver : IAllianceMembershipResolver
-    {
-        private readonly Dictionary<(Guid, Guid), ChatPermissionRole> roles = new();
-        public void SetRole(Guid allianceId, Guid playerId, ChatPermissionRole role) => roles[(allianceId, playerId)] = role;
-        public void RemoveRole(Guid allianceId, Guid playerId) => roles.Remove((allianceId, playerId));
-        public ChatPermissionRole? GetMemberRole(Guid allianceId, Guid playerId) => roles.TryGetValue((allianceId, playerId), out var role) ? role : null;
     }
 }

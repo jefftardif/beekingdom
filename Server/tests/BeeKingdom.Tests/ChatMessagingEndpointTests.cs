@@ -376,107 +376,100 @@ public sealed class ChatMessagingEndpointTests
         Assert.That(messages.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(2));
     }
 
-    // M042-CL: alliance/leaders chat access is now server-authoritative (see
-    // LocalChatAudienceResolver/IAllianceMembershipResolver) - a client-declared
-    // "requesterAllianceRole" no longer has any effect on Alliance/Leaders channels. This test
-    // now creates a REAL alliance through the real /alliance/v1 endpoints (Alliance:Enabled is
-    // true in the base config CreateFactory inherits) and uses real Leader/Member accounts
-    // instead of a role string, proving the actual end-to-end wiring rather than a since-removed
-    // trust mechanism.
     [Test]
     public async Task AllianceAndLeadersChannelsRequireAllianceRoles()
     {
         await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
-        using HttpClient leaderClient = factory.CreateClient();
-        string leaderToken = await LoginTestAccount(factory, leaderClient, "chat-leader-gates@bee.test");
-        leaderClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
-
-        HttpResponseMessage createAlliance = await leaderClient.PostAsJsonAsync(
-            "/alliance/v1/alliances",
-            new { name = "Golden Hive Gate Test", tag = "GHG", description = "", language = "fr-CA", emblemKey = "", joinMode = 0, clientRequestId = "chat-gate-alliance" },
-            BeeJson.CreateDefaultOptions());
-        Assert.That(createAlliance.StatusCode, Is.EqualTo(HttpStatusCode.OK), await createAlliance.Content.ReadAsStringAsync());
-        using JsonDocument allianceDoc = JsonDocument.Parse(await createAlliance.Content.ReadAsStringAsync());
-        Guid allianceId = allianceDoc.RootElement.GetProperty("alliance").GetProperty("allianceId").GetProperty("value").GetGuid();
-
-        using HttpClient memberClient = factory.CreateClient();
-        string memberToken = await LoginTestAccount(factory, memberClient, "chat-member-gates@bee.test");
-        memberClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", memberToken);
-        HttpResponseMessage joinResponse = await memberClient.PostAsync($"/alliance/v1/alliances/{allianceId:D}/join", null);
-        Assert.That(joinResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), await joinResponse.Content.ReadAsStringAsync());
+        using HttpClient client = factory.CreateClient();
+        string accessToken = await LoginTestAccount(factory, client, "chat-leader-gates@bee.test");
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
         Guid gameServerId = Guid.NewGuid();
         Guid worldId = Guid.NewGuid();
-        Guid unrelatedAllianceId = Guid.NewGuid(); // a real Guid, but no alliance/membership exists for it
+        Guid allianceId = Guid.NewGuid();
 
-        object AllianceBody(string clientRequestId, Guid forAllianceId) => new
-        {
-            channelType = ChatChannelType.Alliance,
-            gameServerId,
-            worldId,
-            audienceKey = $"alliance:{forAllianceId:N}",
-            title = "Alliance",
-            participantIds = Array.Empty<Guid>(),
-            clientRequestId
-        };
-        object LeadersBody(string clientRequestId) => new
-        {
-            channelType = ChatChannelType.Leaders,
-            gameServerId,
-            worldId,
-            audienceKey = $"leaders:{allianceId:N}",
-            title = "Leaders",
-            participantIds = Array.Empty<Guid>(),
-            clientRequestId
-        };
-
-        HttpResponseMessage allianceWithoutMembership = await leaderClient.PostAsJsonAsync("/chat/v1/conversations", AllianceBody("alliance_no_role", unrelatedAllianceId), BeeJson.CreateDefaultOptions());
-        HttpResponseMessage allianceWithRealMember = await memberClient.PostAsJsonAsync("/chat/v1/conversations", AllianceBody("alliance_member", allianceId), BeeJson.CreateDefaultOptions());
-        HttpResponseMessage leadersWithRealMember = await memberClient.PostAsJsonAsync("/chat/v1/conversations", LeadersBody("leaders_member"), BeeJson.CreateDefaultOptions());
-        HttpResponseMessage leadersWithRealLeader = await leaderClient.PostAsJsonAsync("/chat/v1/conversations", LeadersBody("leaders_leader"), BeeJson.CreateDefaultOptions());
+        HttpResponseMessage allianceWithoutRole = await client.PostAsJsonAsync(
+            "/chat/v1/conversations",
+            new
+            {
+                channelType = ChatChannelType.Alliance,
+                gameServerId,
+                worldId,
+                audienceKey = $"alliance:{allianceId:N}",
+                title = "Alliance",
+                participantIds = Array.Empty<Guid>(),
+                clientRequestId = "alliance_no_role"
+            },
+            BeeJson.CreateDefaultOptions());
+        HttpResponseMessage allianceWithMember = await client.PostAsJsonAsync(
+            "/chat/v1/conversations",
+            new
+            {
+                channelType = ChatChannelType.Alliance,
+                gameServerId,
+                worldId,
+                audienceKey = $"alliance:{allianceId:N}",
+                title = "Alliance",
+                participantIds = Array.Empty<Guid>(),
+                clientRequestId = "alliance_member",
+                requesterAllianceRole = "member"
+            },
+            BeeJson.CreateDefaultOptions());
+        HttpResponseMessage leadersWithMember = await client.PostAsJsonAsync(
+            "/chat/v1/conversations",
+            new
+            {
+                channelType = ChatChannelType.Leaders,
+                gameServerId,
+                worldId,
+                audienceKey = $"leaders:{allianceId:N}",
+                title = "Leaders",
+                participantIds = Array.Empty<Guid>(),
+                clientRequestId = "leaders_member",
+                requesterAllianceRole = "member"
+            },
+            BeeJson.CreateDefaultOptions());
+        HttpResponseMessage leadersWithLeader = await client.PostAsJsonAsync(
+            "/chat/v1/conversations",
+            new
+            {
+                channelType = ChatChannelType.Leaders,
+                gameServerId,
+                worldId,
+                audienceKey = $"leaders:{allianceId:N}",
+                title = "Leaders",
+                participantIds = Array.Empty<Guid>(),
+                clientRequestId = "leaders_leader",
+                requesterAllianceRole = "leader"
+            },
+            BeeJson.CreateDefaultOptions());
 
         Assert.Multiple(() =>
         {
-            Assert.That(allianceWithoutMembership.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
-            Assert.That(allianceWithRealMember.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            Assert.That(leadersWithRealMember.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
-            Assert.That(leadersWithRealLeader.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(allianceWithoutRole.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(allianceWithMember.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(leadersWithMember.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(leadersWithLeader.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         });
     }
 
-    // M042-CL: announcement access is now gated by real server-side Alliance membership
-    // (IAllianceMembershipResolver), not the client-declared "requesterAllianceRole" the endpoint
-    // used to trust - seeds a REAL alliance/leader/member through the live /alliance/v1 endpoints
-    // instead, same approach as AllianceAndLeadersChannelsRequireAllianceRoles above.
     [Test]
     public async Task AllianceAnnouncementRequiresLeaderRoleAndFanOutParticipants()
     {
         await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
-        using HttpClient leaderClient = factory.CreateClient();
-        string leaderToken = await LoginTestAccount(factory, leaderClient, "chat-announcement-leader@bee.test");
-        leaderClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
+        using HttpClient client = factory.CreateClient();
+        string accessToken = await LoginTestAccount(factory, client, "chat-announcement@bee.test");
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-        HttpResponseMessage createAlliance = await leaderClient.PostAsJsonAsync(
-            "/alliance/v1/alliances",
-            new { name = "Golden Hive Announce Test", tag = "GHA", description = "", language = "fr-CA", emblemKey = "", joinMode = 0, clientRequestId = "chat-gate-announce-alliance" },
-            BeeJson.CreateDefaultOptions());
-        Assert.That(createAlliance.StatusCode, Is.EqualTo(HttpStatusCode.OK), await createAlliance.Content.ReadAsStringAsync());
-        using JsonDocument allianceDoc = JsonDocument.Parse(await createAlliance.Content.ReadAsStringAsync());
-        Guid allianceId = allianceDoc.RootElement.GetProperty("alliance").GetProperty("allianceId").GetProperty("value").GetGuid();
-
-        using HttpClient memberClient = factory.CreateClient();
-        string memberToken = await LoginTestAccount(factory, memberClient, "chat-announcement-member@bee.test");
-        memberClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", memberToken);
-        HttpResponseMessage joinResponse = await memberClient.PostAsync($"/alliance/v1/alliances/{allianceId:D}/join", null);
-        Assert.That(joinResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), await joinResponse.Content.ReadAsStringAsync());
-
+        Guid allianceId = Guid.NewGuid();
         object body = new
         {
             gameServerId = Guid.NewGuid(),
             worldId = Guid.NewGuid(),
             body = "Defense au centre ce soir.",
             memberPlayerIds = new[] { Guid.NewGuid(), Guid.NewGuid() },
-            clientRequestId = "announcement_001"
+            clientRequestId = "announcement_001",
+            requesterAllianceRole = "leader"
         };
         object memberBody = new
         {
@@ -484,11 +477,12 @@ public sealed class ChatMessagingEndpointTests
             worldId = Guid.NewGuid(),
             body = "Defense au centre ce soir.",
             memberPlayerIds = new[] { Guid.NewGuid() },
-            clientRequestId = "announcement_forbidden"
+            clientRequestId = "announcement_forbidden",
+            requesterAllianceRole = "member"
         };
 
-        HttpResponseMessage forbidden = await memberClient.PostAsJsonAsync($"/chat/v1/alliances/{allianceId}/announcements", memberBody, BeeJson.CreateDefaultOptions());
-        HttpResponseMessage accepted = await leaderClient.PostAsJsonAsync($"/chat/v1/alliances/{allianceId}/announcements", body, BeeJson.CreateDefaultOptions());
+        HttpResponseMessage forbidden = await client.PostAsJsonAsync($"/chat/v1/alliances/{allianceId}/announcements", memberBody, BeeJson.CreateDefaultOptions());
+        HttpResponseMessage accepted = await client.PostAsJsonAsync($"/chat/v1/alliances/{allianceId}/announcements", body, BeeJson.CreateDefaultOptions());
 
         Assert.Multiple(() =>
         {
@@ -502,39 +496,6 @@ public sealed class ChatMessagingEndpointTests
             Assert.That(payload.RootElement.GetProperty("conversation").GetProperty("channelType").GetString(), Is.EqualTo("Alliance"));
             Assert.That(payload.RootElement.GetProperty("sendResult").GetProperty("message").GetProperty("body").GetString(), Is.EqualTo("Defense au centre ce soir."));
         });
-    }
-
-    [Test]
-    public async Task DIAGNOSTIC_ListConversationsAfterOtherParticipantNeverExisted()
-    {
-        await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
-        using HttpClient client = factory.CreateClient();
-        string accessToken = await LoginTestAccount(factory, client, "diag-queen@bee.test");
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        Guid otherPlayerId = Guid.NewGuid();
-        Guid gameServerId = Guid.NewGuid();
-        Guid worldId = Guid.NewGuid();
-
-        HttpResponseMessage createResponse = await client.PostAsJsonAsync(
-            "/chat/v1/conversations",
-            new
-            {
-                channelType = ChatChannelType.Private,
-                gameServerId,
-                worldId,
-                audienceKey = (string?)null,
-                title = "Queen, Ghost",
-                participantIds = new[] { otherPlayerId },
-                clientRequestId = "diag_create_001"
-            },
-            BeeJson.CreateDefaultOptions());
-        Console.WriteLine("CREATE status: " + createResponse.StatusCode);
-        Console.WriteLine("CREATE body: " + await createResponse.Content.ReadAsStringAsync());
-
-        HttpResponseMessage listResponse = await client.GetAsync("/chat/v1/conversations");
-        Console.WriteLine("LIST status: " + listResponse.StatusCode);
-        Console.WriteLine("LIST body: " + await listResponse.Content.ReadAsStringAsync());
     }
 
     private static WebApplicationFactory<Program> CreateFactory(bool chatEnabled)

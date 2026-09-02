@@ -41,11 +41,6 @@ public static class ChatServiceCollectionExtensions
             services.AddSingleton<IChatRepository, InMemoryChatRepository>();
         }
 
-        // M042-CL: fail-closed default - real membership resolution is registered on top of this
-        // by AddBeeKingdomAlliance (Program.cs calls that after AddBeeKingdomChat, so it wins as
-        // the last registration for this service type). Chat still works standalone without it;
-        // alliance/leaders channels just deny everything until Alliance is wired in.
-        services.AddSingleton<IAllianceMembershipResolver, NullAllianceMembershipResolver>();
         services.AddSingleton<IChatAudienceResolver, LocalChatAudienceResolver>();
         services.AddSingleton<IChatTranslationRepository>(provider =>
             PersistenceOptions.UsesSqlServer(configuration)

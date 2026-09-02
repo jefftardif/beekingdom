@@ -12,12 +12,6 @@ public interface IChatRepository
     IReadOnlyList<ChatConversationParticipant> ListParticipants(Guid conversationId);
     ChatConversationParticipant? GetParticipant(Guid conversationId, PlayerId playerId);
     ChatConversationParticipant EnsureParticipant(ChatConversationParticipant participant);
-    // M042-CL: Ensure* only adds a brand-new row and never touches an existing one (including a
-    // previously-removed one) - Upsert additionally reactivates/updates it, and Remove marks it
-    // gone. Added specifically to let Alliance membership changes (join/leave/kick/application-
-    // accepted/invitation-accepted) drive real chat participation without a second chat system.
-    ChatConversationParticipant UpsertParticipant(ChatConversationParticipant participant);
-    ChatConversationParticipant? RemoveParticipant(Guid conversationId, PlayerId playerId, DateTimeOffset removedAtUtc);
     long NextSequence(Guid conversationId);
     ChatOutboxReceipt? GetOutboxReceipt(PlayerId playerId, Guid conversationId, string clientRequestId);
     ChatOutboxReceipt SaveOutboxReceipt(ChatOutboxReceipt receipt);

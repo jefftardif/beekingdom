@@ -170,43 +170,6 @@ public sealed class SqlChatRepository : IChatRepository
         return GetParticipant(participant.ConversationId, participant.PlayerId) ?? participant;
     }
 
-    public ChatConversationParticipant UpsertParticipant(ChatConversationParticipant participant)
-    {
-        using IDbConnection connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using IDbCommand command = connection.CreateCommand();
-        command.CommandText = """
-            MERGE dbo.ChatConversationParticipants AS target
-            USING (SELECT @ConversationId AS ConversationId, @PlayerId AS PlayerId) AS source
-            ON target.ConversationId = source.ConversationId AND target.PlayerId = source.PlayerId
-            WHEN MATCHED THEN
-                UPDATE SET Role = @Role, RemovedAtUtc = @RemovedAtUtc, CanRead = @CanRead, CanWrite = @CanWrite
-            WHEN NOT MATCHED THEN
-                INSERT (ConversationId, PlayerId, Role, JoinedAtUtc, RemovedAtUtc, CanRead, CanWrite)
-                VALUES (@ConversationId, @PlayerId, @Role, @JoinedAtUtc, @RemovedAtUtc, @CanRead, @CanWrite);
-            """;
-        AddParticipantParameters(command, participant);
-        command.ExecuteNonQuery();
-        return GetParticipant(participant.ConversationId, participant.PlayerId) ?? participant;
-    }
-
-    public ChatConversationParticipant? RemoveParticipant(Guid conversationId, PlayerId playerId, DateTimeOffset removedAtUtc)
-    {
-        using IDbConnection connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using IDbCommand command = connection.CreateCommand();
-        command.CommandText = """
-            UPDATE dbo.ChatConversationParticipants
-            SET RemovedAtUtc = @RemovedAtUtc, CanRead = 0, CanWrite = 0
-            WHERE ConversationId = @ConversationId AND PlayerId = @PlayerId;
-            """;
-        Add(command, "@ConversationId", conversationId);
-        Add(command, "@PlayerId", playerId.Value);
-        Add(command, "@RemovedAtUtc", removedAtUtc.UtcDateTime);
-        int affected = command.ExecuteNonQuery();
-        return affected > 0 ? GetParticipant(conversationId, playerId) : null;
-    }
-
     public long NextSequence(Guid conversationId)
     {
         using IDbConnection connection = connectionFactory.CreateConnection();

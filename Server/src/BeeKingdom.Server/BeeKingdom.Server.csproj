@@ -7,7 +7,6 @@
     <ProjectReference Include="..\BeeKingdom.Shared\BeeKingdom.Shared.csproj" />
     <ProjectReference Include="..\BeeKingdom.Authentication\BeeKingdom.Authentication.csproj" />
     <ProjectReference Include="..\BeeKingdom.Chat\BeeKingdom.Chat.csproj" />
-    <ProjectReference Include="..\BeeKingdom.Alliance\BeeKingdom.Alliance.csproj" />
     <ProjectReference Include="..\BeeKingdom.Accounts\BeeKingdom.Accounts.csproj" />
     <ProjectReference Include="..\BeeKingdom.Gateway\BeeKingdom.Gateway.csproj" />
     <ProjectReference Include="..\BeeKingdom.Colony\BeeKingdom.Colony.csproj" />
