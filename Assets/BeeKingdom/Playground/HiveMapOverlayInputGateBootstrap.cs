@@ -65,11 +65,15 @@ namespace BeeKingdom.Playground
             root.AddComponent<HiveMapOverlayInputGateBootstrap>();
         }
 
-        private void Update()
+        // M043V-CL: shared by any bootstrap that draws or reacts to input outside the
+        // overlay's own draw call (e.g. HiveMapProductionBootstrap's honey/warehouse/
+        // transformation ready-glow + bee-swirl badges, found bleeding through the
+        // Communication/Chat Royal overlay because it only checked Research/Activities/
+        // RoyalPalace/Army, never Alliance/Communication/Barrack/Construction/Settings).
+        // Single source of truth so a new overlay only needs to be added once here.
+        public static bool IsAnyOverlayBlocking()
         {
-            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-
-            bool blocked = HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
+            return HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
@@ -88,9 +92,33 @@ namespace BeeKingdom.Playground
                 // M013 extends that status window to Bank.
                 || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost
                 || HiveMapArmyBootstrap.ModalOpenForExternalHost;
+        }
+
+        private void Update()
+        {
+            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+
+            bool blocked = IsAnyOverlayBlocking();
+
+            // M043Z-CL: the non-modal mini-chat draws via IMGUI, not uGUI, so
+            // BuildingInteractionController's own EventSystem.IsPointerOverGameObject() guard
+            // never sees it - a click on its "Ouvrir" button (or anywhere else on its panel)
+            // fell through to whatever 3D building happened to sit behind it on screen (Jeff,
+            // 2026-09-03: clicking "Ouvrir" over the Royal Palace opened the Royal Palace
+            // instead). `blocked` above must stay false while only the mini-chat is open (it
+            // must not hide the rest of the HUD - see CommunicationOverlayOpenForExternalHost's
+            // comment), so this is a separate, pointer-position-scoped check: building clicks
+            // are only suppressed while the mouse is actually over the mini-chat's own rect,
+            // not the whole screen.
+            bool blockedByMiniChatPointer = false;
+            if (!blocked && HiveViewProductUiPresenter.MiniChatOnlyOpenForExternalHost)
+            {
+                Vector2 guiPoint = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+                blockedByMiniChatPointer = HiveViewProductUiPresenter.MiniChatFloatingRectForExternalHost.Contains(guiPoint);
+            }
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();
-            if (controller != null) controller.IsEnabled = !blocked;
+            if (controller != null) controller.IsEnabled = !blocked && !blockedByMiniChatPointer;
 
             if (LivingHiveMenuRuntime.CanvasComponent != null) LivingHiveMenuRuntime.CanvasComponent.SetInputBlocked(blocked);
         }

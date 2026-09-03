@@ -138,9 +138,22 @@ namespace BeeKingdom.LivingHiveMenu
         // overlay's own close button also fires whatever uGUI element (or, separately, 3D
         // building collider - see BuildingInteractionController.IsEnabled) happens to sit
         // at that same screen position.
+        //
+        // M043T-CL: raycaster.enabled only ever blocked INPUT, never hid this canvas
+        // visually - a real, confirmed bug (CEO's own Play Mode test): this canvas is
+        // RenderMode.ScreenSpaceOverlay, which Unity ALWAYS composites last, after every
+        // camera render including any OnGUI/IMGUI draw for that frame - no IMGUI backdrop
+        // opacity can ever cover it, no matter how opaque. The CEO saw the Communication
+        // rail icon (with its active-state glow) bleeding straight through the full-screen
+        // "CHAT ROYAL" IMGUI overlay drawn "on top" of it. Every overlay `blocked` covers
+        // (Alliance, Communication, Barrack, Construction, Settings, Research, building
+        // modals...) is itself full-screen or otherwise meant to fully own the screen, so
+        // hiding this canvas outright (not just its raycaster) while any of them is open is
+        // correct in every case, not just Communication's.
         public void SetInputBlocked(bool blocked)
         {
             if (raycaster != null) raycaster.enabled = !blocked;
+            if (canvas != null) canvas.enabled = !blocked;
         }
 
         public void Build()

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BeeKingdom.Buildings.Interaction;
 using BeeKingdom.LivingHiveMenu;
 using UnityEngine;
@@ -31,6 +32,7 @@ namespace BeeKingdom.Playground
         };
 
         private BuildingInteractionController subscribedController;
+        private readonly List<Rect> visibleRegions = new List<Rect>(16);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -81,7 +83,6 @@ namespace BeeKingdom.Playground
 
         private void OnBuildingClicked(BuildingDefinition building)
         {
-            if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (building == null || !IsTrackedBuildingType(building.BuildingType)) return;
             string hotspotId = BuildingMappingTable.GetByBuildingType(building.BuildingType).LegacyKey;
             HiveViewProductUiPresenter.CollectManualProductionForExternalHost(hotspotId);
@@ -99,7 +100,6 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
@@ -119,20 +119,18 @@ namespace BeeKingdom.Playground
                 : 11.76f;
             float badgeGlowSize = Mathf.Clamp(BadgeWorldSize * pixelsPerWorldUnit, 40f, 220f);
 
-            // M040X-CL: script execution order does not reliably control cross-script OnGUI
-            // paint order in this project (demonstrated: TutorialDialoguePresenter forced to
-            // order 32000, persisted, verified after a real Play Mode restart - the badge/bees
-            // drawn here still painted on top of the already-drawn dialogue panel). GUI.BeginGroup
-            // gives true per-pixel occlusion instead: anything drawn below the clip rect is cut
-            // exactly at the panel's real edge, the same way it's naturally hidden behind a real
-            // building - not a heuristic hide/show, and nothing is skipped outside that area.
-            bool clipToDialogue = BeeKingdom.Tutorial.TutorialDialoguePresenter.IsAnyDialogueVisible;
-            if (clipToDialogue)
+            HiveMapUiOcclusion.GetWorldPresentationVisibleRegions(visibleRegions);
+            for (int i = 0; i < visibleRegions.Count; i++)
             {
-                Rect panelRect = BeeKingdom.Tutorial.TutorialDialoguePresenter.GetCurrentPanelRect();
-                GUI.BeginGroup(new Rect(0f, 0f, Screen.width, panelRect.yMin));
+                Rect visible = visibleRegions[i];
+                GUI.BeginGroup(visible);
+                DrawMarkers(camera, time, badgeGlowSize, visible.position);
+                GUI.EndGroup();
             }
+        }
 
+        private void DrawMarkers(Camera camera, float time, float badgeGlowSize, Vector2 clipOffset)
+        {
             for (int i = 0; i < TrackedBuildingTypes.Length; i++)
             {
                 string buildingType = TrackedBuildingTypes[i];
@@ -143,11 +141,10 @@ namespace BeeKingdom.Playground
                 if (rect.width <= 0f) continue;
 
                 string hotspotId = BuildingMappingTable.GetByBuildingType(buildingType).LegacyKey;
-                HiveViewProductUiPresenter.DrawManualProductionBeesForExternalHost(rect, hotspotId, time, badgeGlowSize);
-                HiveViewProductUiPresenter.DrawManualCollectionFeedbackForExternalHost(rect, hotspotId);
+                Rect clippedRect = new Rect(rect.x - clipOffset.x, rect.y - clipOffset.y, rect.width, rect.height);
+                HiveViewProductUiPresenter.DrawManualProductionBeesForExternalHost(clippedRect, hotspotId, time, badgeGlowSize);
+                HiveViewProductUiPresenter.DrawManualCollectionFeedbackForExternalHost(clippedRect, hotspotId);
             }
-
-            if (clipToDialogue) GUI.EndGroup();
         }
 
         // Reuses the building's own click-collider bounds (BoxCollider set up by

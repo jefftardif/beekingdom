@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -74,6 +75,33 @@ namespace BeeKingdom.Playground.Editor
         {
             Assert.That(HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof, Is.True,
                 "Le monde 3D ne doit plus recevoir de clics quand l'ecran '" + label + "' est ouvert.");
+        }
+
+        [Test]
+        public void UiOcclusionSubtractsOpaqueRectsWithoutHidingState()
+        {
+            var result = new List<Rect>();
+            HiveMapUiOcclusion.SubtractForProof(new Rect(0f, 0f, 100f, 100f), new Rect(20f, 30f, 40f, 50f), result);
+
+            Assert.That(result, Has.Count.EqualTo(4));
+            Assert.That(result[0], Is.EqualTo(new Rect(0f, 0f, 100f, 30f)));
+            Assert.That(result[1], Is.EqualTo(new Rect(0f, 80f, 100f, 20f)));
+            Assert.That(result[2], Is.EqualTo(new Rect(0f, 30f, 20f, 50f)));
+            Assert.That(result[3], Is.EqualTo(new Rect(60f, 30f, 40f, 50f)));
+        }
+
+        [Test]
+        public void MiniChatOcclusionIsPartialNotFullscreen()
+        {
+            HiveViewProductUiPresenter.OpenCommunicationPanelForProof();
+
+            Rect miniChat = HiveViewProductUiPresenter.MiniChatOcclusionRectForExternalHost;
+
+            Assert.That(HiveViewProductUiPresenter.MiniChatOnlyOpenForExternalHost, Is.True);
+            Assert.That(miniChat.width, Is.GreaterThan(0f));
+            Assert.That(miniChat.height, Is.GreaterThan(0f));
+            Assert.That(miniChat.width, Is.LessThan(Screen.width));
+            Assert.That(miniChat.height, Is.LessThan(Screen.height));
         }
 
         [Test]

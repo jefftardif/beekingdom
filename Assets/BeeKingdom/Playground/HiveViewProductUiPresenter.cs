@@ -3294,7 +3294,32 @@ private static string courierToast = string.Empty;
             guidedCollectionTutorialStep = GuidedCollectionTutorialStep.Inactive;
         }
 
-        public static bool CommunicationOverlayOpenForExternalHost => communicationPanelOpen;
+        // M043Y-CL: this used to be `communicationPanelOpen`, which is actually the small
+        // persistent floating mini-chat's own flag (see its other name, MiniChatOpenForProof,
+        // same field) - true almost all the time since the mini-chat is meant to float
+        // non-modally alongside the rest of the HUD. Every real consumer of this property
+        // (HiveMapOverlayInputGateBootstrap, HiveMapQueueSidebarBootstrap, AnyModalOpenForExternalHost)
+        // wants "is a full-screen exclusive Communication surface open", the same meaning
+        // BarrackOverlayOpenForExternalHost/AllianceOverlayOpenForExternalHost/etc. have for
+        // their own screens - so it was blocking/hiding the entire HUD (top resource bar,
+        // bottom rail, queue sidebar, world decorations) any time the mini-chat was simply
+        // visible, not just when the actual CHAT ROYAL/Mail screen was open (Jeff, 2026-09-03:
+        // "tu efface tout... le menu, les files d'attente, la barre de ressources du haut").
+        // chatScreenOpen/courierScreenOpen are the two real full-screen states drawn inside
+        // DrawCommunicationOverlayForExternalHost - this now matches them, not the mini-chat.
+        public static bool CommunicationOverlayOpenForExternalHost => chatScreenOpen || courierScreenOpen;
+
+        // M043Y-CL: the small persistent floating mini-chat is non-modal by design (Jeff:
+        // it must keep the rest of the HUD - top resource bar, bottom rail, queue sidebar -
+        // visible while open, unlike the real full-screen Chat Royal/Mail screens above).
+        // World decorations (production ready-glow/bee-swirl badges) still must not paint
+        // through ITS panel specifically though, so this exposes just enough for callers to
+        // do a precise per-rect overlap check instead of a blanket full-screen hide.
+        public static bool MiniChatOnlyOpenForExternalHost => communicationPanelOpen && !chatScreenOpen && !courierScreenOpen;
+
+        public static Rect MiniChatFloatingRectForExternalHost => MiniChatFloatingRectForProof(IsPortraitLayout(), Screen.width, Screen.height);
+
+        public static Rect MiniChatOcclusionRectForExternalHost => MiniChatFloatingOcclusionRect(false);
 
         // EnsureStyles() touches GUI.skin, which throws outside an OnGUI call — this can
         // be invoked from a uGUI Button's onClick (EventSystem.Update, not OnGUI), so it
@@ -3337,10 +3362,19 @@ private static string courierToast = string.Empty;
         {
             if (!communicationPanelOpen) return;
             EnsureStyles();
-            if (courierScreenOpen) DrawCourierScreen(compact);
-            else if (chatScreenOpen) DrawChatScreen(compact);
-            else DrawMiniChatFloating(compact, false);
-            if (chatScreenOpen || courierScreenOpen) DrawCommunicationTabBarForExternalHost(compact);
+            int previousDepth = GUI.depth;
+            if (chatScreenOpen || courierScreenOpen) GUI.depth = HiveMapUiOcclusion.ModalWindowGuiDepth;
+            try
+            {
+                if (courierScreenOpen) DrawCourierScreen(compact);
+                else if (chatScreenOpen) DrawChatScreen(compact);
+                else DrawMiniChatFloating(compact, false);
+                if (chatScreenOpen || courierScreenOpen) DrawCommunicationTabBarForExternalHost(compact);
+            }
+            finally
+            {
+                GUI.depth = previousDepth;
+            }
         }
 
         private static void DrawCommunicationTabBarForExternalHost(bool compact)
@@ -37557,8 +37591,7 @@ private static void DrawMiniChatFloating(bool compact, bool worldMap)
             EnsureChatData();
             EnsureMiniChatSelection();
 
-            Rect panel = MiniChatFloatingRect(worldMap);
-            panel = UIAnimationLibrary.ApplyWindowAnimation(panel, "communication");
+            Rect panel = MiniChatFloatingOcclusionRect(worldMap);
             float fade = UIAnimationLibrary.GetFadeProgress("communication", 1f);
             DrawPremiumPanel(panel, new Color(0.024f, 0.021f, 0.017f, 0.985f * fade), new Color(0.92f, 0.64f, 0.18f, 0.90f * fade));
 
@@ -37717,6 +37750,11 @@ public static Rect ChatRailButtonRectForProof(bool portrait, float screenWidth, 
         }
 
         private static Rect MiniChatFloatingRect(bool worldMap) => MiniChatFloatingRectForProof(IsPortraitLayout(), Screen.width, Screen.height, worldMap);
+
+        private static Rect MiniChatFloatingOcclusionRect(bool worldMap)
+        {
+            return UIAnimationLibrary.ApplyWindowAnimation(MiniChatFloatingRect(worldMap), "communication");
+        }
 
         public static Rect MiniChatFloatingRectForProof(bool portrait, float screenWidth, float screenHeight)
         {

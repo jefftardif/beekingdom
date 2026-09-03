@@ -56,8 +56,18 @@ seule facon pour une future session Claude de reprendre sans repetition.
 - Package terrain verrouille:
   `Assets/BeeKingdom/Playground/Resources/WorldMapWave6Runtime/UIB_ImmenseContinuousMaster50x50_wave5method_12288_preview`
 - Ne jamais regenerer, recadrer ou remplacer le terrain sans demande explicite.
-- Conserver l'image de base actuelle de la ruche `LivingHive`.
-  Scene de travail principale: `Assets/Scenes/LivingHive.unity`.
+- MISE A JOUR PERMANENTE (confirmee par le CEO le 2026-09-03) :
+  `Assets/Scenes/LivingHive.unity` NE DOIT PLUS JAMAIS ETRE UTILISEE, ni comme
+  scene de travail, ni comme reference de test. La ruche officielle testee par
+  le CEO tourne dans la scene `Environment2D5D_HiveMap_Test`
+  (`Assets/Experiments/Environment2D5D/`), avec son propre systeme d'interface
+  parallele (un Canvas uGUI `LivingHiveMenu`, distinct de l'IMGUI de
+  `HiveViewProductUiPresenter.cs`) construit par `LivingHiveMenuCanvas.cs` et
+  les bootstraps `Environment2D5D*` (`LivingHiveChatBridgeBootstrap`,
+  `HiveMapOverlayInputGateBootstrap`, etc.). Tout bug/correctif visuel ou
+  d'interaction doit etre verifie dans CETTE scene, pas dans LivingHive.unity.
+  Le "bouton Communication du menu du bas" (ouvrant "CHAT ROYAL") passe par ce
+  Canvas uGUI + `HiveViewProductUiPresenter.DrawCommunicationOverlayForExternalHost`.
 - Ameliorer la ruche par le runtime, l'interface, l'animation, le tutoriel, le
   son, la progression et les services.
 - Le chantier chat et messagerie (module Communication) a ete gele par
