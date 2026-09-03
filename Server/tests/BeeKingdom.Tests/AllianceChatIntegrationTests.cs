@@ -91,6 +91,29 @@ public sealed class AllianceChatIntegrationTests
     }
 
     [Test]
+    public void AcceptInvitation_AddsRealChatParticipant()
+    {
+        // M043T-CL: JoinOpen_AddsRealChatParticipant above covers the open-join path; this is the
+        // same proof for the invite-then-accept path (the exact Stara scenario) - AcceptInvitation
+        // calls the same SyncChatParticipantAdded as JoinOpen/AcceptApplication, but that was never
+        // actually exercised against a real chat repository until now.
+        (AllianceService alliances, IChatRepository chatRepo) = BuildStack();
+        PlayerId leader = PlayerId.New();
+        AllianceEntity alliance = alliances.CreateAlliance(leader, new CreateAllianceRequest("Golden Hive", "GLD", "", "fr-CA", "", AllianceJoinMode.InviteOnly, "create-1")).Alliance;
+        PlayerId invitee = PlayerId.New();
+        AllianceInvitation invitation = alliances.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "invite-1"));
+
+        alliances.AcceptInvitation(invitee, invitation.InvitationId);
+
+        ChatConversationParticipant? participant = chatRepo.GetParticipant(alliance.ChatConversationId!.Value, invitee);
+        Assert.That(participant, Is.Not.Null);
+        Assert.That(participant!.RemovedAtUtc, Is.Null);
+        Assert.That(participant.Role, Is.EqualTo(ChatPermissionRole.Member));
+        Assert.That(participant.CanRead, Is.True);
+        Assert.That(participant.CanWrite, Is.True);
+    }
+
+    [Test]
     public void Kick_RemovesRealChatParticipant()
     {
         (AllianceService alliances, IChatRepository chatRepo) = BuildStack();

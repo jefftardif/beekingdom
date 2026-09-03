@@ -127,6 +127,17 @@ namespace BeeKingdom.Playground
         public Guid InvitedByPlayerId { get; }
         public RemoteAllianceInvitationStatus Status { get; }
         public DateTimeOffset CreatedAtUtc { get; }
+
+        // M043T-CL: RemoteAllianceInvitation itself only carries AllianceId (a bare GUID) - the
+        // invitee has no other way to recognize which alliance invited them ("Alliance Test [BKT]")
+        // without this. Filled in best-effort after construction (see
+        // AllianceCenterPanelController.EnrichInvitationsWithAllianceNamesAsync) via the existing
+        // GetProfileAsync endpoint - never blocks showing the invitation itself if the lookup fails.
+        public string AllianceName { get; internal set; } = string.Empty;
+        public string AllianceTag { get; internal set; } = string.Empty;
+        public string ResolvedAllianceLabel => !string.IsNullOrEmpty(AllianceName)
+            ? (!string.IsNullOrEmpty(AllianceTag) ? AllianceName + " [" + AllianceTag + "]" : AllianceName)
+            : "Alliance " + AllianceId.ToString("D").Substring(0, 8);
     }
 
     public sealed class AllianceSearchResultModel
@@ -461,8 +472,11 @@ namespace BeeKingdom.Playground
                 {
                     List<RemoteAllianceInvitation> invitations = await SafeListMyInvitationsAsync();
                     if (disposed) return;
+                    AllianceInvitationModel[] invitationModels = invitations.Select(i => new AllianceInvitationModel(i)).ToArray();
+                    await EnrichInvitationsWithAllianceNamesAsync(invitationModels);
+                    if (disposed) return;
                     Model = AllianceCenterPresentation.NoAlliance(
-                        invitations.Select(i => new AllianceInvitationModel(i)).ToArray(),
+                        invitationModels,
                         Array.Empty<AllianceSearchResultModel>());
                     return;
                 }
@@ -506,6 +520,29 @@ namespace BeeKingdom.Playground
         {
             try { return await client.ListMyInvitationsAsync(lifetime.Token); }
             catch { return new List<RemoteAllianceInvitation>(); }
+        }
+
+        // M043T-CL: one profile lookup per distinct AllianceId among the invitee's pending
+        // invitations (never per invitation - a player could theoretically have more than one
+        // pending invitation to the same alliance). Best-effort per alliance: a failed lookup
+        // leaves that invitation's ResolvedAllianceLabel falling back to the truncated GUID instead
+        // of failing the whole invitations list.
+        private async Task EnrichInvitationsWithAllianceNamesAsync(AllianceInvitationModel[] invitationModels)
+        {
+            if (invitationModels.Length == 0) return;
+            foreach (Guid allianceId in invitationModels.Select(i => i.AllianceId).Distinct())
+            {
+                RemoteAlliancePublicProfile profile;
+                try { profile = await client.GetProfileAsync(allianceId, lifetime.Token); }
+                catch { continue; }
+                if (disposed || profile == null) continue;
+                for (int i = 0; i < invitationModels.Length; i++)
+                {
+                    if (invitationModels[i].AllianceId != allianceId) continue;
+                    invitationModels[i].AllianceName = profile.Name ?? string.Empty;
+                    invitationModels[i].AllianceTag = profile.Tag ?? string.Empty;
+                }
+            }
         }
 
         private async Task<RemoteAllianceActivityPage> SafeListActivityAsync(Guid allianceId)

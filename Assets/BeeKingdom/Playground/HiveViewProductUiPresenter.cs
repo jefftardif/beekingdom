@@ -31992,7 +31992,7 @@ if (leftNavigationTexture == null)
                 AllianceInvitationModel invitation = model.MyInvitations[i];
                 Rect row = new Rect(body.x + 16f, y, body.width - 32f, 44f);
                 DrawPremiumPanel(row, new Color(0.045f, 0.036f, 0.024f, 0.94f), new Color(0.7f, 0.5f, 0.2f, 0.5f));
-                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 210f, 18f), "Alliance " + invitation.AllianceId.ToString("D").Substring(0, 8), new GUIStyle(smallStyle) { fontSize = 12 });
+                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 210f, 18f), invitation.ResolvedAllianceLabel, new GUIStyle(smallStyle) { fontSize = 12 });
                 GUI.Label(new Rect(row.x + 10f, row.y + 22f, row.width - 210f, 16f), invitation.CreatedAtUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), new GUIStyle(tinyLabelStyle) { fontSize = 10 });
 
                 bool busy = allianceCenterController.IsBusy;

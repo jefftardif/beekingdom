@@ -267,6 +267,11 @@ public sealed class AllianceServiceTests
         InvitationDecisionResult accepted = service.AcceptInvitation(invitee, invitation.InvitationId);
         Assert.That(accepted.Membership, Is.Not.Null);
         Assert.That(accepted.Membership!.Role, Is.EqualTo(AllianceRole.Member));
+        Assert.That(accepted.Invitation.Status, Is.EqualTo(AllianceInvitationStatus.Accepted));
+
+        Assert.That(service.ListPublicActivity(alliance.AllianceId, null, 10).Items
+            .Any(e => e.Type == AllianceActivityType.MemberJoined && e.ActorPlayerId == invitee), Is.True,
+            "AcceptInvitation must publish a MemberJoined activity for the invitee, same as JoinOpen/AcceptApplication.");
     }
 
     [Test]
@@ -279,6 +284,32 @@ public sealed class AllianceServiceTests
         AllianceInvitation invitation = service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "inv-2"));
 
         Assert.Throws<UnauthorizedAccessException>(() => service.AcceptInvitation(NewPlayer(), invitation.InvitationId));
+    }
+
+    [Test]
+    public void Invitation_AcceptRetried_DoesNotDuplicateMembershipOrMemberCount()
+    {
+        // M043T-CL: a double-tap on "Accept" (or a retry after a lost/ambiguous response) must not
+        // create a second AllianceMembership row or double-increment MemberCount. AcceptInvitation's
+        // own early branch for a non-Pending invitation already Accepted returns the existing
+        // decision instead of re-running the membership-creation path - this proves that branch
+        // actually holds under a real double call, not just by reading the code.
+        AllianceService service = CreateService();
+        PlayerId leader = NewPlayer();
+        AllianceEntity alliance = CreateAlliance(service, leader, AllianceJoinMode.InviteOnly);
+        PlayerId invitee = NewPlayer();
+        AllianceInvitation invitation = service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "inv-retry-1"));
+
+        InvitationDecisionResult first = service.AcceptInvitation(invitee, invitation.InvitationId);
+        InvitationDecisionResult second = service.AcceptInvitation(invitee, invitation.InvitationId);
+
+        Assert.That(second.Invitation.Status, Is.EqualTo(AllianceInvitationStatus.Accepted));
+        Assert.That(second.Membership, Is.Not.Null);
+        Assert.That(second.Membership!.PlayerId, Is.EqualTo(first.Membership!.PlayerId));
+
+        IReadOnlyList<AllianceMemberSummary> members = service.ListMembers(leader, alliance.AllianceId);
+        Assert.That(members.Count(m => m.PlayerId == invitee), Is.EqualTo(1));
+        Assert.That(service.GetPublicProfile(alliance.AllianceId).MemberCount, Is.EqualTo(2), "leader + invitee, not 3");
     }
 
     [Test]
@@ -320,6 +351,113 @@ public sealed class AllianceServiceTests
         Assert.That(request, Is.Not.Null);
         Assert.That(request!.InvitedPlayerId.Value, Is.EqualTo(invitedPlayerId));
         Assert.That(request.ClientRequestId, Is.EqualTo("mobile-alliance-invite-key"));
+    }
+
+    // ---------------- M043T-CL: real Accept-flow wire shape (server -> client this time) ----------------
+    //
+    // First pass here assumed PlayerId/AllianceId (no [JsonConverter] of their own, confirmed by
+    // reading Identifiers.cs) would serialize as {"value":"<guid>"} and break every Unity DTO that
+    // declares the same field as a bare System.Guid (RemoteAllianceInvitation.InvitedPlayerId,
+    // RemoteAllianceMembership.PlayerId, RemoteAllianceMemberSummary.PlayerId, etc.) - confirmed true
+    // by direct serialization below. But Unity's actual codec (SystemTextGameJsonCodec,
+    // Assets/BeeKingdom/Networking/AuthenticatedGameRestContracts.cs) registers a custom
+    // BeeGuidJsonConverter on System.Text.Json's `Guid` itself, which reads EITHER a bare string OR
+    // an object with a "value"/"Value" string property - this was already added (M043-CL era, exact
+    // commit not traced) specifically to tolerate this shape mismatch project-wide. So the
+    // server->client contract for Accept/ListMyInvitations/ListMembers already works today; this is
+    // a proof of that, not a bug fix. Left in as regression coverage - if BeeGuidJsonConverter's
+    // object-shape branch is ever removed from the client without a matching server-side converter
+    // being added, these tests must still pass or the next call site to add a PlayerId/AllianceId
+    // response field silently breaks the exact same way M043S's request-side bug did.
+    private static Guid ParseAsUnityBeeGuidConverterWould(System.Text.Json.JsonElement element)
+    {
+        if (element.ValueKind == System.Text.Json.JsonValueKind.String)
+            return Guid.ParseExact(element.GetString()!, "D");
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Object
+            && (element.TryGetProperty("value", out var value) || element.TryGetProperty("Value", out value))
+            && value.ValueKind == System.Text.Json.JsonValueKind.String)
+            return Guid.ParseExact(value.GetString()!, "D");
+        throw new System.Text.Json.JsonException("A game identifier is malformed.");
+    }
+
+    [Test]
+    public void AcceptInvitation_ResponseIdsRoundTripThroughUnitysGuidConverter()
+    {
+        var serverOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        };
+
+        AllianceService service = CreateService();
+        PlayerId leader = NewPlayer();
+        AllianceEntity alliance = CreateAlliance(service, leader);
+        PlayerId invitee = NewPlayer();
+        AllianceInvitation invitation = service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "invite-key-accept-shape"));
+
+        InvitationDecisionResult decision = service.AcceptInvitation(invitee, invitation.InvitationId);
+        string wireJson = System.Text.Json.JsonSerializer.Serialize(decision, serverOptions);
+
+        // Confirmed: the server DOES emit the object-wrapped shape (no converter on PlayerId/
+        // AllianceId themselves, by design - see Identifiers.cs). Not asserting this away; asserting
+        // the client-side tolerance that actually makes it work end-to-end.
+        Assert.That(wireJson, Does.Contain("\"value\":\"" + invitee.Value.ToString("D") + "\""));
+
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(wireJson);
+        Guid roundTrippedInvitedPlayerId = ParseAsUnityBeeGuidConverterWould(document.RootElement.GetProperty("invitation").GetProperty("invitedPlayerId"));
+        Guid roundTrippedMembershipPlayerId = ParseAsUnityBeeGuidConverterWould(document.RootElement.GetProperty("membership").GetProperty("playerId"));
+        Assert.That(roundTrippedInvitedPlayerId, Is.EqualTo(invitee.Value));
+        Assert.That(roundTrippedMembershipPlayerId, Is.EqualTo(invitee.Value));
+    }
+
+    [Test]
+    public void ListMyInvitations_ResponseIdsRoundTripThroughUnitysGuidConverter()
+    {
+        // Stara's client calls GET /alliance/v1/invitations/mine BEFORE ever reaching Accept - this
+        // proves that step of the flow independently, not just the Accept response itself.
+        var serverOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        };
+
+        AllianceService service = CreateService();
+        PlayerId leader = NewPlayer();
+        AllianceEntity alliance = CreateAlliance(service, leader);
+        PlayerId invitee = NewPlayer();
+        service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "invite-key-list-shape"));
+
+        IReadOnlyList<AllianceInvitation> mine = service.ListMyInvitations(invitee);
+        string wireJson = System.Text.Json.JsonSerializer.Serialize(mine, serverOptions);
+
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(wireJson);
+        Guid roundTrippedAllianceId = ParseAsUnityBeeGuidConverterWould(document.RootElement[0].GetProperty("allianceId"));
+        Guid roundTrippedInvitedPlayerId = ParseAsUnityBeeGuidConverterWould(document.RootElement[0].GetProperty("invitedPlayerId"));
+        Assert.That(roundTrippedAllianceId, Is.EqualTo(alliance.AllianceId.Value));
+        Assert.That(roundTrippedInvitedPlayerId, Is.EqualTo(invitee.Value));
+    }
+
+    [Test]
+    public void ListMembers_ResponseIdsRoundTripThroughUnitysGuidConverter()
+    {
+        // Same question for the roster screen the acceptance flow's memberCount check depends on -
+        // AllianceMemberSummary.PlayerId is also an un-converted PlayerId server-side.
+        var serverOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        };
+
+        AllianceService service = CreateService();
+        PlayerId leader = NewPlayer();
+        AllianceEntity alliance = CreateAlliance(service, leader);
+
+        IReadOnlyList<AllianceMemberSummary> members = service.ListMembers(leader, alliance.AllianceId);
+        string wireJson = System.Text.Json.JsonSerializer.Serialize(members, serverOptions);
+
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(wireJson);
+        Guid roundTrippedPlayerId = ParseAsUnityBeeGuidConverterWould(document.RootElement[0].GetProperty("playerId"));
+        Assert.That(roundTrippedPlayerId, Is.EqualTo(leader.Value));
     }
 
     [Test]
