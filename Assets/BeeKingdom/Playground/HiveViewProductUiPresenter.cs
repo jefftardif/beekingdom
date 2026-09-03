@@ -1174,6 +1174,16 @@ private static float resourceInventoryOpenedAt = -10f;
 
 		private static float allianceProfileToastAt = -10f;
 
+		// M043U-CL: Kick/Promote/Demote/TransferLeadership/Leave/Dissolve all set
+		// Model.State=Error + Model.ErrorCode on server rejection (AllianceCenterPresentation.cs),
+		// but the headquarters screen (unlike the NoAlliance screen's own State==Error branch)
+		// silently falls through and keeps rendering the normal shell whenever a valid Overview is
+		// already cached - the exact same "click does something real, nothing visible happens"
+		// class of bug already found and fixed for Invite this session, just for 6 more actions.
+		private static string allianceHqLastErrorCode = string.Empty;
+
+		private static float allianceHqErrorShownAt = -10f;
+
 		private static Vector2 allianceMembersListScroll;
 
 		private static Vector2 allianceProfilePortraitScroll;
@@ -32080,6 +32090,31 @@ if (leftNavigationTexture == null)
             GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
             GUI.color = Color.white;
 
+            // M043U-CL: real, visible feedback for a rejected mutation on the alliance we're
+            // already viewing (Kick/Promote/Demote/TransferLeadership/Leave/Dissolve) - see the
+            // allianceHqLastErrorCode field comment. Auto-fades after 6s like the other toasts in
+            // this screen; re-triggers (resets its own timer) only when the error code actually
+            // changes, so it never gets stuck showing a stale message.
+            if (allianceModel?.State == AllianceCenterScreenState.Error && !string.IsNullOrEmpty(allianceModel.ErrorCode))
+            {
+                if (!string.Equals(allianceHqLastErrorCode, allianceModel.ErrorCode, StringComparison.Ordinal))
+                {
+                    allianceHqLastErrorCode = allianceModel.ErrorCode;
+                    allianceHqErrorShownAt = NowForUi();
+                }
+            }
+            float hqErrorAge = allianceHqErrorShownAt < 0f ? float.MaxValue : NowForUi() - allianceHqErrorShownAt;
+            if (hqErrorAge < 6f)
+            {
+                float hqErrorAlpha = hqErrorAge > 5f ? Mathf.Clamp01(1f - (hqErrorAge - 5f)) : 1f;
+                Rect hqErrorRect = new Rect(Screen.width * 0.5f - 220f, banner.yMax + 6f, 440f, 32f);
+                Color previousGui = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, hqErrorAlpha);
+                DrawPremiumPanel(hqErrorRect, new Color(0.42f, 0.12f, 0.10f, 0.94f), new Color(0.95f, 0.45f, 0.35f, 0.9f));
+                GUI.Label(hqErrorRect, "Erreur : " + allianceHqLastErrorCode, new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 11, normal = { textColor = Color.white } });
+                GUI.color = previousGui;
+            }
+
             int nameFont = compact ? 20 : 28;
             Rect nameRect = new Rect(30f, banner.yMax - (compact ? 56f : 62f), Mathf.Min(Screen.width * 0.50f, 560f), nameFont + 4f);
             string allianceRuntimeName = allianceModel?.Overview?.Name;
@@ -32671,17 +32706,37 @@ if (leftNavigationTexture == null)
             Rect messagesArea = new Rect(area.x, area.y, area.width, area.height - composerH - 6f);
             IReadOnlyList<BeeKingdom.Gameplay.Communication.LivingHiveChatMessage> messages = snapshot.Messages;
             float rowH = 46f;
+            Guid myPlayerId = allianceCenterController.Model?.Overview?.MyPlayerId ?? Guid.Empty;
+            float bubbleWidth = (messagesArea.width - 20f) * 0.72f;
             allianceChatDrawerMessagesScroll = GUI.BeginScrollView(messagesArea, allianceChatDrawerMessagesScroll,
                 new Rect(0f, 0f, messagesArea.width - 16f, Mathf.Max(messagesArea.height, messages.Count * rowH)), false, true);
             for (int i = 0; i < messages.Count; i++)
             {
                 BeeKingdom.Gameplay.Communication.LivingHiveChatMessage message = messages[i];
-                Rect bubble = new Rect(0f, i * rowH, messagesArea.width - 20f, rowH - 4f);
-                Color accentBubble = new Color(0.36f, 0.62f, 0.95f, 1f);
+                // M043U-CL: same left/right-by-sender convention as every other chat surface (own
+                // messages on the right, everyone else's on the left) - previously every bubble was
+                // pinned to the left full-width regardless of sender, making it impossible to tell
+                // your own messages apart from the alliance's at a glance.
+                bool mine = myPlayerId != Guid.Empty && Guid.TryParse(message.SenderPlayerId, out Guid senderGuid) && senderGuid == myPlayerId;
+                float bubbleX = mine ? (messagesArea.width - 16f) - bubbleWidth : 0f;
+                Rect bubble = new Rect(bubbleX, i * rowH, bubbleWidth, rowH - 4f);
+                Color accentBubble = mine ? new Color(0.42f, 0.78f, 0.42f, 1f) : new Color(0.36f, 0.62f, 0.95f, 1f);
                 DrawPremiumPanel(bubble, new Color(0.045f, 0.055f, 0.075f, 0.96f), new Color(accentBubble.r * 0.6f, accentBubble.g * 0.6f, accentBubble.b * 0.6f, 0.55f));
-                string sender = string.IsNullOrEmpty(message.SenderDisplayName) ? "—" : message.SenderDisplayName;
-                GUI.Label(new Rect(bubble.x + 10f, bubble.y + 4f, bubble.width - 20f, 16f), sender, new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 10 });
-                GUI.Label(new Rect(bubble.x + 10f, bubble.y + 19f, bubble.width - 20f, 20f), message.VisibleBody ?? string.Empty, new GUIStyle(smallStyle) { fontSize = compact ? 10 : 11, wordWrap = true });
+                GUIStyle senderStyle = new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 10, alignment = mine ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft };
+                GUIStyle timeStyle = new GUIStyle(badgeStyle) { fontSize = compact ? 8 : 9, alignment = mine ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight, normal = { textColor = new Color(1f, 1f, 1f, 0.45f) } };
+                GUIStyle bodyStyle = new GUIStyle(smallStyle) { fontSize = compact ? 10 : 11, wordWrap = true, alignment = mine ? TextAnchor.UpperRight : TextAnchor.UpperLeft };
+                string timeLabel = message.CreatedAt.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+                if (mine)
+                {
+                    GUI.Label(new Rect(bubble.x + 10f, bubble.y + 4f, bubble.width - 20f, 16f), timeLabel, timeStyle);
+                }
+                else
+                {
+                    string sender = string.IsNullOrEmpty(message.SenderDisplayName) ? "—" : message.SenderDisplayName;
+                    GUI.Label(new Rect(bubble.x + 10f, bubble.y + 4f, bubble.width - 66f, 16f), sender, senderStyle);
+                    GUI.Label(new Rect(bubble.xMax - 66f, bubble.y + 4f, 56f, 16f), timeLabel, timeStyle);
+                }
+                GUI.Label(new Rect(bubble.x + 10f, bubble.y + (mine ? 12f : 19f), bubble.width - 20f, 20f), message.VisibleBody ?? string.Empty, bodyStyle);
             }
             GUI.EndScrollView();
 
@@ -32725,7 +32780,13 @@ if (leftNavigationTexture == null)
                     // Real server-authoritative rejection (M042: kicked/left members lose access) -
                     // not a local membership guess. Never create a second chat client-side to work
                     // around this.
-                    allianceChatAccessDeniedReason = "not_a_member";
+                    // M043U-CL: this used to always display the hardcoded "not_a_member", regardless
+                    // of what the server/transport actually reported - a real CEO/Stara repro showed
+                    // this exact label while server-side data proved membership+participant were both
+                    // correct, and the ONLY place the real cause was ever recorded was this console
+                    // log, which is gone once Play Mode restarts. Show the real code on-screen now so
+                    // a future occurrence is diagnosable from the screenshot alone.
+                    allianceChatAccessDeniedReason = string.IsNullOrEmpty(afterSelect.ErrorCode) ? "not_a_member" : afterSelect.ErrorCode;
                     Debug.LogWarning("[AllianceChat] Real conversation " + conversationKey + " is not accessible to this player (server-authoritative - kicked/left/never joined). errorCode=" + afterSelect.ErrorCode);
                 }
                 else

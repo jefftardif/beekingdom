@@ -40,6 +40,105 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M043U-CL / M043T-CL / M044-CX : certification Alliance deux joueurs bout-en-bout, occlusion UI HiveMap (2026-09-03)
+
+Session marathon en trois volets, tous testés en direct par le CEO (compte
+Jeff/Leader + compte Stara/Member réels).
+
+**M044-CX (implémenté par Codex après un échec de mes propres correctifs) —
+architecture d'occlusion UI géométrique pour HiveMap.** Les badges/abeilles
+de production (`HiveMapProductionBootstrap`) et autres marqueurs "monde"
+dessinés en overlay bleedaient à travers Alliance/Communication/etc. Mes
+propres tentatives (masquer via des flags "overlay ouvert") ont été
+explicitement rejetées par le CEO ("tu as simplement fait disparaître...
+il faut régler ce problème à la source"). Solution retenue : nouveau
+`Assets/BeeKingdom/Playground/HiveMapUiOcclusion.cs` — calcule les régions
+réellement visibles à l'écran (soustraction de rectangles contre toutes les
+fenêtres/HUD opaques) et les marqueurs se dessinent uniquement dans ces
+régions via `GUI.BeginGroup` avec décalage - jamais désactivés, jamais
+cachés, juste découpés pixel par pixel. Convention documentée dans
+`Docs/Architecture/HiveMap_UI_Window_Occlusion_Guide.md` (checklist
+obligatoire pour toute future fenêtre HiveMap). Commit `40147fb`, poussé.
+
+**M043T-CL — préparation de l'acceptation d'invitation Stara.** Route
+d'acceptation déjà correcte (le défaut backslash signalé dans M043S
+n'existait plus dans l'arbre actuel). Trouvé et corrigé : la ligne
+d'invitation dans le modal n'affichait qu'un GUID tronqué, jamais le nom de
+l'alliance ("Alliance Test [BKT]") — résolu maintenant. Tests
+d'idempotence + activité MemberJoined ajoutés. Commit `e235c0f`, poussé.
+
+**M043U-CL — bug réel post-acceptation : Alliance Center → Chat affichait
+"not_a_member" pour Stara malgré une adhésion réelle et confirmée (Leader
+Jeff, Member Stara, 2/100, activité "Stara a rejoint l'alliance").**
+Vérité SQL production (lecture seule, fournie par le CEO) a prouvé que
+`dbo.ChatConversationParticipants` avait déjà la ligne correcte pour Stara
+(CanRead=1, CanWrite=1, RemovedAtUtc NULL) au moment de l'enquête — le
+prédicat serveur (`ChatService.RequireRead`) n'aurait pas dû rejeter. Le
+CEO a redémarré Play Mode entre-temps et le chat a fonctionné au retest
+suivant, sans changement de code encore déployé — cause originale
+probablement transitoire (course/timing juste après l'acceptation), non
+capturée en direct. Deux vrais problèmes trouvés et corrigés quand même :
+1) `AllianceService.SyncChatParticipantAdded/Removed` et
+   `CreateOrLinkAllianceChat` avalaient TOUTE exception silencieusement,
+   sans aucun log — un vrai échec SQL futur serait resté invisible pour
+   toujours. Ajouté `ILogger<AllianceService>?` optionnel (même patron que
+   `chatManager`/`chatRepository`) + log sur les 3 catch précédemment
+   muets.
+2) Le message affiché au joueur ("Accès au chat de l'alliance perdu
+   (...)") montrait toujours le texte codé en dur "not_a_member", jamais
+   le vrai code d'erreur serveur/transport (`afterSelect.ErrorCode`),
+   qui n'existait que dans un `Debug.LogWarning` de la Console —
+   disparu au redémarrage de Play Mode, exactement ce qui a bloqué
+   l'enquête cette fois. Corrigé : le vrai code s'affiche maintenant à
+   l'écran, une prochaine occurrence sera prouvable par une simple capture
+   d'écran.
+
+QoL demandée en direct par le CEO pendant le retest : les messages du chat
+d'alliance sont maintenant alignés à droite (vert) pour les messages du
+joueur courant et à gauche (bleu) pour les autres — auparavant tout était
+collé à gauche peu importe l'expéditeur. Horodatage `HH:mm` ajouté à chaque
+bulle (convention déjà utilisée ailleurs dans ce fichier).
+
+Preuves : `Server dotnet build` 0 erreur ; `AllianceServiceTests` +
+`AllianceChatIntegrationTests` 62/62 verts ; compilation Unity 0 erreur.
+Rapports : `Docs/AI/Missions/M043T-CL-Alliance-Invitation-Acceptance-Readiness.md`,
+`Docs/AI/Missions/M043U-CL-Alliance-Chat-Membership-Reconciliation.md`.
+
+**SERVER DEPLOYMENT REQUIRED (non déployé, autorisation CEO nécessaire) :**
+`Server/src/BeeKingdom.Alliance/AllianceService.cs` (logging uniquement,
+aucun changement de comportement sur un chemin succès/échec existant).
+
+Prochain test utilisateur : confirmer visuellement l'alignement/horodatage
+des messages d'alliance (pas encore vu en Play Mode par le CEO au moment
+de cette entrée). Si "not_a_member" (ou tout autre code) réapparaît, le
+capturer directement à l'écran — plus besoin de la Console.
+
+Ouvert / à faire ensuite : déploiement du logging `AllianceService.cs`
+(en attente d'autorisation) ; continuer à polir Alliance Center (le CEO a
+donné carte blanche pour choisir les prochains chantiers pendant une
+absence d'une heure — voir travail en cours ci-dessous si une session
+suivante reprend avant qu'il ne revienne).
+
+**Travail autonome pendant l'absence du CEO (même session, 2026-09-03) :**
+en auditant le pattern `Model.State/ErrorCode` déjà corrigé pour Invite,
+trouvé le même bug de silence total pour **Kick, Promote, Demote,
+TransferLeadership, Leave, Dissolve** : `AllianceCenterPresentation.cs`
+place bien `Model.State = Error` + `ErrorCode` sur échec serveur pour ces
+6 actions (code correct, pas touché), mais dans
+`HiveViewProductUiPresenter.cs` l'écran "j'ai déjà une alliance" (pas
+l'écran NoAlliance) ignorait silencieusement ce cas dès qu'un `Overview`
+valide était déjà en cache (`case Mutating/Error: if (hasValidOverview)
+break;` — retombe dans le rendu normal, ErrorCode jamais affiché nulle
+part). Corrigé : bandeau d'erreur rouge sous le banner de l'écran Alliance,
+apparaît quand `State==Error`, fondu automatique après 6s, se réarme si le
+code change. Compilation Unity 0 erreur, Play Mode redémarré. **Pas encore
+vu/testé par le CEO** — aucune de ces 6 actions n'échoue en usage normal,
+donc ça nécessite de provoquer un vrai rejet serveur pour le voir (ex:
+tenter Kick deux fois de suite rapidement, ou une permission insuffisante)
+pour confirmer visuellement.
+
+---
+
 ## Jalon courant — M043S-CL : Bug réel d'invitation Alliance trouvé, corrigé, déployé, prouvé (2026-09-02/03)
 
 Suite directe de la première partie de M043S ci-dessous (retour visuel du

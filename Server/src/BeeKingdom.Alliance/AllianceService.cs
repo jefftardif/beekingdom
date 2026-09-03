@@ -6,6 +6,7 @@ using BeeKingdom.Chat;
 using BeeKingdom.Chat.Models;
 using BeeKingdom.Chat.Repositories;
 using BeeKingdom.Shared.ValueObjects;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BeeKingdom.Alliance;
@@ -29,6 +30,7 @@ public sealed class AllianceService
     private readonly ChatManager? chatManager;
     private readonly IChatRepository? chatRepository;
     private readonly IPlayerDirectoryService? playerDirectory;
+    private readonly ILogger<AllianceService>? logger;
 
     public AllianceService(
         IAllianceRepository repository,
@@ -38,7 +40,8 @@ public sealed class AllianceService
         IOptions<AllianceOptions> options,
         ChatManager? chatManager = null,
         IChatRepository? chatRepository = null,
-        IPlayerDirectoryService? playerDirectory = null)
+        IPlayerDirectoryService? playerDirectory = null,
+        ILogger<AllianceService>? logger = null)
     {
         this.repository = repository;
         this.activityRepository = activityRepository;
@@ -54,6 +57,11 @@ public sealed class AllianceService
         // M043B-CL: same optional/nullable pattern - display names fall back to empty string (never
         // fabricated) when absent, DI always supplies the real one.
         this.playerDirectory = playerDirectory;
+        // M043U-CL: same pattern again - chat sync stays best-effort (never blocks/rolls back a
+        // real membership change), but a swallowed exception here used to leave zero trace
+        // anywhere, so a real production desync (e.g. SyncChatParticipantAdded failing for one
+        // player) was indistinguishable from "nothing went wrong" until a human found it live.
+        this.logger = logger;
     }
 
     private AllianceOptions O => options.Value;
@@ -150,12 +158,13 @@ public sealed class AllianceService
                 "alliance-chat-" + allianceClientRequestId));
             return result.Conversation.ConversationId;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Chat linking must never block Alliance creation itself - the Alliance is real and
             // saved regardless; a missing ChatConversationId just means the chat tab has nothing
             // to show yet (same graceful-degradation posture as the rest of this service toward
             // optional dependencies).
+            logger?.LogWarning(exception, "Alliance {AllianceId} chat conversation link failed - alliance created without a chat tab.", allianceId.Value);
             return null;
         }
     }
@@ -174,14 +183,22 @@ public sealed class AllianceService
             chatRepository.UpsertParticipant(new ChatConversationParticipant(
                 conversationId, playerId, ToChatRole(role), joinedAtUtc, RemovedAtUtc: null, CanRead: true, CanWrite: true));
         }
-        catch (Exception) { /* best-effort - see class-level note */ }
+        catch (Exception exception)
+        {
+            // M043U-CL: best-effort by design (see class-level note) - never rethrown, but now
+            // at least observable instead of vanishing without a trace.
+            logger?.LogWarning(exception, "Alliance chat participant sync (add) failed for player {PlayerId} in conversation {ConversationId}.", playerId.Value, conversationId);
+        }
     }
 
     private void SyncChatParticipantRemoved(Guid? chatConversationId, PlayerId playerId, DateTimeOffset removedAtUtc)
     {
         if (chatRepository == null || chatConversationId is not { } conversationId || conversationId == Guid.Empty) return;
         try { chatRepository.RemoveParticipant(conversationId, playerId, removedAtUtc); }
-        catch (Exception) { /* best-effort - see class-level note */ }
+        catch (Exception exception)
+        {
+            logger?.LogWarning(exception, "Alliance chat participant sync (remove) failed for player {PlayerId} in conversation {ConversationId}.", playerId.Value, conversationId);
+        }
     }
 
     private static ChatPermissionRole ToChatRole(AllianceRole role) => role switch
