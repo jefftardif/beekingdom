@@ -10540,6 +10540,27 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 || guidedCollectionTutorialStep == GuidedCollectionTutorialStep.ForageOpenMap;
         }
 
+        // M043T-CL STANDING CONVENTION - real production bug, not theoretical: when a screen draws
+        // its OWN sub-overlay/modal/profile popup on top of its OWN other content, later in the SAME
+        // draw function (e.g. Alliance Center's "Inviter un joueur" action panel drawn after its own
+        // tab content), the underlying content must be wrapped in this helper. Without it, that
+        // content stays fully interactive and visually opaque-less underneath the overlay - IMGUI
+        // resolves an overlapping click to whichever control matches it FIRST in draw order, so a
+        // click meant for the overlay can land on a hidden control behind it instead, and the CEO
+        // saw this live as "my click passes through, I see icons/bees through the window."
+        // ShouldBlockUnderlyingHiveChromeInput()/PremiumUiBlocksWorldInput() below already solve the
+        // OUTER problem (disabling the hive chrome/3D world while ANY screen is open) - this solves
+        // the INNER one (a screen's own content vs its own overlay). Any new screen with an internal
+        // sub-overlay MUST wrap its main-content draw calls in this, passing whatever bool(s)
+        // indicate that screen's own overlay/profile/popup is currently open.
+        private static void DrawUnderOwnOverlayGate(bool ownOverlayOpen, Action drawUnderlyingContent)
+        {
+            bool previous = GUI.enabled;
+            GUI.enabled = previous && !ownOverlayOpen;
+            try { drawUnderlyingContent(); }
+            finally { GUI.enabled = previous; }
+        }
+
 		private static bool ShouldBlockUnderlyingHiveChromeInput()
 		{
 			return resourceInventoryOpen
@@ -10560,6 +10581,9 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 				|| milestoneEventOverlayOpen
 				|| communicationPanelOpen
 				|| !string.IsNullOrEmpty(activeMainMenuId)
+				// M043T-CL: gap found during the click-through audit - the reference detail info
+				// popup (over DrawDetailPanel) was missing from this outer gate too.
+				|| referenceDetailInfoPopupOpen
 				|| (guidedCollectionTutorialStep != GuidedCollectionTutorialStep.Inactive
 					&& !GuidedCollectionTutorialTargetsSurfaceSwitch());
         }
@@ -27395,7 +27419,10 @@ if (leftNavigationTexture == null)
 
             if (activeHiveMenu == HiveMenuMode.Hive || activeHiveMenu == HiveMenuMode.Actions)
             {
-                DrawDetailPanel(compact);
+                // M043T-CL: DrawReferenceDetailInfoPopup is this screen's own sub-modal (opened by
+                // an "i" button inside DrawDetailPanel itself) drawn on top of that same panel's
+                // upgrade/train/close buttons - see DrawUnderOwnOverlayGate's standing convention.
+                DrawUnderOwnOverlayGate(referenceDetailInfoPopupOpen, () => DrawDetailPanel(compact));
                 DrawReferenceDetailInfoPopup(compact);
                 return;
             }
@@ -32045,16 +32072,10 @@ if (leftNavigationTexture == null)
             // M043T-CL: real, confirmed click pass-through bug - DrawAllianceQuickActionOverlay
             // (the "Inviter un joueur" etc. modal) and DrawAllianceMemberProfile are drawn LAST, on
             // top of this same screen's own nav/tab/member content, but nothing ever locally
-            // disabled that underlying content while one of those own overlays was open. IMGUI
-            // resolves an overlapping click to whichever control matches it FIRST in draw order -
-            // so a click meant for the modal's "Inviter" button could be captured instead by
-            // whatever real, still-fully-interactive Alliance Center control happened to sit at the
-            // same screen position underneath it. ShouldBlockUnderlyingHiveChromeInput() already
-            // disables the outer hive chrome (top HUD, side rail...) for exactly this reason, but
-            // never reached this screen's own internal content, since that content is inside the
-            // very screen ShouldBlockUnderlyingHiveChromeInput is keyed off of, not behind it.
+            // disabled that underlying content while one of those own overlays was open. Fixed via
+            // the standing DrawUnderOwnOverlayGate convention (see its definition for the full
+            // explanation) - this is that convention's canonical example.
             bool allianceOwnOverlayOpen = !string.IsNullOrEmpty(allianceActionPanelOpen) || allianceMemberProfileOpen;
-            bool previousAllianceGuiEnabled = GUI.enabled;
 
 			if (compact)
             {
@@ -32064,8 +32085,7 @@ if (leftNavigationTexture == null)
                 Rect stats = new Rect(10f, contentTop, Screen.width - 20f, 46f);
                 navigation = new Rect(10f, stats.yMax + 6f, Screen.width - 20f, 56f);
                 Rect content = new Rect(10f, navigation.yMax + 6f, Screen.width - 20f, Screen.height - navigation.yMax - 12f);
-                GUI.enabled = previousAllianceGuiEnabled && !allianceOwnOverlayOpen;
-                try
+                DrawUnderOwnOverlayGate(allianceOwnOverlayOpen, () =>
                 {
                     DrawAllianceTopNavigation(navigation, true);
                     DrawAllianceQuickActionsBar(quickActions, true);
@@ -32074,8 +32094,7 @@ if (leftNavigationTexture == null)
                     DrawPremiumPanel(content, new Color(0.030f, 0.024f, 0.016f, 0.985f), new Color(0.86f, 0.58f, 0.16f, 0.80f));
                     DrawAllianceTabContent(content, true, tabProgress);
                     DrawAllianceChatDrawer(true);
-                }
-                finally { GUI.enabled = previousAllianceGuiEnabled; }
+                });
                 DrawAllianceQuickActionOverlay(true);
                 DrawAllianceMemberProfile(true);
                 return;
@@ -32087,8 +32106,7 @@ if (leftNavigationTexture == null)
             Rect left = new Rect(12f, contentTopLandscape, 226f, Screen.height - contentTopLandscape - 12f);
             Rect right = new Rect(Screen.width - 292f, contentTopLandscape, 280f, Screen.height - contentTopLandscape - 12f);
             Rect center = new Rect(250f, contentTopLandscape, Screen.width - 566f, Screen.height - contentTopLandscape - 12f);
-            GUI.enabled = previousAllianceGuiEnabled && !allianceOwnOverlayOpen;
-            try
+            DrawUnderOwnOverlayGate(allianceOwnOverlayOpen, () =>
             {
                 DrawAllianceTopNavigation(topNavigation, false);
                 DrawAllianceQuickActionsBar(quickBar, false);
@@ -32097,8 +32115,7 @@ if (leftNavigationTexture == null)
                 DrawAllianceTabContent(center, false, tabProgress);
                 DrawAllianceRightColumn(right, false);
                 DrawAllianceChatDrawer(false);
-            }
-            finally { GUI.enabled = previousAllianceGuiEnabled; }
+            });
             DrawAllianceQuickActionOverlay(false);
             DrawAllianceMemberProfile(false);
         }
@@ -35232,7 +35249,11 @@ if (leftNavigationTexture == null)
 			bool readOnly = conv == null || conv.ReadOnly;
 			float composerH = readOnly ? 30f : (compact ? 58f : 54f);
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, Mathf.Max(1f, area.height - headerH - 6f - composerH));
-			DrawVirtualChatMessages(viewport, chatSelectedConversation, compact);
+			// M043T-CL: the emoji panel (opened from inside DrawChatComposer below) is drawn
+			// directly above the composer, overlapping the tail of this message scroll view - its
+			// message-action buttons (react/copy/pin/report) must not stay clickable underneath.
+			// The composer itself stays outside this gate so its own emoji toggle keeps working.
+			DrawUnderOwnOverlayGate(chatEmojiPanelOpen, () => DrawVirtualChatMessages(viewport, chatSelectedConversation, compact));
 			if (readOnly)
 			{
 				chatEmojiPanelOpen = false;
@@ -38129,8 +38150,13 @@ public static Rect ChatRailButtonRectForProof(bool portrait, float screenWidth, 
             float contentTop = tabsY + 40f;
             float searchHeight = missionsSearchOpen ? 46f : 0f;
             Rect body = new Rect(0f, contentTop + searchHeight, Screen.width, Mathf.Max(1f, Screen.height - contentTop - searchHeight));
-            if (missionsSearchOpen) DrawMissionsSearchBar(contentTop, compact);
-            DrawMissionsTabContent(body, compact);
+            // M043T-CL: DrawMissionsGuideOverlay is this screen's own sub-modal, drawn on top of
+            // this same content below - see DrawUnderOwnOverlayGate's standing convention.
+            DrawUnderOwnOverlayGate(missionsGuideOpen, () =>
+            {
+                if (missionsSearchOpen) DrawMissionsSearchBar(contentTop, compact);
+                DrawMissionsTabContent(body, compact);
+            });
             DrawMissionsGuideOverlay(compact);
             DrawMissionsToast();
             GUI.matrix = Matrix4x4.identity;

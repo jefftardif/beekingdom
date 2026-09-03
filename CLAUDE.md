@@ -108,3 +108,19 @@ seule facon pour une future session Claude de reprendre sans repetition.
   plus de son objectif principal, une petite amelioration Quality of Life -
   sans jamais devier le sprint de cet objectif principal. A documenter dans
   le meme jalon que le reste du sprint.
+- REGLE PERMANENTE (ajoutee le 2026-09-03, bug reel confirme en Play Mode -
+  M043T-CL) : toute fenetre/ecran de `HiveViewProductUiPresenter.cs` qui
+  dessine son propre sous-modal/overlay/popup par-dessus son propre contenu
+  (dans la meme fonction ou appele depuis elle) DOIT desactiver ce contenu
+  sous-jacent via `DrawUnderOwnOverlayGate(ownOverlayOpen, () => { ...appels
+  de dessin du contenu principal... })` avant de dessiner le sous-modal.
+  Sans ca, IMGUI resout un clic superpose au PREMIER controle qui matche
+  dans l'ordre de dessin - un clic destine au sous-modal peut donc etre
+  capture par un controle invisible du contenu sous-jacent a la meme
+  position ecran ("le clic passe au travers", icones/abeilles volantes
+  visibles a travers la fenetre). Voir `DrawAllianceHeadquartersScreen`
+  (definition de `DrawUnderOwnOverlayGate` juste avant
+  `ShouldBlockUnderlyingHiveChromeInput`) pour l'exemple canonique.
+  `ShouldBlockUnderlyingHiveChromeInput`/`PremiumUiBlocksWorldInput`
+  resolvent un probleme different (le chrome/monde 3D EXTERNE a l'ecran, pas
+  le contenu INTERNE de l'ecran lui-meme) - ne pas confondre les deux.
