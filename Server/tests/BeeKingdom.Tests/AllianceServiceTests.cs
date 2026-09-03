@@ -293,6 +293,72 @@ public sealed class AllianceServiceTests
         Assert.Throws<UnauthorizedAccessException>(() => service.CreateInvitation(member, alliance.AllianceId, new CreateInvitationRequest(NewPlayer(), "inv-3")));
     }
 
+    // ---------------- M043S-CL: real Invite-flow idempotency (the exact Stara-shaped scenario) ----------------
+
+    [Test]
+    public void CreateInvitationRequest_DeserializesTheExactWireShapeAllianceClientSends()
+    {
+        // M043S-CL: the real, confirmed production bug - PlayerId has no [JsonConverter] of its
+        // own (by design), so without a converter on this specific property, System.Text.Json
+        // expects an object shape ({"invitedPlayerId":{"value":"<guid>"}}) but
+        // AllianceClient.CreateInvitationWireRequest (like every client request DTO in this
+        // codebase) sends InvitedPlayerId as a bare GUID string. That mismatch threw inside
+        // ASP.NET's own request-body binding for every real CreateInvitation call ever made -
+        // proven via a production AllianceInvitations table that was completely empty despite real
+        // invite attempts. This reproduces the server's actual ConfigureHttpJsonOptions shape
+        // (camelCase property names, string enums) against the exact wire JSON the client sends.
+        var options = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        };
+        Guid invitedPlayerId = Guid.NewGuid();
+        string wireJson = "{\"invitedPlayerId\":\"" + invitedPlayerId.ToString("D") + "\",\"clientRequestId\":\"mobile-alliance-invite-key\"}";
+
+        CreateInvitationRequest? request = System.Text.Json.JsonSerializer.Deserialize<CreateInvitationRequest>(wireJson, options);
+
+        Assert.That(request, Is.Not.Null);
+        Assert.That(request!.InvitedPlayerId.Value, Is.EqualTo(invitedPlayerId));
+        Assert.That(request.ClientRequestId, Is.EqualTo("mobile-alliance-invite-key"));
+    }
+
+    [Test]
+    public void Invitation_SecondCallForSameStillPendingTarget_ThrowsAlreadyInvited_NoDuplicateRowCreated()
+    {
+        // A second real click (or a retry after the first click's response was lost/never showed
+        // feedback client-side) must never create a second pending invitation for the same target -
+        // this is the server invariant the Unity UI's AlreadyPending state relies on.
+        AllianceService service = CreateService();
+        PlayerId leader = NewPlayer();
+        AllianceEntity alliance = CreateAlliance(service, leader, AllianceJoinMode.InviteOnly);
+        PlayerId invitee = NewPlayer();
+        AllianceInvitation first = service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "stara-invite-1"));
+
+        InvalidOperationException thrown = Assert.Throws<InvalidOperationException>(
+            () => service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "stara-invite-2")));
+
+        Assert.That(thrown!.Message, Is.EqualTo("already_invited"));
+        Assert.That(service.ListMyInvitations(invitee).Count(i => i.InvitationId == first.InvitationId), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Invitation_SameClientRequestIdReplayed_IsIdempotent_ReturnsSameInvitationNoDuplicate()
+    {
+        // A genuine network retry (same click, same generated ClientRequestId resent because the
+        // first response never reached the client) must replay the exact same invitation, not
+        // create a second one and not throw already_invited against itself.
+        AllianceService service = CreateService();
+        PlayerId leader = NewPlayer();
+        AllianceEntity alliance = CreateAlliance(service, leader, AllianceJoinMode.InviteOnly);
+        PlayerId invitee = NewPlayer();
+
+        AllianceInvitation first = service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "stara-replay"));
+        AllianceInvitation replayed = service.CreateInvitation(leader, alliance.AllianceId, new CreateInvitationRequest(invitee, "stara-replay"));
+
+        Assert.That(replayed.InvitationId, Is.EqualTo(first.InvitationId));
+        Assert.That(service.ListMyInvitations(invitee).Count(i => i.InvitationId == first.InvitationId), Is.EqualTo(1));
+    }
+
     // ---------------- Roles / promote / demote / kick / leave ----------------
 
     [Test]

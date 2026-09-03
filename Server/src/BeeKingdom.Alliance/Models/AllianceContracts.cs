@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using BeeKingdom.Shared.ValueObjects;
 
 namespace BeeKingdom.Alliance.Models;
@@ -36,7 +37,17 @@ public sealed record ApplicationDecisionResult(AllianceApplication Application, 
 // AllianceMemberSummary.
 public sealed record AllianceApplicationView(Guid ApplicationId, AllianceId AllianceId, PlayerId PlayerId, string DisplayName, AllianceApplicationStatus Status, DateTimeOffset SubmittedAtUtc, string Message);
 
-public sealed record CreateInvitationRequest(PlayerId InvitedPlayerId, string ClientRequestId);
+// M043S-CL: PlayerId has no [JsonConverter] of its own (deliberately - see Identifiers.cs), so
+// System.Text.Json's default handling of this record struct expects an object shape
+// ({"invitedPlayerId":{"value":"<guid>"}}), but AllianceClient's CreateInvitationWireRequest (like
+// every other client-side request DTO in this codebase) sends InvitedPlayerId as a bare GUID
+// string. Deserializing that bare string into a PlayerId with no converter threw inside ASP.NET's
+// own request-body binding - before ExecuteAlliance's try/catch ever ran - so every real
+// invitation attempt failed with .NET's generic error shape (which the client can't parse as an
+// AllianceErrorEnvelope, hence the "game.rejected" fallback) instead of ever reaching
+// AllianceService.CreateInvitation. Proven via a production AllianceInvitations table that was
+// completely empty despite the CEO's real invite attempts.
+public sealed record CreateInvitationRequest([property: JsonConverter(typeof(PlayerIdJsonConverter))] PlayerId InvitedPlayerId, string ClientRequestId);
 public sealed record InvitationDecisionResult(AllianceInvitation Invitation, AllianceMembership? Membership);
 
 public sealed record UpdateAllianceProfileRequest(string? Description, string? Language, string? EmblemKey, AllianceJoinMode? JoinMode, long ExpectedRevision);
