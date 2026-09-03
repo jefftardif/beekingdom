@@ -1,4 +1,5 @@
 using BeeKingdom.Buildings.Interaction;
+using BeeKingdom.Core.Integration;
 using UnityEngine;
 
 namespace BeeKingdom.LivingHiveMenu
@@ -81,12 +82,19 @@ namespace BeeKingdom.LivingHiveMenu
         {
             if (building == null) return;
             if (!string.Equals(building.BuildingType, BuildingTypes.Research, System.StringComparison.Ordinal)) return;
-            // The official server-backed Research overlay reproducibly freezes the Unity Editor
-            // main thread on open (M016E-CL). Root cause traced to a Unity Editor-internal
-            // stall (EditorResources.Load during an IMGUI repaint's GUISkin reload), most
-            // likely triggered by SentinelOne EDR intercepting Editor file I/O - not a bug in
-            // this code. Routing to the local-preview fallback window unconditionally until a
-            // SentinelOne exclusion for the project/Unity install is confirmed to fix it.
+            // M040-CL: restored the conditional routing this bridge was already built for
+            // (LivingHiveResearchBridge.IsOfficialAvailable/OpenOfficialOverlay - wired since
+            // M038B but never called from here). The unconditional fallback below was a M016E-CL
+            // workaround for a real Unity Editor freeze on opening the official overlay, traced
+            // to a Unity-internal stall (EditorResources.Load during a GUISkin reload) most
+            // likely caused by SentinelOne EDR intercepting Editor file I/O - being retested now
+            // that a SentinelOne exclusion may be in place. If the freeze recurs, revert this and
+            // restore the unconditional BuildingWindowRouter.TryOpen(building) call below.
+            if (LivingHiveResearchBridge.IsOfficialAvailable)
+            {
+                LivingHiveResearchBridge.OpenOfficialOverlay();
+                return;
+            }
             BuildingWindowRouter.TryOpen(building);
         }
 

@@ -653,6 +653,7 @@ namespace BeeKingdom.Playground
                         lifetime.Token);
                 if (disposed) return;
                 snapshot = response.Snapshot;
+                try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyTrainingStarted(family); } catch {}
                 await DeletePartitionBestEffortAsync(
                     pending.Path,
                     CancellationToken.None);

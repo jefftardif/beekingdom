@@ -119,6 +119,20 @@ namespace BeeKingdom.Playground
                 : 11.76f;
             float badgeGlowSize = Mathf.Clamp(BadgeWorldSize * pixelsPerWorldUnit, 40f, 220f);
 
+            // M040X-CL: script execution order does not reliably control cross-script OnGUI
+            // paint order in this project (demonstrated: TutorialDialoguePresenter forced to
+            // order 32000, persisted, verified after a real Play Mode restart - the badge/bees
+            // drawn here still painted on top of the already-drawn dialogue panel). GUI.BeginGroup
+            // gives true per-pixel occlusion instead: anything drawn below the clip rect is cut
+            // exactly at the panel's real edge, the same way it's naturally hidden behind a real
+            // building - not a heuristic hide/show, and nothing is skipped outside that area.
+            bool clipToDialogue = BeeKingdom.Tutorial.TutorialDialoguePresenter.IsAnyDialogueVisible;
+            if (clipToDialogue)
+            {
+                Rect panelRect = BeeKingdom.Tutorial.TutorialDialoguePresenter.GetCurrentPanelRect();
+                GUI.BeginGroup(new Rect(0f, 0f, Screen.width, panelRect.yMin));
+            }
+
             for (int i = 0; i < TrackedBuildingTypes.Length; i++)
             {
                 string buildingType = TrackedBuildingTypes[i];
@@ -132,6 +146,8 @@ namespace BeeKingdom.Playground
                 HiveViewProductUiPresenter.DrawManualProductionBeesForExternalHost(rect, hotspotId, time, badgeGlowSize);
                 HiveViewProductUiPresenter.DrawManualCollectionFeedbackForExternalHost(rect, hotspotId);
             }
+
+            if (clipToDialogue) GUI.EndGroup();
         }
 
         // Reuses the building's own click-collider bounds (BoxCollider set up by

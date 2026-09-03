@@ -351,6 +351,7 @@ namespace BeeKingdom.Playground
         bool IsBusy { get; }
         TimeSpan Elapsed { get; }
         void Refresh();
+        void RefreshQuietly();
         void Start(string researchId);
         void Complete();
     }
@@ -363,6 +364,7 @@ namespace BeeKingdom.Playground
         public bool IsBusy => false;
         public TimeSpan Elapsed => TimeSpan.Zero;
         public void Refresh() { }
+        public void RefreshQuietly() { }
         public void Start(string researchId) { }
         public void Complete() { }
     }
@@ -412,7 +414,12 @@ namespace BeeKingdom.Playground
         public bool IsBusy => busy;
         public TimeSpan Elapsed => clock.Elapsed;
 
-        public void Refresh() { RefreshInsideLifetime(); }
+        public void Refresh() { RefreshInsideLifetime(false); }
+        // M040-CL: a periodic background poll (keeps ActiveOperation.Status in sync while the
+        // Research window sits open, e.g. to detect a timer reaching completion) must not flash
+        // the whole window to a "Loading" state every few seconds just because the player didn't
+        // ask for it - only Refresh(), called from an explicit player click, should do that.
+        public void RefreshQuietly() { RefreshInsideLifetime(true); }
         public void Start(string researchId) { StartInsideLifetime(researchId); }
         public void Complete() { CompleteInsideLifetime(); }
 
@@ -425,19 +432,20 @@ namespace BeeKingdom.Playground
             pendingKeys.Clear();
         }
 
-        public Task RefreshForProofAsync() { return RefreshCoreAsync(); }
-        public Task StartForProofAsync(string researchId) { return StartCoreAsync(researchId); }
-        public Task CompleteForProofAsync() { return CompleteCoreAsync(); }
+        public Task RefreshForProofAsync() { return RefreshCoreAsync(false); }
+        public Task RefreshQuietlyForProofAsync() { return RefreshCoreAsync(true); }
+        public Task StartForProofAsync(string researchId) { return StartCoreAsync(researchId, false); }
+        public Task CompleteForProofAsync() { return CompleteCoreAsync(false); }
 
-        private async void RefreshInsideLifetime() { await RefreshCoreAsync(); }
-        private async void StartInsideLifetime(string researchId) { await StartCoreAsync(researchId); }
-        private async void CompleteInsideLifetime() { await CompleteCoreAsync(); }
+        private async void RefreshInsideLifetime(bool quiet) { await RefreshCoreAsync(quiet); }
+        private async void StartInsideLifetime(string researchId) { await StartCoreAsync(researchId, false); }
+        private async void CompleteInsideLifetime() { await CompleteCoreAsync(false); }
 
-        private async Task RefreshCoreAsync()
+        private async Task RefreshCoreAsync(bool quiet)
         {
             if (busy || disposed) return;
             busy = true;
-            Model = HiveResearchPresentation.Loading(snapshot, clock.Elapsed);
+            if (!quiet) Model = HiveResearchPresentation.Loading(snapshot, clock.Elapsed);
             try
             {
                 RemoteHiveResearchSnapshot result = await client.ReadAsync(hiveId, lifetime.Token);
@@ -467,7 +475,7 @@ namespace BeeKingdom.Playground
             }
         }
 
-        private async Task StartCoreAsync(string researchId)
+        private async Task StartCoreAsync(string researchId, bool isRetryAfterRevisionRefresh)
         {
             HiveResearchScreenModel current = Model;
             if (busy || disposed || snapshot == null || current == null || !current.CanStart(researchId)) return;
@@ -482,6 +490,7 @@ namespace BeeKingdom.Playground
                 if (disposed) return;
                 snapshot = response.Snapshot;
                 pendingKeys.Remove(signature);
+                try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyResearchStarted(researchId); } catch {}
                 Model = HiveResearchPresentation.Ready(snapshot, clock.Elapsed);
             }
             catch (OperationCanceledException)
@@ -490,9 +499,27 @@ namespace BeeKingdom.Playground
             }
             catch (HivePerimeterClientException error)
             {
+                if (disposed) { busy = false; return; }
+                string code = StableError(error);
+                // Le champ Revision est global a la ruche (bouge a chaque tick de
+                // production, pas seulement pour la recherche) : un revision_conflict
+                // ne signifie presque jamais un vrai conflit d'action, juste un cache
+                // client perime. Plutot que de forcer le joueur a cliquer "Actualiser"
+                // lui-meme puis a recliquer "Lancer", on rafraichit et on retente une
+                // seule fois de facon transparente (meme action deja demandee par le
+                // joueur, pas une nouvelle mutation inventee).
+                if (code == "revision_conflict" && !isRetryAfterRevisionRefresh)
+                {
+                    busy = false;
+                    await RefreshCoreAsync(true);
+                    if (!disposed && Model != null && Model.CanStart(researchId))
+                    {
+                        await StartCoreAsync(researchId, true);
+                        return;
+                    }
+                }
                 if (!disposed)
                 {
-                    string code = StableError(error);
                     Model = HiveResearchPresentation.Error(snapshot, clock.Elapsed, code,
                         code == "network_unavailable" ? signature : string.Empty);
                 }
@@ -504,11 +531,12 @@ namespace BeeKingdom.Playground
             finally { busy = false; }
         }
 
-        private async Task CompleteCoreAsync()
+        private async Task CompleteCoreAsync(bool isRetryAfterRevisionRefresh)
         {
             HiveResearchScreenModel current = Model;
             if (busy || disposed || snapshot == null || current == null || current.ActiveOperation == null ||
                 !current.CanComplete(current.ActiveOperation.ResearchId)) return;
+            string researchId = current.ActiveOperation.ResearchId;
             Guid operationId = current.ActiveOperation.OperationId;
             string signature = "complete|" + operationId.ToString("D") + "|" +
                 current.Revision.ToString(CultureInfo.InvariantCulture);
@@ -531,9 +559,20 @@ namespace BeeKingdom.Playground
             }
             catch (HivePerimeterClientException error)
             {
+                if (disposed) { busy = false; return; }
+                string code = StableError(error);
+                if (code == "revision_conflict" && !isRetryAfterRevisionRefresh)
+                {
+                    busy = false;
+                    await RefreshCoreAsync(true);
+                    if (!disposed && Model != null && Model.CanComplete(researchId))
+                    {
+                        await CompleteCoreAsync(true);
+                        return;
+                    }
+                }
                 if (!disposed)
                 {
-                    string code = StableError(error);
                     Model = HiveResearchPresentation.Error(snapshot, clock.Elapsed, code,
                         code == "network_unavailable" ? signature : string.Empty);
                 }

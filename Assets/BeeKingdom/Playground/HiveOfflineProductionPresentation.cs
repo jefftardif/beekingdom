@@ -369,6 +369,7 @@ namespace BeeKingdom.Playground
                 if (disposed) return;
                 snapshot = response.Snapshot;
                 pendingKeys.Remove(signature);
+                try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyProductionCollected(buildingKey); } catch {}
                 Model = HiveOfflineProductionPresentation.Ready(snapshot);
             }
             catch (OperationCanceledException)

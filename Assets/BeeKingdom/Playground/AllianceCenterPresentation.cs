@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BeeKingdom.Networking;
+using UnityEngine;
 
 namespace BeeKingdom.Playground
 {
@@ -181,16 +182,24 @@ namespace BeeKingdom.Playground
     // controller as a small separate mutable list - PlayerDirectoryClient is a generic, reusable
     // service (see PlayerDirectoryClient.cs), not an Alliance concept, so its results don't belong
     // in the Alliance-specific immutable model.
+    // M043S-CL: the CEO's single "Inviter" click on Stara produced zero visible change - traced to
+    // InvitePlayerCoreAsync discarding the CreateInvitationAsync result entirely and only ever
+    // refreshing the alliance overview model, never this row list. A row now carries its own real
+    // outcome instead of silently reverting to looking untouched regardless of what the server did.
+    public enum InvitationRowStatus { Eligible, Sending, Sent, AlreadyPending, Error }
+
     public sealed class PlayerSearchResultModel
     {
         internal PlayerSearchResultModel(RemotePlayerPublicIdentity source)
         {
             PlayerId = source.PlayerId;
             DisplayName = source.DisplayName ?? string.Empty;
+            Status = InvitationRowStatus.Eligible;
         }
 
         public Guid PlayerId { get; }
         public string DisplayName { get; }
+        public InvitationRowStatus Status { get; internal set; }
     }
 
     public sealed class AllianceCenterScreenModel
@@ -288,12 +297,19 @@ namespace BeeKingdom.Playground
         }
     }
 
+    // M043R-CL: distinguishes "haven't typed enough yet" from "searched and found nothing" from
+    // "search failed" - the invite modal used to collapse all three into the same "type at least 2
+    // characters" helper text, which read as a lie once a real 2+ character query legitimately
+    // returned zero results or errored.
+    public enum InvitePlayerSearchStatus { Idle, Searching, Empty, Results, Error }
+
     public interface IAllianceCenterPanelController
     {
         AllianceCenterScreenModel Model { get; }
         bool IsConfigured { get; }
         bool IsBusy { get; }
         IReadOnlyList<PlayerSearchResultModel> InvitePlayerSearchResults { get; }
+        InvitePlayerSearchStatus InviteSearchStatus { get; }
         void Refresh();
         void RefreshQuietly();
         void Search(string nameOrTag, string language, RemoteAllianceJoinMode? joinMode);
@@ -321,6 +337,7 @@ namespace BeeKingdom.Playground
         public bool IsConfigured => false;
         public bool IsBusy => false;
         public IReadOnlyList<PlayerSearchResultModel> InvitePlayerSearchResults => Array.Empty<PlayerSearchResultModel>();
+        public InvitePlayerSearchStatus InviteSearchStatus => InvitePlayerSearchStatus.Idle;
         public void Refresh() { }
         public void RefreshQuietly() { }
         public void Search(string nameOrTag, string language, RemoteAllianceJoinMode? joinMode) { }
@@ -365,6 +382,7 @@ namespace BeeKingdom.Playground
         private readonly IAllianceCenterMutationKeySource keySource;
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private List<PlayerSearchResultModel> invitePlayerSearchResults = new List<PlayerSearchResultModel>();
+        private InvitePlayerSearchStatus invitePlayerSearchStatus = InvitePlayerSearchStatus.Idle;
         private bool disposed;
         private bool busy;
 
@@ -384,6 +402,7 @@ namespace BeeKingdom.Playground
         public bool IsConfigured => !disposed;
         public bool IsBusy => busy;
         public IReadOnlyList<PlayerSearchResultModel> InvitePlayerSearchResults => invitePlayerSearchResults;
+        public InvitePlayerSearchStatus InviteSearchStatus => invitePlayerSearchStatus;
 
         public void Refresh() { RunFireAndForget(() => RefreshCoreAsync(false)); }
         public void RefreshQuietly() { RunFireAndForget(() => RefreshCoreAsync(true)); }
@@ -424,6 +443,8 @@ namespace BeeKingdom.Playground
         public Task JoinOpenForProofAsync(Guid allianceId) => JoinOpenCoreAsync(allianceId);
         public Task LeaveForProofAsync() => LeaveCoreAsync();
         public Task DissolveForProofAsync() => DissolveCoreAsync();
+        public Task SearchPlayersForInviteForProofAsync(string query) => SearchPlayersForInviteCoreAsync(query);
+        public Task InvitePlayerForProofAsync(Guid playerId) => InvitePlayerCoreAsync(playerId);
 
         private async void RunFireAndForget(Func<Task> action) { try { await action(); } catch { /* Model already carries the Error state */ } }
 
@@ -643,37 +664,69 @@ namespace BeeKingdom.Playground
             if (playerDirectory == null || string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
             {
                 invitePlayerSearchResults = new List<PlayerSearchResultModel>();
+                invitePlayerSearchStatus = InvitePlayerSearchStatus.Idle;
                 return;
             }
+            invitePlayerSearchStatus = InvitePlayerSearchStatus.Searching;
             try
             {
                 List<RemotePlayerPublicIdentity> results = await playerDirectory.SearchAsync(query, 0, 20, lifetime.Token);
                 if (disposed) return;
                 invitePlayerSearchResults = (results ?? new List<RemotePlayerPublicIdentity>())
                     .Select(r => new PlayerSearchResultModel(r)).ToList();
+                invitePlayerSearchStatus = invitePlayerSearchResults.Count == 0 ? InvitePlayerSearchStatus.Empty : InvitePlayerSearchStatus.Results;
             }
             catch (Exception)
             {
-                if (!disposed) invitePlayerSearchResults = new List<PlayerSearchResultModel>();
+                if (!disposed)
+                {
+                    invitePlayerSearchResults = new List<PlayerSearchResultModel>();
+                    invitePlayerSearchStatus = InvitePlayerSearchStatus.Error;
+                }
             }
         }
 
         private async Task InvitePlayerCoreAsync(Guid playerId)
         {
             if (busy || disposed || Model?.Overview == null) return;
+            PlayerSearchResultModel row = invitePlayerSearchResults.FirstOrDefault(r => r.PlayerId == playerId);
+            if (row == null || row.Status == InvitationRowStatus.Sending || row.Status == InvitationRowStatus.Sent || row.Status == InvitationRowStatus.AlreadyPending) return;
             busy = true;
+            row.Status = InvitationRowStatus.Sending;
             Model = AllianceCenterPresentation.Mutating(Model, "invite");
             try
             {
                 string key = keySource.Create("invite");
                 await client.CreateInvitationAsync(Model.Overview.AllianceId, playerId, key, lifetime.Token);
-                if (disposed) return;
+                row.Status = InvitationRowStatus.Sent;
                 busy = false;
+                if (disposed) return;
                 await RefreshCoreAsync(true);
                 return;
             }
-            catch (HivePerimeterClientException error) { if (!disposed) Model = AllianceCenterPresentation.Error(Model, StableError(error)); }
-            catch (Exception) { if (!disposed) Model = AllianceCenterPresentation.Error(Model, "unexpected"); }
+            catch (HivePerimeterClientException error)
+            {
+                string code = StableError(error);
+                row.Status = code == "already_invited" || code == "target_already_in_alliance" ? InvitationRowStatus.AlreadyPending : InvitationRowStatus.Error;
+                // M043S-CL: was completely silent on failure (Model flipped to an Error state the
+                // invite modal never reads, and nothing else logged anything) - a real rejection
+                // and "the click never registered" were indistinguishable from the CEO's side. Now
+                // always leaves a trace, whatever the underlying cause turns out to be. Logs the raw
+                // error.Message too, not just the sanitized StableError code - a genuine
+                // InvalidResponse (deserialization/transport-level failure, not a clean server
+                // rejection) loses its real detail once collapsed to "invalid_response".
+                Debug.LogWarning("[AllianceInvite] CreateInvitation rejected for player " + playerId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
+                Model = AllianceCenterPresentation.Error(Model, code);
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    row.Status = InvitationRowStatus.Error;
+                    Debug.LogWarning("[AllianceInvite] CreateInvitation failed for player " + playerId + ": " + exception.GetType().Name + " - " + exception.Message);
+                    Model = AllianceCenterPresentation.Error(Model, "unexpected");
+                }
+            }
             busy = false;
         }
 

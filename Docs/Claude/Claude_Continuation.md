@@ -40,6 +40,239 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M043S-CL : Bug réel d'invitation Alliance trouvé, corrigé, déployé, prouvé (2026-09-02/03)
+
+Suite directe de la première partie de M043S ci-dessous (retour visuel du
+modal Inviter, non déployée). Après ce correctif UI, le CEO a vu pour la
+première fois le VRAI résultat de son clic : une erreur (`invalid_response`
+→ `game.rejected` une fois journalisé en clair). Investigation poussée
+jusqu'à la cause exacte, prouvée par appel direct en lecture/écriture
+contrôlée (accord explicite du CEO) :
+
+**`CreateInvitationRequest.InvitedPlayerId` est typé `PlayerId` (record
+struct sans convertisseur JSON propre, par design). Le client envoie ce
+champ comme un GUID brut - comme partout ailleurs dans ce code -, mais
+`System.Text.Json` attend par défaut une forme objet pour ce type sans
+convertisseur. La désérialisation du corps de requête échouait donc À
+L'INTÉRIEUR du binding ASP.NET, avant même d'atteindre
+`AllianceService.CreateInvitation` — preuve définitive : la table
+`dbo.AllianceInvitations` était complètement vide malgré plusieurs vraies
+tentatives du CEO. Cette route n'avait JAMAIS fonctionné une seule fois
+depuis sa création.**
+
+Corrigé au point de rupture exact : `[property: JsonConverter(...)]`
+ajouté uniquement sur `CreateInvitationRequest.InvitedPlayerId`
+(`AllianceContracts.cs`) + nouveau `PlayerIdJsonConverter`
+(`Identifiers.cs`). Une première tentative avait mis le convertisseur sur
+le type `PlayerId` lui-même — cassé 19 tests non liés (hachage
+d'idempotence Chat, fixtures) — annulée au profit du correctif étroit.
+Déployé avec autorisation explicite du CEO ; API saine, Alliance Test
+[BKT] et membership Leader du CEO préservés après déploiement.
+
+**Vérifié en production, succès réel prouvé** : une invitation a été créée
+pour Stara (`InvitationId 0b7afca1-abf1-4a3f-b2f0-f8f37b1390f7`, `Status
+Pending`), confirmée par le CEO directement en base SQL.
+
+Bug distinct découvert, non résolu : les clics MANUELS du CEO sur le
+bouton "Inviter" ne déclenchent toujours rien (contrôleur pourtant sain -
+`busy=False`, `Model.State=Ready` au moment du clic), alors que le même
+appel fonctionne parfaitement par reflection. Probablement un problème
+Unity IMGUI (désynchronisation d'ID de contrôle entre passes Layout et
+Repaint) plutôt qu'un problème réseau. Signalé séparément (tâche en
+arrière-plan proposée au CEO), non investigué en profondeur ce soir.
+
+Fichiers touchés (serveur, déployés) :
+`Server/src/BeeKingdom.Shared/ValueObjects/Identifiers.cs`,
+`Server/src/BeeKingdom.Alliance/Models/AllianceContracts.cs`,
+`Server/tests/BeeKingdom.Tests/AllianceServiceTests.cs`.
+
+Preuves : rapport `Docs/AI/Missions/M043S-CL-Real-Alliance-Invitation-Feedback.md`
+(addendum complet). Suite serveur : 482 tests, 1 échec isolé
+préexistant/instable confirmé sans lien. Build : 0 erreur.
+
+Prochain test utilisateur : Stara doit se connecter et vérifier qu'elle
+voit l'invitation en attente, puis l'accepter ou la refuser — le CEO ne
+doit plus recliquer "Inviter" pour elle (l'invitation existe déjà).
+
+Ouvert / a faire ensuite : diagnostiquer pourquoi le bouton "Inviter" ne
+réagit pas aux clics manuels (tâche déjà proposée) ; connexion Stara ;
+toujours la question non répondue sur les ~960 lignes non liées dans
+`HiveViewProductUiPresenter.cs`.
+
+---
+
+## Jalon courant — M043S-CL : Retour visuel réel sur l'invitation Alliance (2026-09-02)
+
+Suite de M043R. Le CEO a cliqué une fois "Stara → Inviter" : rien de
+visible ne s'est passé (modal ouvert, bouton "Inviter" inchangé, aucune
+confirmation, aucune erreur). Vérité serveur d'abord (requête SQL en
+lecture seule fournie par le CEO sur `dbo.AllianceInvitations`) : **aucune
+invitation n'existe** pour ce couple alliance/joueur — le clic n'a jamais
+abouti à une écriture serveur.
+
+Cause racine prouvée par lecture de code (pas d'inférence) :
+`AllianceCenterPanelController.InvitePlayerCoreAsync` jetait le résultat de
+`CreateInvitationAsync`, ne rafraîchissait jamais la liste de résultats de
+recherche affichée par le modal (seulement l'aperçu général de l'alliance),
+et **ne journalisait rien en cas d'échec** — succès, échec serveur réel, ou
+requête jamais envoyée auraient tous les trois produit exactement le même
+silence visuel. Corrigé : nouvel état par ligne (`InvitationRowStatus` :
+Eligible/Sending/Sent/AlreadyPending/Error) reflété dans le modal
+("Envoi…"/"Envoyée"/"Déjà invité"/"Réessayer"), et journalisation
+systématique du code d'erreur réel sur tout échec.
+
+Idempotence serveur déjà correcte (double protection existante :
+ClientRequestId + garde `already_invited`), maintenant couverte par 2
+nouveaux tests reproduisant exactement le scénario Stara. Bug distinct
+repéré en chemin (route d'acceptation d'invitation enregistrée avec des
+antislashs au lieu de slashs, jamais matchable) — signalé séparément, non
+corrigé (hors périmètre : accepter une invitation, pas en créer une).
+
+**Aucun changement serveur de production** cette fois — le correctif est
+entièrement Unity (`AllianceCenterPresentation.cs`,
+`HiveViewProductUiPresenter.cs`), non commité/poussé. Seuls des tests ont
+été ajoutés côté serveur (`AllianceServiceTests.cs`).
+
+Preuves : rapport `Docs/AI/Missions/M043S-CL-Real-Alliance-Invitation-Feedback.md`
+(verdict A-L). Suite serveur ciblée `AllianceServiceTests` : 48/48 verts.
+Suite complète : 470-478/481 verts selon exécution (2-3 échecs isolés
+confirmés préexistants/instables sous parallélisation, tous verts seuls,
+sans rapport). Build serveur : 0 erreur. Compilation Unity : 0 erreur. Pas
+de nouveau test Unity automatisé : `AllianceCenterPanelController` vit
+dans l'assembly par défaut `Assembly-CSharp`, structurellement
+inaccessible à `BeeKingdom.Tests.asmdef` (contrainte déjà documentée dans
+`AllianceClientTests.cs`, pas une décision prise ce soir).
+
+Prochain test utilisateur : rouvrir Alliance Center → Inviter → chercher
+"St" → cliquer "Inviter" sur Stara une fois. Attendu : "Envoi…" puis
+"Envoyée" (bouton désactivé), ou une erreur visible + journalisée si ça
+échoue à nouveau.
+
+Ouvert / a faire ensuite : le retest CEO ci-dessus ; décider si la route
+d'acceptation cassée (antislashs) et la détection proactive
+"déjà invité" à la réouverture du modal (nécessiterait une nouvelle route
+serveur) valent la peine d'être traitées ; toujours la question non
+répondue sur les ~960 lignes non liées dans `HiveViewProductUiPresenter.cs`.
+
+---
+
+## Jalon courant — M043R-CL : Player Directory Search sur identité authentifiée réelle (2026-09-02)
+
+Suite de M043Q. Le CEO a cherché "Stara" (joueur réel, onboardé, prouvé par
+requête SQL directe) dans le modal Alliance Center → Inviter → aucun
+résultat. Cause : `PlayerDirectoryService.Search()` interrogeait
+exclusivement `BeeKingdom.Accounts` (jamais
+`BeeKingdom.Authentication.AuthenticationAccounts`), contrairement à
+`GetByPlayerId` déjà corrigé par M043P — Stara n'a jamais de compte
+`BeeKingdom.Accounts` (créée uniquement via l'onboarding Google réel).
+
+Corrigé : `Search()` fusionne maintenant les deux sources (autoritative
+`credentials.SearchByDisplayName` + legacy `accounts.QueryAccount`),
+déduplique par PlayerId avec la même précédence que M043P (autoritative
+gagne), trie préfixe avant "contient". Bug UX distinct corrigé au passage :
+le modal Inviter affichait le même message "tapez 2 caractères" pour
+"pas assez tapé", "zéro résultat" et "erreur réseau" — nouveau
+`InvitePlayerSearchStatus` distingue les 4 états + bouton Réessayer. Le
+debounce ~350ms existant (M043B-CL) fonctionnait déjà correctement, non
+modifié.
+
+Fichiers touchés : `Server/src/BeeKingdom.Accounts/PlayerDirectoryService.cs`,
+`Assets/BeeKingdom/Playground/AllianceCenterPresentation.cs`,
+`Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs`.
+
+Preuves : rapport `Docs/AI/Missions/M043R-CL-PlayerDirectory-Authenticated-Name-Search.md`
+(verdict A-P). Suite serveur : 479 tests, 471 verts, 8 ignorés (SQL,
+préexistant), 0 échec — 8 nouveaux tests couvrant exactement le scénario
+Stara. Build serveur : 0 erreur. Compilation Unity : 0 erreur. Pas de
+nouveau test Unity automatisé (aucune suite existante pour
+`AllianceCenterPanelController`, stub complet de `IAllianceClient`
+disproportionné pour ce correctif — vérification par compilation + retest
+humain prévu).
+
+**Aucun déploiement effectué** — changement serveur en attente
+d'autorisation explicite du CEO (comme chaque jalon précédent).
+
+Prochain test utilisateur : après déploiement autorisé, rouvrir Alliance
+Center → Inviter → taper "St" → "Stara" doit apparaître automatiquement
+après le debounce. Ne pas cliquer Inviter avant validation visuelle.
+
+Ouvert / a faire ensuite : autorisation de déploiement M043R en attente ;
+toujours la question non répondue sur les ~960 lignes non liées dans
+`HiveViewProductUiPresenter.cs`.
+
+---
+
+## Jalon courant — M043Q-CL : Alliance Center Chat réel + nom d'expéditeur réel (2026-09-02)
+
+Suite de M043P (DisplayName Alliance). Le CEO a signalé l'onglet "Chat"
+d'Alliance Center toujours sur "À VENIR". Preuve serveur directe (lecture
+seule, jeton réel du CEO, aucune mutation) : `GET
+/chat/v1/conversations/{ChatConversationId}/messages` répond **200** avec
+une liste vide — le participant chat du CEO existe bel et bien côté serveur
+(créé par `AllianceService.CreateOrLinkAllianceChat` a la création de
+l'alliance). Ce n'était donc jamais un problème d'autorisation serveur : le
+vrai blocage était côté client — `LivingHiveChatController.
+SelectConversationAsync` refuse tout id absent de la liste agrégée chargée
+par `OpenAsync()`, liste qui peut ne pas encore contenir la conversation
+Alliance au moment où l'écran l'ouvre.
+
+Corrigé en ajoutant `LivingHiveChatController.SelectKnownConversationAsync`
+(et sa façade statique `LivingHiveChatRuntime.SelectKnownAsync`) qui ouvre un
+id de conversation déjà connu sans exiger qu'il soit dans cette liste,
+en réutilisant tel quel le même transport réseau (`ReconcileFullyAsync`/
+`SendAsync`, aucune logique forkée). L'onglet "Chat" d'Alliance Center et le
+tiroir latéral existant (`DrawAllianceChatRealBody`, M043B-CL) utilisent
+maintenant cette méthode au lieu de `SelectAsync`.
+
+Bug distinct découvert en tracant le nom d'expéditeur (le point resté
+"PARTIEL" dans M043P) : `ChatService.SendMessageAsync` fixait
+inconditionnellement `SenderDisplayNameSnapshot = "player:{id}"`, jamais le
+vrai nom, pour TOUT message envoyé par TOUT joueur, indépendamment
+d'Alliance. Corrigé avec le même seam d'inversion de dépendance que M042
+(`IAllianceMembershipResolver`) : nouveau `IChatSenderDisplayNameResolver`
+dans `BeeKingdom.Chat` (défaut neutre), implémentation réelle
+`PlayerDirectoryChatSenderDisplayNameResolver` dans `BeeKingdom.Accounts`
+(même source authoritative que M043P), enregistrée en DI après le défaut.
+
+Fichiers touchés : `Assets/BeeKingdom/Gameplay/Communication/LivingHiveChatController.cs`,
+`Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs`,
+`Server/src/BeeKingdom.Chat/ChatService.cs`,
+`Server/src/BeeKingdom.Chat/Audience/IChatSenderDisplayNameResolver.cs` (nouveau),
+`Server/src/BeeKingdom.Accounts/PlayerDirectoryChatSenderDisplayNameResolver.cs` (nouveau),
+`Server/src/BeeKingdom.Accounts/DependencyInjection/AccountServiceCollectionExtensions.cs`,
+`Server/src/BeeKingdom.Accounts/BeeKingdom.Accounts.csproj`.
+
+Preuves : rapport complet `Docs/AI/Missions/M043Q-CL-Alliance-Center-Real-Chat.md`
+(verdict A-K, tout OUI). Build serveur : 0 erreur. Suite serveur complète :
+462/462 verts (+2 nouveaux tests `AllianceChatIntegrationTests`), 1 échec
+isolé confirmé préexistant/instable (`Claim_returns_typed_receipt_and_replay_conflict`,
+repasse au vert seul, sans rapport). Compilation Unity : 0 erreur
+(`assets-refresh` propre). Preuve serveur directe : `GET
+/chat/v1/conversations/{id}/messages` → `200` avec le vrai jeton CEO, aucune
+mutation.
+
+**Note importante** : plusieurs corrections d'interface Alliance Center de
+cette soirée (M043N/O ad-hoc nav fix, ce jalon) vivent dans
+`HiveViewProductUiPresenter.cs`, qui contient aussi ~960 lignes de
+changements pré-existants sans rapport, jamais commités (question posée au
+CEO, restée sans réponse). Aucun commit/push/déploiement n'a été fait pour
+ce jalon — en attente d'autorisation explicite du CEO, comme pour les
+jalons précédents.
+
+Prochain test utilisateur : ouvrir Alliance Center → onglet "Chat" en Play
+Mode connecté à la production. Attendu : composer visible, "Aucun message
+pour le moment" (pas "À VENIR"), et — après déploiement du correctif
+serveur — le premier message envoyé par le CEO doit afficher son vrai nom,
+pas `player:xxxxxxxx`.
+
+Ouvert / a faire ensuite : décider du sort des ~960 lignes non liées dans
+`HiveViewProductUiPresenter.cs` (isoler vs tout committer) ; committer/pousser
+ce jalon si validé ; déployer le correctif serveur (résolveur de nom
+d'expéditeur) une fois autorisé ; le CEO doit envoyer le tout premier
+message d'alliance lui-même (jamais fait par CL, comme demandé).
+
+---
+
 ## Jalon courant — M043J/K/L/M/N-CL : Alliance Center enfin fonctionnel de bout en bout (2026-09-02)
 
 Suite directe de M043I (persistance SQL). Le CEO a certifié Alliance Center

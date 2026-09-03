@@ -26,6 +26,10 @@ namespace BeeKingdom.Playground.Editor
             tests.NetworkRetryReusesStartIdempotencyKey().GetAwaiter().GetResult();
             tests.ServerRefusalKeepsSpecificPlayerFacingCode().GetAwaiter().GetResult();
             tests.ControllerCompletesOnlyServerAwaitingOperation().GetAwaiter().GetResult();
+            tests.RevisionConflictOnStartAutoRefreshesAndRetriesTransparently().GetAwaiter().GetResult();
+            tests.RevisionConflictOnStartTwiceInARowSurfacesAsError().GetAwaiter().GetResult();
+            tests.RevisionConflictOnCompleteAutoRefreshesAndRetriesTransparently().GetAwaiter().GetResult();
+            tests.QuietRefreshNeverShowsLoadingState().GetAwaiter().GetResult();
         }
 
         [Test]
@@ -52,7 +56,7 @@ namespace BeeKingdom.Playground.Editor
             var model = HiveResearchPresentation.Ready(snapshot, TimeSpan.FromSeconds(10));
 
             Assert.That(model.Remaining(TimeSpan.FromSeconds(10)), Is.EqualTo(TimeSpan.FromMinutes(4)));
-            Assert.That(model.Remaining(TimeSpan.FromMinutes(10)), Is.Zero);
+            Assert.That(model.Remaining(TimeSpan.FromMinutes(10)), Is.EqualTo(TimeSpan.Zero));
             Assert.That(model.Progress01(TimeSpan.FromMinutes(10)), Is.EqualTo(1d));
             Assert.That(model.CanComplete(HiveResearchClient.ForagingRoutesId), Is.False,
                 "The device projection may reach zero, but only server awaiting_completion authorizes completion.");
@@ -192,6 +196,110 @@ namespace BeeKingdom.Playground.Editor
             }
         }
 
+        // M040-CL: revision_conflict is almost never a real double-action conflict - Revision
+        // is global to the hive (bumped by unrelated production ticks, upgrades, etc.), so the
+        // client's cached copy is very often stale by the time the player actually clicks. The
+        // player must never see this as an error: a silent refresh + one transparent retry
+        // should just make their original click succeed.
+        [Test]
+        public async Task RevisionConflictOnStartAutoRefreshesAndRetriesTransparently()
+        {
+            var client = new FakeClient(Snapshot()); // Revision = 3
+            using (var controller = new HiveResearchPanelController(
+                client, HiveId, new FixedKeySource("start-key"), new FakeClock(TimeSpan.Zero)))
+            {
+                await controller.RefreshForProofAsync();
+                Assert.That(controller.Model.Revision, Is.EqualTo(3));
+
+                client.StartSteps.Enqueue(new HivePerimeterClientException(
+                    HivePerimeterClientError.InvalidResponse, "game.revision_conflict"));
+                // Simulates an unrelated server-side mutation (a production tick) bumping the
+                // hive's real revision between the player's last fetch and their click.
+                client.BumpSnapshotRevision(4);
+                client.StartSteps.Enqueue(StartResponse(4, "start-key"));
+
+                await controller.StartForProofAsync(HiveResearchClient.ForagingRoutesId);
+
+                Assert.That(controller.Model.State, Is.EqualTo(HiveResearchScreenState.Ready),
+                    "The player must never see an Error state from a plain revision_conflict.");
+                Assert.That(controller.Model.ErrorCode, Is.Empty);
+                Assert.That(controller.Model.ActiveOperation, Is.Not.Null,
+                    "The retried Start must have actually gone through server-side.");
+                Assert.That(controller.Model.ActiveOperation.ResearchId, Is.EqualTo(HiveResearchClient.ForagingRoutesId));
+                Assert.That(client.StartSteps, Is.Empty, "Both the failing and the retried Start call must have been consumed.");
+            }
+        }
+
+        [Test]
+        public async Task RevisionConflictOnStartTwiceInARowSurfacesAsError()
+        {
+            var client = new FakeClient(Snapshot());
+            using (var controller = new HiveResearchPanelController(
+                client, HiveId, new FixedKeySource("start-key"), new FakeClock(TimeSpan.Zero)))
+            {
+                await controller.RefreshForProofAsync();
+
+                // A second, genuine conflict on the retry itself (not just a stale cache) -
+                // the single automatic retry must not loop forever; it should surface normally.
+                client.StartSteps.Enqueue(new HivePerimeterClientException(
+                    HivePerimeterClientError.InvalidResponse, "game.revision_conflict"));
+                client.StartSteps.Enqueue(new HivePerimeterClientException(
+                    HivePerimeterClientError.InvalidResponse, "game.revision_conflict"));
+
+                await controller.StartForProofAsync(HiveResearchClient.ForagingRoutesId);
+
+                Assert.That(controller.Model.State, Is.EqualTo(HiveResearchScreenState.Error));
+                Assert.That(controller.Model.ErrorCode, Is.EqualTo("revision_conflict"));
+                Assert.That(client.StartSteps, Is.Empty,
+                    "Exactly one retry must be attempted, not an unbounded loop.");
+            }
+        }
+
+        [Test]
+        public async Task RevisionConflictOnCompleteAutoRefreshesAndRetriesTransparently()
+        {
+            RemoteHiveResearchSnapshot awaiting = SnapshotWithOperation(HiveResearchClient.AwaitingCompletionStatus);
+            var client = new FakeClient(awaiting);
+            using (var controller = new HiveResearchPanelController(
+                client, HiveId, new FixedKeySource("complete-key"), new FakeClock(TimeSpan.Zero)))
+            {
+                await controller.RefreshForProofAsync();
+                Assert.That(controller.Model.CanComplete(HiveResearchClient.ForagingRoutesId), Is.True);
+
+                client.CompleteSteps.Enqueue(new HivePerimeterClientException(
+                    HivePerimeterClientError.InvalidResponse, "game.revision_conflict"));
+                client.BumpSnapshotRevision(awaiting.Revision + 1);
+                client.CompleteSteps.Enqueue(CompleteResponse(awaiting.Revision + 1, "complete-key"));
+
+                await controller.CompleteForProofAsync();
+
+                Assert.That(controller.Model.State, Is.EqualTo(HiveResearchScreenState.Ready));
+                Assert.That(controller.Model.ErrorCode, Is.Empty);
+                Assert.That(controller.Model.IsCompleted(HiveResearchClient.ForagingRoutesId), Is.True,
+                    "The retried Complete must have actually gone through server-side.");
+            }
+        }
+
+        [Test]
+        public async Task QuietRefreshNeverShowsLoadingState()
+        {
+            var client = new FakeClient(Snapshot());
+            using (var controller = new HiveResearchPanelController(
+                client, HiveId, new FixedKeySource("k"), new FakeClock(TimeSpan.Zero)))
+            {
+                await controller.RefreshForProofAsync();
+                Assert.That(controller.Model.State, Is.EqualTo(HiveResearchScreenState.Ready));
+
+                var statesObserved = new List<HiveResearchScreenState>();
+                client.OnReadAsync = () => statesObserved.Add(controller.Model.State);
+                await controller.RefreshQuietlyForProofAsync();
+
+                Assert.That(statesObserved.Contains(HiveResearchScreenState.Loading), Is.False,
+                    "A background poll the player never asked for must never flash the whole window to Loading.");
+                Assert.That(controller.Model.State, Is.EqualTo(HiveResearchScreenState.Ready));
+            }
+        }
+
         private static RemoteHiveResearchSnapshot Snapshot()
         {
             DateTimeOffset now = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero);
@@ -310,8 +418,14 @@ namespace BeeKingdom.Playground.Editor
             public List<string> CompleteKeys { get; } = new List<string>();
             public GameReadSource LastReadSource { get; set; } = GameReadSource.Server;
             public DateTimeOffset LastReadCachedAtUtc { get; set; }
+            public Action OnReadAsync { get; set; }
+            public void BumpSnapshotRevision(long newRevision) { snapshot.Revision = newRevision; }
             public Task<RemoteHiveResearchSnapshot> ReadAsync(Guid hiveId, CancellationToken cancellationToken = default(CancellationToken))
-            { cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(snapshot); }
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                OnReadAsync?.Invoke();
+                return Task.FromResult(snapshot);
+            }
             public Task<RemoteHiveResearchMutationResponse> StartAsync(Guid hiveId, string researchId, long expectedRevision, string idempotencyKey, CancellationToken cancellationToken = default(CancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -352,6 +466,7 @@ namespace BeeKingdom.Playground.Editor
             public bool IsBusy => false;
             public TimeSpan Elapsed { get; }
             public void Refresh() { }
+            public void RefreshQuietly() { }
             public void Start(string researchId) { }
             public void Complete() { }
         }

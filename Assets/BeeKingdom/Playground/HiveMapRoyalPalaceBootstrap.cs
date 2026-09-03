@@ -74,6 +74,8 @@ namespace BeeKingdom.Playground
             selectedBuilding = building;
             OverlayOpenForExternalHost = true;
             HiveViewProductUiPresenter.RefreshRoyalPalaceUpgradeForExternalHost();
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("administration_core"); } catch {}
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyBuildingSelected("administration_core"); } catch {}
         }
 
         private void OnGUI()

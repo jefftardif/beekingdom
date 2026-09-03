@@ -102,8 +102,19 @@ namespace BeeKingdom.Networking
         public const string CompletedCode = "game.building_upgrade_completed";
         public static readonly TimeSpan MaximumDuration = TimeSpan.FromDays(7);
 
+        // M039-CL: doit rester le miroir exact du catalogue serveur (BuildingUpgradeOptions.Catalog,
+        // voir appsettings.*.json) - un batiment present cote serveur mais absent ici fait echouer
+        // ValidateSnapshot pour TOUT compte dont ce batiment est encore dans la plage du catalogue
+        // (ex.: guard_post niveau 1 pour un compte neuf), meme si le batiment cible n'est pas celui
+        // que le joueur tente d'ameliorer - le snapshot entier est rejete des qu'une offre est invalide.
         private static readonly HashSet<string> SupportedBuildings =
-            new HashSet<string>(StringComparer.Ordinal) { "honey_storage", "wax_workshop", "warehouse_cells", "administration_core" };
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "honey_storage", "wax_workshop", "warehouse_cells", "nursery_cluster",
+                "guard_post", "defense_growth", "genetics_garden", "research_node",
+                "infirmary_grove", "academy_canopy", "hive_bank", "administration_core",
+                "alliance_future_hall", "archives_honeyfall"
+            };
         private readonly MobileAccountSessionGate sessionGate;
         private readonly IGameAccountSessionSource sessionSource;
         private readonly IAuthenticatedGameRestTransport transport;

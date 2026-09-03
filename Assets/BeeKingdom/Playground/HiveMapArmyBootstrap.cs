@@ -57,6 +57,12 @@ namespace BeeKingdom.Playground
         private void Start()
         {
             LivingHiveArmyBridge.SetHandlers(() => ModalOpenForExternalHost, OpenModal);
+            // M038C-CL: fallback FTUE target for whenever the Caserne's own Army button
+            // (registered as a screen-rect, takes priority - see HiveViewProductUiPresenter's
+            // DrawBarrackTopBar) isn't currently on screen, e.g. the player is looking at the
+            // "Plus" submenu instead. Lazy Func: re-resolves the real RectTransform on every
+            // lookup, so it stays correct across the submenu opening/closing.
+            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterUi(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetArmyMenu, LivingHiveArmyBridge.GetArmyRowRect); } catch {}
         }
 
         private void OnGUI()
@@ -65,7 +71,16 @@ namespace BeeKingdom.Playground
 
             if (ModalOpenForExternalHost)
             {
+                // M040X-CL: same fix as HiveMapProductionBootstrap/HiveMapBarrackBootstrap -
+                // see Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md.
+                bool clipToDialogue = BeeKingdom.Tutorial.TutorialDialoguePresenter.IsAnyDialogueVisible;
+                if (clipToDialogue)
+                {
+                    Rect panelRect = BeeKingdom.Tutorial.TutorialDialoguePresenter.GetCurrentPanelRect();
+                    GUI.BeginGroup(new Rect(0f, 0f, Screen.width, panelRect.yMin));
+                }
                 DrawFullscreen();
+                if (clipToDialogue) GUI.EndGroup();
                 return;
             }
 
@@ -83,6 +98,7 @@ namespace BeeKingdom.Playground
             ModalOpenForExternalHost = true;
             MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
             RefreshAllControllers();
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("army"); } catch {}
         }
 
         private void SyncSelectionFromModel()
@@ -266,9 +282,9 @@ namespace BeeKingdom.Playground
                     GUILayout.Label(Text("Escouade actuelle: ", "Current squad: ") + m.ReservedGuardians + "/" + m.ReservedWingrunners + "/" + m.ReservedDarters + Text(" (G/V/L)", " (G/W/D)"), new GUIStyle(GUI.skin.label) { wordWrap = true });
                 }
 
-                DrawSquadRow("Gardiennes", "Guardians", m.AvailableGuardians, ref selGuardians, capacity, totalSel);
-                DrawSquadRow("Voltigeuses", "Wingrunners", m.AvailableWingrunners, ref selWingrunners, capacity, totalSel);
-                DrawSquadRow("Lanceuses", "Darters", m.AvailableDarters, ref selDarters, capacity, totalSel);
+                DrawSquadRow("guardians", "Gardiennes", "Guardians", m.AvailableGuardians, ref selGuardians, capacity, totalSel);
+                DrawSquadRow("wingrunners", "Voltigeuses", "Wingrunners", m.AvailableWingrunners, ref selWingrunners, capacity, totalSel);
+                DrawSquadRow("darters", "Lanceuses", "Darters", m.AvailableDarters, ref selDarters, capacity, totalSel);
 
                 GUILayout.Label(Text("TOTAL ", "TOTAL ") + totalSel + " / " + capacity, new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, wordWrap = true });
 
@@ -304,7 +320,7 @@ namespace BeeKingdom.Playground
             GUILayout.EndVertical();
         }
 
-        private void DrawSquadRow(string fr, string en, long available, ref int selected, int capacity, int totalSel)
+        private void DrawSquadRow(string familyKey, string fr, string en, long available, ref int selected, int capacity, int totalSel)
         {
             string name = Text(fr, en);
             GUILayout.BeginHorizontal();
@@ -316,7 +332,13 @@ namespace BeeKingdom.Playground
             GUI.enabled = true;
             GUILayout.Label(selected.ToString(CultureInfo.InvariantCulture), GUILayout.Width(30f));
             GUI.enabled = canInc;
-            if (GUILayout.Button("+", GUILayout.Width(32f), GUILayout.Height(28f))) selected = Math.Min((int)available, selected + 1);
+            if (GUILayout.Button("+", GUILayout.Width(32f), GUILayout.Height(28f)))
+            {
+                selected = Math.Min((int)available, selected + 1);
+                // M038-CL: real, local-only interaction (adjusts squad selection, no server call) - does not
+                // depend on CombatSquadReservation being enabled, so it stays usable even while Confirm Squad is off.
+                try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyArmyInteracted(familyKey); } catch {}
+            }
             GUI.enabled = true;
             if (GUILayout.Button("MAX", GUILayout.Width(48f), GUILayout.Height(28f)))
             {

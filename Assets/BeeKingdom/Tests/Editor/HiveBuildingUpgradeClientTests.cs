@@ -109,6 +109,61 @@ namespace BeeKingdom.Tests.Editor
         }
 
         [Test]
+        public async Task FreshAccountSnapshotWithGuardPostOfferAtLevelOneIsAccepted()
+        {
+            // M039-CL: reproduit exactement le compte neuf - guard_post est materialise au
+            // niveau 1 des la creation du hive (voir CreateInitialHiveState cote serveur), donc
+            // toute lecture reelle inclut une offre pour guard_post. Avant le correctif, cette
+            // offre etait absente de SupportedBuildings et faisait rejeter TOUT le snapshot.
+            RemoteBuildingUpgradeSnapshot snapshot = ValidSnapshot();
+            snapshot.BuildingLevels["guard_post"] = 1;
+            snapshot.Offers.Add(new RemoteBuildingUpgradeOffer
+            {
+                BuildingKey = "guard_post", FromLevel = 1, ToLevel = 2,
+                Duration = TimeSpan.FromMinutes(3),
+                Costs = new Dictionary<string, long> { ["honey"] = 972, ["wax"] = 251 }
+            });
+            snapshot.Balances["wax"] = new RemoteBuildingUpgradeBalance { Amount = 500, Capacity = 1000 };
+            var client = NewClient(new FakeSessionSource(new GameAccountSession(PlayerId, Token)), new ScriptedTransport(snapshot));
+
+            RemoteBuildingUpgradeSnapshot result = await client.ReadAsync(HiveId);
+
+            Assert.That(result, Is.SameAs(snapshot));
+        }
+
+        [Test]
+        public async Task EveryCatalogBuildingOfferIsAcceptedByClientValidation()
+        {
+            // M039-CL: garde-fou anti-regression - la liste ci-dessous doit rester le miroir
+            // exact du catalogue serveur (appsettings.*.json, section BuildingUpgrades.Catalog).
+            string[] catalogBuildings =
+            {
+                "honey_storage", "wax_workshop", "warehouse_cells", "nursery_cluster",
+                "guard_post", "defense_growth", "genetics_garden", "research_node",
+                "infirmary_grove", "academy_canopy", "hive_bank", "administration_core",
+                "alliance_future_hall", "archives_honeyfall"
+            };
+            foreach (string buildingKey in catalogBuildings)
+            {
+                RemoteBuildingUpgradeSnapshot snapshot = ValidSnapshot();
+                snapshot.BuildingLevels.Clear();
+                snapshot.BuildingLevels[buildingKey] = 1;
+                snapshot.Offers.Clear();
+                snapshot.Offers.Add(new RemoteBuildingUpgradeOffer
+                {
+                    BuildingKey = buildingKey, FromLevel = 1, ToLevel = 2,
+                    Duration = TimeSpan.FromMinutes(1),
+                    Costs = new Dictionary<string, long> { ["honey"] = 10 }
+                });
+                var client = NewClient(new FakeSessionSource(new GameAccountSession(PlayerId, Token)), new ScriptedTransport(snapshot));
+
+                RemoteBuildingUpgradeSnapshot result = await client.ReadAsync(HiveId);
+
+                Assert.That(result, Is.SameAs(snapshot), "Building '" + buildingKey + "' must be accepted by client validation.");
+            }
+        }
+
+        [Test]
         public void ForeignMalformedOrInconsistentSnapshotsAreRejected()
         {
             AssertInvalidSnapshot(snapshot => snapshot.PlayerId = Guid.NewGuid());

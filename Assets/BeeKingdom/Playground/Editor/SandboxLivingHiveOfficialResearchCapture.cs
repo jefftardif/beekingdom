@@ -47,6 +47,7 @@ namespace BeeKingdom.Playground.Editor
             public bool IsBusy => false;
             public TimeSpan Elapsed => TimeSpan.Zero;
             public void Refresh() { }
+            public void RefreshQuietly() { }
             public void Start(string researchId) { }
             public void Complete() { }
         }

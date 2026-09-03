@@ -61,6 +61,13 @@ namespace BeeKingdom.Playground
             HiveMapArmyBootstrap.InitializeForScene(scene);
             HiveMapAmbientBeesBootstrap.InitializeForScene(scene);
             LivingHiveChatBridgeBootstrap.InitializeForScene(scene);
+            // M038B-CL: both were missing from this list entirely - their [RuntimeInitializeOnLoadMethod]
+            // AutoStart() only fires once, on whatever scene is active when Play Mode starts (the
+            // splash/login scene, which never starts with "Environment2D5D"), so neither ever actually
+            // ran once the player transitioned into the real HiveMap scene. Confirmed live: a fresh
+            // account entering Environment2D5D_HiveMap_Test had zero FtueTutorialBootstrap instances.
+            HiveMapResearchBootstrap.InitializeForScene(scene);
+            BeeKingdom.Tutorial.FtueTutorialBootstrap.InitializeForScene(scene);
         }
     }
 }

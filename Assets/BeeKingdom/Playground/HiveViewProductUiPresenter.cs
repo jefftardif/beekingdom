@@ -1004,6 +1004,7 @@ private const string LeftNavigationAssetPath = "Assets/Art/UI/Navigation/closing
         private static IHiveBuildingUpgradePanelController buildingUpgradeController = new UnavailableHiveBuildingUpgradePanelController();
 
         private static IHiveResearchPanelController researchController = new UnavailableHiveResearchPanelController();
+        private static IAllianceCenterPanelController allianceCenterController = new UnavailableAllianceCenterPanelController();
 
         private static IHiveStockPanelController hiveStockController = new UnavailableHiveStockPanelController();
 
@@ -1109,6 +1110,37 @@ private static float resourceInventoryOpenedAt = -10f;
 		private static float allianceActivityRowOffset;
 
 		private static string alliancePlayerRole = "membre";
+
+		// M043-CL: NO_ALLIANCE screen state (Create/Search/Invitations tabs) - real backend calls
+		// via allianceCenterController, see AllianceCenterPresentation.cs.
+		private static string allianceNoAllianceTab = "search";
+		private static string allianceCreateNameInput = string.Empty;
+		private static string allianceCreateTagInput = string.Empty;
+		private static string allianceCreateDescriptionInput = string.Empty;
+		private static string allianceCreateLanguageInput = "fr-CA";
+		private static RemoteAllianceJoinMode allianceCreateJoinMode = RemoteAllianceJoinMode.Open;
+		private static string allianceSearchQueryInput = string.Empty;
+		private static Guid allianceInviteTargetInput = Guid.Empty;
+		private static string allianceInviteTargetRawInput = string.Empty;
+		private static float allianceLeaveDissolveConfirmArmedAt = -10f;
+		// M043B-CL: member-row admin action confirmation (Kick/Transfer) - armed by target+action id,
+		// same two-click pattern as Leave/Dissolve above, cleared on any successful mutation call.
+		private static string allianceMemberActionConfirmArmedId = string.Empty;
+		private static float allianceMemberActionConfirmArmedAt = -10f;
+		// M043B-CL: real player search for the Invite flow (Part 2/12).
+		private static string allianceInviteSearchQuery = string.Empty;
+		private static float allianceInviteSearchLastQueriedAt = -10f;
+		private static string allianceInviteFeedback = string.Empty;
+		private static float allianceInviteFeedbackAt = -10f;
+		// M043B-CL: real Alliance chat bridge state (Part 3/13) - which conversation id we last
+		// asked LivingHiveChatRuntime to open/select, so we don't re-issue that call every OnGUI
+		// frame; a composer text buffer; and whether the currently-selected real conversation is
+		// genuinely inaccessible (kicked/left) vs just not loaded yet.
+		private static string allianceChatOpenedForConversationId = string.Empty;
+		private static bool allianceChatOpenInFlight;
+		private static string allianceChatComposerText = string.Empty;
+		private static string allianceChatAccessDeniedReason = string.Empty;
+		private static Vector2 allianceChatDrawerMessagesScroll;
 
 		private static string allianceActionPanelOpen = string.Empty;
 
@@ -1250,6 +1282,13 @@ private static string courierToast = string.Empty;
 		private static Vector2 researchFullscreenScroll;
 
 		private static Vector2 researchFullscreenFilterScroll;
+
+		// M040-CL: research menu panel (both DrawResearchMenuPanel's local-preview branch and
+		// DrawOfficialResearchMenuPanel) drew its 10 catalog cards at a fixed height that ran off
+		// the bottom of the screen and over whatever was drawn beneath it (Play Mode observed:
+		// the FTUE dialogue panel). Real Play Mode fix - clip the card list to the panel's actual
+		// bounds inside a vertical scroll view instead of growing past them.
+		private static Vector2 researchMenuScroll;
 
 		private static string researchFullscreenFilter = "all";
 
@@ -3576,6 +3615,7 @@ private static string courierToast = string.Empty;
         {
             EnsureLocalPreviewQueueJournalLoaded();
             barrackOverlayOpenForExternalHost = true;
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("guard_post"); } catch {}
             // Without this, the panel shows whatever the controller last fetched (possibly
             // stale or empty from before this session even had resources) until something
             // else happens to trigger a refresh - which nothing did, since this window has
@@ -3669,9 +3709,28 @@ private static string courierToast = string.Empty;
             // Building-level upgrade for the Barrack itself (guard_post), separate from troop
             // training below - same shared redirect+glow entry point as everywhere else.
             Rect upgradeBadge = new Rect(Screen.width - 158f, 42f, 96f, 24f);
-            if (DrawPreviewActionButton(upgradeBadge, "N." + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture) + " Ameliorer", true, true))
+            // M038C-CL: publish the REAL geometry every frame this is drawn, so the FTUE arrow
+            // targets the actual button instead of a guessed screen fraction (see
+            // TutorialTargetRegistry.RegisterScreenRect).
+            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetUpgradeButton, upgradeBadge); } catch {}
+            // M039-CL: le bouton ne doit plus paraitre actionnable pendant Loading/Starting/
+            // Completing/NotConfigured - OfficialBuildingUpgradeActionEnabled reflete le vrai
+            // etat du modele (et garde Error actionnable, pour la reprise/retry).
+            if (DrawPreviewActionButton(upgradeBadge, "N." + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture) + " Ameliorer", OfficialBuildingUpgradeActionEnabled("guard_post"), true))
             {
                 TryStartUpgradeWithPrerequisiteRedirectForExternalHost("guard_post");
+            }
+
+            // Direct request (Jeff, live during M038C): give the Caserne its own real entry
+            // point into Army, not just via the "Plus" submenu. Same handler as that existing
+            // entry (BeeKingdom.Core.Integration.LivingHiveArmyBridge.OpenOverlay), so it opens
+            // the exact same real Army overlay - not a second implementation.
+            Rect armyBadge = new Rect(Screen.width - 158f, 68f, 96f, 24f);
+            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetArmyMenu, armyBadge); } catch {}
+            if (DrawPreviewActionButton(armyBadge, "Armee", true, true))
+            {
+                CloseBarrackOverlayForExternalHost();
+                BeeKingdom.Core.Integration.LivingHiveArmyBridge.OpenOverlay();
             }
         }
 
@@ -3814,6 +3873,15 @@ private static string courierToast = string.Empty;
             doctrineRecruitmentController.Refresh();
         }
 
+        // M038C-CL: publishes the real on-screen Rect of the Training start button every
+        // frame it's drawn (same pattern as the upgrade badge above), so the FTUE arrow
+        // targets the actual control instead of a guessed screen fraction.
+        private static bool RegisterFtueTrainingButtonAndDraw(Rect rect, string label, bool enabled)
+        {
+            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetTrainingStartButton, rect); } catch {}
+            return DrawPreviewActionButton(rect, label, enabled);
+        }
+
         private static void DrawOfficialBarrackContent(float margin, float contentTop, float contentWidth)
         {
             RefreshDoctrineRecruitmentIfDueOrJustFinished();
@@ -3858,7 +3926,7 @@ private static string courierToast = string.Empty;
                 GUI.Label(new Rect(margin, y, contentWidth, 18f), "Entrainement en cours : " + Mathf.RoundToInt((float)model.Progress01(doctrineRecruitmentController.Elapsed) * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
                 DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), (float)model.Progress01(doctrineRecruitmentController.Elapsed));
             }
-            else if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily)))
+            else if (RegisterFtueTrainingButtonAndDraw(new Rect(margin, y, contentWidth, 44f), OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily)))
             {
                 RunOfficialDoctrineRecruitmentAction(officialSelectedTroopFamily);
             }
@@ -4215,6 +4283,27 @@ private static string courierToast = string.Empty;
         // convention as the rest of local-preview state.
         public static bool SpeedUpOverlayOpenForExternalHost => speedUpWindowOpen;
 
+        // M040X-CL: same comprehensive "is any HiveMap modal open" list already maintained in
+        // HiveMapOverlayInputGateBootstrap.Update() (input-blocking), reused here so the FTUE
+        // dialogue's champion portrait knows when it's safe to overflow above its own panel
+        // (nothing else drawn there) versus when it must stay contained (some other IMGUI
+        // modal is open and would otherwise paint over the overflowing part - see
+        // Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md).
+        public static bool AnyModalOpenForExternalHost =>
+            AllianceOverlayOpenForExternalHost
+            || CommunicationOverlayOpenForExternalHost
+            || BarrackOverlayOpenForExternalHost
+            || ConstructionOverlayOpenForExternalHost
+            || SettingsOverlayOpenForExternalHost
+            || BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen || ResearchOverlayOpenForExternalHost
+            || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
+            || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
+            || HiveMapNurseryBootstrap.OverlayOpenForExternalHost
+            || HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost
+            || HiveMapChampionHallBootstrap.OverlayOpenForExternalHost
+            || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost
+            || HiveMapArmyBootstrap.ModalOpenForExternalHost;
+
         public static void OpenSpeedUpForExternalHost(SpeedUpCategory category, string targetHotspotId, long remainingSeconds)
         {
             OpenSpeedUpDialog(category, targetHotspotId, remainingSeconds);
@@ -4509,7 +4598,10 @@ private static string courierToast = string.Empty;
             EnsureLocalPreviewQueueJournalLoaded();
             EnsureLocalPreviewManualProductionLoaded();
             EnsureStyles();
-            TickAllianceActivityFeed();
+            // M043-CL: TickAllianceActivityFeed() (simulated join/login/research/build entries) is
+            // no longer called - allianceActivityFeed is now populated from the real
+            // AllianceActivityEvent feed by SyncAllianceRuntimeStateFromController(), which runs
+            // whenever the Alliance Center screen is actually drawn (see DrawAllianceHeadquartersScreen).
             HandlePremiumScreensEscape();
             if (DrawStartupLoadingScreenIfActive()) return;
             if (splashAuthGateState != SplashAuthGateState.EnteredHive)
@@ -4521,6 +4613,7 @@ private static string courierToast = string.Empty;
             UpdateAnimationStates();
             UIFeedbackSystem.Tick(Time.unscaledDeltaTime);
             RewardClaimView.Draw(compact);
+            CheckForNewAllianceInvitationAlerts();
 
             // Les arrivées simulées continuent pendant les autres écrans : le bouton Chat doit
             // rester une notification fiable même quand le joueur consulte Alliance, Amis ou Mail.
@@ -6301,6 +6394,13 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 
         private static void HandleWorldMapGestures(Rect artRect, bool portrait)
         {
+            if (PremiumUiBlocksWorldInput())
+            {
+                worldMapInputStartedInMap = false;
+                worldMapSelectionSuppressed = false;
+                return;
+            }
+
             Rect mapRect = WorldMapInteractionRect(portrait);
             HandleWorldMapTouchGestures(mapRect);
             Event current = Event.current;
@@ -6601,7 +6701,12 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 
             if (current.type == EventType.ScrollWheel && hiveRect.Contains(current.mousePosition))
             {
-                if (IsPointOnFixedHiveUi(current.mousePosition, portrait))
+                // M040-CL: Play Mode observed - scrolling inside the new Research panel's card
+                // list (GUI.BeginScrollView) also zoomed the hive map behind it, since
+                // IsPointOnFixedHiveUi only knows about small fixed icon/button rects, not the
+                // large overlay panels gated by PremiumUiBlocksWorldInput() (Research, Alliance,
+                // etc.) - reuse that existing flag here too instead of consuming/duplicating rects.
+                if (IsPointOnFixedHiveUi(current.mousePosition, portrait) || PremiumUiBlocksWorldInput())
                 {
                     uiInputBlockedHiveGestureForProof = true;
                     RecordReferenceGesture("ui-blocked-scroll", 0, Vector2.zero, 0f);
@@ -20778,11 +20883,19 @@ public static string[] ConnectionTruthForProof()
             if (!OfficialBuildingUpgradeActionEnabled(hotspotId)) return;
             HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
             if (model == null) return;
-            if (model.CanComplete(hotspotId)) buildingUpgradeController.Complete();
+            if (model.CanComplete(hotspotId))
+            {
+                buildingUpgradeController.Complete();
+                // M040-CL: real FTUE wiring, mirrors NotifyUpgradeStarted below - the tutorial now
+                // requires the player to actually claim a finished upgrade, not just start one.
+                try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyUpgradeCompleted(hotspotId); } catch {}
+            }
             else if (model.CanStart(hotspotId))
             {
                 buildingUpgradeController.Start(hotspotId);
                 ChampionVoiceBarkController.BarkForBuildingLaunch(localPreviewAssignedChampionBeeIds);
+                // M037B — real FTUE wiring: notify tutorial that a building upgrade was started (guard_post etc.)
+                try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyUpgradeStarted(hotspotId); } catch {}
             }
             else buildingUpgradeController.Refresh();
             localPreviewLastActionStatus = OfficialBuildingUpgradeStatusText(hotspotId);
@@ -20988,8 +21101,14 @@ public static string[] ConnectionTruthForProof()
         // queue. Force this false until the official overlay is re-enabled.
         private static bool OfficialResearchConfigured()
         {
-            return false;
-            // return researchController != null && researchController.IsConfigured;
+            // M040-CL: this was hardcoded to false (real check commented out below), which
+            // silently forced every Research panel render through the local-preview fallback
+            // branch inside DrawResearchMenuPanel - never reaching DrawOfficialResearchMenuPanel,
+            // which is where the real FTUE target registration (TargetResearchStartButton) and
+            // the real catalog display names ("Rayons tempérés", not the fallback's own naming)
+            // live. Restored to the real check now that the M016E freeze workaround has been
+            // lifted and the official Research controller is confirmed reachable.
+            return researchController != null && researchController.IsConfigured;
         }
 
         private static bool OfficialHiveStockConfigured()
@@ -21235,6 +21354,24 @@ public static string[] ConnectionTruthForProof()
             else researchController.Refresh();
             localPreviewLastActionStatus = OfficialResearchStatusText(researchId);
             BeginReferenceFeedbackPulse("preview");
+        }
+
+        // M040-CL: the queue sidebar's periodic researchController.Refresh() (see
+        // DrawQueueSidebarForExternalHost) deliberately stops while the Research overlay
+        // itself is open (it's part of "any overlay open" there) - which meant the one poll
+        // that flips a finished operation's ActiveOperation.Status from "running" to
+        // "awaiting_completion" never ran while a player was actually looking at the window
+        // watching the timer hit zero, leaving the button stuck on "Actualiser" forever
+        // instead of switching to "Terminer" like the building upgrade card does. Reuses the
+        // same 5s cadence/field as the sidebar poll (safe - only one of the two ever runs at
+        // a time, since the sidebar skips itself whenever this overlay is open).
+        public static void RefreshResearchIfOverlayOpenAndDue()
+        {
+            if (!ResearchOverlayOpenForExternalHost) return;
+            if (!OfficialResearchConfigured() || researchController == null || researchController.IsBusy) return;
+            if (NowForUi() - officialResearchQueueLastLiveRefreshAt <= 5f) return;
+            officialResearchQueueLastLiveRefreshAt = NowForUi();
+            researchController.RefreshQuietly();
         }
 
         private static HiveOfflineProductionScreenModel OfficialOfflineProductionModel()
@@ -28865,6 +29002,22 @@ if (leftNavigationTexture == null)
             researchController = controller ?? new UnavailableHiveResearchPanelController();
         }
 
+        // M043-CL: same pattern as Research above - see AllianceCenterPresentation.cs.
+        public static void ConfigureAllianceCenterControllerForRuntime(IAllianceCenterPanelController controller)
+        {
+            allianceCenterController = controller ?? new UnavailableAllianceCenterPanelController();
+        }
+
+        public static void ResetAllianceCenterControllerForRuntime()
+        {
+            allianceCenterController = new UnavailableAllianceCenterPanelController();
+        }
+
+        public static void UseAllianceCenterControllerForProof(IAllianceCenterPanelController controller)
+        {
+            allianceCenterController = controller ?? new UnavailableAllianceCenterPanelController();
+        }
+
         public static void ConfigureHiveStockControllerForRuntime(IHiveStockPanelController controller)
         {
             hiveStockController = controller ?? new UnavailableHiveStockPanelController();
@@ -30468,10 +30621,14 @@ if (leftNavigationTexture == null)
             float cardHeight = compact ? 92f : 112f;
             float cardGap = compact ? 6f : 10f;
             float cardY = disclosureY + 31f;
+            Rect scrollViewport = new Rect(panel.x, cardY, panel.width, Mathf.Max(0f, panel.yMax - cardY - 8f));
+            float contentHeight = definitions.Count * (cardHeight + cardGap);
+            researchMenuScroll = GUI.BeginScrollView(scrollViewport, researchMenuScroll,
+                new Rect(0f, 0f, scrollViewport.width - 16f, Mathf.Max(scrollViewport.height, contentHeight)), false, true);
             for (int i = 0; i < definitions.Count; i++)
             {
                 LocalPreviewResearchDefinition definition = definitions[i];
-                Rect card = new Rect(panel.x + 14f, cardY + i * (cardHeight + cardGap), panel.width - 28f, cardHeight);
+                Rect card = new Rect(14f, i * (cardHeight + cardGap), scrollViewport.width - 28f, cardHeight);
                 bool completed = LocalPreviewResearchCatalog.Contains(localPreviewQueueJournal.completedResearchIds, definition.ResearchId);
                 bool running = IsResearchRunning() && string.Equals(localPreviewResearchId, definition.ResearchId, StringComparison.Ordinal);
                 Color accent = completed ? new Color(0.42f, 0.82f, 0.48f, 0.88f) : running ? new Color(0.70f, 0.62f, 1f, 0.92f) : new Color(0.38f, 0.72f, 1f, 0.76f);
@@ -30501,6 +30658,7 @@ if (leftNavigationTexture == null)
                 if (running) DrawProgressBar(new Rect(action.x, action.yMax + 8f, action.width, 7f), ResearchProgress01());
                 else if (!string.IsNullOrWhiteSpace(reason)) GUI.Label(new Rect(action.x, action.yMax + 5f, action.width, 26f), reason, centeredTinyLabelStyle);
             }
+            GUI.EndScrollView();
         }
 
         private static void DrawOfficialResearchMenuPanel(Rect panel, bool compact)
@@ -30529,11 +30687,15 @@ if (leftNavigationTexture == null)
             float cardHeight = compact ? 100f : 118f;
             float cardGap = compact ? 6f : 10f;
             float cardY = disclosureY + 31f;
+            Rect scrollViewport = new Rect(panel.x, cardY, panel.width, Mathf.Max(0f, panel.yMax - cardY - 8f));
+            float contentHeight = definitions.Count * (cardHeight + cardGap);
+            researchMenuScroll = GUI.BeginScrollView(scrollViewport, researchMenuScroll,
+                new Rect(0f, 0f, scrollViewport.width - 16f, Mathf.Max(scrollViewport.height, contentHeight)), false, true);
             for (int i = 0; i < definitions.Count; i++)
             {
                 LocalPreviewResearchDefinition definition = definitions[i];
                 string researchId = definition.ResearchId;
-                Rect card = new Rect(panel.x + 14f, cardY + i * (cardHeight + cardGap), panel.width - 28f, cardHeight);
+                Rect card = new Rect(14f, i * (cardHeight + cardGap), scrollViewport.width - 28f, cardHeight);
                 bool completed = model != null && model.IsCompleted(researchId);
                 bool running = model != null && model.ActiveOperation != null &&
                     string.Equals(model.ActiveOperation.ResearchId, researchId, StringComparison.Ordinal);
@@ -30558,6 +30720,20 @@ if (leftNavigationTexture == null)
                     detail, new GUIStyle(tinyLabelStyle) { wordWrap = true, fontSize = compact ? 8 : 9 });
 
                 Rect action = new Rect(card.xMax - actionWidth - 10f, card.y + 12f, actionWidth, 44f);
+                // M038C-CL: publish the real geometry of THIS SPECIFIC research card's action
+                // button, only for the FTUE's chosen research (tempered_combs_i) - other cards'
+                // buttons share the same visual shape but are not the FTUE's target.
+                // M040-CL: this Rect is in scroll-content-local coordinates now that the list is
+                // clipped - convert to the real on-screen Rect before publishing, or the FTUE
+                // arrow ends up pointing at the wrong place whenever the list is scrolled.
+                if (string.Equals(researchId, BeeKingdom.Tutorial.FtueTutorialRegistry.FirstResearchId, StringComparison.Ordinal))
+                {
+                    Rect actionOnScreen = new Rect(
+                        scrollViewport.x + action.x - researchMenuScroll.x,
+                        scrollViewport.y + action.y - researchMenuScroll.y,
+                        action.width, action.height);
+                    try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetResearchStartButton, actionOnScreen); } catch {}
+                }
                 if (DrawPreviewActionButton(action, OfficialResearchActionLabel(researchId),
                     OfficialResearchActionEnabled(researchId)))
                     RunOfficialResearchAction(researchId);
@@ -30571,8 +30747,17 @@ if (leftNavigationTexture == null)
                     OfficialResearchStatusText(researchId),
                     new GUIStyle(centeredTinyLabelStyle) { wordWrap = true, fontSize = compact ? 8 : 9 });
             }
+            GUI.EndScrollView();
         }
 
+        // M040-CL: the real panel (DrawResearchMenuPanel/DrawOfficialResearchMenuPanel) now
+        // scrolls its card list inside a fixed-height GUI.BeginScrollView viewport (added this
+        // session to fix cards overflowing past the screen on portrait/mobile) - this proof
+        // helper must mirror that same clipping, or it wrongly asserts unbounded, unscrolled
+        // positions for catalogs too long to fit (10 research items today). Only cards that
+        // are actually visible without scrolling (scroll position 0, matching a fresh open) are
+        // returned, in real absolute screen coordinates - the same conversion already used by
+        // RegisterScreenRect in the real draw methods.
         public static Rect[] OfficialResearchActionRectsForProof(
             bool portrait,
             float screenWidth,
@@ -30584,13 +30769,21 @@ if (leftNavigationTexture == null)
             float cardGap = portrait ? 6f : 10f;
             float cardY = disclosureY + 31f;
             float actionWidth = portrait ? 96f : 118f;
-            var result = new Rect[LocalPreviewResearchCatalog.All.Count];
-            for (int i = 0; i < result.Length; i++)
+            Rect scrollViewport = new Rect(panel.x, cardY, panel.width, Mathf.Max(0f, panel.yMax - cardY - 8f));
+
+            var visible = new List<Rect>(LocalPreviewResearchCatalog.All.Count);
+            for (int i = 0; i < LocalPreviewResearchCatalog.All.Count; i++)
             {
-                Rect card = new Rect(panel.x + 14f, cardY + i * (cardHeight + cardGap), panel.width - 28f, cardHeight);
-                result[i] = new Rect(card.xMax - actionWidth - 10f, card.y + 12f, actionWidth, 44f);
+                float localCardY = i * (cardHeight + cardGap);
+                if (localCardY + cardHeight > scrollViewport.height) break; // scrolled out of view at scroll=0
+                float localActionX = (scrollViewport.width - 28f) - actionWidth - 10f + 14f;
+                float localActionY = localCardY + 12f;
+                visible.Add(new Rect(
+                    scrollViewport.x + localActionX,
+                    scrollViewport.y + localActionY,
+                    actionWidth, 44f));
             }
-            return result;
+            return visible.ToArray();
         }
 
         public static Rect ResearchMenuPanelRectForProof(bool portrait, float screenWidth, float screenHeight)
@@ -31425,8 +31618,381 @@ if (leftNavigationTexture == null)
             }
         }
 
+        // M043-CL: real-data bridge for the Alliance Center window - reads the controller's Model
+        // once per frame and feeds it into the legacy local statics this screen already renders from
+        // (allianceMemberRoster, alliancePlayerRole) so the drawing code below stays untouched.
+        // Never fabricates a value: a field the server has no data for renders "—", never a fake name.
+        private static void SyncAllianceRuntimeStateFromController()
+        {
+            AllianceCenterScreenModel model = allianceCenterController.Model;
+            if (model == null || !model.HasAlliance || model.Overview == null)
+            {
+                if (allianceMemberRoster.Count > 0) allianceMemberRoster.Clear();
+                if (allianceActivityFeed.Count > 0) allianceActivityFeed.Clear();
+                // M043E-CL: without this, alliancePlayerRole kept whatever value it was last set
+                // to (its static-field initializer default, "membre", on a session that never had
+                // a valid alliance) - contributed to a real screen showing "RÔLE : Membre" for an
+                // account with no alliance at all. Reset to neutral; every switch on this string
+                // already treats an unrecognized value as "no elevated role" (falls to the
+                // Membre/default case), which is the correct behavior here too.
+                alliancePlayerRole = string.Empty;
+                return;
+            }
+
+            alliancePlayerRole = model.Overview.MyRole == RemoteAllianceRole.Leader ? "chef"
+                : model.Overview.MyRole == RemoteAllianceRole.Officer ? "officier" : "membre";
+
+            allianceMemberRoster.Clear();
+            for (int i = 0; i < model.Members.Count; i++)
+            {
+                AllianceMemberModel m = model.Members[i];
+                allianceMemberRoster.Add(new AllianceMemberProfileData
+                {
+                    PlayerId = m.PlayerId,
+                    RoleValue = m.Role,
+                    Name = m.ResolvedDisplayName,
+                    Role = m.Role == RemoteAllianceRole.Leader ? "Chef" : m.Role == RemoteAllianceRole.Officer ? "Officier" : "Membre",
+                    Level = 0,
+                    Power = 0L,
+                    Presence = "offline",
+                    JoinedOn = m.JoinedAtUtc == default ? "—" : m.JoinedAtUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    LastSeen = "—",
+                    Motto = "—",
+                    Bees = 0L,
+                    Resources = 0L,
+                    Buildings = 0,
+                    Researches = 0,
+                    Helps = 0,
+                    Donations = 0
+                });
+            }
+
+            // Real activity feed (M043-CL, Phase 14) - replaces the deleted simulated
+            // TickAllianceActivityFeed() generator. Client-side localization from structured
+            // AllianceActivityEvent data, never a pre-fabricated server sentence.
+            //
+            // M043O-CL: actor/target names resolved from the roster already loaded a few lines above
+            // (model.Members, each carrying ResolvedDisplayName) - zero extra HTTP calls. Falls back
+            // to a truncated id only for a player no longer in the roster (left/kicked since the
+            // event happened), which is the one case a display name genuinely isn't known.
+            Dictionary<Guid, string> memberNamesById = new Dictionary<Guid, string>(model.Members.Count);
+            for (int i = 0; i < model.Members.Count; i++)
+                memberNamesById[model.Members[i].PlayerId] = model.Members[i].ResolvedDisplayName;
+
+            allianceActivityFeed.Clear();
+            float nowUi = NowForUi();
+            DateTimeOffset nowUtc = DateTimeOffset.UtcNow;
+            for (int i = 0; i < model.Activity.Count; i++)
+            {
+                AllianceActivityModel a = model.Activity[i];
+                float secondsAgo = (float)(nowUtc - a.OccurredAtUtc).TotalSeconds;
+                allianceActivityFeed.Add(new AllianceActivityEntry
+                {
+                    Type = AllianceActivityLegacyType(a.Type),
+                    Player = ResolveAllianceActorLabel(a.ActorPlayerId, memberNamesById),
+                    Message = AllianceActivityMessage(a, memberNamesById),
+                    CreatedAt = nowUi - Mathf.Max(0f, secondsAgo)
+                });
+            }
+        }
+
+        private static string AllianceActivityLegacyType(RemoteAllianceActivityType type)
+        {
+            switch (type)
+            {
+                case RemoteAllianceActivityType.MemberJoined: return "join";
+                case RemoteAllianceActivityType.MemberLeft: return "leave";
+                case RemoteAllianceActivityType.MemberKicked: return "leave";
+                case RemoteAllianceActivityType.PlayerBuildingUpgraded: return "build_end";
+                case RemoteAllianceActivityType.PlayerResearchCompleted: return "research_end";
+                default: return "preview";
+            }
+        }
+
+        private static string ResolveAllianceActorLabel(Guid? playerId, Dictionary<Guid, string> memberNamesById)
+        {
+            if (!playerId.HasValue) return "Système";
+            if (memberNamesById != null && memberNamesById.TryGetValue(playerId.Value, out string name) && !string.IsNullOrEmpty(name))
+                return name;
+            return playerId.Value.ToString("D").Substring(0, 8);
+        }
+
+        private static string AllianceActivityMessage(AllianceActivityModel a, Dictionary<Guid, string> memberNamesById)
+        {
+            string actor = ResolveAllianceActorLabel(a.ActorPlayerId, memberNamesById);
+            string target = a.TargetPlayerId.HasValue ? ResolveAllianceActorLabel(a.TargetPlayerId, memberNamesById) : actor;
+            switch (a.Type)
+            {
+                case RemoteAllianceActivityType.AllianceCreated: return actor + " a fondé l'alliance.";
+                case RemoteAllianceActivityType.MemberJoined: return actor + " a rejoint l'alliance.";
+                case RemoteAllianceActivityType.MemberLeft: return actor + " a quitté l'alliance.";
+                case RemoteAllianceActivityType.MemberKicked: return target + " a été exclu(e) de l'alliance.";
+                case RemoteAllianceActivityType.MemberPromoted: return target + " a été promu(e).";
+                case RemoteAllianceActivityType.MemberDemoted: return target + " a été rétrogradé(e).";
+                case RemoteAllianceActivityType.LeadershipTransferred: return "Le leadership a été transféré à " + target + ".";
+                case RemoteAllianceActivityType.ProfileUpdated: return "Le profil de l'alliance a été mis à jour.";
+                case RemoteAllianceActivityType.PlayerBuildingUpgraded:
+                    return actor + " a amélioré " + (string.IsNullOrEmpty(a.EntityName) ? "un bâtiment" : a.EntityName) + (a.Level.HasValue ? " au niveau " + a.Level.Value : string.Empty) + ".";
+                case RemoteAllianceActivityType.PlayerResearchCompleted:
+                    return actor + " a terminé la recherche " + (string.IsNullOrEmpty(a.EntityName) ? string.Empty : a.EntityName) + ".";
+                case RemoteAllianceActivityType.AllianceWarDeclared: return "Une guerre a été déclarée.";
+                case RemoteAllianceActivityType.AllianceWarEnded: return "Une guerre s'est terminée.";
+                case RemoteAllianceActivityType.AllianceDiplomacyChanged: return "La diplomatie de l'alliance a changé.";
+                default: return "Activité de l'alliance.";
+            }
+        }
+
+        private static void DrawAllianceLoadingScreen(bool compact)
+        {
+            Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
+            GUI.color = new Color(0.008f, 0.007f, 0.005f, 0.97f);
+            GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+            if (DrawPremiumBackButton(new Rect(4f, 2f, compact ? 44f : 48f, compact ? 44f : 48f)))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                AudioManager.Instance?.PlayMenuClose();
+                activeMainMenuId = string.Empty;
+                activeHiveMenu = HiveMenuMode.Hive;
+                detailPanelClosed = true;
+                return;
+            }
+            GUI.Label(new Rect(62f, 11f, Screen.width - 76f, 16f), "CENTRE D'ALLIANCE", new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(0.98f, 0.82f, 0.45f, 0.95f) } });
+            Rect center = new Rect(Screen.width * 0.5f - 140f, Screen.height * 0.5f - 20f, 280f, 40f);
+            GUI.Label(center, "Chargement de votre alliance…", new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter, fontSize = compact ? 13 : 15 });
+        }
+
+        private static void DrawAllianceNoAllianceScreen(bool compact)
+        {
+            AllianceCenterScreenModel model = allianceCenterController.Model;
+            Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
+            GUI.color = new Color(0.008f, 0.007f, 0.005f, 0.97f);
+            GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+
+            if (DrawPremiumBackButton(new Rect(4f, 2f, compact ? 44f : 48f, compact ? 44f : 48f)))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                AudioManager.Instance?.PlayMenuClose();
+                activeMainMenuId = string.Empty;
+                activeHiveMenu = HiveMenuMode.Hive;
+                detailPanelClosed = true;
+                return;
+            }
+            GUI.Label(new Rect(62f, 11f, Screen.width - 76f, 16f), "CENTRE D'ALLIANCE", new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(0.98f, 0.82f, 0.45f, 0.95f) } });
+
+            float top = 56f;
+            Rect title = new Rect(20f, top, Screen.width - 40f, 34f);
+            GUI.Label(title, "AUCUNE ALLIANCE", new GUIStyle(titleStyle) { fontSize = compact ? 20 : 26, fontStyle = FontStyle.Bold });
+            Rect subtitle = new Rect(20f, title.yMax, Screen.width - 40f, 20f);
+            GUI.Label(subtitle, "Rejoignez ou créez une alliance pour débloquer le centre d'alliance.", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13 });
+
+            float tabsY = subtitle.yMax + 10f;
+            float tabW = Mathf.Min(180f, (Screen.width - 40f - 16f) / 3f);
+            string[] tabIds = { "search", "create", "invitations" };
+            string[] tabLabels = { "RECHERCHER", "CRÉER", "INVITATIONS (" + model.MyInvitations.Count + ")" };
+            for (int i = 0; i < tabIds.Length; i++)
+            {
+                Rect tabRect = new Rect(20f + i * (tabW + 8f), tabsY, tabW, 34f);
+                bool active = allianceNoAllianceTab == tabIds[i];
+                DrawPremiumPanel(tabRect, active ? new Color(0.40f, 0.24f, 0.06f, 0.96f) : new Color(0.04f, 0.032f, 0.02f, 0.9f), active ? new Color(1f, 0.72f, 0.18f, 0.95f) : new Color(0.5f, 0.4f, 0.25f, 0.55f));
+                GUI.Label(tabRect, tabLabels[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 9 : 11 });
+                if (GUI.Button(tabRect, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    allianceNoAllianceTab = tabIds[i];
+                }
+            }
+
+            Rect body = new Rect(20f, tabsY + 42f, Screen.width - 40f, Screen.height - (tabsY + 42f) - 20f);
+            DrawPremiumPanel(body, new Color(0.030f, 0.024f, 0.016f, 0.985f), new Color(0.86f, 0.58f, 0.16f, 0.80f));
+
+            if (model.State == AllianceCenterScreenState.Error)
+            {
+                Rect errorRect = new Rect(body.x + 16f, body.y + 12f, body.width - 32f, 40f);
+                GUI.Label(errorRect, "Erreur : " + model.ErrorCode, new GUIStyle(smallStyle) { fontSize = 12, normal = { textColor = new Color(1f, 0.5f, 0.4f) } });
+                Rect retry = new Rect(body.x + 16f, errorRect.yMax + 4f, 120f, 30f);
+                DrawPremiumPanel(retry, new Color(0.40f, 0.22f, 0.05f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.94f));
+                GUI.Label(retry, "Réessayer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+                if (GUI.Button(retry, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.Refresh(); }
+                return;
+            }
+
+            if (allianceNoAllianceTab == "create") DrawAllianceCreateForm(body, compact);
+            else if (allianceNoAllianceTab == "invitations") DrawAllianceMyInvitationsList(body, compact, model);
+            else DrawAllianceSearchPanel(body, compact, model);
+        }
+
+        private static void DrawAllianceCreateForm(Rect body, bool compact)
+        {
+            float y = body.y + 14f;
+            float fieldH = 30f;
+            float gap = 8f;
+            GUI.Label(new Rect(body.x + 16f, y, body.width - 32f, 16f), "Nom de l'alliance", new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+            y += 16f;
+            allianceCreateNameInput = GUI.TextField(new Rect(body.x + 16f, y, body.width - 32f, fieldH), allianceCreateNameInput ?? string.Empty, new GUIStyle(GUI.skin.textField) { fontSize = 13 });
+            y += fieldH + gap;
+
+            GUI.Label(new Rect(body.x + 16f, y, body.width - 32f, 16f), "Tag (2-5 caractères)", new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+            y += 16f;
+            allianceCreateTagInput = GUI.TextField(new Rect(body.x + 16f, y, 120f, fieldH), allianceCreateTagInput ?? string.Empty, new GUIStyle(GUI.skin.textField) { fontSize = 13 });
+            y += fieldH + gap;
+
+            GUI.Label(new Rect(body.x + 16f, y, body.width - 32f, 16f), "Description", new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+            y += 16f;
+            allianceCreateDescriptionInput = GUI.TextField(new Rect(body.x + 16f, y, body.width - 32f, fieldH), allianceCreateDescriptionInput ?? string.Empty, new GUIStyle(GUI.skin.textField) { fontSize = 13 });
+            y += fieldH + gap;
+
+            GUI.Label(new Rect(body.x + 16f, y, body.width - 32f, 16f), "Mode d'adhésion", new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+            y += 16f;
+            string[] modeLabels = { "Ouverte", "Sur candidature", "Sur invitation" };
+            RemoteAllianceJoinMode[] modes = { RemoteAllianceJoinMode.Open, RemoteAllianceJoinMode.Application, RemoteAllianceJoinMode.InviteOnly };
+            float modeW = Mathf.Min(150f, (body.width - 32f - 16f) / 3f);
+            for (int i = 0; i < modes.Length; i++)
+            {
+                Rect modeRect = new Rect(body.x + 16f + i * (modeW + 8f), y, modeW, 28f);
+                bool active = allianceCreateJoinMode == modes[i];
+                DrawPremiumPanel(modeRect, active ? new Color(0.40f, 0.24f, 0.06f, 0.96f) : new Color(0.04f, 0.032f, 0.02f, 0.9f), active ? new Color(1f, 0.72f, 0.18f, 0.95f) : new Color(0.5f, 0.4f, 0.25f, 0.55f));
+                GUI.Label(modeRect, modeLabels[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                if (GUI.Button(modeRect, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCreateJoinMode = modes[i]; }
+            }
+            y += 28f + gap + 6f;
+
+            bool canSubmit = !string.IsNullOrWhiteSpace(allianceCreateNameInput) && !string.IsNullOrWhiteSpace(allianceCreateTagInput) && !allianceCenterController.IsBusy;
+            Rect submit = new Rect(body.x + 16f, y, 160f, 34f);
+            DrawPremiumPanel(submit, canSubmit ? new Color(0.40f, 0.24f, 0.06f, 0.96f) : new Color(0.15f, 0.12f, 0.08f, 0.7f), canSubmit ? new Color(1f, 0.72f, 0.18f, 0.95f) : new Color(0.4f, 0.34f, 0.25f, 0.5f));
+            GUI.Label(submit, allianceCenterController.IsBusy ? "Création…" : "Créer l'alliance", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+            if (canSubmit && GUI.Button(submit, string.Empty, GUIStyle.none))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                allianceCenterController.Create(allianceCreateNameInput.Trim(), allianceCreateTagInput.Trim(), allianceCreateDescriptionInput ?? string.Empty, allianceCreateLanguageInput ?? "fr-CA", allianceCreateJoinMode);
+            }
+        }
+
+        private static void DrawAllianceSearchPanel(Rect body, bool compact, AllianceCenterScreenModel model)
+        {
+            Rect searchRow = new Rect(body.x + 16f, body.y + 14f, body.width - 32f - 100f, 30f);
+            allianceSearchQueryInput = GUI.TextField(searchRow, allianceSearchQueryInput ?? string.Empty, new GUIStyle(GUI.skin.textField) { fontSize = 13 });
+            Rect searchButton = new Rect(searchRow.xMax + 8f, searchRow.y, 92f, 30f);
+            DrawPremiumPanel(searchButton, new Color(0.40f, 0.24f, 0.06f, 0.96f), new Color(1f, 0.72f, 0.18f, 0.95f));
+            GUI.Label(searchButton, "Rechercher", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+            if (GUI.Button(searchButton, string.Empty, GUIStyle.none))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                allianceCenterController.Search(allianceSearchQueryInput, null, null);
+            }
+
+            float y = searchRow.yMax + 12f;
+            if (model.SearchResults.Count == 0)
+            {
+                GUI.Label(new Rect(body.x + 16f, y, body.width - 32f, 20f), "Aucun résultat. Lancez une recherche par nom ou tag.", new GUIStyle(smallStyle) { fontSize = 11 });
+                return;
+            }
+            for (int i = 0; i < model.SearchResults.Count; i++)
+            {
+                AllianceSearchResultModel result = model.SearchResults[i];
+                Rect row = new Rect(body.x + 16f, y, body.width - 32f, 44f);
+                DrawPremiumPanel(row, new Color(0.045f, 0.036f, 0.024f, 0.94f), new Color(0.7f, 0.5f, 0.2f, 0.5f));
+                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 190f, 18f), result.Name + "  [" + result.Tag + "]", new GUIStyle(smallStyle) { fontSize = 12 });
+                GUI.Label(new Rect(row.x + 10f, row.y + 22f, row.width - 190f, 16f), result.MemberCount + " / " + result.MaxMembers + " membres · " + result.JoinMode, new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+
+                Rect action = new Rect(row.xMax - 116f, row.y + 7f, 106f, 30f);
+                bool busy = allianceCenterController.IsBusy;
+                if (result.JoinMode == RemoteAllianceJoinMode.Open)
+                {
+                    DrawPremiumPanel(action, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+                    GUI.Label(action, "Rejoindre", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+                    if (!busy && GUI.Button(action, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.JoinOpen(result.AllianceId); }
+                }
+                else if (result.JoinMode == RemoteAllianceJoinMode.Application)
+                {
+                    DrawPremiumPanel(action, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.24f, 0.30f, 0.45f, 0.95f), new Color(0.5f, 0.6f, 0.9f, 0.7f));
+                    GUI.Label(action, "Postuler", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+                    if (!busy && GUI.Button(action, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.SubmitApplication(result.AllianceId, string.Empty); }
+                }
+                else
+                {
+                    GUI.Label(action, "Sur invitation", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                }
+                y += 44f + 6f;
+            }
+        }
+
+        private static void DrawAllianceMyInvitationsList(Rect body, bool compact, AllianceCenterScreenModel model)
+        {
+            if (model.MyInvitations.Count == 0)
+            {
+                GUI.Label(new Rect(body.x + 16f, body.y + 14f, body.width - 32f, 20f), "Aucune invitation en attente.", new GUIStyle(smallStyle) { fontSize = 12 });
+                return;
+            }
+            float y = body.y + 14f;
+            for (int i = 0; i < model.MyInvitations.Count; i++)
+            {
+                AllianceInvitationModel invitation = model.MyInvitations[i];
+                Rect row = new Rect(body.x + 16f, y, body.width - 32f, 44f);
+                DrawPremiumPanel(row, new Color(0.045f, 0.036f, 0.024f, 0.94f), new Color(0.7f, 0.5f, 0.2f, 0.5f));
+                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 210f, 18f), "Alliance " + invitation.AllianceId.ToString("D").Substring(0, 8), new GUIStyle(smallStyle) { fontSize = 12 });
+                GUI.Label(new Rect(row.x + 10f, row.y + 22f, row.width - 210f, 16f), invitation.CreatedAtUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+
+                bool busy = allianceCenterController.IsBusy;
+                Rect accept = new Rect(row.xMax - 210f, row.y + 7f, 96f, 30f);
+                DrawPremiumPanel(accept, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+                GUI.Label(accept, "Accepter", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+                if (!busy && GUI.Button(accept, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.AcceptInvitation(invitation.InvitationId); }
+
+                Rect decline = new Rect(row.xMax - 106f, row.y + 7f, 96f, 30f);
+                DrawPremiumPanel(decline, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.45f, 0.20f, 0.18f, 0.95f), new Color(0.9f, 0.5f, 0.5f, 0.7f));
+                GUI.Label(decline, "Refuser", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+                if (!busy && GUI.Button(decline, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.DeclineInvitation(invitation.InvitationId); }
+                y += 44f + 6f;
+            }
+        }
+
         private static void DrawAllianceHeadquartersScreen(bool compact)
         {
+            SyncAllianceRuntimeStateFromController();
+            AllianceCenterScreenModel allianceModel = allianceCenterController.Model;
+
+            // M043E-CL: explicit per-state branching, proven necessary by a CEO Play Mode
+            // certification failure - the previous logic only special-cased State==NoAlliance and
+            // (Loading||NotConfigured)&&!HasAlliance, so Error/Mutating (and any other state) with
+            // no prior successful Overview fell straight through into the full IN_ALLIANCE shell
+            // below, rendering it with a null Overview - every field showed "—" and the role
+            // defaulted to whatever alliancePlayerRole was last set to ("membre" on first load,
+            // since SyncAllianceRuntimeStateFromController only updates it when HasAlliance is
+            // true). Never use "State != NoAlliance" as a proxy for "State == Ready" - only a
+            // structurally valid Overview (a real, non-empty AllianceId) may render this screen.
+            bool hasValidOverview = allianceModel?.Overview != null && allianceModel.Overview.AllianceId != Guid.Empty;
+            switch (allianceModel?.State ?? AllianceCenterScreenState.NotConfigured)
+            {
+                case AllianceCenterScreenState.NoAlliance:
+                    DrawAllianceNoAllianceScreen(compact);
+                    return;
+                case AllianceCenterScreenState.Ready:
+                    // AllianceCenterPresentation.Ready(...) always constructs a real, non-null
+                    // Overview - guaranteed valid by construction, no extra check needed here.
+                    break;
+                case AllianceCenterScreenState.Mutating:
+                case AllianceCenterScreenState.Error:
+                    // A mutation in flight, or a failed refresh, on top of an alliance we already
+                    // successfully loaded before - keep showing that known-good state (retry-in-
+                    // place), never fabricate a blank one. If there is no prior valid state (e.g.
+                    // the very first load itself failed), DrawAllianceNoAllianceScreen's own
+                    // State==Error branch renders the real ErrorCode with a Retry button - it must
+                    // never look like an empty Alliance.
+                    if (hasValidOverview) break;
+                    DrawAllianceNoAllianceScreen(compact);
+                    return;
+                case AllianceCenterScreenState.Loading:
+                case AllianceCenterScreenState.NotConfigured:
+                default:
+                    // A quiet background refresh over an already-valid state keeps showing it;
+                    // otherwise there is nothing real to render yet.
+                    if (hasValidOverview) break;
+                    DrawAllianceLoadingScreen(compact);
+                    return;
+            }
+
             float openProgress = Mathf.Clamp01((NowForUi() - allianceScreenOpenedAt) / 0.18f);
             float tabProgress = Mathf.Clamp01((NowForUi() - allianceTabChangedAt) / 0.14f);
             Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
@@ -31455,56 +32021,84 @@ if (leftNavigationTexture == null)
 
             int nameFont = compact ? 20 : 28;
             Rect nameRect = new Rect(30f, banner.yMax - (compact ? 56f : 62f), Mathf.Min(Screen.width * 0.50f, 560f), nameFont + 4f);
-            GUI.Label(nameRect, "ALLIANCE PRIME", new GUIStyle(titleStyle) { fontSize = nameFont, fontStyle = FontStyle.Bold });
+            string allianceRuntimeName = allianceModel?.Overview?.Name;
+            GUI.Label(nameRect, string.IsNullOrEmpty(allianceRuntimeName) ? "—" : allianceRuntimeName, new GUIStyle(titleStyle) { fontSize = nameFont, fontStyle = FontStyle.Bold });
             Rect tag = new Rect(nameRect.xMax + 10f, nameRect.y + Mathf.Max(0f, (nameFont - 20f) * 0.5f), 48f, 22f);
             DrawPremiumPanel(tag, new Color(0.30f, 0.20f, 0.06f, 0.92f), new Color(1f, 0.72f, 0.18f, 0.90f));
-            GUI.Label(tag, "NEX", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(1f, 0.92f, 0.72f, 1f) } });
+            string allianceRuntimeTag = allianceModel?.Overview?.Tag;
+            GUI.Label(tag, string.IsNullOrEmpty(allianceRuntimeTag) ? "—" : allianceRuntimeTag, new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(1f, 0.92f, 0.72f, 1f) } });
             GUI.Label(new Rect(32f, banner.yMax - (compact ? 30f : 33f), Screen.width * 0.50f, 16f), "Le cœur vivant de votre communauté", new GUIStyle(smallStyle) { fontSize = compact ? 9 : 12 });
 			if (DrawPremiumBackButton(new Rect(4f, 2f, compact ? 44f : 48f, compact ? 44f : 48f)))
 			{
 				AudioManager.Instance?.PlayUIClick();
 				AudioManager.Instance?.PlayMenuClose();
-                activeMainMenuId = string.Empty;
-                activeHiveMenu = HiveMenuMode.Hive;
-                detailPanelClosed = true;
-				allianceActionPanelOpen = string.Empty;
+                // M043O-CL: was unconditional "exit Alliance entirely", so backing out of a member
+                // profile (drawn on top of this same Ready screen) skipped straight past it and left
+                // allianceMemberProfileOpen stuck true - re-opening the Alliance building then showed
+                // the stranded profile again with no way back. Reuse the same priority order already
+                // used for Escape/Android-back so the button closes the topmost overlay first.
+                ClosePremiumScreensInPriorityOrderCore();
 				return;
 			}
 			GUI.Label(new Rect(62f, 11f, Screen.width - 76f, 16f), "CENTRE D'ALLIANCE", new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(0.98f, 0.82f, 0.45f, 0.95f) } });
 
+            // M043T-CL: real, confirmed click pass-through bug - DrawAllianceQuickActionOverlay
+            // (the "Inviter un joueur" etc. modal) and DrawAllianceMemberProfile are drawn LAST, on
+            // top of this same screen's own nav/tab/member content, but nothing ever locally
+            // disabled that underlying content while one of those own overlays was open. IMGUI
+            // resolves an overlapping click to whichever control matches it FIRST in draw order -
+            // so a click meant for the modal's "Inviter" button could be captured instead by
+            // whatever real, still-fully-interactive Alliance Center control happened to sit at the
+            // same screen position underneath it. ShouldBlockUnderlyingHiveChromeInput() already
+            // disables the outer hive chrome (top HUD, side rail...) for exactly this reason, but
+            // never reached this screen's own internal content, since that content is inside the
+            // very screen ShouldBlockUnderlyingHiveChromeInput is keyed off of, not behind it.
+            bool allianceOwnOverlayOpen = !string.IsNullOrEmpty(allianceActionPanelOpen) || allianceMemberProfileOpen;
+            bool previousAllianceGuiEnabled = GUI.enabled;
+
 			if (compact)
             {
                 Rect navigation = new Rect(10f, banner.yMax + 6f, Screen.width - 20f, 36f);
-                DrawAllianceTopNavigation(navigation, true);
                 Rect quickActions = new Rect(10f, navigation.yMax + 6f, Screen.width - 20f, 64f);
-                DrawAllianceQuickActionsBar(quickActions, true);
                 float contentTop = quickActions.yMax + 6f;
                 Rect stats = new Rect(10f, contentTop, Screen.width - 20f, 46f);
-                DrawAllianceHeaderStats(stats, true);
                 navigation = new Rect(10f, stats.yMax + 6f, Screen.width - 20f, 56f);
-                DrawAllianceNavigation(navigation, true);
                 Rect content = new Rect(10f, navigation.yMax + 6f, Screen.width - 20f, Screen.height - navigation.yMax - 12f);
-                DrawPremiumPanel(content, new Color(0.030f, 0.024f, 0.016f, 0.985f), new Color(0.86f, 0.58f, 0.16f, 0.80f));
-                DrawAllianceTabContent(content, true, tabProgress);
-                DrawAllianceChatDrawer(true);
+                GUI.enabled = previousAllianceGuiEnabled && !allianceOwnOverlayOpen;
+                try
+                {
+                    DrawAllianceTopNavigation(navigation, true);
+                    DrawAllianceQuickActionsBar(quickActions, true);
+                    DrawAllianceHeaderStats(stats, true);
+                    DrawAllianceNavigation(navigation, true);
+                    DrawPremiumPanel(content, new Color(0.030f, 0.024f, 0.016f, 0.985f), new Color(0.86f, 0.58f, 0.16f, 0.80f));
+                    DrawAllianceTabContent(content, true, tabProgress);
+                    DrawAllianceChatDrawer(true);
+                }
+                finally { GUI.enabled = previousAllianceGuiEnabled; }
                 DrawAllianceQuickActionOverlay(true);
                 DrawAllianceMemberProfile(true);
                 return;
             }
 
             Rect topNavigation = new Rect(10f, banner.yMax + 6f, Screen.width - 20f, 36f);
-            DrawAllianceTopNavigation(topNavigation, false);
             Rect quickBar = new Rect(10f, topNavigation.yMax + 6f, Screen.width - 20f, 70f);
-            DrawAllianceQuickActionsBar(quickBar, false);
             float contentTopLandscape = quickBar.yMax + 8f;
             Rect left = new Rect(12f, contentTopLandscape, 226f, Screen.height - contentTopLandscape - 12f);
             Rect right = new Rect(Screen.width - 292f, contentTopLandscape, 280f, Screen.height - contentTopLandscape - 12f);
             Rect center = new Rect(250f, contentTopLandscape, Screen.width - 566f, Screen.height - contentTopLandscape - 12f);
-            DrawAllianceNavigation(left, false);
-            DrawPremiumPanel(center, new Color(0.030f, 0.024f, 0.016f, 0.985f), new Color(0.86f, 0.58f, 0.16f, 0.80f));
-            DrawAllianceTabContent(center, false, tabProgress);
-            DrawAllianceRightColumn(right, false);
-            DrawAllianceChatDrawer(false);
+            GUI.enabled = previousAllianceGuiEnabled && !allianceOwnOverlayOpen;
+            try
+            {
+                DrawAllianceTopNavigation(topNavigation, false);
+                DrawAllianceQuickActionsBar(quickBar, false);
+                DrawAllianceNavigation(left, false);
+                DrawPremiumPanel(center, new Color(0.030f, 0.024f, 0.016f, 0.985f), new Color(0.86f, 0.58f, 0.16f, 0.80f));
+                DrawAllianceTabContent(center, false, tabProgress);
+                DrawAllianceRightColumn(right, false);
+                DrawAllianceChatDrawer(false);
+            }
+            finally { GUI.enabled = previousAllianceGuiEnabled; }
             DrawAllianceQuickActionOverlay(false);
             DrawAllianceMemberProfile(false);
         }
@@ -31515,9 +32109,15 @@ if (leftNavigationTexture == null)
             float gap = compact ? 4f : 8f;
             int count = compact ? 4 : 5;
             float width = (rect.width - 20f - gap * (count - 1)) / count;
+            // M043-CL: "Connectés"/"Niveau"/"Puissance" have no server-side concept for an Alliance
+            // (see AllianceEntity - no online-presence, no level, no power aggregate) - shown as "—"
+            // rather than fabricated. Tag and Membres are real.
+            AllianceOverviewModel overview = allianceCenterController.Model?.Overview;
+            string tagValue = overview != null && !string.IsNullOrEmpty(overview.Tag) ? overview.Tag : "—";
+            string membersValue = overview != null ? overview.MemberCount + " / " + overview.MaxMembers : "— / —";
             string[] values = compact
-                ? new[] { "0", "Niv. 1", "0 / 50", "—" }
-                : new[] { "NEX", "0", "Niv. 1", "0 / 50", "—" };
+                ? new[] { "—", "—", membersValue, "—" }
+                : new[] { tagValue, "—", "—", membersValue, "—" };
             string[] labels = compact
                 ? new[] { "Connectés", "Niveau", "Membres", "Puissance" }
                 : new[] { "Tag", "Connectés", "Niveau", "Membres", "Puissance" };
@@ -31550,11 +32150,14 @@ if (leftNavigationTexture == null)
 
         private static bool AllianceActionAllowed(string actionId)
         {
+            // M043B-CL: "invite" now requires Officer/Leader (AlliancePermissionPolicy.CanInvite) -
+            // was previously allowed for any role including plain Member, which never matched the
+            // real server rule.
             switch (alliancePlayerRole)
             {
                 case "chef": return true;
                 case "officier": return actionId == "invite" || actionId == "help" || actionId == "announce" || actionId == "chat" || actionId == "war";
-                default: return actionId == "invite" || actionId == "help" || actionId == "chat";
+                default: return actionId == "help" || actionId == "chat";
             }
         }
 
@@ -31694,6 +32297,22 @@ if (leftNavigationTexture == null)
 			}
 			GUI.Label(new Rect(header.x + 50f, header.y + 10f, header.width - 58f, 24f), title.ToUpperInvariant(), new GUIStyle(titleStyle) { fontSize = compact ? 16 : 18 });
 
+            if (id == "invite")
+            {
+                DrawAllianceInvitePlayerBody(new Rect(panel.x + 18f, header.yMax + 12f, panel.width - 36f, panel.yMax - 44f - (header.yMax + 12f) - 6f), compact);
+                Rect closeInvite = new Rect(panel.x + 18f, panel.yMax - 44f, panel.width - 36f, 34f);
+                DrawPremiumPanel(closeInvite, new Color(0.40f, 0.22f, 0.05f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.94f));
+                GUI.Label(closeInvite, "Fermer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+                if (GUI.Button(closeInvite, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    AudioManager.Instance?.PlayMenuClose();
+                    allianceActionPanelOpen = string.Empty;
+                    allianceInviteSearchQuery = string.Empty;
+                }
+                return;
+            }
+
             string body = AllianceActionBody(id);
             GUI.Label(new Rect(panel.x + 18f, header.yMax + 16f, panel.width - 36f, 130f), body, new GUIStyle(smallStyle) { wordWrap = true, fontSize = compact ? 13 : 15 });
             GUI.Label(new Rect(panel.x + 18f, panel.yMax - 74f, panel.width - 36f, 40f), AllianceActionFooter(id), new GUIStyle(tinyLabelStyle) { wordWrap = true, alignment = TextAnchor.MiddleLeft });
@@ -31706,6 +32325,118 @@ if (leftNavigationTexture == null)
                 AudioManager.Instance?.PlayUIClick();
                 AudioManager.Instance?.PlayMenuClose();
                 allianceActionPanelOpen = string.Empty;
+            }
+        }
+
+        // M043B-CL: real player search + invite (Part 2/12) - uses the generic PlayerDirectoryClient
+        // (via allianceCenterController.SearchPlayersForInvite/InvitePlayerSearchResults), never a
+        // raw pasted GUID.
+        private static void DrawAllianceInvitePlayerBody(Rect area, bool compact)
+        {
+            Rect searchRow = new Rect(area.x, area.y, area.width - 84f, 30f);
+            string newQuery = GUI.TextField(searchRow, allianceInviteSearchQuery ?? string.Empty, new GUIStyle(GUI.skin.textField) { fontSize = 13 });
+            if (newQuery != allianceInviteSearchQuery)
+            {
+                allianceInviteSearchQuery = newQuery;
+                allianceInviteSearchLastQueriedAt = NowForUi();
+            }
+            // Debounce: query the real backend ~350ms after the player stops typing, not every keystroke.
+            if (allianceInviteSearchLastQueriedAt >= 0f && NowForUi() - allianceInviteSearchLastQueriedAt > 0.35f)
+            {
+                allianceInviteSearchLastQueriedAt = -10f;
+                if (!string.IsNullOrWhiteSpace(allianceInviteSearchQuery) && allianceInviteSearchQuery.Trim().Length >= 2)
+                    allianceCenterController.SearchPlayersForInvite(allianceInviteSearchQuery);
+            }
+            Rect searchButton = new Rect(searchRow.xMax + 8f, area.y, 76f, 30f);
+            DrawPremiumPanel(searchButton, new Color(0.40f, 0.24f, 0.06f, 0.96f), new Color(1f, 0.72f, 0.18f, 0.95f));
+            GUI.Label(searchButton, "Chercher", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+            if (GUI.Button(searchButton, string.Empty, GUIStyle.none))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                allianceInviteSearchLastQueriedAt = -10f;
+                allianceCenterController.SearchPlayersForInvite(allianceInviteSearchQuery);
+            }
+
+            float y = searchRow.yMax + 8f;
+            if (!string.IsNullOrEmpty(allianceInviteFeedback) && NowForUi() - allianceInviteFeedbackAt < 3f)
+            {
+                GUI.Label(new Rect(area.x, y, area.width, 18f), allianceInviteFeedback, new GUIStyle(smallStyle) { fontSize = 11, normal = { textColor = new Color(0.5f, 0.9f, 0.5f) } });
+                y += 22f;
+            }
+
+            // M043R-CL: was a single "type at least 2 characters" message for every empty state
+            // (not-yet-typed, zero-results, AND network error alike) - now distinguishes each so
+            // "St" legitimately finding nobody doesn't read as "you didn't type enough".
+            IReadOnlyList<PlayerSearchResultModel> results = allianceCenterController.InvitePlayerSearchResults;
+            InvitePlayerSearchStatus searchStatus = allianceCenterController.InviteSearchStatus;
+            if (searchStatus != InvitePlayerSearchStatus.Results)
+            {
+                string message = searchStatus switch
+                {
+                    InvitePlayerSearchStatus.Searching => "Recherche…",
+                    InvitePlayerSearchStatus.Empty => "Aucun joueur trouvé.",
+                    InvitePlayerSearchStatus.Error => "Recherche impossible pour le moment.",
+                    _ => "Tapez au moins 2 caractères pour chercher un joueur."
+                };
+                GUI.Label(new Rect(area.x, y, area.width, 18f), message, new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+                if (searchStatus == InvitePlayerSearchStatus.Error)
+                {
+                    Rect retry = new Rect(area.x, y + 22f, 100f, 26f);
+                    DrawPremiumPanel(retry, new Color(0.40f, 0.24f, 0.06f, 0.96f), new Color(1f, 0.72f, 0.18f, 0.95f));
+                    GUI.Label(retry, "Réessayer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                    if (GUI.Button(retry, string.Empty, GUIStyle.none))
+                    {
+                        AudioManager.Instance?.PlayUIClick();
+                        allianceCenterController.SearchPlayersForInvite(allianceInviteSearchQuery);
+                    }
+                }
+                return;
+            }
+            bool busy = allianceCenterController.IsBusy;
+            for (int i = 0; i < results.Count && y + 36f <= area.yMax; i++)
+            {
+                PlayerSearchResultModel result = results[i];
+                Rect row = new Rect(area.x, y, area.width, 32f);
+                DrawPremiumPanel(row, new Color(0.045f, 0.036f, 0.024f, 0.94f), new Color(0.7f, 0.5f, 0.2f, 0.5f));
+                GUI.Label(new Rect(row.x + 8f, row.y, row.width - 96f, row.height), result.DisplayName, new GUIStyle(smallStyle) { fontSize = 11, alignment = TextAnchor.MiddleLeft });
+                Rect inviteBtn = new Rect(row.xMax - 88f, row.y + 3f, 80f, 26f);
+
+                // M043S-CL: a successfully (or already-)invited row must never look actionable
+                // again - was always "Inviter" regardless of what the last click actually did.
+                switch (result.Status)
+                {
+                    case InvitationRowStatus.Sending:
+                        DrawPremiumPanel(inviteBtn, new Color(0.15f, 0.12f, 0.08f, 0.7f), new Color(0.5f, 0.4f, 0.2f, 0.6f));
+                        GUI.Label(inviteBtn, "Envoi…", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                        break;
+                    case InvitationRowStatus.Sent:
+                        DrawPremiumPanel(inviteBtn, new Color(0.12f, 0.18f, 0.12f, 0.7f), new Color(0.4f, 0.7f, 0.4f, 0.6f));
+                        GUI.Label(inviteBtn, "Envoyée", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        break;
+                    case InvitationRowStatus.AlreadyPending:
+                        DrawPremiumPanel(inviteBtn, new Color(0.12f, 0.14f, 0.18f, 0.7f), new Color(0.4f, 0.5f, 0.7f, 0.6f));
+                        GUI.Label(inviteBtn, "Déjà invité", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        break;
+                    case InvitationRowStatus.Error:
+                        DrawPremiumPanel(inviteBtn, new Color(0.45f, 0.16f, 0.14f, 0.95f), new Color(0.9f, 0.4f, 0.35f, 0.7f));
+                        GUI.Label(inviteBtn, "Réessayer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                        if (!busy && GUI.Button(inviteBtn, string.Empty, GUIStyle.none))
+                        {
+                            AudioManager.Instance?.PlayUIClick();
+                            allianceCenterController.InvitePlayer(result.PlayerId);
+                        }
+                        break;
+                    default:
+                        DrawPremiumPanel(inviteBtn, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+                        GUI.Label(inviteBtn, "Inviter", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                        if (!busy && GUI.Button(inviteBtn, string.Empty, GUIStyle.none))
+                        {
+                            AudioManager.Instance?.PlayUIClick();
+                            allianceCenterController.InvitePlayer(result.PlayerId);
+                        }
+                        break;
+                }
+                y += 32f + 6f;
             }
         }
 
@@ -31747,8 +32478,8 @@ if (leftNavigationTexture == null)
                     return "Aucune aide n'est disponible actuellement. Revenez un peu plus tard lorsque vos membres auront besoin d'un coup de main.";
                 case "announce":
                     return "La rédaction d'annonces sera disponible pour le Chef et les Officiers autorisés. Cette fenêtre est un point d'entrée préparé pour les prochains sprints.";
-                case "chat":
-                    return "Le chat de l'Alliance arrive au prochain sprint. Les messages des membres seront rassemblés ici en temps réel.";
+                // "chat" is handled entirely by DrawAllianceChatDrawer (real backend, M043B-CL) -
+                // the quick-action button opens that drawer directly and never reaches this overlay.
                 case "war":
                     return "Le système de guerre n'est pas encore disponible. Cette action sera réservée au Chef et aux Officiers autorisés.";
                 default:
@@ -31762,6 +32493,12 @@ if (leftNavigationTexture == null)
                 return "Action réservée. Rôle actuel : " + AllianceRoleLabel(alliancePlayerRole) + ".";
             string roleSuffix = alliancePlayerRole == "chef" ? " (Chef)" : alliancePlayerRole == "officier" ? " (Officier)" : " (Membre)";
             return "Point d'entrée " + AllianceRoleLabel(alliancePlayerRole) + ". Aperçu local — aucune action officielle envoyée.";
+        }
+
+        private static string AllianceRuntimeTagOrDash()
+        {
+            string tag = allianceCenterController.Model?.Overview?.Tag;
+            return string.IsNullOrEmpty(tag) ? "—" : tag;
         }
 
         private static string AllianceRoleLabel(string role)
@@ -31829,31 +32566,146 @@ if (leftNavigationTexture == null)
                 return;
             }
 
-            string[] lines =
+            DrawAllianceChatRealBody(new Rect(drawer.x + 10f, header.yMax + 8f, drawer.width - 20f, drawer.yMax - (header.yMax + 8f) - 6f), compact);
+            GUI.color = previous;
+        }
+
+        // M043B-CL: real Alliance chat bridge (Part 3/13) - reuses the existing Communication
+        // backend (LivingHiveChatRuntime/ServerChatProvider, built in M042) entirely; this screen
+        // never talks to the chat server directly and never creates a second conversation. The
+        // conversation identity is EXACTLY Model.Overview.ChatConversationId - never a locally
+        // guessed or cached id.
+        private static void DrawAllianceChatRealBody(Rect area, bool compact)
+        {
+            Guid? conversationId = allianceCenterController.Model?.Overview?.ChatConversationId;
+            if (conversationId == null || conversationId == Guid.Empty)
             {
-                "Jeff : Bonne construction de la Caserne !",
-                "Marie : Merci ! Il me manque encore de la cire.",
-                "Alex : Je peux vous aider à la récolte."
-            };
-            float y = header.yMax + 8f;
-            for (int i = 0; i < lines.Length; i++)
+                GUI.Label(area, "Chat indisponible pour cette alliance.", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter, wordWrap = true });
+                if (allianceChatAccessDeniedReason != "no_conversation_id")
+                {
+                    allianceChatAccessDeniedReason = "no_conversation_id";
+                    Debug.LogWarning("[AllianceChat] No ChatConversationId on the current alliance - chat unavailable (old/invalid alliance state, not an error to recover from client-side).");
+                }
+                return;
+            }
+            string conversationKey = conversationId.Value.ToString("D");
+
+            if (!BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.IsConfigured)
             {
-                Rect bubble = new Rect(drawer.x + 10f, y, drawer.width - 20f, 44f);
-                DrawPremiumPanel(bubble, new Color(0.045f, 0.055f, 0.075f, 0.96f), new Color(accent.r * 0.6f, accent.g * 0.6f, accent.b * 0.6f, 0.55f));
-                GUI.Label(new Rect(bubble.x + 10f, bubble.y + 6f, bubble.width - 20f, 16f), "· " + lines[i], new GUIStyle(smallStyle) { fontSize = compact ? 11 : 12, wordWrap = true });
-                y += 52f;
+                GUI.Label(area, "Session de chat non prête…", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
+                return;
             }
 
-            GUI.Label(new Rect(drawer.x + 10f, y + 4f, drawer.width - 20f, 20f), "Conversation réservée au serveur · prochain sprint", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
+            BeeKingdom.Gameplay.Communication.LivingHiveChatSnapshot snapshot = BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.Snapshot;
+            bool alreadyOnRightConversation = string.Equals(snapshot.SelectedConversationId, conversationKey, StringComparison.Ordinal);
+            if (!alreadyOnRightConversation && allianceChatOpenedForConversationId != conversationKey && !allianceChatOpenInFlight)
+            {
+                allianceChatOpenedForConversationId = conversationKey;
+                EnsureAllianceChatOpenedAndSelected(conversationKey);
+            }
 
-            Rect input = new Rect(drawer.x + 10f, drawer.yMax - 42f, drawer.width - 20f, 32f);
+            if (!string.IsNullOrEmpty(allianceChatAccessDeniedReason) && allianceChatAccessDeniedReason != "no_conversation_id")
+            {
+                GUI.Label(area, "Accès au chat de l'alliance perdu (" + allianceChatAccessDeniedReason + ").", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter, wordWrap = true });
+                return;
+            }
+
+            if (!alreadyOnRightConversation)
+            {
+                GUI.Label(area, "Connexion au chat de l'alliance…", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
+                return;
+            }
+
+            float composerH = 34f;
+            Rect messagesArea = new Rect(area.x, area.y, area.width, area.height - composerH - 6f);
+            IReadOnlyList<BeeKingdom.Gameplay.Communication.LivingHiveChatMessage> messages = snapshot.Messages;
+            float rowH = 46f;
+            allianceChatDrawerMessagesScroll = GUI.BeginScrollView(messagesArea, allianceChatDrawerMessagesScroll,
+                new Rect(0f, 0f, messagesArea.width - 16f, Mathf.Max(messagesArea.height, messages.Count * rowH)), false, true);
+            for (int i = 0; i < messages.Count; i++)
+            {
+                BeeKingdom.Gameplay.Communication.LivingHiveChatMessage message = messages[i];
+                Rect bubble = new Rect(0f, i * rowH, messagesArea.width - 20f, rowH - 4f);
+                Color accentBubble = new Color(0.36f, 0.62f, 0.95f, 1f);
+                DrawPremiumPanel(bubble, new Color(0.045f, 0.055f, 0.075f, 0.96f), new Color(accentBubble.r * 0.6f, accentBubble.g * 0.6f, accentBubble.b * 0.6f, 0.55f));
+                string sender = string.IsNullOrEmpty(message.SenderDisplayName) ? "—" : message.SenderDisplayName;
+                GUI.Label(new Rect(bubble.x + 10f, bubble.y + 4f, bubble.width - 20f, 16f), sender, new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 10 });
+                GUI.Label(new Rect(bubble.x + 10f, bubble.y + 19f, bubble.width - 20f, 20f), message.VisibleBody ?? string.Empty, new GUIStyle(smallStyle) { fontSize = compact ? 10 : 11, wordWrap = true });
+            }
+            GUI.EndScrollView();
+
+            Rect input = new Rect(area.x, area.yMax - composerH, area.width - 66f, composerH);
             DrawPremiumPanel(input, new Color(0.03f, 0.028f, 0.022f, 0.96f), new Color(0.5f, 0.45f, 0.35f, 0.6f));
-            GUI.Label(new Rect(input.x + 10f, input.y + 7f, input.width - 20f, 18f), "Le chat arrive au prochain sprint…", new GUIStyle(tinyLabelStyle) { fontSize = compact ? 10 : 11 });
-            GUI.color = previous;
+            allianceChatComposerText = GUI.TextField(new Rect(input.x + 8f, input.y + 5f, input.width - 16f, input.height - 10f), allianceChatComposerText ?? string.Empty, new GUIStyle(GUI.skin.textField) { fontSize = compact ? 11 : 12 });
+
+            Rect send = new Rect(area.xMax - 58f, area.yMax - composerH, 58f, composerH);
+            DrawPremiumPanel(send, new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+            GUI.Label(send, "Envoyer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+            if (GUI.Button(send, string.Empty, GUIStyle.none) && !string.IsNullOrWhiteSpace(allianceChatComposerText))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                string toSend = allianceChatComposerText.Trim();
+                allianceChatComposerText = string.Empty;
+                SendAllianceChatMessage(toSend);
+            }
+        }
+
+        private static async void EnsureAllianceChatOpenedAndSelected(string conversationKey)
+        {
+            allianceChatOpenInFlight = true;
+            try
+            {
+                // M043Q-CL: the Alliance conversation isn't reliably present yet in the aggregate
+                // "list all my conversations" result (LoadAllConversationsAsync can time out on the
+                // realtime-subscription step, or simply not have surfaced it yet) even though the
+                // player IS a real, server-authorized participant - proven live via a direct
+                // GET /chat/v1/conversations/{id}/messages returning 200 for a conversation absent
+                // from that list. SelectKnownConversationAsync opens the known Alliance
+                // ChatConversationId directly (still via the same ReconcileFullyAsync/SendAsync wire
+                // calls - no new chat system, no forked business logic) instead of requiring it to
+                // already be in that cached list first.
+                await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.OpenAsync();
+                await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SelectKnownAsync(conversationKey, "Alliance", "Alliance");
+
+                BeeKingdom.Gameplay.Communication.LivingHiveChatSnapshot afterSelect = BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.Snapshot;
+                if (afterSelect.Status == BeeKingdom.Gameplay.Communication.LivingHiveChatStatus.AuthenticationRequired
+                    || afterSelect.Status == BeeKingdom.Gameplay.Communication.LivingHiveChatStatus.Error)
+                {
+                    // Real server-authoritative rejection (M042: kicked/left members lose access) -
+                    // not a local membership guess. Never create a second chat client-side to work
+                    // around this.
+                    allianceChatAccessDeniedReason = "not_a_member";
+                    Debug.LogWarning("[AllianceChat] Real conversation " + conversationKey + " is not accessible to this player (server-authoritative - kicked/left/never joined). errorCode=" + afterSelect.ErrorCode);
+                }
+                else
+                {
+                    allianceChatAccessDeniedReason = string.Empty;
+                }
+            }
+            catch (Exception exception)
+            {
+                allianceChatAccessDeniedReason = "network";
+                Debug.LogWarning("[AllianceChat] Failed to open/select the alliance conversation: " + exception.GetType().Name);
+            }
+            finally
+            {
+                allianceChatOpenInFlight = false;
+            }
+        }
+
+        private static async void SendAllianceChatMessage(string body)
+        {
+            try { await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body); }
+            catch (Exception exception) { Debug.LogWarning("[AllianceChat] Send failed: " + exception.GetType().Name); }
         }
 
         private sealed class AllianceMemberProfileData
         {
+            // M043B-CL: real identity backing this row - PlayerId/RoleValue drive the permission
+            // matrix and the real Promote/Demote/Kick/Transfer calls; Name/Role stay the display
+            // strings the rest of this legacy screen already renders from.
+            public Guid PlayerId;
+            public RemoteAllianceRole RoleValue;
             public string Name;
             public string Role;
             public int Level;
@@ -31870,43 +32722,10 @@ if (leftNavigationTexture == null)
             public int Donations;
         }
 
-        private static readonly List<AllianceMemberProfileData> allianceMemberRoster = BuildAllianceMemberRoster();
-
-        private static List<AllianceMemberProfileData> BuildAllianceMemberRoster()
-        {
-            List<AllianceMemberProfileData> list = new List<AllianceMemberProfileData>(16);
-            list.Add(RosterMember("Jeff", "Chef", 12, 48230L, "online", "2026-07-14", "à l'instant", "Unis. Forts. Éternels."));
-            list.Add(RosterMember("Marie", "Officier", 9, 31800L, "hive", "2026-07-20", "il y a 12 min", "Chaque ruche mérite un royaume."));
-            list.Add(RosterMember("Alex", "Officier", 8, 27400L, "world", "2026-07-21", "il y a 40 min", "La récolte n'attend pas."));
-            list.Add(RosterMember("Sophie", "Membre", 4, 9200L, "alliance", "2026-08-01", "il y a 6 min", "Une abeille, un sourire."));
-            list.Add(RosterMember("Lucas", "Membre", 7, 21300L, "offline", "2026-07-25", "il y a 2 h", "La constance bat la vitesse."));
-            list.Add(RosterMember("Nora", "Membre", 6, 17600L, "combat", "2026-07-28", "il y a 3 min", "Frappe d'abord, discute ensuite."));
-            list.Add(RosterMember("Idriss", "Membre", 5, 13400L, "hive", "2026-07-30", "il y a 1 h", "Construire, toujours construire."));
-            list.Add(RosterMember("Chloé", "Membre", 3, 6800L, "offline", "2026-08-02", "il y a 6 h", "Nouvelle venue, grand espoir."));
-            list.Add(RosterMember("Maxime", "Membre", 6, 15050L, "online", "2026-07-26", "à l'instant", "L'entraide est notre miel."));
-            return list;
-        }
-
-        private static AllianceMemberProfileData RosterMember(string name, string role, int level, long power, string presence, string joined, string lastSeen, string motto)
-        {
-            return new AllianceMemberProfileData
-            {
-                Name = name,
-                Role = role,
-                Level = level,
-                Power = power,
-                Presence = presence,
-                JoinedOn = joined,
-                LastSeen = lastSeen,
-                Motto = motto,
-                Bees = level * 450L,
-                Resources = level * 1400L,
-                Buildings = level * 2 + 3,
-                Researches = level * 2,
-                Helps = level * 6,
-                Donations = level * 4
-            };
-        }
+        // M043-CL: was `static readonly` initialized once from fake data (BuildAllianceMemberRoster,
+        // deleted) - now a plain mutable list, refilled every frame from the real backend roster by
+        // SyncAllianceRuntimeStateFromController() (see above DrawAllianceHeadquartersScreen).
+        private static readonly List<AllianceMemberProfileData> allianceMemberRoster = new List<AllianceMemberProfileData>();
 
         private static AllianceMemberProfileData AllianceMemberData(string name)
         {
@@ -31915,7 +32734,14 @@ if (leftNavigationTexture == null)
                 if (string.Equals(allianceMemberRoster[i].Name, name, StringComparison.Ordinal))
                     return allianceMemberRoster[i];
             }
-            return RosterMember(name, "Membre", 1, 1200L, "offline", "2026-08-01", "il y a 2 j", "Rejoint tout juste l'Alliance.");
+            // No fake fallback member (M043-CL, Phase 22: no sample names in the runtime view) - an
+            // unresolved lookup means the roster hasn't loaded yet or the id is stale; render "—".
+            return new AllianceMemberProfileData
+            {
+                Name = name ?? "—", Role = "—", Level = 0, Power = 0L, Presence = "offline",
+                JoinedOn = "—", LastSeen = "—", Motto = "—", Bees = 0L, Resources = 0L,
+                Buildings = 0, Researches = 0, Helps = 0, Donations = 0
+            };
         }
 
         private static void OpenAllianceMemberProfile(string name)
@@ -32059,7 +32885,7 @@ if (leftNavigationTexture == null)
 
             Rect tagChip = new Rect(x0 + 32f, chipY + 1f, 48f, chipH);
             DrawPremiumPanel(tagChip, new Color(0.30f, 0.20f, 0.06f, 0.92f), new Color(1f, 0.72f, 0.18f, 0.90f));
-            GUI.Label(tagChip, "NEX", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.92f, 0.72f, 1f) } });
+            GUI.Label(tagChip, AllianceRuntimeTagOrDash(), new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.92f, 0.72f, 1f) } });
 
             Rect roleChip = new Rect(tagChip.xMax + gap, chipY + 1f, roleW, chipH);
             DrawPremiumPanel(roleChip, new Color(0.16f, 0.10f, 0.03f, 0.96f), new Color(0.92f, 0.60f, 0.15f, 0.88f));
@@ -32097,9 +32923,9 @@ if (leftNavigationTexture == null)
             DrawAllianceProfileActionButton(new Rect(12f, actionY, actionW, actionH), "message", "messages", "Envoyer", true);
             DrawAllianceProfileActionButton(new Rect(12f + actionW + tileGap, actionY, actionW, actionH), "friend", "members", "Ami", true);
             DrawAllianceProfileActionButton(new Rect(12f + (actionW + tileGap) * 2f, actionY, actionW, actionH), "invite", "mail", "Inviter", true);
-            DrawAllianceProfileActionButton(new Rect(12f, actionY + actionH + tileGap, actionW, actionH), "report", "warning", "Signaler", true);
-            DrawAllianceProfileActionButton(new Rect(12f + actionW + tileGap, actionY + actionH + tileGap, actionW, actionH), "promote", "sword", "Promouvoir", true);
-            DrawAllianceProfileActionButton(new Rect(12f + (actionW + tileGap) * 2f, actionY + actionH + tileGap, actionW, actionH), "exclude", "locked", "Exclure", true);
+            // M043B-CL: the full second row (previously "report"/"promote"/"exclude" placeholders)
+            // is now real Promote/Demote/Kick/Transfer, dynamically laid out per real permission.
+            DrawAllianceMemberAdminActionsRow(new Rect(12f, actionY + actionH + tileGap, w - 24f, actionH), member, true);
 
             GUI.EndScrollView();
         }
@@ -32131,7 +32957,7 @@ if (leftNavigationTexture == null)
 
             Rect tagChip = new Rect(x0 + 30f, chipY, 46f, chipH);
             DrawPremiumPanel(tagChip, new Color(0.30f, 0.20f, 0.06f, 0.92f), new Color(1f, 0.72f, 0.18f, 0.90f));
-            GUI.Label(tagChip, "NEX", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.92f, 0.72f, 1f) } });
+            GUI.Label(tagChip, AllianceRuntimeTagOrDash(), new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.92f, 0.72f, 1f) } });
 
             Rect roleChip = new Rect(tagChip.xMax + gap, chipY, roleW, chipH);
             DrawPremiumPanel(roleChip, new Color(0.16f, 0.10f, 0.03f, 0.96f), new Color(0.92f, 0.60f, 0.15f, 0.88f));
@@ -32154,8 +32980,9 @@ if (leftNavigationTexture == null)
             DrawAllianceProfileActionButton(new Rect(left.x + actionW + 8f, actionY, actionW, actionH), "friend", "members", "Ami", false);
             DrawAllianceProfileActionButton(new Rect(left.x, actionY + actionH + 8f, actionW, actionH), "invite", "mail", "Inviter", false);
             DrawAllianceProfileActionButton(new Rect(left.x + actionW + 8f, actionY + actionH + 8f, actionW, actionH), "report", "warning", "Signaler", false);
-            DrawAllianceProfileActionButton(new Rect(left.x, actionY + (actionH + 8f) * 2f, actionW, actionH), "promote", "sword", "Promouvoir", false);
-            DrawAllianceProfileActionButton(new Rect(left.x + actionW + 8f, actionY + (actionH + 8f) * 2f, actionW, actionH), "exclude", "locked", "Exclure", false);
+            // M043B-CL: real Promote/Demote/Kick/Transfer replacing the "promote"/"exclude" placeholders,
+            // dynamically laid out across this whole third row per real permission.
+            DrawAllianceMemberAdminActionsRow(new Rect(left.x, actionY + (actionH + 8f) * 2f, left.width, actionH), member, false);
 
             Rect right = new Rect(left.xMax + 16f, contentTop, Screen.width - left.xMax - 16f - inset, Screen.height - contentTop - inset);
             DrawAllianceProfileInfoSection(new Rect(right.x, right.y, right.width, 152f), member, false);
@@ -32231,6 +33058,75 @@ if (leftNavigationTexture == null)
             }
         }
 
+        // M043B-CL: Promote/Demote/Kick/Transfer Leadership - mirrors AlliancePermissionPolicy
+        // server-side rules exactly (see AllianceModels.cs). The server remains the final authority
+        // (a rejected mutation surfaces via Model.ErrorCode like any other action) - this is purely
+        // about which buttons are worth showing at all. Never offered against yourself.
+        private static List<(string Id, string Icon, string Label)> AllianceComputeMemberAdminActions(AllianceMemberProfileData member)
+        {
+            var actions = new List<(string, string, string)>();
+            AllianceOverviewModel overview = allianceCenterController.Model?.Overview;
+            if (overview == null || member.PlayerId == Guid.Empty || member.PlayerId == overview.MyPlayerId) return actions;
+
+            bool iAmLeader = overview.MyRole == RemoteAllianceRole.Leader;
+            bool iAmOfficer = overview.MyRole == RemoteAllianceRole.Officer;
+
+            if (iAmLeader && member.RoleValue == RemoteAllianceRole.Member) actions.Add(("promote", "sword", "Promouvoir"));
+            if (iAmLeader && member.RoleValue == RemoteAllianceRole.Officer) actions.Add(("demote", "shield", "Rétrograder"));
+            // CanKickTarget: Leader can kick Officer/Member; Officer can only kick Member.
+            bool canKick = iAmLeader ? member.RoleValue != RemoteAllianceRole.Leader : iAmOfficer && member.RoleValue == RemoteAllianceRole.Member;
+            if (canKick) actions.Add(("kick", "locked", "Exclure"));
+            if (iAmLeader) actions.Add(("transfer", "queen", "Transférer"));
+
+            return actions;
+        }
+
+        private static void DrawAllianceMemberAdminActionsRow(Rect row, AllianceMemberProfileData member, bool compact)
+        {
+            List<(string Id, string Icon, string Label)> actions = AllianceComputeMemberAdminActions(member);
+            if (actions.Count == 0) return;
+            float gap = 6f;
+            float w = (row.width - gap * (actions.Count - 1)) / actions.Count;
+            for (int i = 0; i < actions.Count; i++)
+            {
+                Rect btn = new Rect(row.x + i * (w + gap), row.y, w, row.height);
+                DrawAllianceMemberAdminActionButton(btn, member, actions[i].Id, actions[i].Icon, actions[i].Label, compact);
+            }
+        }
+
+        private static void DrawAllianceMemberAdminActionButton(Rect rect, AllianceMemberProfileData member, string actionId, string icon, string label, bool compact)
+        {
+            bool needsConfirmation = actionId == "kick" || actionId == "transfer";
+            string confirmKey = actionId + "|" + member.PlayerId.ToString("N");
+            bool armed = needsConfirmation && allianceMemberActionConfirmArmedId == confirmKey && NowForUi() - allianceMemberActionConfirmArmedAt < 5f;
+            bool busy = allianceCenterController.IsBusy;
+
+            DrawPremiumPanel(rect, busy ? new Color(0.10f, 0.09f, 0.07f, 0.9f) : (armed ? new Color(0.45f, 0.20f, 0.18f, 0.96f) : new Color(0.10f, 0.09f, 0.06f, 0.92f)),
+                armed ? new Color(0.9f, 0.5f, 0.5f, 0.85f) : new Color(1f, 0.72f, 0.18f, 0.55f));
+            DrawGameIcon(new Rect(rect.x + rect.width * 0.5f - 9f, rect.y + 6f, 18f, 18f), icon, Color.white);
+            string displayLabel = armed ? "Confirmer ?" : label;
+            GUI.Label(new Rect(rect.x + 4f, rect.y + rect.height - 17f, rect.width - 8f, 16f), displayLabel, new GUIStyle(smallStyle) { fontSize = compact ? 9 : 10 });
+
+            if (busy || GUI.Button(rect, string.Empty, GUIStyle.none) == false) return;
+            AudioManager.Instance?.PlayUIClick();
+
+            if (needsConfirmation && !armed)
+            {
+                allianceMemberActionConfirmArmedId = confirmKey;
+                allianceMemberActionConfirmArmedAt = NowForUi();
+                return;
+            }
+
+            allianceMemberActionConfirmArmedId = string.Empty;
+            switch (actionId)
+            {
+                case "promote": allianceCenterController.Promote(member.PlayerId); break;
+                case "demote": allianceCenterController.Demote(member.PlayerId); break;
+                case "kick": allianceCenterController.Kick(member.PlayerId); CloseAllianceMemberProfile(); break;
+                case "transfer": allianceCenterController.TransferLeadership(member.PlayerId); CloseAllianceMemberProfile(); break;
+            }
+        }
+
         private static void AllianceProfileActionClicked(string id)
         {
             switch (id)
@@ -32266,19 +33162,58 @@ if (leftNavigationTexture == null)
         private static void DrawAllianceMembersList(Rect rect, bool compact)
         {
             float inset = compact ? 8f : 12f;
-            GUI.Label(new Rect(rect.x + inset, rect.y + inset, rect.width - inset * 2f, 22f), "MEMBRES  ·  " + allianceMemberRoster.Count + " / 50", new GUIStyle(badgeStyle) { fontSize = compact ? 10 : 12 });
+            AllianceCenterScreenModel allianceModel = allianceCenterController.Model;
+            int allianceMaxMembers = allianceModel?.Overview?.MaxMembers ?? 0;
+            GUI.Label(new Rect(rect.x + inset, rect.y + inset, rect.width - inset * 2f, 22f), "MEMBRES  ·  " + allianceMemberRoster.Count + " / " + (allianceMaxMembers > 0 ? allianceMaxMembers.ToString() : "—"), new GUIStyle(badgeStyle) { fontSize = compact ? 10 : 12 });
             float listTop = rect.y + inset + 28f;
             Rect viewport = new Rect(rect.x + inset, listTop, rect.width - inset * 2f, rect.yMax - listTop - inset);
             if (viewport.width < 40f || viewport.height < 40f) return;
             float rowH = compact ? 52f : 58f;
             float gap = compact ? 4f : 6f;
-            float contentH = allianceMemberRoster.Count * (rowH + gap);
-                allianceMembersListScroll = GUI.BeginScrollView(viewport, allianceMembersListScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
+
+            // M043B-CL: Leader/Officer application review (Part 4/9) appended below the roster in the
+            // same scroll view - real AllianceApplicationView data, DisplayName, Accept/Reject.
+            bool showApplications = allianceModel?.Overview != null && allianceModel.Overview.IsOfficerOrLeader && allianceModel.Applications.Count > 0;
+            float applicationsHeaderH = 26f;
+            float applicationsRowH = 46f;
+            float applicationsBlockH = showApplications ? applicationsHeaderH + allianceModel.Applications.Count * (applicationsRowH + gap) : 0f;
+
+            float contentH = allianceMemberRoster.Count * (rowH + gap) + applicationsBlockH;
+            allianceMembersListScroll = GUI.BeginScrollView(viewport, allianceMembersListScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
             for (int i = 0; i < allianceMemberRoster.Count; i++)
             {
                 DrawAllianceMemberRow(new Rect(2f, i * (rowH + gap), viewport.width - 4f, rowH), allianceMemberRoster[i], compact);
             }
+            if (showApplications)
+            {
+                float ay = allianceMemberRoster.Count * (rowH + gap) + 6f;
+                GUI.Label(new Rect(2f, ay, viewport.width - 4f, 20f), "CANDIDATURES EN ATTENTE  ·  " + allianceModel.Applications.Count, new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(0.92f, 0.60f, 0.15f, 1f) } });
+                ay += applicationsHeaderH;
+                for (int i = 0; i < allianceModel.Applications.Count; i++)
+                {
+                    DrawAllianceApplicationRow(new Rect(2f, ay, viewport.width - 4f, applicationsRowH), allianceModel.Applications[i], compact);
+                    ay += applicationsRowH + gap;
+                }
+            }
             GUI.EndScrollView();
+        }
+
+        private static void DrawAllianceApplicationRow(Rect rect, AllianceApplicationModel application, bool compact)
+        {
+            DrawPremiumPanel(rect, new Color(0.045f, 0.036f, 0.024f, 0.94f), new Color(0.7f, 0.5f, 0.2f, 0.55f));
+            GUI.Label(new Rect(rect.x + 10f, rect.y + 4f, rect.width - 190f, 18f), application.ResolvedDisplayName, new GUIStyle(smallStyle) { fontSize = compact ? 11 : 12 });
+            GUI.Label(new Rect(rect.x + 10f, rect.y + 22f, rect.width - 190f, 16f), application.SubmittedAtUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), new GUIStyle(tinyLabelStyle) { fontSize = 10 });
+
+            bool busy = allianceCenterController.IsBusy;
+            Rect accept = new Rect(rect.xMax - 180f, rect.y + 8f, 84f, 30f);
+            DrawPremiumPanel(accept, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+            GUI.Label(accept, "Accepter", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+            if (!busy && GUI.Button(accept, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.AcceptApplication(application.ApplicationId); }
+
+            Rect reject = new Rect(rect.xMax - 90f, rect.y + 8f, 84f, 30f);
+            DrawPremiumPanel(reject, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.45f, 0.20f, 0.18f, 0.95f), new Color(0.9f, 0.5f, 0.5f, 0.7f));
+            GUI.Label(reject, "Rejeter", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+            if (!busy && GUI.Button(reject, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); allianceCenterController.RejectApplication(application.ApplicationId); }
         }
 
         private static void DrawAllianceMemberRow(Rect rect, AllianceMemberProfileData member, bool compact)
@@ -32976,6 +33911,44 @@ if (leftNavigationTexture == null)
 
         private static readonly List<CourierMessageData> courierMessages = BuildCourierMessages();
 
+        // M043T-CL: a real pending Alliance invitation used to be invisible unless the player
+        // explicitly opened Alliance Center -> Invitations. Reuses two systems that already exist
+        // and are already drawn every frame regardless of which screen is open (UIFeedbackSystem,
+        // drawn last in DrawInternal; the Courrier/Mail list) instead of building a new alert or
+        // inbox system. No new network calls - reads the Model that allianceCenterController.Refresh()
+        // (called once at hive load, see MobileAccountSessionRuntimeBootstrap) already fetched.
+        private static readonly HashSet<Guid> allianceInvitationAlertsShown = new HashSet<Guid>();
+
+        private static void CheckForNewAllianceInvitationAlerts()
+        {
+            AllianceCenterScreenModel model = allianceCenterController.Model;
+            if (model?.MyInvitations == null) return;
+            for (int i = 0; i < model.MyInvitations.Count; i++)
+            {
+                AllianceInvitationModel invite = model.MyInvitations[i];
+                if (invite.Status != RemoteAllianceInvitationStatus.Pending) continue;
+                if (!allianceInvitationAlertsShown.Add(invite.InvitationId)) continue;
+
+                UIFeedbackSystem.ShowFloatingText(
+                    "Nouvelle invitation d'Alliance en attente — voir Courrier",
+                    new Vector2(Screen.width * 0.5f, Screen.height * 0.16f),
+                    new Color(0.82f, 0.60f, 0.95f, 1f),
+                    5f);
+
+                courierMessages.Insert(0, new CourierMessageData
+                {
+                    Id = -Math.Abs(invite.InvitationId.GetHashCode()),
+                    Category = "alliance",
+                    Title = "Invitation d'Alliance",
+                    Preview = "Vous avez reçu une invitation à rejoindre une alliance.",
+                    Body = "Ouvrez Alliance Center pour accepter ou refuser cette invitation.",
+                    DateLabel = "à l'instant",
+                    Read = false,
+                    Favorite = false
+                });
+            }
+        }
+
         private static List<CourierMessageData> BuildCourierMessages()
         {
             List<CourierMessageData> messages = new List<CourierMessageData>(240);
@@ -33080,15 +34053,19 @@ if (leftNavigationTexture == null)
             AudioManager.Instance?.PlayMenuOpen();
         }
 
+        // Closes ONLY the member profile overlay - returns to whatever Alliance Center screen was
+        // underneath (member list, overview, etc.), never exits the Alliance menu itself. Previously
+        // this also reset activeHiveMenu to Hive, so backing out of a profile silently exited the
+        // entire Alliance Center with no way back in (re-opening the Alliance building would just
+        // show the stuck profile again, since allianceMemberProfileOpen was the only thing this
+        // method actually cleared correctly). Exiting Alliance itself is a separate, deliberate
+        // action - see ClosePremiumScreensInPriorityOrderCore's own Alliance-menu-close branch.
         private static void CloseAllianceMemberProfile()
         {
             allianceMemberProfileOpen = false;
             allianceMemberProfileName = string.Empty;
             allianceActionPanelOpen = string.Empty;
             allianceChatDrawerOpen = false;
-            activeMainMenuId = string.Empty;
-            activeHiveMenu = HiveMenuMode.Hive;
-            detailPanelClosed = true;
             GUIUtility.hotControl = 0;
             GUIUtility.keyboardControl = 0;
         }
@@ -35097,6 +36074,31 @@ if (leftNavigationTexture == null)
                 return;
             }
 
+            // M043O-CL: "Journal" was routing into the generic DrawAllianceComingSoon placeholder
+            // even though the real server-authoritative activity feed (SyncAllianceRuntimeStateFromController
+            // -> model.Activity -> allianceActivityFeed) already existed and was already rendered
+            // correctly elsewhere on this same screen (the "Vue générale" tab's activity card) -
+            // the disconnect was purely this routing check, not missing data. Reuses the exact same
+            // card full-screen instead of a second implementation.
+            if (allianceOverviewTab == "journal")
+            {
+                DrawAllianceActivityCard(area, compact);
+                GUI.color = Color.white;
+                return;
+            }
+
+            // M043Q-CL: the "Chat" tab was still routing into DrawAllianceComingSoon even though the
+            // real chat body (DrawAllianceChatRealBody, M043B-CL) already existed and was already
+            // wired to the real conversation - it was only ever reachable from the side drawer
+            // opened by the action bar's "chat" button. Reuses the exact same real body full-screen,
+            // same as the Journal fix above - no second chat implementation.
+            if (allianceOverviewTab == "chat")
+            {
+                DrawAllianceChatRealBody(area, compact);
+                GUI.color = Color.white;
+                return;
+            }
+
             if (allianceOverviewTab != "overview")
             {
                 DrawAllianceComingSoon(area, compact);
@@ -35180,7 +36182,10 @@ if (leftNavigationTexture == null)
 
             if (visible.Count == 0)
             {
-                GUI.Label(new Rect(10f, 8f, viewport.width - 20f, 26f), "Aucun événement pour ce filtre", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
+                // M043O-CL: distinct copy for "genuinely zero activity ever" vs "this filter has no
+                // matches" - a brand-new alliance's Journal must never say "coming soon".
+                string emptyLabel = allianceActivityFeed.Count == 0 ? "Aucune activité pour le moment." : "Aucun événement pour ce filtre";
+                GUI.Label(new Rect(10f, 8f, viewport.width - 20f, 26f), emptyLabel, new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
             }
 
             float now = NowForUi();
@@ -35245,15 +36250,37 @@ if (leftNavigationTexture == null)
         {
             DrawPremiumPanel(rect, new Color(0.035f, 0.030f, 0.020f, 0.96f), new Color(0.82f, 0.54f, 0.14f, 0.72f));
             GUI.Label(new Rect(rect.x + 12f, rect.y + 10f, rect.width - 24f, 20f), "TABLEAU DE BORD", badgeStyle);
+            AllianceOverviewModel overview = allianceCenterController.Model?.Overview;
+            int officerCount = 0;
+            for (int i = 0; i < allianceMemberRoster.Count; i++)
+                if (allianceMemberRoster[i].Role == "Officier") officerCount++;
+            // M043O-CL: was always the truncated raw guid - resolve the real display name from the
+            // roster already loaded for this same screen (allianceMemberRoster), zero extra calls.
+            string leaderLabel = "—";
+            if (overview != null)
+            {
+                leaderLabel = overview.LeaderPlayerId.ToString("D").Substring(0, 8);
+                for (int i = 0; i < allianceMemberRoster.Count; i++)
+                {
+                    if (allianceMemberRoster[i].PlayerId == overview.LeaderPlayerId && !string.IsNullOrEmpty(allianceMemberRoster[i].Name))
+                    {
+                        leaderLabel = allianceMemberRoster[i].Name;
+                        break;
+                    }
+                }
+            }
+            string membersLabel = overview != null ? overview.MemberCount + " / " + overview.MaxMembers : "— / —";
+            // M043-CL: "connectés"/"aides"/"messages non lus"/"événements à venir" have no server
+            // concept for Alliance today (see AllianceEntity/AllianceMembership) - "—", not fabricated.
             string[] stats =
             {
-                "Chef              À désigner",
-                "Officiers           0",
-                "Membres connectés   0",
-                "Membres (total)   0 / 50",
-                "Aides aujourd'hui   0",
-                "Messages non lus    0",
-                "Événements à venir  0"
+                "Chef              " + leaderLabel,
+                "Officiers           " + officerCount,
+                "Membres connectés   —",
+                "Membres (total)   " + membersLabel,
+                "Aides aujourd'hui   —",
+                "Messages non lus    —",
+                "Événements à venir  —"
             };
             float y = rect.y + 38f;
             for (int i = 0; i < stats.Length; i++)
@@ -35261,16 +36288,30 @@ if (leftNavigationTexture == null)
                 GUI.Label(new Rect(rect.x + 14f, y + i * 24f, rect.width - 28f, 20f), stats[i], new GUIStyle(smallStyle) { fontSize = 11, alignment = TextAnchor.MiddleLeft });
             }
 
-            GUI.Label(new Rect(rect.x + 12f, y + stats.Length * 24f + 4f, rect.width - 24f, 18f), "RÔLE (TEST)", badgeStyle);
-            Rect roleButton = new Rect(rect.x + 12f, y + stats.Length * 24f + 24f, rect.width - 24f, 26f);
-            DrawPremiumPanel(roleButton, new Color(0.06f, 0.05f, 0.03f, 0.92f), new Color(1f, 0.72f, 0.18f, 0.78f));
-            GUI.Label(roleButton, "Rôle : " + AllianceRoleLabel(alliancePlayerRole), new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
-            if (GUI.Button(roleButton, string.Empty, GUIStyle.none))
+            float actionsY = y + stats.Length * 24f + 6f;
+            GUI.Label(new Rect(rect.x + 12f, actionsY, rect.width - 24f, 18f), "RÔLE : " + AllianceRoleLabel(alliancePlayerRole), badgeStyle);
+            actionsY += 24f;
+
+            bool busy = allianceCenterController.IsBusy;
+            bool isLeader = alliancePlayerRole == "chef";
+            bool confirmArmed = NowForUi() - allianceLeaveDissolveConfirmArmedAt < 4f;
+            Rect actionButton = new Rect(rect.x + 12f, actionsY, rect.width - 24f, 30f);
+            string actionLabel = confirmArmed ? "Confirmer ?" : (isLeader ? "Dissoudre l'alliance" : "Quitter l'alliance");
+            DrawPremiumPanel(actionButton, busy ? new Color(0.15f, 0.12f, 0.08f, 0.7f) : new Color(0.45f, 0.20f, 0.18f, 0.95f), new Color(0.9f, 0.5f, 0.5f, 0.7f));
+            GUI.Label(actionButton, actionLabel, new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
+            if (!busy && GUI.Button(actionButton, string.Empty, GUIStyle.none))
             {
                 AudioManager.Instance?.PlayUIClick();
-                alliancePlayerRole = alliancePlayerRole == "chef" ? "officier" : alliancePlayerRole == "officier" ? "membre" : "chef";
-                allianceActionPanelOpen = string.Empty;
-                localPreviewLoopMessage = "Rôle Alliance: " + AllianceRoleLabel(alliancePlayerRole);
+                if (!confirmArmed)
+                {
+                    allianceLeaveDissolveConfirmArmedAt = NowForUi();
+                }
+                else
+                {
+                    allianceLeaveDissolveConfirmArmedAt = -10f;
+                    if (isLeader) allianceCenterController.Dissolve();
+                    else allianceCenterController.Leave();
+                }
             }
         }
 

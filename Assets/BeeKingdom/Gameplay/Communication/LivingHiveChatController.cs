@@ -142,6 +142,26 @@ namespace BeeKingdom.Gameplay.Communication
             await RefreshSelectedAsync(ct);
         }
 
+        // M043Q-CL: opens a conversation the caller already knows the id of (e.g. Alliance.ChatConversationId)
+        // even when it hasn't shown up yet in the aggregate "list all my conversations" result -
+        // SelectConversationAsync refuses anything not already in that cached list, but the underlying
+        // wire calls (ReconcileFullyAsync/SendAsync, both reused as-is via RefreshSelectedAsync) only
+        // ever needed a raw conversation id, so this is additive, not a fork of the read/send path.
+        public async Task SelectKnownConversationAsync(string conversationId, string title, string channelType, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(conversationId)) throw new ArgumentException("A conversation id is required.", nameof(conversationId));
+            lock (gate)
+            {
+                if (!conversations.Any(value => string.Equals(value.ConversationId, conversationId, StringComparison.Ordinal)))
+                {
+                    conversations.Add(new LivingHiveChatConversation { ConversationId = conversationId, Title = title, ChannelType = channelType });
+                }
+                selectedConversationId = conversationId;
+                messages.Clear();
+            }
+            await RefreshSelectedAsync(ct);
+        }
+
         public async Task RefreshSelectedAsync(CancellationToken ct)
         {
             string conversationId;
@@ -392,6 +412,7 @@ namespace BeeKingdom.Gameplay.Communication
         }
         public static Task OpenAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.OpenAsync(lifetime.Token); }
         public static Task SelectAsync(string id) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SelectConversationAsync(id, lifetime.Token); }
+        public static Task SelectKnownAsync(string id, string title, string channelType) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SelectKnownConversationAsync(id, title, channelType, lifetime.Token); }
         public static Task SendAsync(string body) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SendAsync(body, lifetime.Token); }
         public static Task ResumeAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.ResumeAsync(lifetime.Token); }
         public static Task TranslateAsync(string messageId, string locale, string modelVersion) { lock (Gate) return controller == null ? Task.CompletedTask : controller.TranslateAsync(messageId, locale, modelVersion, lifetime.Token); }

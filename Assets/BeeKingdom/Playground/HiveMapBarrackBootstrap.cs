@@ -115,6 +115,7 @@ namespace BeeKingdom.Playground
         {
             if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (building == null || !string.Equals(building.BuildingType, BuildingTypes.Barrack, StringComparison.Ordinal)) return;
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyBuildingSelected("guard_post"); } catch {}
             // Jeff's request: tapping the Barrack while troops are ready claims them
             // directly instead of opening the full window - only falls through to opening
             // the panel when there's nothing ready to claim.
@@ -126,10 +127,26 @@ namespace BeeKingdom.Playground
         {
             if (LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost || HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             bool compact = Screen.width < 900;
+
+            // M040X-CL: same real bug as the production badge fix (see
+            // HiveMapProductionBootstrap.OnGUI / Docs/AI/Missions/M040X-CL-FTUE-Overlay-
+            // Occlusion-Fix.md) - this modal is drawn by a separate OnGUI from the FTUE
+            // dialogue, and cross-script OnGUI paint order isn't reliable, so it could cover
+            // the dialogue instead of the other way around. Clip this panel's own drawing away
+            // from the dialogue's real rect instead of touching the dialogue itself.
+            bool clipToDialogue = BeeKingdom.Tutorial.TutorialDialoguePresenter.IsAnyDialogueVisible;
+            if (clipToDialogue)
+            {
+                Rect panelRect = BeeKingdom.Tutorial.TutorialDialoguePresenter.GetCurrentPanelRect();
+                GUI.BeginGroup(new Rect(0f, 0f, Screen.width, panelRect.yMin));
+            }
+
             HiveViewProductUiPresenter.DrawBarrackOverlayForExternalHost(compact);
             // Same OnGUI call as the panel it opens from, so it always draws on top of it -
             // see the identical comment in HiveMapConstructionBootstrap.
             HiveViewProductUiPresenter.DrawSpeedUpOverlayForExternalHost(compact);
+
+            if (clipToDialogue) GUI.EndGroup();
 
             // "Ready to claim" badge on the Barrack itself, visible even while the panel is
             // closed - only meaningful when the player hasn't already opened the window

@@ -61,14 +61,29 @@ namespace BeeKingdom.Playground
         {
             HiveViewProductUiPresenter.OpenResearchOverlayForExternalHost();
             MobileAccountSessionRuntimeBootstrap.ResearchControllerForHiveMap.Refresh();
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyBuildingSelected("research_node"); } catch {}
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("research_node"); } catch {}
         }
 
         private void OnGUI()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
             if (!HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost) return;
+            HiveViewProductUiPresenter.RefreshResearchIfOverlayOpenAndDue();
             bool compact = Screen.width < 900;
+
+            // M040X-CL: same fix as HiveMapProductionBootstrap/HiveMapBarrackBootstrap - see
+            // Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md.
+            bool clipToDialogue = BeeKingdom.Tutorial.TutorialDialoguePresenter.IsAnyDialogueVisible;
+            if (clipToDialogue)
+            {
+                Rect panelRect = BeeKingdom.Tutorial.TutorialDialoguePresenter.GetCurrentPanelRect();
+                GUI.BeginGroup(new Rect(0f, 0f, Screen.width, panelRect.yMin));
+            }
+
             HiveViewProductUiPresenter.DrawResearchOverlayForExternalHost(compact);
+
+            if (clipToDialogue) GUI.EndGroup();
         }
     }
 }

@@ -19,6 +19,7 @@ namespace BeeKingdom.Playground
         private static HiveOfflineProductionPanelController offlineProductionController;
         private static HiveBuildingUpgradePanelController buildingUpgradeController;
         private static HiveResearchPanelController researchController;
+        private static AllianceCenterPanelController allianceCenterController;
         private static HiveStockPanelController stockController;
         private static HiveDailyRoundPanelController dailyRoundController;
         private static HiveBroodVitalityPanelController broodVitalityController;
@@ -32,6 +33,8 @@ namespace BeeKingdom.Playground
         private static WorldPresencePanelController worldPresenceController;
         private static BestiaryCodexPanelController bestiaryCodexController;
         private static HiveMilestoneEventPanelController milestoneEventController;
+        private static BeeKingdom.Networking.ITutorialClient tutorialClient;
+        private static Guid tutorialHiveId;
         private static ProtectedGameMutationOutbox gameplayMutationOutbox;
         private static Guid gameplayPlayerId;
 
@@ -79,6 +82,8 @@ namespace BeeKingdom.Playground
             new UnavailableHiveMilestoneEventPanelController();
         private static readonly IHiveResearchPanelController UnavailableResearchController =
             new UnavailableHiveResearchPanelController();
+        private static readonly IAllianceCenterPanelController UnavailableAllianceCenterController =
+            new UnavailableAllianceCenterPanelController();
 
         public static IHiveOfflineProductionPanelController OfflineProductionControllerForHiveMap =>
             offlineProductionController != null
@@ -109,6 +114,16 @@ namespace BeeKingdom.Playground
             researchController != null
                 ? (IHiveResearchPanelController)researchController
                 : UnavailableResearchController;
+
+        public static bool IsAllianceCenterControllerAvailableForExternalHost()
+        {
+            return allianceCenterController != null && allianceCenterController.IsConfigured;
+        }
+
+        public static IAllianceCenterPanelController AllianceCenterControllerForHiveMap =>
+            allianceCenterController != null
+                ? (IAllianceCenterPanelController)allianceCenterController
+                : UnavailableAllianceCenterController;
 
         public static IHiveDoctrineRecruitmentPanelController DoctrineRecruitmentControllerForHiveMap => doctrineRecruitmentController;
         public static IHiveSquadReservationPanelController SquadReservationControllerForHiveMap => squadReservationController;
@@ -339,6 +354,15 @@ namespace BeeKingdom.Playground
                 gameTransport,
                 cache);
             researchController = new HiveResearchPanelController(researchClient, hiveId);
+            // M043-CL: alliance membership is player-scoped, not hive-scoped - no hiveId argument,
+            // same session/transport plumbing as every other client above (client.Gate, client,
+            // gameTransport), no cache (AllianceClient has no offline-read support today).
+            var allianceClient = new AllianceClient(client.Gate, client, gameTransport);
+            // M043B-CL: generic, reusable player-search client (not Alliance-specific) - see
+            // PlayerDirectoryClient.cs. Passed into the Alliance controller so its "Invite Player"
+            // flow can search real players without AllianceClient ever duplicating search logic.
+            var playerDirectoryClient = new PlayerDirectoryClient(client.Gate, client, gameTransport);
+            allianceCenterController = new AllianceCenterPanelController(allianceClient, playerDirectoryClient);
             gameplayHiveId = hiveId;
             championBeeClient = new HiveChampionBeeClient(client.Gate, client, gameTransport);
             troopTierClient = new HiveTroopTierClient(client.Gate, client, gameTransport);
@@ -348,6 +372,9 @@ namespace BeeKingdom.Playground
             speedUpController = new HiveSpeedUpPanelController(speedUpClient, hiveId);
             rewardLedgerController = new HiveRewardLedgerPanelController(rewardLedgerClient, hiveId);
             championBeeAndTroopTierGameplayReady = authenticatedAuthority;
+            // M037B — FTUE tutorial persistence uses same authenticated transport/hive as building upgrades
+            tutorialClient = new BeeKingdom.Networking.TutorialClient(client.Gate, client, gameTransport);
+            tutorialHiveId = hiveId;
             var stockClient = new HiveStockSnapshotClient(
                 client.Gate,
                 client,
@@ -406,6 +433,12 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ConfigureOfflineProductionControllerForRuntime(offlineProductionController);
             HiveViewProductUiPresenter.ConfigureBuildingUpgradeControllerForRuntime(buildingUpgradeController);
             HiveViewProductUiPresenter.ConfigureResearchControllerForRuntime(researchController);
+            HiveViewProductUiPresenter.ConfigureAllianceCenterControllerForRuntime(allianceCenterController);
+            // M043T-CL: nothing previously fetched Alliance state until the player manually opened
+            // Alliance Center - a pending invitation (or an existing membership) sat invisible
+            // until then. One real, already-existing fetch at hive load; HiveViewProductUiPresenter
+            // reads the resulting Model to surface a real "you have a pending invitation" alert.
+            allianceCenterController.Refresh();
             HiveViewProductUiPresenter.ConfigureHiveStockControllerForRuntime(stockController);
             HiveViewProductUiPresenter.ConfigureDailyRoundControllerForRuntime(dailyRoundController);
             HiveViewProductUiPresenter.ConfigureBroodVitalityControllerForRuntime(
@@ -455,6 +488,7 @@ namespace BeeKingdom.Playground
             offlineProductionController.Refresh();
             buildingUpgradeController.Refresh();
             researchController.Refresh();
+            allianceCenterController.Refresh();
             stockController.Refresh();
             dailyRoundController.Refresh();
             broodVitalityController.Refresh();
@@ -583,6 +617,7 @@ namespace BeeKingdom.Playground
             HiveOfflineProductionPanelController previousProduction = offlineProductionController;
             HiveBuildingUpgradePanelController previousBuildingUpgrade = buildingUpgradeController;
             HiveResearchPanelController previousResearch = researchController;
+            AllianceCenterPanelController previousAllianceCenter = allianceCenterController;
             HiveStockPanelController previousStock = stockController;
             HiveDailyRoundPanelController previousDailyRound = dailyRoundController;
             HiveBroodVitalityPanelController previousBroodVitality =
@@ -609,6 +644,7 @@ namespace BeeKingdom.Playground
             offlineProductionController = null;
             buildingUpgradeController = null;
             researchController = null;
+            allianceCenterController = null;
             stockController = null;
             dailyRoundController = null;
             broodVitalityController = null;
@@ -631,6 +667,7 @@ namespace BeeKingdom.Playground
             if (previousProduction != null) previousProduction.Dispose();
             if (previousBuildingUpgrade != null) previousBuildingUpgrade.Dispose();
             if (previousResearch != null) previousResearch.Dispose();
+            if (previousAllianceCenter != null) previousAllianceCenter.Dispose();
             if (previousStock != null) previousStock.Dispose();
             if (previousDailyRound != null) previousDailyRound.Dispose();
             if (previousBroodVitality != null) previousBroodVitality.Dispose();
@@ -658,6 +695,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ResetOfflineProductionControllerForRuntime();
             HiveViewProductUiPresenter.ResetBuildingUpgradeControllerForRuntime();
             HiveViewProductUiPresenter.ResetResearchControllerForRuntime();
+            HiveViewProductUiPresenter.ResetAllianceCenterControllerForRuntime();
             HiveViewProductUiPresenter.ResetHiveStockControllerForRuntime();
             HiveViewProductUiPresenter.ResetDailyRoundControllerForRuntime();
             HiveViewProductUiPresenter.ResetBroodVitalityControllerForRuntime();
@@ -673,6 +711,16 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ResetMilestoneEventControllerForRuntime();
             HiveViewProductUiPresenter.ResetSpeedUpControllerForRuntime();
             HiveViewProductUiPresenter.ResetRewardLedgerControllerForRuntime();
+            tutorialClient = null;
+            tutorialHiveId = Guid.Empty;
+        }
+
+        public static BeeKingdom.Networking.ITutorialClient TutorialClientForRuntime() => tutorialClient;
+        public static Guid TutorialHiveIdForRuntime() => tutorialHiveId;
+        public static BeeKingdom.Networking.ITutorialClient RequireTutorialClientForRuntime()
+        {
+            if (tutorialClient == null) throw new InvalidOperationException("Tutorial client not configured — no authenticated session.");
+            return tutorialClient;
         }
 
         private static IProtectedRefreshTokenStore CreateRefreshTokenStore()

@@ -924,6 +924,17 @@ namespace BeeKingdom.LivingHiveMenu
                 LabelRect(t.GetComponent<RectTransform>(), 14f, 0f);
                 string captureEntry = entry;
                 b.onClick.AddListener(() => OnMoreRowClicked(captureEntry));
+                // M038C-CL: "Armée" lives inside the "Plus" submenu, not on the bottom rail
+                // directly - publish its real RectTransform via the SAME bridge pattern already
+                // used elsewhere (this assembly cannot reference BeeKingdom.Tutorial directly),
+                // so the FTUE arrow can target the actual row once this submenu is open, instead
+                // of a guessed screen fraction. Consumed in BeeKingdom.Playground (see
+                // HiveMapArmyBootstrap.cs), which can see both this bridge and BeeKingdom.Tutorial.
+                if (string.Equals(entry, "Armée", System.StringComparison.Ordinal))
+                {
+                    RectTransform rowRect = go.GetComponent<RectTransform>();
+                    LivingHiveArmyBridge.SetArmyRowRectQuery(() => rowRect);
+                }
                 y += rowH + 4f;
             }
         }

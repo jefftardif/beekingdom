@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using BeeKingdom.Playground;
 
 namespace BeeKingdom.Experiments.Environment2D5D
 {
@@ -83,6 +84,14 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void HandleInput()
         {
+            // M040-CL: this camera read WASD/scroll directly every frame with no awareness of
+            // any IMGUI panel on top of it, so scrolling inside the Research window (or any
+            // other premium overlay) also zoomed/panned the whole scene behind it. Reuses the
+            // same gate already used for the other world-input handlers in this build
+            // (HiveViewProductUiPresenter.PremiumUiBlocksWorldInput) rather than inventing a
+            // second flag - both live in the same default assembly.
+            if (HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof) return;
+
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
 
