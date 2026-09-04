@@ -336,6 +336,13 @@ namespace BeeKingdom.Networking
         public bool Available { get; set; }
         public Dictionary<string, long> DonationCost { get; set; }
         public long DonationProgressPerDonation { get; set; }
+
+        // M051C-CL: real catalog bonus magnitudes (basis points) - lets the client format "+X %"
+        // from actual server truth instead of a hardcoded, drift-prone number. 0 for whichever
+        // categories this technology doesn't grant.
+        public long ProductionBp { get; set; }
+        public long CapacityBp { get; set; }
+        public long CombatPowerBp { get; set; }
     }
 
     [Serializable]

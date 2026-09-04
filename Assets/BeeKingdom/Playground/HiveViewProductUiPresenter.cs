@@ -36764,6 +36764,9 @@ if (leftNavigationTexture == null)
         // M051-CL: real Alliance Research / Alliance Donations screen inside the existing Alliance
         // Center - reuses the same controller/model plumbing (allianceCenterController.ResearchModel)
         // every other real Alliance Center section already uses, never a second UI-owned data source.
+        // M051C-CL: grouped by branch (server already returns technologies in stable catalog order -
+        // Prospérité/Coopération/Défense Royale - so a header is inserted client-side whenever Branch
+        // changes, never a second ordering source).
         private static void DrawAllianceResearchTab(Rect rect, bool compact)
         {
             allianceCenterController.RefreshResearch();
@@ -36787,57 +36790,136 @@ if (leftNavigationTexture == null)
                     AllianceResearchErrorText(model.ErrorCode), new GUIStyle(tinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.55f, 0.5f) } });
             }
 
+            const float headerHeight = 30f;
+            float cardHeight = compact ? 176f : 150f;
+            float cardGap = 12f;
+
+            string lastBranch = null;
+            int branchCount = 0;
+            foreach (AllianceTechnologyRowModel t in model.Technologies)
+                if (!string.Equals(t.Branch, lastBranch, StringComparison.Ordinal)) { lastBranch = t.Branch; branchCount++; }
+
             Rect scrollArea = new Rect(rect.x, rect.y + 50f, rect.width, rect.height - 54f);
-            float cardHeight = compact ? 138f : 118f;
-            float cardGap = 10f;
-            float contentHeight = model.Technologies.Count * (cardHeight + cardGap) + 8f;
+            float contentHeight = model.Technologies.Count * (cardHeight + cardGap) + branchCount * headerHeight + 8f;
             Rect viewRect = new Rect(0f, 0f, scrollArea.width - 18f, contentHeight);
             allianceResearchScroll = GUI.BeginScrollView(scrollArea, allianceResearchScroll, viewRect);
             float y = 4f;
+            lastBranch = null;
             foreach (AllianceTechnologyRowModel tech in model.Technologies)
             {
+                if (!string.Equals(tech.Branch, lastBranch, StringComparison.Ordinal))
+                {
+                    lastBranch = tech.Branch;
+                    GUI.Label(new Rect(10f, y, viewRect.width - 20f, headerHeight),
+                        BeeLocalization.Text("alliance.research.branch." + tech.Branch, tech.Branch.ToUpperInvariant()),
+                        new GUIStyle(badgeStyle) { fontSize = compact ? 11 : 13 });
+                    y += headerHeight;
+                }
                 DrawAllianceTechnologyCard(new Rect(6f, y, viewRect.width - 12f, cardHeight), tech, model, compact);
                 y += cardHeight + cardGap;
             }
             GUI.EndScrollView();
         }
 
+        // M051C-CL: real BeeLocalization-backed name/description/effect - Stage 1 certification
+        // failed because the localization keys this card already looked up (DisplayNameKey/
+        // DescriptionKey/BonusSummaryKey, unchanged since M051) were never registered in
+        // strings.fr-CA.json, so every lookup missed and silently fell back to the raw
+        // TechnologyId (BeeLocalization.Text's own fallback parameter) - the architecture was
+        // always correct, only the catalog entries were missing. Fixed by adding them, not by
+        // reformatting the id client-side.
         private static void DrawAllianceTechnologyCard(Rect card, AllianceTechnologyRowModel tech, AllianceResearchScreenModel model, bool compact)
         {
+            bool inProgress = !tech.Completed && !tech.Locked && tech.CurrentProgress > 0;
             Color accent = tech.Completed ? new Color(0.42f, 0.82f, 0.48f, 0.88f)
                 : tech.Locked ? new Color(0.45f, 0.42f, 0.38f, 0.55f)
+                : inProgress ? new Color(0.70f, 0.62f, 1f, 0.85f)
                 : new Color(0.86f, 0.58f, 0.16f, 0.76f);
             DrawPremiumPanel(card, new Color(0.035f, 0.052f, 0.070f, 0.94f), accent);
 
             string name = BeeLocalization.Text(tech.DisplayNameKey, tech.TechnologyId);
             string desc = BeeLocalization.Text(tech.DescriptionKey, string.Empty);
-            string bonus = BeeLocalization.Text(tech.BonusSummaryKey, string.Empty);
-            string stateLabel = tech.Completed ? "TERMINÉE" : tech.Locked ? "VERROUILLÉE" : "DISPONIBLE";
+            string effect = AllianceTechnologyEffectText(tech);
+            string stateKey = tech.Completed ? "alliance.research.state.completed"
+                : tech.Locked ? "alliance.research.state.locked"
+                : inProgress ? "alliance.research.state.in_progress"
+                : "alliance.research.state.available";
+            string stateLabel = BeeLocalization.Text(stateKey, stateKey);
 
             GUI.Label(new Rect(card.x + 12f, card.y + 8f, card.width - 108f, 20f), name, new GUIStyle(smallStyle) { fontStyle = FontStyle.Bold });
             GUI.Label(new Rect(card.xMax - 100f, card.y + 8f, 92f, 20f), stateLabel, new GUIStyle(badgeStyle) { alignment = TextAnchor.MiddleRight, fontSize = 10 });
             GUI.Label(new Rect(card.x + 12f, card.y + 28f, card.width - 24f, compact ? 32f : 20f), desc, new GUIStyle(tinyLabelStyle) { wordWrap = true, fontSize = 10 });
 
-            float progressY = card.y + (compact ? 64f : 52f);
+            float effectY = card.y + (compact ? 64f : 52f);
+            GUI.Label(new Rect(card.x + 12f, effectY, card.width - 24f, 16f),
+                "EFFET  " + effect, new GUIStyle(tinyLabelStyle) { fontSize = 10, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.68f, 0.92f, 0.72f) } });
+
+            float progressY = effectY + 20f;
             float progress01 = tech.RequiredProgress > 0 ? Mathf.Clamp01((float)tech.CurrentProgress / tech.RequiredProgress) : 0f;
             DrawProgressBar(new Rect(card.x + 12f, progressY, card.width - 24f, 8f), progress01);
             GUI.Label(new Rect(card.x + 12f, progressY + 10f, card.width - 24f, 16f),
-                tech.CurrentProgress.ToString(CultureInfo.InvariantCulture) + " / " + tech.RequiredProgress.ToString(CultureInfo.InvariantCulture)
-                + (string.IsNullOrEmpty(bonus) ? string.Empty : "  ·  " + bonus),
+                tech.CurrentProgress.ToString(CultureInfo.InvariantCulture) + " / " + tech.RequiredProgress.ToString(CultureInfo.InvariantCulture),
                 new GUIStyle(tinyLabelStyle) { fontSize = 9 });
+
+            float bottomY = progressY + 30f;
+            if (tech.Locked)
+            {
+                // M051C-CL: a locked card must never look actionable - no button at all, only the
+                // real prerequisite (resolved from this same snapshot's own rows, never a second
+                // catalog lookup client-side).
+                string requirement = AllianceTechnologyPrerequisiteNames(tech, model);
+                GUI.Label(new Rect(card.x + 12f, bottomY, card.width - 24f, 20f),
+                    string.Format(CultureInfo.InvariantCulture, BeeLocalization.Text("alliance.research.locked.requires", "Requiert : {0}"), requirement),
+                    new GUIStyle(tinyLabelStyle) { fontSize = 9, wordWrap = true, normal = { textColor = new Color(0.72f, 0.68f, 0.62f) } });
+                return;
+            }
 
             string costText = tech.DonationCost.Count == 0 ? string.Empty : string.Join("  ", tech.DonationCost
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => kv.Value.ToString(CultureInfo.InvariantCulture) + " " + OfficialBuildingUpgradeResourceLabel(kv.Key)));
-            GUI.Label(new Rect(card.x + 12f, progressY + 30f, card.width - 112f, 20f), costText, new GUIStyle(tinyLabelStyle) { fontSize = 9 });
 
-            Rect donateButton = new Rect(card.xMax - 100f, progressY + 26f, 90f, 28f);
+            if (tech.Completed)
+            {
+                // Completed technology: no Donate button, no cost - the Alliance now simply owns
+                // this bonus (already communicated by the TERMINÉE badge + the EFFET line above).
+                return;
+            }
+
+            GUI.Label(new Rect(card.x + 12f, bottomY, card.width - 112f, 20f), costText, new GUIStyle(tinyLabelStyle) { fontSize = 9 });
+
+            Rect donateButton = new Rect(card.xMax - 100f, bottomY - 4f, 90f, 28f);
             bool sendingThis = model.DonationState == AllianceResearchDonationState.Sending && string.Equals(model.DonatingTechnologyId, tech.TechnologyId, StringComparison.Ordinal);
             bool sendingOther = model.DonationState == AllianceResearchDonationState.Sending && !sendingThis;
-            bool enabled = tech.Available && !tech.Completed && !tech.Locked && !sendingOther;
+            bool enabled = tech.Available && !sendingOther;
             string label = sendingThis ? "Envoi…" : "DONNER";
             if (DrawPreviewActionButton(donateButton, label, enabled, true) && enabled)
                 allianceCenterController.DonateToResearch(MobileAccountSessionRuntimeBootstrap.GameplayHiveId, tech.TechnologyId);
+        }
+
+        // M051C-CL: formats "+X %" from the real catalog magnitude the server now exposes
+        // (ProductionBp/CapacityBp/CombatPowerBp) - never a hardcoded number that could drift from
+        // AllianceResearchCatalog. Exactly one of the three is non-zero for every Alpha technology.
+        private static string AllianceTechnologyEffectText(AllianceTechnologyRowModel tech)
+        {
+            if (tech.ProductionBp > 0)
+                return string.Format(CultureInfo.InvariantCulture, BeeLocalization.Text("alliance.research.bonus.production_percent", "+{0} %"), tech.ProductionBp / 100);
+            if (tech.CapacityBp > 0)
+                return string.Format(CultureInfo.InvariantCulture, BeeLocalization.Text("alliance.research.bonus.capacity_percent", "+{0} %"), tech.CapacityBp / 100);
+            if (tech.CombatPowerBp > 0)
+                return string.Format(CultureInfo.InvariantCulture, BeeLocalization.Text("alliance.research.bonus.combat_power_percent", "+{0} %"), tech.CombatPowerBp / 100);
+            return string.Empty;
+        }
+
+        private static string AllianceTechnologyPrerequisiteNames(AllianceTechnologyRowModel tech, AllianceResearchScreenModel model)
+        {
+            if (tech.PrerequisiteIds.Count == 0) return string.Empty;
+            List<string> names = new List<string>(tech.PrerequisiteIds.Count);
+            foreach (string prereqId in tech.PrerequisiteIds)
+            {
+                AllianceTechnologyRowModel prereq = model.Technologies.FirstOrDefault(t => string.Equals(t.TechnologyId, prereqId, StringComparison.Ordinal));
+                names.Add(prereq != null ? BeeLocalization.Text(prereq.DisplayNameKey, prereq.TechnologyId) : prereqId);
+            }
+            return string.Join(", ", names);
         }
 
         private static string AllianceResearchErrorText(string code)

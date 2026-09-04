@@ -286,6 +286,29 @@ public sealed class AllianceResearchServiceTests
         Assert.That(snapshot.MyDonationCount, Is.EqualTo(1));
     }
 
+    // ---------------- M051C-CL: real bonus magnitude reaches the read contract ----------------
+
+    [Test]
+    public async Task GetSnapshot_ExposesRealCatalogBonusMagnitudes_NotJustAGenericSummaryKey()
+    {
+        // M051C-CL: Stage 1 visual certification failed because the client had nowhere to read a
+        // real number from - only a generic BonusSummaryKey existed. This proves the read contract
+        // now carries the actual AllianceResearchCatalog values, so the UI can format "+X %" from
+        // server truth instead of a client-hardcoded number that could drift from the catalog.
+        Fixture fx = CreateFixture();
+        PlayerId leader = NewPlayer(), member = NewPlayer();
+        SetUpAllianceOfTwo(fx, leader, member);
+        AllianceResearchCatalog.TryGet(TechA1, out AllianceResearchCatalog.TechnologyDefinition definition);
+
+        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(leader);
+
+        AllianceTechnologyReadModel tech = snapshot.Technologies.Single(t => t.TechnologyId == TechA1);
+        Assert.That(tech.ProductionBp, Is.EqualTo(definition.ProductionBp));
+        Assert.That(tech.CapacityBp, Is.EqualTo(definition.CapacityBp));
+        Assert.That(tech.CombatPowerBp, Is.EqualTo(definition.CombatPowerBp));
+        Assert.That(tech.ProductionBp, Is.GreaterThan(0), "prosperity_shared_reserves_i must actually carry its real production bonus");
+    }
+
     // ---------------- 14/15: membership bonus semantics ----------------
 
     [Test]

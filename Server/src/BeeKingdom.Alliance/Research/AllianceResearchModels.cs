@@ -63,7 +63,14 @@ public sealed record AllianceTechnologyReadModel(
     bool Locked,
     bool Available,
     IReadOnlyDictionary<string, long> DonationCost,
-    long DonationProgressPerDonation);
+    long DonationProgressPerDonation,
+    // M051C-CL: real catalog bonus magnitudes, exposed so the client formats "+X %" from actual
+    // server truth instead of hardcoding a number that could silently drift from the catalog -
+    // never a gameplay change, these mirror AllianceResearchCatalog.TechnologyDefinition's own
+    // existing fields exactly (0 for whichever categories this technology doesn't grant).
+    long ProductionBp,
+    long CapacityBp,
+    long CombatPowerBp);
 
 public sealed record AllianceResearchReadSnapshot(
     Guid AllianceId,

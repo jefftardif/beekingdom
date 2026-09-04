@@ -187,7 +187,8 @@ public sealed class AllianceResearchService
             technologies.Add(new AllianceTechnologyReadModel(
                 definition.TechnologyId, definition.Branch, definition.Tier, definition.DisplayNameKey, definition.DescriptionKey,
                 definition.BonusSummaryKey, definition.RequiredProgress, progress?.CurrentProgress ?? 0, completed, progress?.CompletedAtUtc,
-                definition.PrerequisiteIds, locked, !locked && !completed, definition.DonationCost, definition.DonationProgressPerDonation));
+                definition.PrerequisiteIds, locked, !locked && !completed, definition.DonationCost, definition.DonationProgressPerDonation,
+                definition.ProductionBp, definition.CapacityBp, definition.CombatPowerBp));
         }
 
         state.Contributions.TryGetValue(actorPlayerId.Value, out AllianceResearchContribution? myContribution);

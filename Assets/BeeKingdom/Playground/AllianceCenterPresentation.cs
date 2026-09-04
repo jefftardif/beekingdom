@@ -278,6 +278,9 @@ namespace BeeKingdom.Playground
             Available = source.Available;
             DonationCost = source.DonationCost ?? new Dictionary<string, long>();
             DonationProgressPerDonation = source.DonationProgressPerDonation;
+            ProductionBp = source.ProductionBp;
+            CapacityBp = source.CapacityBp;
+            CombatPowerBp = source.CombatPowerBp;
         }
 
         public string TechnologyId { get; }
@@ -295,6 +298,9 @@ namespace BeeKingdom.Playground
         public bool Available { get; }
         public IReadOnlyDictionary<string, long> DonationCost { get; }
         public long DonationProgressPerDonation { get; }
+        public long ProductionBp { get; }
+        public long CapacityBp { get; }
+        public long CombatPowerBp { get; }
     }
 
     public enum AllianceResearchDonationState { Idle, Sending, Error }

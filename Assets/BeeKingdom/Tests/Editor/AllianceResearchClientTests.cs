@@ -46,6 +46,31 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(result.MyContributionPoints, Is.EqualTo(10), "contribution total must be exactly what the server returned, never re-derived client-side");
         }
 
+        // M051C-CL: Stage 1 certification failed because the UI had no real number to format an
+        // effect from - proves the wire DTO now round-trips the real catalog bonus magnitude the
+        // server exposes (ProductionBp/CapacityBp/CombatPowerBp), so "+1 %" on screen always comes
+        // from server truth, never a client-hardcoded value.
+        [Test]
+        public async Task GetAllianceResearchAsync_RoundTripsRealBonusMagnitudes()
+        {
+            var snapshot = new RemoteAllianceResearchSnapshot
+            {
+                AllianceId = AllianceId,
+                Technologies = new List<RemoteAllianceTechnology>
+                {
+                    new RemoteAllianceTechnology { TechnologyId = TechnologyId, RequiredProgress = 60, ProductionBp = 100, CapacityBp = 0, CombatPowerBp = 0 }
+                }
+            };
+            var transport = new TypeCapturingTransport(snapshot);
+            var client = NewClient(transport);
+
+            RemoteAllianceResearchSnapshot result = await client.GetAllianceResearchAsync();
+
+            Assert.That(result.Technologies[0].ProductionBp, Is.EqualTo(100), "the real catalog magnitude must reach the client unchanged");
+            Assert.That(result.Technologies[0].CapacityBp, Is.EqualTo(0));
+            Assert.That(result.Technologies[0].CombatPowerBp, Is.EqualTo(0));
+        }
+
         [Test]
         public async Task DonateToAllianceResearchAsync_PostsToTheSpecificTechnologyWithHiveIdAndClientRequestId()
         {
