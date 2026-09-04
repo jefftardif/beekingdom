@@ -61,7 +61,23 @@ public sealed record SpeedUpCommandResult(bool Succeeded, string Code, SpeedUpRe
 public sealed class SpeedUpInventoryService(IHiveStateRepository repository, IServerClock clock, SpeedUpOptions options)
 {
     private readonly SpeedUpOptions configuration = options ?? throw new ArgumentNullException(nameof(options));
-    private readonly IReadOnlyDictionary<string, ISpeedUpTargetHandler> handlers = CreateHandlers();
+
+    // M045-CL: the four per-category handlers used to live here as private nested classes; they
+    // now live in OperationTimerReduction (shared with Alliance Help) - this tries the requested
+    // category, or all four in turn for the "universal" item category, exactly like the old
+    // CompositeSpeedUpHandler did.
+    private static bool TryApplyByCategory(string category, PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out PlayerHiveState updatedState, out OperationTimerInfo info)
+    {
+        if (!string.Equals(category, SpeedUpCategories.Universal, StringComparison.Ordinal))
+            return OperationTimerReduction.TryReduce(state, category, targetId, now, duration, out updatedState, out info);
+
+        string[] universalCategories = [SpeedUpCategories.Construction, SpeedUpCategories.Research, SpeedUpCategories.Training, SpeedUpCategories.Healing, SpeedUpCategories.Manufacturing];
+        foreach (string universalCategory in universalCategories)
+            if (OperationTimerReduction.TryReduce(state, universalCategory, targetId, now, duration, out updatedState, out info)) return true;
+        updatedState = state;
+        info = default;
+        return false;
+    }
 
     public async Task<SpeedUpReadSnapshot?> ReadAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default)
     {
@@ -106,15 +122,13 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
                 return RecordFailure(state, request, payloadHash, "inventory_insufficient", now, out result);
 
             string handlerKey = string.Equals(definition.Category, SpeedUpCategories.Universal, StringComparison.Ordinal) ? SpeedUpCategories.Universal : request.Category;
-            if (!handlers.TryGetValue(handlerKey, out ISpeedUpTargetHandler? handler))
-                return RecordFailure(state, request, payloadHash, "category_unsupported", now, out result);
-            if (!handler.TryApply(state, request.TargetId, now, TimeSpan.FromSeconds(definition.DurationSeconds), out TargetApplyResult target))
-                return RecordFailure(state, request, payloadHash, target.Code, now, out result);
+            if (!TryApplyByCategory(handlerKey, state, request.TargetId, now, TimeSpan.FromSeconds(definition.DurationSeconds), out PlayerHiveState reducedState, out OperationTimerInfo timer))
+                return RecordFailure(state, request, payloadHash, "timer_not_found", now, out result);
 
             inventory[request.ItemId] = quantity - 1;
-            PlayerHiveState updated = target.State with { Revision = state.Revision + 1, SpeedUps = inventory };
-            string code = target.Completed ? "speedup_applied_completed" : "speedup_applied";
-            return RecordSuccess(updated, request, payloadHash, code, now, target.OperationId, out result);
+            PlayerHiveState updated = reducedState with { Revision = state.Revision + 1, SpeedUps = inventory };
+            string code = timer.Completed ? "speedup_applied_completed" : "speedup_applied";
+            return RecordSuccess(updated, request, payloadHash, code, now, timer.OperationId, out result);
         }, cancellationToken);
         return result ?? Failure(playerId, hiveId, "mutation_failed");
     }
@@ -169,89 +183,4 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
         return new SpeedUpReadSnapshot(state.PlayerId, state.HiveId, configuration.ContractVersion, state.Revision, now, new SpeedUpInventorySnapshot(new Dictionary<string, int>(state.SpeedUps ?? new Dictionary<string, int>())), timers, rewards, events);
     }
 
-    private static Dictionary<string, ISpeedUpTargetHandler> CreateHandlers() => new(StringComparer.Ordinal)
-    {
-        [SpeedUpCategories.Construction] = new OperationSpeedUpHandler(HiveOperationKind.BuildingUpgrade),
-        [SpeedUpCategories.Manufacturing] = new OperationSpeedUpHandler(HiveOperationKind.Production),
-        [SpeedUpCategories.Research] = new ResearchSpeedUpHandler(),
-        [SpeedUpCategories.Training] = new TrainingSpeedUpHandler(),
-        [SpeedUpCategories.Healing] = new HealingSpeedUpHandler(),
-        [SpeedUpCategories.Universal] = new CompositeSpeedUpHandler(new OperationSpeedUpHandler(HiveOperationKind.BuildingUpgrade), new ResearchSpeedUpHandler(), new TrainingSpeedUpHandler(), new HealingSpeedUpHandler(), new OperationSpeedUpHandler(HiveOperationKind.Production))
-    };
-
-    private interface ISpeedUpTargetHandler
-    {
-        bool TryApply(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out TargetApplyResult result);
-    }
-
-    private sealed record TargetApplyResult(bool Success, string Code, PlayerHiveState State, Guid? OperationId, bool Completed);
-
-    private sealed class OperationSpeedUpHandler(HiveOperationKind kind) : ISpeedUpTargetHandler
-    {
-        public bool TryApply(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out TargetApplyResult result)
-        {
-            int index = state.Operations.FindIndex(operation => operation.Kind == kind && operation.BuildingKey == targetId && operation.Status != HiveOperationStatus.Collected);
-            if (index < 0) { result = new(false, "timer_not_found", state, null, false); return false; }
-            HiveOperation operation = state.Operations[index];
-            DateTimeOffset end = operation.CompletesAtUtc - duration;
-            bool completed = end <= now;
-            List<HiveOperation> operations = [.. state.Operations];
-            operations[index] = operation with { CompletesAtUtc = end <= now ? now : end, Status = completed ? HiveOperationStatus.AwaitingCollection : HiveOperationStatus.Running };
-            result = new(true, "speedup_applied", state with { Operations = operations }, operation.OperationId, completed);
-            return true;
-        }
-    }
-
-    private sealed class ResearchSpeedUpHandler : ISpeedUpTargetHandler
-    {
-        public bool TryApply(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out TargetApplyResult result)
-        {
-            ResearchOperation? operation = state.Research?.ActiveOperation;
-            if (operation is null || operation.ResearchId != targetId) { result = new(false, "timer_not_found", state, null, false); return false; }
-            DateTimeOffset end = operation.EndsAtUtc - duration;
-            bool completed = end <= now;
-            HiveResearchState research = state.Research! with { ActiveOperation = operation with { EndsAtUtc = end <= now ? now : end } };
-            result = new(true, "speedup_applied", state with { Research = research }, operation.OperationId, completed);
-            return true;
-        }
-    }
-
-    private sealed class TrainingSpeedUpHandler : ISpeedUpTargetHandler
-    {
-        public bool TryApply(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out TargetApplyResult result)
-        {
-            DoctrineTrainingOperation? operation = state.DoctrineRoster?.ActiveOperation;
-            if (operation is null || operation.Family != targetId) { result = new(false, "timer_not_found", state, null, false); return false; }
-            DateTimeOffset end = operation.EndsAtUtc - duration;
-            bool completed = end <= now;
-            DoctrineRosterState roster = state.DoctrineRoster! with { ActiveOperation = operation with { EndsAtUtc = end <= now ? now : end } };
-            result = new(true, "speedup_applied", state with { DoctrineRoster = roster }, operation.OperationId, completed);
-            return true;
-        }
-    }
-
-    private sealed class HealingSpeedUpHandler : ISpeedUpTargetHandler
-    {
-        public bool TryApply(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out TargetApplyResult result)
-        {
-            BroodVitalityOperation? operation = state.BroodVitality?.ActiveOperation;
-            if (operation is null || operation.Type != targetId) { result = new(false, "timer_not_found", state, null, false); return false; }
-            DateTimeOffset end = operation.EndsAtUtc - duration;
-            bool completed = end <= now;
-            BroodVitalityState vitality = state.BroodVitality! with { ActiveOperation = operation with { EndsAtUtc = end <= now ? now : end } };
-            result = new(true, "speedup_applied", state with { BroodVitality = vitality }, operation.OperationId, completed);
-            return true;
-        }
-    }
-
-    private sealed class CompositeSpeedUpHandler(params ISpeedUpTargetHandler[] handlers) : ISpeedUpTargetHandler
-    {
-        public bool TryApply(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out TargetApplyResult result)
-        {
-            foreach (ISpeedUpTargetHandler handler in handlers)
-                if (handler.TryApply(state, targetId, now, duration, out result)) return true;
-            result = new(false, "timer_not_found", state, null, false);
-            return false;
-        }
-    }
 }

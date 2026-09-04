@@ -1154,7 +1154,17 @@ private static float resourceInventoryOpenedAt = -10f;
 
 		private static int allianceUnreadChatMessages = 3;
 
-		private static int allianceAvailableHelpRequests = 1;
+		// M045-CL: was a hardcoded fake (always 1) - now the real count of other members' open
+		// requests still eligible for this player to help, from the same controller-owned list the
+		// "Aides" panel itself renders (AllianceHelpRowStatus.Eligible = not already helped by me).
+		private static int AllianceAvailableHelpRequests()
+		{
+			IReadOnlyList<AllianceHelpRowModel> rows = allianceCenterController?.HelpRequests;
+			if (rows == null) return 0;
+			int count = 0;
+			for (int i = 0; i < rows.Count; i++) if (rows[i].Status == AllianceHelpRowStatus.Eligible) count++;
+			return count;
+		}
 
 		private static bool allianceNewAnnouncement = true;
 
@@ -3969,6 +3979,11 @@ private static string courierToast = string.Empty;
             {
                 GUI.Label(new Rect(margin, y, contentWidth, 18f), "Entrainement en cours : " + Mathf.RoundToInt((float)model.Progress01(doctrineRecruitmentController.Elapsed) * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
                 DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), (float)model.Progress01(doctrineRecruitmentController.Elapsed));
+                // M045B-CL: same real HiveDoctrineRecruitmentOperationModel the countdown above
+                // already reads (active.Family == officialSelectedTroopFamily, not awaiting claim).
+                double estimatedOriginalDurationSeconds = (active.EndsAtUtc - active.StartedAtUtc).TotalSeconds;
+                DrawAllianceHelpAction(new Rect(margin, y + 38f, contentWidth, 34f),
+                    MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Training, officialSelectedTroopFamily, estimatedOriginalDurationSeconds, false);
             }
             else if (RegisterFtueTrainingButtonAndDraw(new Rect(margin, y, contentWidth, 44f), OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily)))
             {
@@ -32251,7 +32266,7 @@ if (leftNavigationTexture == null)
         {
             switch (actionId)
             {
-                case "help": return allianceAvailableHelpRequests;
+                case "help": return AllianceAvailableHelpRequests();
                 case "announce": return allianceNewAnnouncement ? 1 : 0;
                 case "chat": return allianceUnreadChatMessages;
                 default: return 0;
@@ -32352,6 +32367,7 @@ if (leftNavigationTexture == null)
                 allianceActionPanelOpen = actionId;
                 allianceActionPanelOpenedAt = NowForUi();
                 if (actionId == "announce") allianceNewAnnouncement = false;
+                if (actionId == "help") allianceCenterController.RefreshHelp();
                 localPreviewLoopMessage = "Action Alliance: " + title;
             }
         }
@@ -32399,6 +32415,21 @@ if (leftNavigationTexture == null)
                 return;
             }
 
+            if (id == "help")
+            {
+                DrawAllianceHelpBody(new Rect(panel.x + 18f, header.yMax + 12f, panel.width - 36f, panel.yMax - 44f - (header.yMax + 12f) - 6f), compact);
+                Rect closeHelp = new Rect(panel.x + 18f, panel.yMax - 44f, panel.width - 36f, 34f);
+                DrawPremiumPanel(closeHelp, new Color(0.40f, 0.22f, 0.05f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.94f));
+                GUI.Label(closeHelp, "Fermer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+                if (GUI.Button(closeHelp, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    AudioManager.Instance?.PlayMenuClose();
+                    allianceActionPanelOpen = string.Empty;
+                }
+                return;
+            }
+
             string body = AllianceActionBody(id);
             GUI.Label(new Rect(panel.x + 18f, header.yMax + 16f, panel.width - 36f, 130f), body, new GUIStyle(smallStyle) { wordWrap = true, fontSize = compact ? 13 : 15 });
             GUI.Label(new Rect(panel.x + 18f, panel.yMax - 74f, panel.width - 36f, 40f), AllianceActionFooter(id), new GUIStyle(tinyLabelStyle) { wordWrap = true, alignment = TextAnchor.MiddleLeft });
@@ -32412,6 +32443,104 @@ if (leftNavigationTexture == null)
                 AudioManager.Instance?.PlayMenuClose();
                 allianceActionPanelOpen = string.Empty;
             }
+        }
+
+        // M045-CL: real Alliance Help - lists other members' open requests (allianceCenterController.
+        // HelpRequests), server-computed RemainingSeconds/HelpCount refreshed after every mutation.
+        // Never a client-side countdown of its own.
+        private static void DrawAllianceHelpBody(Rect area, bool compact)
+        {
+            IReadOnlyList<AllianceHelpRowModel> rows = allianceCenterController.HelpRequests;
+            int eligibleCount = 0;
+            for (int i = 0; i < rows.Count; i++) if (rows[i].Status == AllianceHelpRowStatus.Eligible) eligibleCount++;
+
+            float y = area.y;
+            if (rows.Count == 0)
+            {
+                GUI.Label(new Rect(area.x, y, area.width, 40f), "Aucune demande d'aide pour le moment.", new GUIStyle(smallStyle) { fontSize = compact ? 12 : 13, wordWrap = true });
+                return;
+            }
+
+            if (eligibleCount > 1)
+            {
+                Rect helpAll = new Rect(area.x, y, area.width, 30f);
+                DrawPremiumPanel(helpAll, new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+                GUI.Label(helpAll, "Aider tout (" + eligibleCount.ToString(CultureInfo.InvariantCulture) + ")", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+                if (GUI.Button(helpAll, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    allianceCenterController.ContributeHelpAll();
+                }
+                y += 30f + 8f;
+            }
+            else if (eligibleCount == 0)
+            {
+                GUI.Label(new Rect(area.x, y, area.width, 18f), "Vous avez aidé toutes les demandes disponibles.", new GUIStyle(tinyLabelStyle) { fontSize = 10, wordWrap = true });
+                y += 22f;
+            }
+
+            for (int i = 0; i < rows.Count && y + 46f <= area.yMax; i++)
+            {
+                AllianceHelpRowModel row = rows[i];
+                Rect rowRect = new Rect(area.x, y, area.width, 42f);
+                DrawPremiumPanel(rowRect, new Color(0.05f, 0.055f, 0.07f, 0.9f), new Color(0.4f, 0.4f, 0.4f, 0.5f));
+                GUI.Label(new Rect(rowRect.x + 8f, rowRect.y + 3f, rowRect.width - 100f, 16f),
+                    row.RequestingDisplayName + " — " + AllianceHelpCategoryLabel(row.OperationCategory),
+                    new GUIStyle(badgeStyle) { fontSize = compact ? 9 : 10 });
+                GUI.Label(new Rect(rowRect.x + 8f, rowRect.y + 20f, rowRect.width - 100f, 18f),
+                    "Restant : " + FormatBuildingUpgradeDuration(TimeSpan.FromSeconds(row.RemainingSeconds)) + "   Aides : " + row.HelpCount.ToString(CultureInfo.InvariantCulture) + " / " + row.MaxHelpCount.ToString(CultureInfo.InvariantCulture),
+                    new GUIStyle(tinyLabelStyle) { fontSize = compact ? 9 : 10 });
+
+                Rect actionBtn = new Rect(rowRect.xMax - 88f, rowRect.y + 6f, 80f, 30f);
+                switch (row.Status)
+                {
+                    case AllianceHelpRowStatus.Sending:
+                        DrawPremiumPanel(actionBtn, new Color(0.15f, 0.12f, 0.08f, 0.7f), new Color(0.6f, 0.5f, 0.3f, 0.6f));
+                        GUI.Label(actionBtn, "Envoi…", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        break;
+                    case AllianceHelpRowStatus.Helped:
+                    case AllianceHelpRowStatus.AlreadyHelped:
+                        DrawPremiumPanel(actionBtn, new Color(0.12f, 0.14f, 0.18f, 0.7f), new Color(0.4f, 0.5f, 0.7f, 0.6f));
+                        GUI.Label(actionBtn, "Aidé", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                        break;
+                    case AllianceHelpRowStatus.RequestFull:
+                        DrawPremiumPanel(actionBtn, new Color(0.12f, 0.14f, 0.18f, 0.7f), new Color(0.4f, 0.5f, 0.7f, 0.6f));
+                        GUI.Label(actionBtn, "Complet", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        break;
+                    case AllianceHelpRowStatus.OperationCompleted:
+                        DrawPremiumPanel(actionBtn, new Color(0.12f, 0.14f, 0.18f, 0.7f), new Color(0.4f, 0.5f, 0.7f, 0.6f));
+                        GUI.Label(actionBtn, "Terminé", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        break;
+                    case AllianceHelpRowStatus.Error:
+                        DrawPremiumPanel(actionBtn, new Color(0.45f, 0.16f, 0.14f, 0.95f), new Color(0.9f, 0.4f, 0.35f, 0.7f));
+                        GUI.Label(actionBtn, "Réessayer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        if (GUI.Button(actionBtn, string.Empty, GUIStyle.none))
+                        {
+                            AudioManager.Instance?.PlayUIClick();
+                            allianceCenterController.ContributeHelp(row.HelpRequestId);
+                        }
+                        break;
+                    default:
+                        DrawPremiumPanel(actionBtn, new Color(0.20f, 0.45f, 0.18f, 0.95f), new Color(0.5f, 0.9f, 0.5f, 0.7f));
+                        GUI.Label(actionBtn, "Aider", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                        if (GUI.Button(actionBtn, string.Empty, GUIStyle.none))
+                        {
+                            AudioManager.Instance?.PlayUIClick();
+                            allianceCenterController.ContributeHelp(row.HelpRequestId);
+                        }
+                        break;
+                }
+                y += 42f + 6f;
+            }
+        }
+
+        private static string AllianceHelpCategoryLabel(string category)
+        {
+            if (string.Equals(category, "construction", StringComparison.Ordinal)) return "Construction";
+            if (string.Equals(category, "research", StringComparison.Ordinal)) return "Recherche";
+            if (string.Equals(category, "training", StringComparison.Ordinal)) return "Entraînement";
+            if (string.Equals(category, "healing", StringComparison.Ordinal)) return "Soins";
+            return category ?? string.Empty;
         }
 
         // M043B-CL: real player search + invite (Part 2/12) - uses the generic PlayerDirectoryClient
@@ -32559,9 +32688,7 @@ if (leftNavigationTexture == null)
                 case "invite":
                     return "Le partage de lien d'invitation sera disponible dès qu'une alliance pourra accueillir de nouveaux membres. Cette action est en préparation : aucune invitation n'est envoyée pour l'instant.";
                 case "help":
-                    if (allianceAvailableHelpRequests > 0)
-                        return allianceAvailableHelpRequests.ToString(CultureInfo.InvariantCulture) + " demande" + (allianceAvailableHelpRequests > 1 ? "s" : "") + " d'aide est disponible pour vos membres. L'envoi d'aide réel sera relié au serveur au prochain sprint.";
-                    return "Aucune aide n'est disponible actuellement. Revenez un peu plus tard lorsque vos membres auront besoin d'un coup de main.";
+                    return string.Empty; // M045-CL: real content drawn by DrawAllianceHelpBody, not this generic body label.
                 case "announce":
                     return "La rédaction d'annonces sera disponible pour le Chef et les Officiers autorisés. Cette fenêtre est un point d'entrée préparé pour les prochains sprints.";
                 // "chat" is handled entirely by DrawAllianceChatDrawer (real backend, M043B-CL) -
@@ -32577,6 +32704,7 @@ if (leftNavigationTexture == null)
         {
             if (!AllianceActionAllowed(actionId))
                 return "Action réservée. Rôle actuel : " + AllianceRoleLabel(alliancePlayerRole) + ".";
+            if (actionId == "help") return string.Empty; // M045-CL: real, server-backed - no "aperçu local" disclaimer.
             string roleSuffix = alliancePlayerRole == "chef" ? " (Chef)" : alliancePlayerRole == "officier" ? " (Officier)" : " (Membre)";
             return "Point d'entrée " + AllianceRoleLabel(alliancePlayerRole) + ". Aperçu local — aucune action officielle envoyée.";
         }
@@ -36139,7 +36267,19 @@ if (leftNavigationTexture == null)
                 if (official) RunOfficialResearchAction(definition.ResearchId);
                 else StartPreviewResearch(definition.ResearchId);
             }
-            if (running) DrawProgressBar(new Rect(action.x, action.yMax + 8f, action.width, 7f), official && model != null ? (float)model.Progress01(researchController.Elapsed) : ResearchProgress01());
+            if (running)
+            {
+                DrawProgressBar(new Rect(action.x, action.yMax + 8f, action.width, 7f), official && model != null ? (float)model.Progress01(researchController.Elapsed) : ResearchProgress01());
+                // M045B-CL: only the real official path has a real server-backed operation to attach
+                // help to - the local preview research (no official session configured) has nothing
+                // for Alliance Help to reduce.
+                if (official && model?.ActiveOperation != null && string.Equals(model.ActiveOperation.ResearchId, definition.ResearchId, StringComparison.Ordinal) && !model.ActiveOperation.IsAwaitingCompletion)
+                {
+                    double estimatedOriginalDurationSeconds = (model.ActiveOperation.CompletesAtUtc - model.ActiveOperation.StartedAtUtc).TotalSeconds;
+                    DrawAllianceHelpAction(new Rect(action.x, action.yMax + 19f, action.width, 24f),
+                        MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Research, definition.ResearchId, estimatedOriginalDurationSeconds, true);
+                }
+            }
             else GUI.Label(new Rect(action.x - 4f, action.yMax + 6f, action.width + 8f, 22f), reason, new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 8 : 9, wordWrap = true });
         }
 
@@ -42008,6 +42148,7 @@ public static void ResetMissionsStateForProof()
                         panel.width - 36f,
                         6f),
                     progress);
+                DrawBroodVitalityAllianceHelpAction(model, new Rect(panel.x + 18f, panel.y + 165f, panel.width - 36f, 30f));
                 return;
             }
 
@@ -42065,6 +42206,21 @@ public static void ResetMissionsStateForProof()
                     "brood_care.disclosure",
                     "Coût, minuterie et vitalité validés par le serveur · cache hors ligne en lecture seule"),
                 new GUIStyle(tinyLabelStyle) { wordWrap = true });
+            DrawBroodVitalityAllianceHelpAction(model, new Rect(panel.x + 16f, panel.y + 258f, panel.width - 32f, 34f));
+        }
+
+        // M045B-CL: real Healing operation adapter, wired the same way as Construction/Research/
+        // Training. Current Brood Vitality durations are hardcoded to 12s (feeding) / 13s
+        // (stabilization) in BroodVitalityCareService - always below the 300s Alpha eligibility hint
+        // used here (see DrawAllianceHelpAction), so this correctly never becomes actionable in
+        // today's real gameplay. Documented in Docs/AI/Missions/M045B-CL-Alliance-Help-Player-Entry-Points.md
+        // rather than special-cased away - if a future balance pass lengthens these durations, this
+        // needs no further work.
+        private static void DrawBroodVitalityAllianceHelpAction(HiveBroodVitalityScreenModel model, Rect area)
+        {
+            if (model?.ActiveOperation == null) return;
+            double estimatedOriginalDurationSeconds = (model.ActiveOperation.EndsAtUtc - model.ActiveOperation.StartedAtUtc).TotalSeconds;
+            DrawAllianceHelpAction(area, MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Healing, model.ActiveOperation.Type, estimatedOriginalDurationSeconds, false);
         }
 
         private static bool OfficialBroodVitalitySingleActionEnabled(
@@ -42279,6 +42435,56 @@ public static void ResetMissionsStateForProof()
             }
         }
 
+        // M045B-CL: shared "Demander de l'aide" contextual action, reused as-is by Construction/
+        // Research/Training. Server (AllianceHelpOptions) remains authoritative on real eligibility
+        // (membership, MaxHelpCount, threshold) - `minEligibleDurationSecondsHint` is a client-side
+        // UX prediction ONLY (mirrors the server's own documented Alpha default,
+        // AllianceHelpOptions.MinEligibleOriginalDurationSeconds = 300s) so a hopeless click on an
+        // obviously-too-short operation never even shows a button; if that default ever drifts
+        // server-side, the worst case is a rare extra click met with a real, visible server error -
+        // never a wrong permanent hide.
+        private static void DrawAllianceHelpAction(Rect area, Guid hiveId, string operationCategory, string operationTargetId, double estimatedOriginalDurationSeconds, bool compact)
+        {
+            const double minEligibleDurationSecondsHint = 300d;
+            if (hiveId == Guid.Empty || string.IsNullOrEmpty(operationTargetId)) return;
+            if (estimatedOriginalDurationSeconds > 0d && estimatedOriginalDurationSeconds < minEligibleDurationSecondsHint) return;
+
+            allianceCenterController.RefreshHelpOperationState(operationCategory, operationTargetId);
+            AllianceHelpOperationState state = allianceCenterController.GetHelpOperationState(operationCategory, operationTargetId);
+            bool inAlliance = allianceCenterController.Model?.Overview != null;
+
+            string label;
+            bool enabled;
+            switch (state.State)
+            {
+                case AllianceHelpOperationRequestState.Sending:
+                    label = "Envoi…";
+                    enabled = false;
+                    break;
+                case AllianceHelpOperationRequestState.Requested:
+                    label = (state.HelpCount >= state.MaxHelpCount ? "Aides reçues · " : "Aide demandée · ")
+                        + state.HelpCount.ToString(CultureInfo.InvariantCulture) + "/" + state.MaxHelpCount.ToString(CultureInfo.InvariantCulture);
+                    enabled = false;
+                    break;
+                case AllianceHelpOperationRequestState.Error:
+                    label = "Réessayer";
+                    enabled = inAlliance;
+                    break;
+                default:
+                    label = "Demander de l'aide";
+                    enabled = inAlliance;
+                    break;
+            }
+
+            localPreviewDisabledReason = inAlliance ? string.Empty : "Rejoignez une alliance pour demander de l'aide.";
+            if (DrawPreviewActionButton(area, label, enabled, true)
+                && state.State != AllianceHelpOperationRequestState.Sending
+                && state.State != AllianceHelpOperationRequestState.Requested)
+            {
+                allianceCenterController.RequestHelp(hiveId, operationCategory, operationTargetId);
+            }
+        }
+
         private static void DrawOfficialBuildingUpgradeOnlyDetail(Rect panel, ReferenceHiveHotspot hotspot, bool compact)
         {
             HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
@@ -42294,6 +42500,7 @@ public static void ResetMissionsStateForProof()
                     new GUIStyle(tinyLabelStyle) { wordWrap = true });
                 DrawProgressBar(new Rect(panel.x + 18f, panel.y + 153f, panel.width - 36f, 6f), progress);
                 DrawLocalContextualSpeedUpButton(panel, hotspot, true, false);
+                DrawConstructionAllianceHelpAction(panel, hotspot, model, new Rect(panel.x + 18f, panel.y + 165f, panel.width - 36f, 30f));
                 return;
             }
 
@@ -42318,6 +42525,18 @@ public static void ResetMissionsStateForProof()
             GUI.Label(new Rect(panel.x + 16f, panel.y + 228f, panel.width - 32f, 28f),
                 BeeLocalization.Text("building_upgrade.disclosure", "Coût, durée, heure et niveau validés par le serveur · cache hors ligne en lecture seule"),
                 new GUIStyle(tinyLabelStyle) { wordWrap = true });
+            DrawConstructionAllianceHelpAction(panel, hotspot, model, new Rect(panel.x + 16f, panel.y + 258f, panel.width - 32f, 34f));
+        }
+
+        // M045B-CL: only shown while THIS building's own real operation is running (not awaiting
+        // collection - nothing left to help there) - the exact same HiveOperation the countdown
+        // above is already reading from, never a second lookup.
+        private static void DrawConstructionAllianceHelpAction(Rect panel, ReferenceHiveHotspot hotspot, HiveBuildingUpgradeScreenModel model, Rect area)
+        {
+            if (model?.ActiveOperation == null || !string.Equals(model.ActiveOperation.BuildingKey, hotspot.HotspotId, StringComparison.Ordinal) || model.ActiveOperation.IsAwaitingCompletion)
+                return;
+            double estimatedOriginalDurationSeconds = (model.ActiveOperation.CompletesAtUtc - model.ActiveOperation.StartedAtUtc).TotalSeconds;
+            DrawAllianceHelpAction(area, MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Construction, hotspot.HotspotId, estimatedOriginalDurationSeconds, false);
         }
 
         private static float officialProductionDetailLastLiveRefreshAt = -100f;

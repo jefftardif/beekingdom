@@ -213,6 +213,49 @@ namespace BeeKingdom.Playground
         public InvitationRowStatus Status { get; internal set; }
     }
 
+    // M045-CL: same "row carries its own real outcome" convention as InvitationRowStatus - a click
+    // must never silently do nothing while a background refresh eventually reverts the row.
+    public enum AllianceHelpRowStatus { Eligible, Sending, Helped, AlreadyHelped, RequestFull, OperationCompleted, Error }
+
+    public sealed class AllianceHelpRowModel
+    {
+        internal AllianceHelpRowModel(RemoteAllianceHelpRequestView source)
+        {
+            HelpRequestId = source.HelpRequestId;
+            RequestingDisplayName = string.IsNullOrEmpty(source.RequestingDisplayName) ? "—" : source.RequestingDisplayName;
+            OperationCategory = source.OperationCategory ?? string.Empty;
+            OperationTargetId = source.OperationTargetId ?? string.Empty;
+            RemainingSeconds = source.RemainingSeconds;
+            HelpCount = source.HelpCount;
+            MaxHelpCount = source.MaxHelpCount;
+            Status = source.AlreadyHelpedByMe ? AllianceHelpRowStatus.AlreadyHelped : AllianceHelpRowStatus.Eligible;
+        }
+
+        public Guid HelpRequestId { get; }
+        public string RequestingDisplayName { get; }
+        public string OperationCategory { get; }
+        public string OperationTargetId { get; }
+        public long RemainingSeconds { get; internal set; }
+        public int HelpCount { get; internal set; }
+        public int MaxHelpCount { get; }
+        public AllianceHelpRowStatus Status { get; internal set; }
+    }
+
+    // M045B-CL: per-operation "does MY currently open request exist for this timer" state, owned by
+    // the same controller as everything else Alliance Help - never a second, presenter-local source
+    // of truth. `Unknown` (not yet fetched from the server this session) is deliberately distinct
+    // from `NoRequest` (fetched, confirmed none) so the timer screen can render nothing/neutral
+    // instead of a wrong "Demander de l'aide" flash before the first real read lands.
+    public enum AllianceHelpOperationRequestState { Unknown, NoRequest, Sending, Requested, Error }
+
+    public sealed class AllianceHelpOperationState
+    {
+        public AllianceHelpOperationRequestState State { get; internal set; } = AllianceHelpOperationRequestState.Unknown;
+        public int HelpCount { get; internal set; }
+        public int MaxHelpCount { get; internal set; } = 10;
+        public string ErrorCode { get; internal set; } = string.Empty;
+    }
+
     public sealed class AllianceCenterScreenModel
     {
         internal AllianceCenterScreenModel(
@@ -339,6 +382,17 @@ namespace BeeKingdom.Playground
         void Demote(Guid targetPlayerId);
         void TransferLeadership(Guid targetPlayerId);
         void Dissolve();
+
+        // M045-CL: Alliance Help.
+        IReadOnlyList<AllianceHelpRowModel> HelpRequests { get; }
+        void RefreshHelp();
+        void ContributeHelp(Guid helpRequestId);
+        void ContributeHelpAll();
+
+        // M045B-CL: real "Demander de l'aide" entry points on the operation's own timer screen.
+        AllianceHelpOperationState GetHelpOperationState(string operationCategory, string operationTargetId);
+        void RefreshHelpOperationState(string operationCategory, string operationTargetId);
+        void RequestHelp(Guid hiveId, string operationCategory, string operationTargetId);
     }
 
     public sealed class UnavailableAllianceCenterPanelController : IAllianceCenterPanelController
@@ -367,6 +421,16 @@ namespace BeeKingdom.Playground
         public void Demote(Guid targetPlayerId) { }
         public void TransferLeadership(Guid targetPlayerId) { }
         public void Dissolve() { }
+
+        public IReadOnlyList<AllianceHelpRowModel> HelpRequests => Array.Empty<AllianceHelpRowModel>();
+        public void RefreshHelp() { }
+        public void ContributeHelp(Guid helpRequestId) { }
+        public void ContributeHelpAll() { }
+
+        private static readonly AllianceHelpOperationState UnknownHelpState = new AllianceHelpOperationState();
+        public AllianceHelpOperationState GetHelpOperationState(string operationCategory, string operationTargetId) => UnknownHelpState;
+        public void RefreshHelpOperationState(string operationCategory, string operationTargetId) { }
+        public void RequestHelp(Guid hiveId, string operationCategory, string operationTargetId) { }
     }
 
     public interface IAllianceCenterMutationKeySource
@@ -394,6 +458,13 @@ namespace BeeKingdom.Playground
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private List<PlayerSearchResultModel> invitePlayerSearchResults = new List<PlayerSearchResultModel>();
         private InvitePlayerSearchStatus invitePlayerSearchStatus = InvitePlayerSearchStatus.Idle;
+        private List<AllianceHelpRowModel> helpRows = new List<AllianceHelpRowModel>();
+        private bool helpBusy;
+        // M045B-CL: keyed by "category|targetId" - one real timer screen's worth of "do I already
+        // have an open request for THIS operation" state, recovered from server truth, never stored
+        // only in a presenter-local field (reopen/reconnect/scene-change must still show it right).
+        private readonly Dictionary<string, AllianceHelpOperationState> helpOperationStates = new Dictionary<string, AllianceHelpOperationState>();
+        private readonly Dictionary<string, float> helpOperationStatesRefreshedAt = new Dictionary<string, float>();
         private bool disposed;
         private bool busy;
 
@@ -439,6 +510,31 @@ namespace BeeKingdom.Playground
         public void TransferLeadership(Guid targetPlayerId) => RunFireAndForget(() => TransferLeadershipCoreAsync(targetPlayerId));
         public void Dissolve() => RunFireAndForget(() => DissolveCoreAsync());
 
+        // M045-CL: Alliance Help.
+        public IReadOnlyList<AllianceHelpRowModel> HelpRequests => helpRows;
+        public void RefreshHelp() => RunFireAndForget(() => RefreshHelpCoreAsync());
+        public void ContributeHelp(Guid helpRequestId) => RunFireAndForget(() => ContributeHelpCoreAsync(helpRequestId));
+        public void ContributeHelpAll() => RunFireAndForget(() => ContributeHelpAllCoreAsync());
+        // M045B-CL: real player entry points.
+        public AllianceHelpOperationState GetHelpOperationState(string operationCategory, string operationTargetId)
+            => helpOperationStates.TryGetValue(HelpOperationKey(operationCategory, operationTargetId), out AllianceHelpOperationState state) ? state : new AllianceHelpOperationState();
+
+        public void RefreshHelpOperationState(string operationCategory, string operationTargetId)
+        {
+            string key = HelpOperationKey(operationCategory, operationTargetId);
+            // No aggressive polling - a screen that redraws every frame only actually asks the
+            // server again every few seconds per operation, same cadence family as the existing
+            // official production/building-upgrade periodic refresh on this same screen.
+            float now = Time.unscaledTime;
+            if (helpOperationStatesRefreshedAt.TryGetValue(key, out float last) && now - last < 5f) return;
+            helpOperationStatesRefreshedAt[key] = now;
+            RunFireAndForget(() => RefreshHelpOperationStateCoreAsync(operationCategory, operationTargetId));
+        }
+
+        public void RequestHelp(Guid hiveId, string operationCategory, string operationTargetId) => RunFireAndForget(() => RequestHelpCoreAsync(hiveId, operationCategory, operationTargetId));
+
+        private static string HelpOperationKey(string operationCategory, string operationTargetId) => (operationCategory ?? string.Empty) + "|" + (operationTargetId ?? string.Empty);
+
         public void Dispose()
         {
             if (disposed) return;
@@ -456,6 +552,12 @@ namespace BeeKingdom.Playground
         public Task DissolveForProofAsync() => DissolveCoreAsync();
         public Task SearchPlayersForInviteForProofAsync(string query) => SearchPlayersForInviteCoreAsync(query);
         public Task InvitePlayerForProofAsync(Guid playerId) => InvitePlayerCoreAsync(playerId);
+        public Task RefreshHelpForProofAsync() => RefreshHelpCoreAsync();
+        public Task ContributeHelpForProofAsync(Guid helpRequestId) => ContributeHelpCoreAsync(helpRequestId);
+        public Task ContributeHelpAllForProofAsync() => ContributeHelpAllCoreAsync();
+        public Task<RemoteAllianceHelpRequest> GetMyOpenHelpRequestForProofAsync(string operationCategory, string operationTargetId) => client.GetMyOpenHelpRequestAsync(operationCategory, operationTargetId, lifetime.Token);
+        public Task RefreshHelpOperationStateForProofAsync(string operationCategory, string operationTargetId) => RefreshHelpOperationStateCoreAsync(operationCategory, operationTargetId);
+        public Task RequestHelpForProofAsync(Guid hiveId, string operationCategory, string operationTargetId) => RequestHelpCoreAsync(hiveId, operationCategory, operationTargetId);
 
         private async void RunFireAndForget(Func<Task> action) { try { await action(); } catch { /* Model already carries the Error state */ } }
 
@@ -765,6 +867,148 @@ namespace BeeKingdom.Playground
                 }
             }
             busy = false;
+        }
+
+        // M045-CL: Alliance Help. Never a parallel timer here either - the row's RemainingSeconds is
+        // only ever what the server just reported (ListHelpRequestsAsync/ContributeHelpAsync's
+        // returned Request), refreshed after every mutation. Uses its own helpBusy flag rather than
+        // the general `busy` one so a request-creation click elsewhere in Alliance Center never gets
+        // silently blocked by an in-flight help contribution, and vice versa.
+        private async Task RefreshHelpCoreAsync()
+        {
+            if (disposed) return;
+            try
+            {
+                List<RemoteAllianceHelpRequestView> views = await client.ListHelpRequestsAsync(lifetime.Token);
+                if (disposed) return;
+                helpRows = (views ?? new List<RemoteAllianceHelpRequestView>()).Select(v => new AllianceHelpRowModel(v)).ToList();
+            }
+            catch (Exception exception)
+            {
+                if (!disposed) Debug.LogWarning("[AllianceHelp] ListHelpRequests failed: " + exception.GetType().Name + " - " + exception.Message);
+            }
+        }
+
+        private async Task ContributeHelpCoreAsync(Guid helpRequestId)
+        {
+            if (helpBusy || disposed) return;
+            AllianceHelpRowModel row = helpRows.FirstOrDefault(r => r.HelpRequestId == helpRequestId);
+            if (row == null || row.Status == AllianceHelpRowStatus.Sending || row.Status == AllianceHelpRowStatus.Helped || row.Status == AllianceHelpRowStatus.AlreadyHelped) return;
+            helpBusy = true;
+            row.Status = AllianceHelpRowStatus.Sending;
+            try
+            {
+                string key = keySource.Create("help-contribute");
+                RemoteContributeAllianceHelpResult result = await client.ContributeHelpAsync(helpRequestId, key, lifetime.Token);
+                if (disposed) return;
+                row.Status = result.Succeeded ? AllianceHelpRowStatus.Helped : AllianceHelpRowStatus.Error;
+                if (result.Request != null) row.HelpCount = result.Request.HelpCount;
+            }
+            catch (HivePerimeterClientException error)
+            {
+                string code = StableError(error);
+                row.Status = code == "already_helped" ? AllianceHelpRowStatus.AlreadyHelped
+                    : code == "help_full" || code == "request_not_open" ? AllianceHelpRowStatus.RequestFull
+                    : code == "operation_completed" ? AllianceHelpRowStatus.OperationCompleted
+                    : AllianceHelpRowStatus.Error;
+                Debug.LogWarning("[AllianceHelp] ContributeHelp rejected for request " + helpRequestId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    row.Status = AllianceHelpRowStatus.Error;
+                    Debug.LogWarning("[AllianceHelp] ContributeHelp failed for request " + helpRequestId + ": " + exception.GetType().Name + " - " + exception.Message);
+                }
+            }
+            helpBusy = false;
+        }
+
+        private async Task ContributeHelpAllCoreAsync()
+        {
+            if (helpBusy || disposed) return;
+            helpBusy = true;
+            try
+            {
+                string key = keySource.Create("help-contribute-all");
+                RemoteContributeAllianceHelpAllResult result = await client.ContributeHelpAllAsync(key, lifetime.Token);
+                if (disposed) return;
+                if (result?.Results != null)
+                {
+                    foreach (RemoteContributeAllianceHelpResult single in result.Results)
+                    {
+                        AllianceHelpRowModel row = single.Request != null ? helpRows.FirstOrDefault(r => r.HelpRequestId == single.Request.HelpRequestId) : null;
+                        if (row == null) continue;
+                        row.Status = single.Succeeded ? AllianceHelpRowStatus.Helped : AllianceHelpRowStatus.Error;
+                        if (single.Request != null) row.HelpCount = single.Request.HelpCount;
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[AllianceHelp] ContributeHelpAll failed: " + exception.GetType().Name + " - " + exception.Message);
+            }
+            helpBusy = false;
+        }
+
+        // M045B-CL: recovers "do I already have an open request for this exact operation" from
+        // server truth (GET /alliance/v1/help/requests/mine) - covers reopen/reconnect/scene-change,
+        // never assumes state from a prior local click.
+        private async Task RefreshHelpOperationStateCoreAsync(string operationCategory, string operationTargetId)
+        {
+            if (disposed) return;
+            string key = HelpOperationKey(operationCategory, operationTargetId);
+            try
+            {
+                RemoteAllianceHelpRequest existing = await client.GetMyOpenHelpRequestAsync(operationCategory, operationTargetId, lifetime.Token);
+                if (disposed) return;
+                helpOperationStates[key] = existing != null && existing.Status == RemoteAllianceHelpRequestStatus.Open
+                    ? new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.Requested, HelpCount = existing.HelpCount, MaxHelpCount = existing.MaxHelpCount }
+                    : new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.NoRequest };
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    Debug.LogWarning("[AllianceHelp] GetMyOpenHelpRequest failed for " + operationCategory + "/" + operationTargetId + ": " + exception.GetType().Name + " - " + exception.Message);
+                    // Leave existing cached state alone on a transient read failure - do not flash
+                    // the button away/back based on a network hiccup.
+                }
+            }
+        }
+
+        private async Task RequestHelpCoreAsync(Guid hiveId, string operationCategory, string operationTargetId)
+        {
+            if (disposed) return;
+            string key = HelpOperationKey(operationCategory, operationTargetId);
+            if (helpOperationStates.TryGetValue(key, out AllianceHelpOperationState current)
+                && (current.State == AllianceHelpOperationRequestState.Sending || current.State == AllianceHelpOperationRequestState.Requested)) return;
+
+            helpOperationStates[key] = new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.Sending };
+            try
+            {
+                string requestKey = keySource.Create("help-request");
+                RemoteAllianceHelpCommandResult result = await client.CreateHelpRequestAsync(hiveId, operationCategory, operationTargetId, requestKey, lifetime.Token);
+                if (disposed) return;
+                helpOperationStates[key] = result != null && result.Succeeded && result.Request != null
+                    ? new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.Requested, HelpCount = result.Request.HelpCount, MaxHelpCount = result.Request.MaxHelpCount }
+                    : new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.Error, ErrorCode = result?.Code ?? "unexpected" };
+            }
+            catch (HivePerimeterClientException error)
+            {
+                if (disposed) return;
+                string code = StableError(error);
+                helpOperationStates[key] = new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.Error, ErrorCode = code };
+                Debug.LogWarning("[AllianceHelp] CreateHelpRequest rejected for " + operationCategory + "/" + operationTargetId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    helpOperationStates[key] = new AllianceHelpOperationState { State = AllianceHelpOperationRequestState.Error, ErrorCode = "unexpected" };
+                    Debug.LogWarning("[AllianceHelp] CreateHelpRequest failed for " + operationCategory + "/" + operationTargetId + ": " + exception.GetType().Name + " - " + exception.Message);
+                }
+            }
         }
 
         private async Task LeaveCoreAsync()

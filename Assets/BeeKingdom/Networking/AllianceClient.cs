@@ -232,11 +232,86 @@ namespace BeeKingdom.Networking
         public long? NextBeforeSequence { get; set; }
     }
 
+    // M045-CL: Alliance Help category strings match Server/src/BeeKingdom.HiveOperations/
+    // SpeedUpContracts.cs's SpeedUpCategories exactly ("construction"/"research"/"training"/
+    // "healing") - reused as-is, not a second vocabulary, since Alliance Help drives the same
+    // OperationTimerReduction dispatch SpeedUp already uses.
+    public static class RemoteAllianceHelpCategories
+    {
+        public const string Construction = "construction";
+        public const string Research = "research";
+        public const string Training = "training";
+        public const string Healing = "healing";
+    }
+
+    public enum RemoteAllianceHelpRequestStatus { Open = 0, Completed = 1, Expired = 2, Cancelled = 3 }
+
+    [Serializable]
+    public sealed class RemoteAllianceHelpRequest
+    {
+        public Guid HelpRequestId { get; set; }
+        public Guid AllianceId { get; set; }
+        public Guid RequestingPlayerId { get; set; }
+        public Guid RequestingHiveId { get; set; }
+        public string OperationCategory { get; set; }
+        public string OperationTargetId { get; set; }
+        public Guid OperationId { get; set; }
+        public DateTimeOffset CreatedAtUtc { get; set; }
+        public RemoteAllianceHelpRequestStatus Status { get; set; }
+        public long OriginalDurationSeconds { get; set; }
+        public int HelpCount { get; set; }
+        public int MaxHelpCount { get; set; }
+        public long Revision { get; set; }
+        public string ClientRequestId { get; set; }
+    }
+
+    // Read-model for the "Aides" list - DisplayName and RemainingSeconds are resolved/computed
+    // server-side against the real operation at read time, never derived client-side.
+    [Serializable]
+    public sealed class RemoteAllianceHelpRequestView
+    {
+        public Guid HelpRequestId { get; set; }
+        public Guid RequestingPlayerId { get; set; }
+        public string RequestingDisplayName { get; set; }
+        public string OperationCategory { get; set; }
+        public string OperationTargetId { get; set; }
+        public long RemainingSeconds { get; set; }
+        public int HelpCount { get; set; }
+        public int MaxHelpCount { get; set; }
+        public bool AlreadyHelpedByMe { get; set; }
+        public DateTimeOffset CreatedAtUtc { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceHelpCommandResult
+    {
+        public bool Succeeded { get; set; }
+        public string Code { get; set; }
+        public RemoteAllianceHelpRequest Request { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteContributeAllianceHelpResult
+    {
+        public bool Succeeded { get; set; }
+        public string Code { get; set; }
+        public RemoteAllianceHelpRequest Request { get; set; }
+        public long? DurationReductionSeconds { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteContributeAllianceHelpAllResult
+    {
+        public List<RemoteContributeAllianceHelpResult> Results { get; set; }
+    }
+
     // ---- wire request bodies (match the server's Models/AllianceContracts.cs records field-for-field) ----
     [Serializable] public sealed class CreateAllianceWireRequest { public string Name, Tag, Description, Language, EmblemKey, ClientRequestId; public RemoteAllianceJoinMode JoinMode; }
     [Serializable] public sealed class SubmitApplicationWireRequest { public string Message, ClientRequestId; }
     [Serializable] public sealed class CreateInvitationWireRequest { public Guid InvitedPlayerId; public string ClientRequestId; }
     [Serializable] public sealed class UpdateProfileWireRequest { public string Description, Language, EmblemKey; public RemoteAllianceJoinMode? JoinMode; public long ExpectedRevision; }
+    [Serializable] public sealed class CreateAllianceHelpRequestWireRequest { public Guid HiveId; public string OperationCategory, OperationTargetId, ClientRequestId; }
+    [Serializable] public sealed class AllianceHelpContributeWireRequest { public string ClientRequestId; }
 
     public interface IAllianceClient
     {
@@ -266,6 +341,14 @@ namespace BeeKingdom.Networking
         Task<RemoteAllianceEntity> TransferLeadershipAsync(Guid targetPlayerId, CancellationToken cancellationToken = default);
         Task<RemoteAllianceEntity> DissolveAsync(CancellationToken cancellationToken = default);
         Task<RemoteAllianceEntity> UpdateProfileAsync(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode, long expectedRevision, CancellationToken cancellationToken = default);
+
+        // M045-CL: Alliance Help. Never a parallel timer client-side either - RemainingSeconds on
+        // each view row comes straight from the server's live read against the real operation.
+        Task<List<RemoteAllianceHelpRequestView>> ListHelpRequestsAsync(CancellationToken cancellationToken = default);
+        Task<RemoteAllianceHelpRequest> GetMyOpenHelpRequestAsync(string operationCategory, string operationTargetId, CancellationToken cancellationToken = default);
+        Task<RemoteAllianceHelpCommandResult> CreateHelpRequestAsync(Guid hiveId, string operationCategory, string operationTargetId, string clientRequestId, CancellationToken cancellationToken = default);
+        Task<RemoteContributeAllianceHelpResult> ContributeHelpAsync(Guid helpRequestId, string clientRequestId, CancellationToken cancellationToken = default);
+        Task<RemoteContributeAllianceHelpAllResult> ContributeHelpAllAsync(string clientRequestId, CancellationToken cancellationToken = default);
     }
 
     public sealed class AllianceClient : IAllianceClient
@@ -440,6 +523,29 @@ namespace BeeKingdom.Networking
         public Task<RemoteAllianceEntity> UpdateProfileAsync(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode, long expectedRevision, CancellationToken cancellationToken = default(CancellationToken))
             => SendAsync<RemoteAllianceEntity>("POST", BasePath + "/alliances/profile",
                 new UpdateProfileWireRequest { Description = description, Language = language, EmblemKey = emblemKey, JoinMode = joinMode, ExpectedRevision = expectedRevision }, cancellationToken);
+
+        // ---------------- M045-CL: Alliance Help ----------------
+
+        public Task<List<RemoteAllianceHelpRequestView>> ListHelpRequestsAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<List<RemoteAllianceHelpRequestView>>("GET", BasePath + "/help/requests", null, cancellationToken);
+
+        public Task<RemoteAllianceHelpRequest> GetMyOpenHelpRequestAsync(string operationCategory, string operationTargetId, CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteAllianceHelpRequest>("GET", BasePath + "/help/requests/mine?category=" + Uri.EscapeDataString(operationCategory) + "&targetId=" + Uri.EscapeDataString(operationTargetId), null, cancellationToken);
+
+        public Task<RemoteAllianceHelpCommandResult> CreateHelpRequestAsync(Guid hiveId, string operationCategory, string operationTargetId, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteAllianceHelpCommandResult>("POST", BasePath + "/help/requests",
+                new CreateAllianceHelpRequestWireRequest { HiveId = hiveId, OperationCategory = operationCategory, OperationTargetId = operationTargetId, ClientRequestId = clientRequestId }, cancellationToken);
+
+        public Task<RemoteContributeAllianceHelpResult> ContributeHelpAsync(Guid helpRequestId, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireId(helpRequestId);
+            return SendAsync<RemoteContributeAllianceHelpResult>("POST", BasePath + "/help/requests/" + helpRequestId.ToString("D") + "/contribute",
+                new AllianceHelpContributeWireRequest { ClientRequestId = clientRequestId }, cancellationToken);
+        }
+
+        public Task<RemoteContributeAllianceHelpAllResult> ContributeHelpAllAsync(string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteContributeAllianceHelpAllResult>("POST", BasePath + "/help/contribute-all",
+                new AllianceHelpContributeWireRequest { ClientRequestId = clientRequestId }, cancellationToken);
 
         // ---------------- plumbing (mirrors HiveResearchClient) ----------------
 

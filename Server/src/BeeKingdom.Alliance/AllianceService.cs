@@ -5,6 +5,7 @@ using BeeKingdom.Alliance.Repositories;
 using BeeKingdom.Chat;
 using BeeKingdom.Chat.Models;
 using BeeKingdom.Chat.Repositories;
+using BeeKingdom.Alliance.Help;
 using BeeKingdom.Shared.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -31,6 +32,7 @@ public sealed class AllianceService
     private readonly IChatRepository? chatRepository;
     private readonly IPlayerDirectoryService? playerDirectory;
     private readonly ILogger<AllianceService>? logger;
+    private readonly IAllianceHelpRepository? allianceHelpRepository;
 
     public AllianceService(
         IAllianceRepository repository,
@@ -41,7 +43,8 @@ public sealed class AllianceService
         ChatManager? chatManager = null,
         IChatRepository? chatRepository = null,
         IPlayerDirectoryService? playerDirectory = null,
-        ILogger<AllianceService>? logger = null)
+        ILogger<AllianceService>? logger = null,
+        IAllianceHelpRepository? allianceHelpRepository = null)
     {
         this.repository = repository;
         this.activityRepository = activityRepository;
@@ -62,6 +65,11 @@ public sealed class AllianceService
         // anywhere, so a real production desync (e.g. SyncChatParticipantAdded failing for one
         // player) was indistinguishable from "nothing went wrong" until a human found it live.
         this.logger = logger;
+        // M045-CL: same best-effort/optional pattern as chat sync - a player leaving/being kicked/
+        // an alliance dissolving must stop their OPEN Alliance Help requests from accepting further
+        // help (invariants 10/11), but must never block or roll back the membership change itself
+        // that's already genuinely happened.
+        this.allianceHelpRepository = allianceHelpRepository;
     }
 
     private AllianceOptions O => options.Value;
@@ -198,6 +206,30 @@ public sealed class AllianceService
         catch (Exception exception)
         {
             logger?.LogWarning(exception, "Alliance chat participant sync (remove) failed for player {PlayerId} in conversation {ConversationId}.", playerId.Value, conversationId);
+        }
+    }
+
+    // M045-CL: same best-effort/observable pattern as chat sync above - stops an ex-member's OPEN
+    // help requests from accepting further help without ever blocking the leave/kick/dissolve that
+    // already genuinely happened. Requests and any contributions already recorded are preserved
+    // (Cancelled, not deleted).
+    private void SyncHelpRequestsCancelledForPlayer(AllianceId allianceId, PlayerId playerId)
+    {
+        if (allianceHelpRepository == null) return;
+        try { allianceHelpRepository.CancelOpenRequestsForPlayerAsync(allianceId.Value, playerId.Value).GetAwaiter().GetResult(); }
+        catch (Exception exception)
+        {
+            logger?.LogWarning(exception, "Alliance Help request cancellation failed for player {PlayerId} leaving alliance {AllianceId}.", playerId.Value, allianceId.Value);
+        }
+    }
+
+    private void SyncHelpRequestsCancelledForAlliance(AllianceId allianceId)
+    {
+        if (allianceHelpRepository == null) return;
+        try { allianceHelpRepository.CancelAllOpenRequestsForAllianceAsync(allianceId.Value).GetAwaiter().GetResult(); }
+        catch (Exception exception)
+        {
+            logger?.LogWarning(exception, "Alliance Help request cancellation failed for dissolved alliance {AllianceId}.", allianceId.Value);
         }
     }
 
@@ -501,6 +533,7 @@ public sealed class AllianceService
             alliance = repository.Save(alliance with { MemberCount = repository.ListActiveMembers(membership.AllianceId).Count, Revision = alliance.Revision + 1 });
             SyncChatParticipantRemoved(alliance.ChatConversationId, targetPlayerId, now);
         }
+        SyncHelpRequestsCancelledForPlayer(membership.AllianceId, targetPlayerId);
         Publish(membership.AllianceId, activityType, now, actorPlayerId, targetPlayerId, AllianceActivityVisibility.Public, null);
     }
 
@@ -574,6 +607,7 @@ public sealed class AllianceService
             // ALLIANCE_PLATFORM_ARCHITECTURE.md / M042-CL report for this documented limitation).
             SyncChatParticipantRemoved(alliance.ChatConversationId, member.PlayerId, now);
         }
+        SyncHelpRequestsCancelledForAlliance(actor.AllianceId);
         foreach (AllianceApplication application in repository.ListPendingApplications(actor.AllianceId))
         {
             repository.SaveApplication(application with { Status = AllianceApplicationStatus.Cancelled, RespondedAtUtc = now });

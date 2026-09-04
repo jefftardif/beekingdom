@@ -4,6 +4,7 @@ using BeeKingdom.Accounts.Models;
 using BeeKingdom.Alliance;
 using BeeKingdom.Alliance.Configuration;
 using BeeKingdom.Alliance.DependencyInjection;
+using BeeKingdom.Alliance.Help;
 using BeeKingdom.Alliance.Models;
 using BeeKingdom.Authentication;
 using BeeKingdom.Authentication.DependencyInjection;
@@ -104,6 +105,7 @@ builder.Services.AddSingleton<HivePerimeterSortieService>(sp => new HivePerimete
 builder.Services.AddSingleton<CombatPatrolService>(sp => new CombatPatrolService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
 builder.Services.AddSingleton<AdminSupportService>(sp => new AdminSupportService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
 builder.Services.AddSingleton<RewardLedgerService>(sp => new RewardLedgerService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IOptions<RewardLedgerOptions>>().Value));
+builder.Services.AddBeeKingdomAllianceHelp(builder.Configuration);
 builder.Services.AddOptions<AdminSupportOptions>()
     .Bind(builder.Configuration.GetSection(AdminSupportOptions.SectionName));
 builder.Services.AddOptions<DevToolsOptions>()
@@ -1668,6 +1670,58 @@ app.MapPost("/alliance/v1/war/declare", (HttpContext context, AuthenticationMana
     return ExecuteAlliance(() => Results.Ok(alliances.DeclareWar(auth.PlayerId, request)));
 });
 
+// ---------------- M045-CL: Alliance Help ----------------
+// Cooperative help against the REAL Construction/Research/Training/Healing timers - see
+// AllianceHelpService's class comment. Never a parallel timer: OperationTimerReduction (shared with
+// SpeedUpInventoryService) is the only thing that ever mutates a real operation's remaining time.
+
+app.MapGet("/alliance/v1/help/requests", async (HttpContext context, AuthenticationManager authentication, AllianceHelpService helpService, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceHelpAsync(async () => Results.Ok(await helpService.ListHelpableViewsForCurrentAllianceAsync(auth.PlayerId, cancellationToken)));
+});
+
+app.MapGet("/alliance/v1/help/requests/mine", async (HttpContext context, AuthenticationManager authentication, AllianceHelpService helpService, string category, string targetId, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceHelpAsync(async () =>
+    {
+        AllianceHelpRequest? mine = await helpService.GetMyOpenRequestAsync(auth.PlayerId, category, targetId, cancellationToken);
+        return Results.Ok(mine);
+    });
+});
+
+app.MapPost("/alliance/v1/help/requests", async (HttpContext context, AuthenticationManager authentication, AllianceHelpService helpService, CreateAllianceHelpRequestCommand request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceHelpAsync(async () =>
+    {
+        AllianceHelpCommandResult result = await helpService.CreateRequestAsync(auth.PlayerId, request, cancellationToken);
+        return result.Succeeded ? Results.Ok(result) : AllianceHelpError(result.Code);
+    });
+});
+
+app.MapPost("/alliance/v1/help/requests/{helpRequestId:guid}/contribute", async (HttpContext context, AuthenticationManager authentication, AllianceHelpService helpService, Guid helpRequestId, AllianceHelpContributeWireRequest request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceHelpAsync(async () =>
+    {
+        ContributeAllianceHelpResult result = await helpService.ContributeAsync(auth.PlayerId, helpRequestId, request.ClientRequestId, cancellationToken);
+        return result.Succeeded ? Results.Ok(result) : AllianceHelpError(result.Code);
+    });
+});
+
+app.MapPost("/alliance/v1/help/contribute-all", async (HttpContext context, AuthenticationManager authentication, AllianceHelpService helpService, AllianceHelpContributeWireRequest request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceHelpAsync(async () => Results.Ok(await helpService.ContributeAllAsync(auth.PlayerId, request.ClientRequestId, cancellationToken)));
+});
+
 app.MapGet("/ops/migrations/pending", async (HttpContext context, IOptions<OpsSecurityOptions> ops, IMigrationRunner migrations, CancellationToken cancellationToken) =>
 {
     IResult? authorization = AuthorizeOps(context, ops.Value);
@@ -2418,6 +2472,44 @@ static IResult ExecuteAlliance(Func<IResult> action)
 static IResult AllianceError(int statusCode, string code)
     => Results.Json(new AllianceErrorEnvelope(code), statusCode: statusCode);
 
+// M045-CL: AllianceHelpService returns result records (Succeeded/Code) rather than throwing for
+// expected domain rejections (already helped, request full, wrong alliance, etc.) - this wrapper
+// only needs to catch the one exception it DOES throw (feature disabled) plus the generic
+// unauthorized/not-found/invalid-request vocabulary shared with the rest of Alliance.
+static async Task<IResult> ExecuteAllianceHelpAsync(Func<Task<IResult>> action)
+{
+    try
+    {
+        return await action();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return AllianceError(403, "alliance.forbidden");
+    }
+    catch (KeyNotFoundException)
+    {
+        return AllianceError(404, "alliance.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return AllianceError(400, "alliance.invalid_request");
+    }
+    catch (InvalidOperationException exception) when (exception.Message == "alliance_help_disabled")
+    {
+        return AllianceError(503, "alliance.unavailable");
+    }
+}
+
+static IResult AllianceHelpError(string code) => AllianceError(CodeToStatus(code), "alliance.help." + code);
+
+static int CodeToStatus(string code) => code switch
+{
+    "not_a_member" or "different_alliance" or "cannot_help_own_request" or "hive_not_owned" => 403,
+    "not_found" or "operation_not_found" or "hive_not_found" => 404,
+    "invalid_request" or "invalid_category" => 400,
+    _ => 409
+};
+
 static ResearchReadSnapshot BuildResearchSnapshot(PlayerHiveState state, DateTimeOffset now, string catalogVersion, IReadOnlyList<string> configuredCatalog)
 {
     var offers = HiveOperationService.ResearchCatalog.Where(x=>configuredCatalog.Contains(x.Key,StringComparer.Ordinal)).Select(x => new ResearchOffer(x.Key, x.Value.Duration, x.Value.Costs, x.Value.Effects, x.Value.Prerequisites)).Where(x => !(state.Research?.Completed.ContainsKey(x.ResearchId) ?? false)).ToArray();
@@ -3127,4 +3219,5 @@ public sealed record GrantResourceHttpRequest(string ResourceKey, long Amount);
 public sealed record SetDisplayNameHttpRequest(string DisplayName);
 public sealed record GameErrorEnvelope(string Code, string Message, int? RetryAfterSeconds);
 public sealed record AllianceErrorEnvelope(string Code);
+public sealed record AllianceHelpContributeWireRequest(string ClientRequestId);
 public sealed record AuthenticationUnavailableEnvelope(string Code, string Message);
