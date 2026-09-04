@@ -256,28 +256,30 @@ namespace BeeKingdom.Playground
         public string ErrorCode { get; internal set; } = string.Empty;
     }
 
-    // M051-CL: Alliance Research (Alliance Donations + collective progression) read model - a
+    // M052-CL: Bible-aligned (BIBLE_ALLIANCE_RESEARCH.md V1.0) Alliance Research read model - a
     // per-technology row, refreshed from the server's own AllianceTechnologyReadModel. Never
-    // computes Locked/Completed/DonationCost locally - all of it is server-declared truth.
+    // computes State/FundingRequired/prerequisites locally - all of it is server-declared truth.
+    public enum AllianceTechnologyStateModel { Locked, Eligible, Funding, Ready, Researching, Completed, Unknown }
+
     public sealed class AllianceTechnologyRowModel
     {
         internal AllianceTechnologyRowModel(RemoteAllianceTechnology source)
         {
             TechnologyId = source.TechnologyId ?? string.Empty;
             Branch = source.Branch ?? string.Empty;
+            IsMajor = string.Equals(source.Category, "major", StringComparison.OrdinalIgnoreCase);
             Tier = source.Tier;
             DisplayNameKey = source.DisplayNameKey ?? string.Empty;
             DescriptionKey = source.DescriptionKey ?? string.Empty;
             BonusSummaryKey = source.BonusSummaryKey ?? string.Empty;
-            RequiredProgress = source.RequiredProgress;
-            CurrentProgress = source.CurrentProgress;
-            Completed = source.Completed;
-            CompletedAtUtc = source.CompletedAtUtc;
             PrerequisiteIds = source.PrerequisiteIds ?? new List<string>();
-            Locked = source.Locked;
-            Available = source.Available;
-            DonationCost = source.DonationCost ?? new Dictionary<string, long>();
-            DonationProgressPerDonation = source.DonationProgressPerDonation;
+            State = Enum.TryParse(source.State, true, out AllianceTechnologyStateModel parsed) ? parsed : AllianceTechnologyStateModel.Unknown;
+            FundingRequired = source.FundingRequired ?? new Dictionary<string, long>();
+            FundingContributed = source.FundingContributed ?? new Dictionary<string, long>();
+            ResearchDurationSeconds = source.ResearchDurationSeconds;
+            ResearchStartedAtUtc = source.ResearchStartedAtUtc;
+            ResearchCompletesAtUtc = source.ResearchCompletesAtUtc;
+            CompletedAtUtc = source.CompletedAtUtc;
             ProductionBp = source.ProductionBp;
             CapacityBp = source.CapacityBp;
             CombatPowerBp = source.CombatPowerBp;
@@ -285,39 +287,52 @@ namespace BeeKingdom.Playground
 
         public string TechnologyId { get; }
         public string Branch { get; }
+        public bool IsMajor { get; }
         public int Tier { get; }
         public string DisplayNameKey { get; }
         public string DescriptionKey { get; }
         public string BonusSummaryKey { get; }
-        public long RequiredProgress { get; }
-        public long CurrentProgress { get; }
-        public bool Completed { get; }
-        public DateTimeOffset? CompletedAtUtc { get; }
         public IReadOnlyList<string> PrerequisiteIds { get; }
-        public bool Locked { get; }
-        public bool Available { get; }
-        public IReadOnlyDictionary<string, long> DonationCost { get; }
-        public long DonationProgressPerDonation { get; }
+        public AllianceTechnologyStateModel State { get; }
+        public IReadOnlyDictionary<string, long> FundingRequired { get; }
+        public IReadOnlyDictionary<string, long> FundingContributed { get; }
+        public long ResearchDurationSeconds { get; }
+        public DateTimeOffset? ResearchStartedAtUtc { get; }
+        public DateTimeOffset? ResearchCompletesAtUtc { get; }
+        public DateTimeOffset? CompletedAtUtc { get; }
         public long ProductionBp { get; }
         public long CapacityBp { get; }
         public long CombatPowerBp { get; }
     }
 
-    public enum AllianceResearchDonationState { Idle, Sending, Error }
+    public enum AllianceResearchActionState { Idle, Sending, Error }
 
-    // One shared model for the whole "Recherche d'Alliance" tab - a single DonationState (not
-    // per-technology) is the mission's own explicit in-flight guard requirement: only one donation
-    // request may be outstanding at a time, so every DONNER button on the tab disables together
-    // while one is in flight, never letting a rapid double-tap fire two requests.
+    // One shared model for the whole "Recherche d'Alliance" tab - a single ActionState (not
+    // per-technology/per-action-kind) is a deliberate, simple in-flight guard: only one Alliance
+    // Research request (select target / donate / launch / speedup) may be outstanding at a time,
+    // so every actionable control on the tab disables together while one is in flight.
     public sealed class AllianceResearchScreenModel
     {
         public IReadOnlyList<AllianceTechnologyRowModel> Technologies { get; internal set; } = Array.Empty<AllianceTechnologyRowModel>();
+        public string MinorFundingTargetId { get; internal set; } = string.Empty;
+        public string MajorFundingTargetId { get; internal set; } = string.Empty;
+        public string MinorResearchingTechnologyId { get; internal set; } = string.Empty;
+        public string MajorResearchingTechnologyId { get; internal set; } = string.Empty;
         public long MyContributionPoints { get; internal set; }
         public long MyDonationCount { get; internal set; }
+        public long MyAllianceCurrencyBalance { get; internal set; }
+        public bool CanSelectFundingTarget { get; internal set; }
+        public bool CanLaunch { get; internal set; }
+        public bool CanUseSpeedUp { get; internal set; }
         public bool Loaded { get; internal set; }
-        public AllianceResearchDonationState DonationState { get; internal set; } = AllianceResearchDonationState.Idle;
-        public string DonatingTechnologyId { get; internal set; } = string.Empty;
+        public AllianceResearchActionState ActionState { get; internal set; } = AllianceResearchActionState.Idle;
+        public string ActingTechnologyId { get; internal set; } = string.Empty;
         public string ErrorCode { get; internal set; } = string.Empty;
+        // Client-only UI mode toggle (never sent to the server, never authorizes anything by
+        // itself - every real mutation is still independently role-checked server-side) - true
+        // while the Chef has the "choose a funding target" picker open for a given category.
+        public bool PickingFundingTargetForMajor { get; internal set; }
+        public bool PickingFundingTargetForMinor { get; internal set; }
     }
 
     public sealed class AllianceCenterScreenModel
@@ -458,10 +473,18 @@ namespace BeeKingdom.Playground
         void RefreshHelpOperationState(string operationCategory, string operationTargetId);
         void RequestHelp(Guid hiveId, string operationCategory, string operationTargetId);
 
-        // M051-CL: Alliance Research (Alliance Donations + collective progression).
+        // M052-CL: Alliance Research (Bible-aligned lifecycle: funding -> ready -> launch -> timer
+        // -> completed). Server remains authoritative even when the UI hides a control - every
+        // method here still goes through the exact same server-side role/state validation
+        // regardless of whether the caller was actually allowed to see the button.
         AllianceResearchScreenModel ResearchModel { get; }
         void RefreshResearch();
-        void DonateToResearch(Guid hiveId, string technologyId);
+        void SelectResearchFundingTarget(string technologyId);
+        void DonateToResearch(Guid hiveId, string technologyId, string resourceKey, long amount);
+        void LaunchResearch(string technologyId);
+        void ApplyResearchSpeedUp(Guid hiveId, string technologyId, string itemId);
+        // Client-only UI mode - opens/closes the Chef's funding-target picker for a category.
+        void SetResearchFundingTargetPickerOpen(bool isMajor, bool open);
     }
 
     public sealed class UnavailableAllianceCenterPanelController : IAllianceCenterPanelController
@@ -504,7 +527,11 @@ namespace BeeKingdom.Playground
         private static readonly AllianceResearchScreenModel UnknownResearchModel = new AllianceResearchScreenModel();
         public AllianceResearchScreenModel ResearchModel => UnknownResearchModel;
         public void RefreshResearch() { }
-        public void DonateToResearch(Guid hiveId, string technologyId) { }
+        public void SelectResearchFundingTarget(string technologyId) { }
+        public void DonateToResearch(Guid hiveId, string technologyId, string resourceKey, long amount) { }
+        public void LaunchResearch(string technologyId) { }
+        public void ApplyResearchSpeedUp(Guid hiveId, string technologyId, string itemId) { }
+        public void SetResearchFundingTargetPickerOpen(bool isMajor, bool open) { }
     }
 
     public interface IAllianceCenterMutationKeySource
@@ -611,7 +638,7 @@ namespace BeeKingdom.Playground
 
         private static string HelpOperationKey(string operationCategory, string operationTargetId) => (operationCategory ?? string.Empty) + "|" + (operationTargetId ?? string.Empty);
 
-        // M051-CL: Alliance Research.
+        // M052-CL: Alliance Research (Bible-aligned lifecycle).
         public AllianceResearchScreenModel ResearchModel => researchModel;
 
         public void RefreshResearch()
@@ -623,7 +650,16 @@ namespace BeeKingdom.Playground
             RunFireAndForget(() => RefreshResearchCoreAsync());
         }
 
-        public void DonateToResearch(Guid hiveId, string technologyId) => RunFireAndForget(() => DonateToResearchCoreAsync(hiveId, technologyId));
+        public void SelectResearchFundingTarget(string technologyId) => RunFireAndForget(() => SelectResearchFundingTargetCoreAsync(technologyId));
+        public void DonateToResearch(Guid hiveId, string technologyId, string resourceKey, long amount) => RunFireAndForget(() => DonateToResearchCoreAsync(hiveId, technologyId, resourceKey, amount));
+        public void LaunchResearch(string technologyId) => RunFireAndForget(() => LaunchResearchCoreAsync(technologyId));
+        public void ApplyResearchSpeedUp(Guid hiveId, string technologyId, string itemId) => RunFireAndForget(() => ApplyResearchSpeedUpCoreAsync(hiveId, technologyId, itemId));
+
+        public void SetResearchFundingTargetPickerOpen(bool isMajor, bool open)
+        {
+            if (isMajor) researchModel.PickingFundingTargetForMajor = open;
+            else researchModel.PickingFundingTargetForMinor = open;
+        }
 
         public void Dispose()
         {
@@ -649,7 +685,10 @@ namespace BeeKingdom.Playground
         public Task RefreshHelpOperationStateForProofAsync(string operationCategory, string operationTargetId) => RefreshHelpOperationStateCoreAsync(operationCategory, operationTargetId);
         public Task RequestHelpForProofAsync(Guid hiveId, string operationCategory, string operationTargetId) => RequestHelpCoreAsync(hiveId, operationCategory, operationTargetId);
         public Task RefreshResearchForProofAsync() => RefreshResearchCoreAsync();
-        public Task DonateToResearchForProofAsync(Guid hiveId, string technologyId) => DonateToResearchCoreAsync(hiveId, technologyId);
+        public Task SelectResearchFundingTargetForProofAsync(string technologyId) => SelectResearchFundingTargetCoreAsync(technologyId);
+        public Task DonateToResearchForProofAsync(Guid hiveId, string technologyId, string resourceKey, long amount) => DonateToResearchCoreAsync(hiveId, technologyId, resourceKey, amount);
+        public Task LaunchResearchForProofAsync(string technologyId) => LaunchResearchCoreAsync(technologyId);
+        public Task ApplyResearchSpeedUpForProofAsync(Guid hiveId, string technologyId, string itemId) => ApplyResearchSpeedUpCoreAsync(hiveId, technologyId, itemId);
 
         private async void RunFireAndForget(Func<Task> action) { try { await action(); } catch { /* Model already carries the Error state */ } }
 
@@ -1122,31 +1161,34 @@ namespace BeeKingdom.Playground
             }
         }
 
-        private async Task DonateToResearchCoreAsync(Guid hiveId, string technologyId)
+        // M052-CL: Chef-only (server enforces via CanSelectFundingTarget - this client-side guard is
+        // just UX, never the real authority) - selects which Minor/Major technology future donations
+        // fund. Changing target preserves prior partial contributions to the deselected technology
+        // (Bible section 5) - purely a server-side guarantee, nothing to do here beyond sending the
+        // command.
+        private async Task SelectResearchFundingTargetCoreAsync(string technologyId)
         {
             if (disposed) return;
-            // In-flight guard (mission requirement): a rapid double-tap on DONNER while a donation
-            // is already in flight must never fire a second request - server idempotency is the
-            // backstop, this is the first line of defense.
-            if (researchModel.DonationState == AllianceResearchDonationState.Sending) return;
+            if (researchModel.ActionState == AllianceResearchActionState.Sending) return;
 
-            researchModel.DonationState = AllianceResearchDonationState.Sending;
-            researchModel.DonatingTechnologyId = technologyId ?? string.Empty;
+            researchModel.ActionState = AllianceResearchActionState.Sending;
+            researchModel.ActingTechnologyId = technologyId ?? string.Empty;
             researchModel.ErrorCode = string.Empty;
             try
             {
-                string requestKey = keySource.Create("research-donate-" + technologyId);
-                RemoteAllianceResearchDonateResult result = await client.DonateToAllianceResearchAsync(technologyId, hiveId, requestKey, lifetime.Token);
+                string requestKey = keySource.Create("research-target-" + technologyId);
+                RemoteAllianceResearchCommandResult result = await client.SelectAllianceResearchFundingTargetAsync(technologyId, requestKey, lifetime.Token);
                 if (disposed) return;
                 if (result != null && result.Succeeded && result.Snapshot != null)
                 {
                     ApplyResearchSnapshot(result.Snapshot);
-                    researchModel.DonationState = AllianceResearchDonationState.Idle;
-                    researchModel.DonatingTechnologyId = string.Empty;
+                    researchModel.ActionState = AllianceResearchActionState.Idle;
+                    researchModel.PickingFundingTargetForMinor = false;
+                    researchModel.PickingFundingTargetForMajor = false;
                 }
                 else
                 {
-                    researchModel.DonationState = AllianceResearchDonationState.Error;
+                    researchModel.ActionState = AllianceResearchActionState.Error;
                     researchModel.ErrorCode = result?.Code ?? "unexpected";
                 }
             }
@@ -1154,7 +1196,54 @@ namespace BeeKingdom.Playground
             {
                 if (disposed) return;
                 string code = StableError(error);
-                researchModel.DonationState = AllianceResearchDonationState.Error;
+                researchModel.ActionState = AllianceResearchActionState.Error;
+                researchModel.ErrorCode = code;
+                Debug.LogWarning("[AllianceResearch] SelectFundingTarget rejected for " + technologyId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    researchModel.ActionState = AllianceResearchActionState.Error;
+                    researchModel.ErrorCode = "unexpected";
+                    Debug.LogWarning("[AllianceResearch] SelectFundingTarget failed for " + technologyId + ": " + exception.GetType().Name + " - " + exception.Message);
+                }
+            }
+        }
+
+        private async Task DonateToResearchCoreAsync(Guid hiveId, string technologyId, string resourceKey, long amount)
+        {
+            if (disposed) return;
+            // In-flight guard (mission requirement): a rapid double-tap on DONNER while a donation
+            // is already in flight must never fire a second request - server idempotency is the
+            // backstop, this is the first line of defense.
+            if (researchModel.ActionState == AllianceResearchActionState.Sending) return;
+
+            researchModel.ActionState = AllianceResearchActionState.Sending;
+            researchModel.ActingTechnologyId = technologyId ?? string.Empty;
+            researchModel.ErrorCode = string.Empty;
+            try
+            {
+                string requestKey = keySource.Create("research-donate-" + technologyId + "-" + resourceKey);
+                RemoteAllianceResearchCommandResult result = await client.DonateToAllianceResearchAsync(technologyId, hiveId, resourceKey, amount, requestKey, lifetime.Token);
+                if (disposed) return;
+                if (result != null && result.Succeeded && result.Snapshot != null)
+                {
+                    ApplyResearchSnapshot(result.Snapshot);
+                    researchModel.ActionState = AllianceResearchActionState.Idle;
+                    researchModel.ActingTechnologyId = string.Empty;
+                }
+                else
+                {
+                    researchModel.ActionState = AllianceResearchActionState.Error;
+                    researchModel.ErrorCode = result?.Code ?? "unexpected";
+                }
+            }
+            catch (HivePerimeterClientException error)
+            {
+                if (disposed) return;
+                string code = StableError(error);
+                researchModel.ActionState = AllianceResearchActionState.Error;
                 researchModel.ErrorCode = code;
                 Debug.LogWarning("[AllianceResearch] Donate rejected for " + technologyId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
             }
@@ -1162,9 +1251,103 @@ namespace BeeKingdom.Playground
             {
                 if (!disposed)
                 {
-                    researchModel.DonationState = AllianceResearchDonationState.Error;
+                    researchModel.ActionState = AllianceResearchActionState.Error;
                     researchModel.ErrorCode = "unexpected";
                     Debug.LogWarning("[AllianceResearch] Donate failed for " + technologyId + ": " + exception.GetType().Name + " - " + exception.Message);
+                }
+            }
+        }
+
+        // M052-CL: Chef or Officer only (server enforces via CanLaunch) - moves a fully-funded
+        // (Ready) technology into Researching with a server-authoritative timer. No Unity-owned
+        // countdown is started here - the returned snapshot's ResearchCompletesAtUtc IS the timer,
+        // resolved lazily and idempotently server-side on every subsequent read.
+        private async Task LaunchResearchCoreAsync(string technologyId)
+        {
+            if (disposed) return;
+            if (researchModel.ActionState == AllianceResearchActionState.Sending) return;
+
+            researchModel.ActionState = AllianceResearchActionState.Sending;
+            researchModel.ActingTechnologyId = technologyId ?? string.Empty;
+            researchModel.ErrorCode = string.Empty;
+            try
+            {
+                string requestKey = keySource.Create("research-launch-" + technologyId);
+                RemoteAllianceResearchCommandResult result = await client.LaunchAllianceResearchAsync(technologyId, requestKey, lifetime.Token);
+                if (disposed) return;
+                if (result != null && result.Succeeded && result.Snapshot != null)
+                {
+                    ApplyResearchSnapshot(result.Snapshot);
+                    researchModel.ActionState = AllianceResearchActionState.Idle;
+                }
+                else
+                {
+                    researchModel.ActionState = AllianceResearchActionState.Error;
+                    researchModel.ErrorCode = result?.Code ?? "unexpected";
+                }
+            }
+            catch (HivePerimeterClientException error)
+            {
+                if (disposed) return;
+                string code = StableError(error);
+                researchModel.ActionState = AllianceResearchActionState.Error;
+                researchModel.ErrorCode = code;
+                Debug.LogWarning("[AllianceResearch] Launch rejected for " + technologyId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    researchModel.ActionState = AllianceResearchActionState.Error;
+                    researchModel.ErrorCode = "unexpected";
+                    Debug.LogWarning("[AllianceResearch] Launch failed for " + technologyId + ": " + exception.GetType().Name + " - " + exception.Message);
+                }
+            }
+        }
+
+        // M052-CL: Chef or Officer only (server enforces via CanUseSpeedUp), only while Researching -
+        // consumes an alliance_research_speedup_* item from PlayerHiveState.SpeedUps (debited on the
+        // hive first, then applied to the alliance timer, mirroring the established two-aggregate
+        // donation pattern).
+        private async Task ApplyResearchSpeedUpCoreAsync(Guid hiveId, string technologyId, string itemId)
+        {
+            if (disposed) return;
+            if (researchModel.ActionState == AllianceResearchActionState.Sending) return;
+
+            researchModel.ActionState = AllianceResearchActionState.Sending;
+            researchModel.ActingTechnologyId = technologyId ?? string.Empty;
+            researchModel.ErrorCode = string.Empty;
+            try
+            {
+                string requestKey = keySource.Create("research-speedup-" + technologyId + "-" + itemId);
+                RemoteAllianceResearchCommandResult result = await client.ApplyAllianceResearchSpeedUpAsync(technologyId, hiveId, itemId, requestKey, lifetime.Token);
+                if (disposed) return;
+                if (result != null && result.Succeeded && result.Snapshot != null)
+                {
+                    ApplyResearchSnapshot(result.Snapshot);
+                    researchModel.ActionState = AllianceResearchActionState.Idle;
+                }
+                else
+                {
+                    researchModel.ActionState = AllianceResearchActionState.Error;
+                    researchModel.ErrorCode = result?.Code ?? "unexpected";
+                }
+            }
+            catch (HivePerimeterClientException error)
+            {
+                if (disposed) return;
+                string code = StableError(error);
+                researchModel.ActionState = AllianceResearchActionState.Error;
+                researchModel.ErrorCode = code;
+                Debug.LogWarning("[AllianceResearch] SpeedUp rejected for " + technologyId + ": code=" + code + " rawError=" + error.Error + " rawMessage=" + error.Message);
+            }
+            catch (Exception exception)
+            {
+                if (!disposed)
+                {
+                    researchModel.ActionState = AllianceResearchActionState.Error;
+                    researchModel.ErrorCode = "unexpected";
+                    Debug.LogWarning("[AllianceResearch] SpeedUp failed for " + technologyId + ": " + exception.GetType().Name + " - " + exception.Message);
                 }
             }
         }
@@ -1173,8 +1356,16 @@ namespace BeeKingdom.Playground
         {
             if (snapshot == null) return;
             researchModel.Technologies = (snapshot.Technologies ?? new List<RemoteAllianceTechnology>()).Select(t => new AllianceTechnologyRowModel(t)).ToList();
+            researchModel.MinorFundingTargetId = snapshot.MinorFundingTargetId ?? string.Empty;
+            researchModel.MajorFundingTargetId = snapshot.MajorFundingTargetId ?? string.Empty;
+            researchModel.MinorResearchingTechnologyId = snapshot.MinorResearchingTechnologyId ?? string.Empty;
+            researchModel.MajorResearchingTechnologyId = snapshot.MajorResearchingTechnologyId ?? string.Empty;
             researchModel.MyContributionPoints = snapshot.MyContributionPoints;
             researchModel.MyDonationCount = snapshot.MyDonationCount;
+            researchModel.MyAllianceCurrencyBalance = snapshot.MyAllianceCurrencyBalance;
+            researchModel.CanSelectFundingTarget = snapshot.CanSelectFundingTarget;
+            researchModel.CanLaunch = snapshot.CanLaunch;
+            researchModel.CanUseSpeedUp = snapshot.CanUseSpeedUp;
             researchModel.Loaded = true;
         }
 

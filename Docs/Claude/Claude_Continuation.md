@@ -40,6 +40,187 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M052-CL : Alliance Research Bible Alignment (2026-09-04)
+
+Migration evolutive (pas une reecriture) du prototype M051/M051C vers le
+cycle de vie officiel de `BIBLE_ALLIANCE_RESEARCH.md` V1.0 :
+`Locked -> Eligible -> Funding -> Ready -> Researching -> Completed`.
+Financement != Recherche (100% finance ne declenche plus rien
+automatiquement). Deux emplacements de recherche independants et
+simultanes (Minor/Major). Seul le Chef selectionne/change la cible de
+financement (changement preserve les contributions deja versees a
+l'ancienne cible) ; Chef **ou** Officier peuvent lancer une technologie
+`Ready` et utiliser un SpeedUp de recherche d'Alliance (nouvelle categorie
+distincte des SpeedUps personnels, items `alliance_research_speedup_1h/3h/8h/24h`
+dans le meme inventaire `PlayerHiveState.SpeedUps`). Minuteur
+serveur-autoritaire, resolution paresseuse/deterministe/idempotente
+(`ResolveElapsedResearch`), aucun minuteur Unity. Bonus (production/
+capacite/puissance de combat) actives uniquement depuis `Completed`.
+Fondation "Sceaux Royaux" (Alliance Currency) ajoutee au domaine/persistance
+uniquement (pas de Boutique). Catalogue Alpha reduit a 8 technologies
+representatives (Prosperite/Expansion/Cooperation/Armee Royale + 1 Majeure
+reelle) ; Supremacie reste verrouillee. Aucune migration SQL necessaire
+(`dbo.AllianceResearch` reste un JSON opaque ; migrateur de deserialisation
+`AllianceResearchStateMigrator` ajoute pour les anciennes lignes).
+
+Fichiers serveur reecrits : `AllianceResearchCatalog.cs`, `AllianceResearchModels.cs`,
+`AllianceResearchService.cs`, `AllianceResearchBonusResolver.cs`,
+`Program.cs` (5 endpoints `/alliance/v1/research/*`). Nouveaux :
+`AllianceResearchSpeedUpCatalog.cs`, `AllianceResearchStateMigrator.cs`.
+Client Unity reecrit : `AllianceClient.cs` (5 methodes), `AllianceCenterPresentation.cs`
+(modele + API publique + `*CoreAsync`), onglet Recherches de
+`HiveViewProductUiPresenter.cs` (double-piste Minor/Major, selecteur de
+cible Chef, boutons LANCER/ACCELERER geres par des booleens serveur
+`CanSelectFundingTarget`/`CanLaunch`/`CanUseSpeedUp`). Cles de localisation
+fr-CA ajoutees pour les 6 etats et les technologies nouvelles/renommees.
+
+Preuves : `AllianceResearchServiceTests.cs` 29/29 verts (serveur) ; suite
+complete `BeeKingdom.Tests` 527/538, 3 echecs pre-existants sans lien
+(routes/replay/CatalogSqlDrift, documentes depuis M051) ; `AllianceResearchClientTests.cs`
+Unity EditMode 8/8 verts (Play Mode confirme libre avant execution) ;
+`assets-refresh` 0 erreur de compilation. Rapport complet :
+`Docs/AI/Missions/M052-CL-Alliance-Research-Bible-Alignment.md`.
+
+Prochain test utilisateur : certification live controlee par le CEO (sans
+mutation reelle tant que non explicitement autorise) - ouvrir le Centre
+d'Alliance, onglet Recherches, verifier l'affichage Minor/Major, le
+selecteur de cible reserve au Chef, le rendu par ressource des exigences de
+financement, et les etats Eligible/Ready/Researching/Completed.
+
+Ouvert / a faire ensuite : deploiement production + application du feature
+flag restent a autoriser explicitement (hors scope de cette mission) ;
+acquisition des items SpeedUp de recherche d'Alliance (boutique/evenements)
+et depense des Sceaux Royaux restent a concevoir plus tard ; bonus par
+ressource specifique (granularite fine) reste un panier generique.
+
+---
+
+## Jalon courant — M051-CL : Alliance Donations + Alliance Research Core Alpha (2026-09-04)
+
+Nouveau systeme complet de progression collective d'Alliance, server-authoritative.
+Arbre Alpha compact (9 technologies, 3 branches : Prosperite/Cooperation/
+Defense Royale), appartenant a l'Alliance (jamais duplique dans le
+`PlayerHiveState` d'un membre). Dons en ressources reelles (miel/pollen/
+cire), progression partagee visible instantanement par tous les membres,
+trois vrais bonus de gameplay appliques (production %, capacite de stockage
+%, puissance de combat %) via un petit port/adapter (`IAllianceGameplayBonusResolver`,
+nouveau dans `BeeKingdom.HiveOperations`) pour eviter toute dependance
+circulaire Alliance -> HiveOperations.
+
+Atomicite don : meme compromis documente que Alliance Help (deux etapes,
+chacune idempotente independamment - debit ressources joueur d'abord via
+`PlayerHiveState.Receipts`, puis progression Alliance via son propre
+`ProcessedDonationIds`). Verrou SQL exclusif reel par Alliance
+(`sys.sp_getapplock`) pour les dons concurrents - prouve par test (deux
+dons simultanes, aucune perte).
+
+Nouveau module `Server/src/BeeKingdom.Alliance/Research/*` complet + tab
+"Recherches" du Alliance Center reellement branche (existait deja comme
+bouton mais routait vers le placeholder generique "A VENIR" - meme classe
+de bris deja corrigee une fois pour Journal/Chat).
+
+**Migration SQL `092_alliance_research.sql` enregistree dans
+`DatabaseCatalog.Migrations` mais NON appliquee en production** - attend
+autorisation CEO explicite (meme flux `/ops/migrations/apply` que
+091_alliance_help). `AllianceResearch:Enabled` reste `false` tant que non
+deploye.
+
+Preuves : 14 nouveaux tests serveur verts (13 AllianceResearchServiceTests +
+1 test d'integration bonus dans HiveOfflineProductionServiceTests), 0
+regression sur les 522 tests existants (1 echec pre-existant sans lien,
+deja documente : drift du fichier 091_alliance_help.sql). Compilation Unity
+verifiee propre. 3 tests wire-level Unity (AllianceResearchClientTests.cs)
+ecrits mais NON executes cette session - Editor confirme en Play Mode reel
+au moment de la verification (probe read-only `Application.isPlaying=true`).
+
+Rapport complet : `Docs/AI/Missions/M051-CL-Alliance-Donations-Research-Core-Alpha.md`.
+
+Prochain test utilisateur: aucun encore possible - attend la decision CEO
+d'autoriser le deploiement (commit/push + migration + flag) avant toute
+certification Stage 1.
+
+Ouvert / a faire ensuite : autoriser et effectuer le deploiement production
+(migration 092 + flag `AllianceResearch:Enabled=true`) ; relancer les tests
+Unity une fois l'Editor libre ; puis certification CEO en 6 etapes deja
+detaillee dans le rapport (Jeff ouvre Recherche -> selectionne une techno ->
+donne -> Stara voit le meme progres -> Stara donne -> Jeff voit sa
+contribution).
+
+---
+
+## Jalon courant — M045 a M049C : Alliance Help + completion HiveMap + pulses Construction/Recherche, certifie CEO (2026-09-04)
+
+Arc de missions enchainees, la derniere (M049C) certifiee visuellement par
+le CEO en Play Mode reel.
+
+**Alliance Help (M045/M045B/M045C, deploye en production)** — nouveau module
+cooperatif serveur (`Server/src/BeeKingdom.Alliance/Help/*`) reduisant le
+temps restant reel des operations Construction/Recherche/Formation/Soin,
+branche cote Unity via `DrawAllianceHelpAction` (bouton "Demander de
+l'aide"). Migration `091_alliance_help.sql` enregistree dans le vrai
+`DatabaseCatalog.Migrations` (les scripts `.sql` isoles ne sont JAMAIS lus en
+prod - piege deja documente). Flag `AllianceHelp:Enabled=true` actif en
+production.
+
+**Completion HiveMap generalisee (M045D-G, M049B)** — le badge "pret a
+valider" de Construction dessine desormais le vrai `upgrade_ready.png`
+(remplace un hexagone genere par code). Recherche a maintenant son propre
+indicateur monde reutilisant exactement le meme renderer
+(`DrawOperationCompletionBadge`), avec son propre asset dedie
+`research_ready.png`. Le clic-priorite (`BuildingInteractionController.
+InteractionPreemptionHook`, M045F) a ete generalise via
+`RegisterCompletionPreemption`/`UnregisterCompletionPreemption` pour que
+Construction ET Recherche partagent le meme routeur unique au lieu d'un
+second routeur concurrent - clic n'importe ou sur un batiment
+"a valider" complete reellement (meme action serveur que le bouton
+"Terminer" de l'ecran), consomme le clic, jamais de double-ouverture.
+
+**Pulse vert Recherche (M049, casse en Play Mode reel malgre tests verts —
+corrige par M049C)** — `HiveMapResearchVisualStateBootstrap.cs` (nouveau,
+M049) n'etait jamais instancie en HiveMap reel : son propre
+`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` ne se declenche qu'une
+seule fois, sur la scene active au tout debut du Play Mode (toujours
+splash/login, jamais Environment2D5D) - EXACTEMENT le meme bug deja
+documente pour deux autres bootstraps (commentaire M038B-CL dans
+`HiveMapRuntimeBootstrapInitializer.cs`). Corrige en ajoutant l'appel
+manquant `HiveMapResearchVisualStateBootstrap.InitializeForScene(scene)`
+dans ce meme installateur de production (une seule ligne). **Piege a
+retenir pour tout futur bootstrap Environment2D5D : ne JAMAIS se fier
+uniquement a `[RuntimeInitializeOnLoadMethod]` - toujours l'enregistrer
+aussi dans `HiveMapRuntimeBootstrapInitializer.InitializeAllBootstraps`.**
+
+Preuves: 6 tests M045F existants + 4 nouveaux tests M049B (`RegisterCompletionPreemption`/
+`UnregisterCompletionPreemption`) dans `BuildingInteractionControllerClickPriorityTests.cs`
+(non re-executes en fin de session - bridge MCP test-runner reste bloque
+apres collision avec le Play Mode du CEO, voir section outillage
+ci-dessous); 6 tests `BuildingActivityPulseTests.cs` (M049) verts au moment
+de leur creation; compilation Unity verifiee propre a chaque etape via
+`assets-refresh`. **M049C certifie visuellement par le CEO en Play Mode reel
+("C'est parfait le pulse")** apres sortie/re-entree en Play Mode (necessaire
+car le fix est un branchement d'evenement scene-load, ne s'applique pas
+retroactivement a une session deja en cours).
+
+Outillage — piege decouvert cette session : le bridge MCP `tests-run`
+(EditMode) se bloque durablement ("another test run is already in
+progress") s'il est appele pendant que le CEO est reellement en Play Mode
+(Unity refuse en interne les taches de restauration de scene du test
+runner) - le verrou ne se libere pas tout seul rapidement. Verifier l'etat
+Play Mode reel avant d'appeler `tests-run`; en cas de doute, un
+`script-execute` en lecture seule (Debug.Log, aucune mutation) reste sur
+pour confirmer l'etat reel sans rien perturber.
+
+Rapports complets : `Docs/AI/Missions/M045-CL-*.md` a `M049C-CL-Research-Pulse-Runtime-Fix.md`.
+
+Prochain test utilisateur: aucun - M049C deja certifie en direct.
+
+Ouvert / a faire ensuite: relancer `BuildingInteractionControllerClickPriorityTests`
+des que le bridge de test se libere (aucune regression attendue, fichier non
+touche par M049C); commit/push M045D-G a M049C en attente d'autorisation
+explicite (rien commite depuis `9c9bac2` sauf le contenu deja pousse via
+M045C).
+
+---
+
 ## Jalon courant — M043U-CL / M043T-CL / M044-CX : certification Alliance deux joueurs bout-en-bout, occlusion UI HiveMap (2026-09-03)
 
 Session marathon en trois volets, tous testés en direct par le CEO (compte

@@ -1724,15 +1724,26 @@ app.MapPost("/alliance/v1/help/contribute-all", async (HttpContext context, Auth
     return await ExecuteAllianceHelpAsync(async () => Results.Ok(await helpService.ContributeAllAsync(auth.PlayerId, request.ClientRequestId, cancellationToken)));
 });
 
-// M051-CL: Alliance Research - real server-authoritative collective progression, shared identically
-// by every current member of the same Alliance. See AllianceResearchService's own class comment for
-// the two-aggregate donation/atomicity strategy (resources debited from the player's own
-// PlayerHiveState, progress applied to the Alliance-owned AllianceResearchState).
+// M052-CL: Alliance Research - Bible-aligned lifecycle (BIBLE_ALLIANCE_RESEARCH.md V1.0):
+// Chef-only funding-target selection -> member donations (clamped to real remaining need) ->
+// fully-funded READY -> Chef/Officer launch -> server-authoritative timer -> COMPLETED -> bonus.
+// See AllianceResearchService's own class comment for the two-aggregate atomicity strategy.
 app.MapGet("/alliance/v1/research", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, CancellationToken cancellationToken) =>
 {
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
     return await ExecuteAllianceResearchAsync(async () => Results.Ok(await researchService.GetSnapshotAsync(auth.PlayerId, cancellationToken)));
+});
+
+app.MapPost("/alliance/v1/research/funding-target", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, AllianceResearchFundingTargetWireRequest request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceResearchAsync(async () =>
+    {
+        AllianceResearchCommandResult result = await researchService.SelectFundingTargetAsync(auth.PlayerId, new SelectAllianceResearchFundingTargetCommand(request.TechnologyId, request.ClientRequestId), cancellationToken);
+        return result.Succeeded ? Results.Ok(result) : AllianceResearchError(result.Code);
+    });
 });
 
 app.MapPost("/alliance/v1/research/{technologyId}/donate", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, string technologyId, AllianceResearchDonateWireRequest request, CancellationToken cancellationToken) =>
@@ -1741,7 +1752,31 @@ app.MapPost("/alliance/v1/research/{technologyId}/donate", async (HttpContext co
     if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
     return await ExecuteAllianceResearchAsync(async () =>
     {
-        AllianceResearchDonateResult result = await researchService.DonateAsync(auth.PlayerId, new DonateToAllianceResearchCommand(request.HiveId, technologyId, request.ClientRequestId), cancellationToken);
+        AllianceResearchCommandResult result = await researchService.DonateAsync(auth.PlayerId,
+            new DonateToAllianceResearchCommand(request.HiveId, technologyId, request.ResourceKey, request.Amount, request.ClientRequestId), cancellationToken);
+        return result.Succeeded ? Results.Ok(result) : AllianceResearchError(result.Code);
+    });
+});
+
+app.MapPost("/alliance/v1/research/{technologyId}/launch", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, string technologyId, AllianceResearchLaunchWireRequest request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceResearchAsync(async () =>
+    {
+        AllianceResearchCommandResult result = await researchService.LaunchAsync(auth.PlayerId, new LaunchAllianceResearchCommand(technologyId, request.ClientRequestId), cancellationToken);
+        return result.Succeeded ? Results.Ok(result) : AllianceResearchError(result.Code);
+    });
+});
+
+app.MapPost("/alliance/v1/research/{technologyId}/speedup", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, string technologyId, AllianceResearchSpeedUpWireRequest request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceResearchAsync(async () =>
+    {
+        AllianceResearchCommandResult result = await researchService.ApplySpeedUpAsync(auth.PlayerId,
+            new ApplyAllianceResearchSpeedUpCommand(request.HiveId, technologyId, request.ItemId, request.ClientRequestId), cancellationToken);
         return result.Succeeded ? Results.Ok(result) : AllianceResearchError(result.Code);
     });
 });
@@ -2570,10 +2605,13 @@ static IResult AllianceResearchError(string code) => AllianceError(AllianceResea
 
 static int AllianceResearchCodeToStatus(string code) => code switch
 {
-    "not_a_member" or "hive_not_owned" => 403,
-    "technology_not_found" or "hive_not_found" => 404,
-    "invalid_request" => 400,
-    "technology_locked" or "technology_completed" or "insufficient_resources" => 409,
+    "not_a_member" or "hive_not_owned" or "not_authorized" => 403,
+    "technology_not_found" or "hive_not_found" or "item_not_found" => 404,
+    "invalid_request" or "invalid_resource" => 400,
+    "technology_locked" or "technology_completed" or "insufficient_resources" or "not_the_funding_target"
+        or "technology_ready" or "technology_researching" or "technology_completed_funding_for_resource"
+        or "funding_incomplete" or "slot_occupied" or "already_researching" or "technology_already_researching"
+        or "no_speedup_available" or "technology_not_researching" => 409,
     _ => 409
 };
 
@@ -3287,5 +3325,8 @@ public sealed record SetDisplayNameHttpRequest(string DisplayName);
 public sealed record GameErrorEnvelope(string Code, string Message, int? RetryAfterSeconds);
 public sealed record AllianceErrorEnvelope(string Code);
 public sealed record AllianceHelpContributeWireRequest(string ClientRequestId);
-public sealed record AllianceResearchDonateWireRequest(Guid HiveId, string ClientRequestId);
+public sealed record AllianceResearchFundingTargetWireRequest(string TechnologyId, string ClientRequestId);
+public sealed record AllianceResearchDonateWireRequest(Guid HiveId, string ResourceKey, long Amount, string ClientRequestId);
+public sealed record AllianceResearchLaunchWireRequest(string ClientRequestId);
+public sealed record AllianceResearchSpeedUpWireRequest(Guid HiveId, string ItemId, string ClientRequestId);
 public sealed record AuthenticationUnavailableEnvelope(string Code, string Message);

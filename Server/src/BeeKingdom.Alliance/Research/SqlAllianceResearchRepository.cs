@@ -27,7 +27,8 @@ public sealed class SqlAllianceResearchRepository : IAllianceResearchRepository
         await connection.OpenAsync(cancellationToken);
         await using SqlTransaction transaction = (SqlTransaction)await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
         await AcquireLockAsync(connection, transaction, allianceId, cancellationToken);
-        AllianceResearchState current = await ReadLockedAsync(connection, transaction, allianceId, cancellationToken) ?? AllianceResearchState.Empty(allianceId);
+        AllianceResearchState current = AllianceResearchStateMigrator.ToCurrent(
+            await ReadLockedAsync(connection, transaction, allianceId, cancellationToken) ?? AllianceResearchState.Empty(allianceId));
         AllianceResearchState updated = mutation(current);
         await UpsertAsync(connection, transaction, updated, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -42,7 +43,7 @@ public sealed class SqlAllianceResearchRepository : IAllianceResearchRepository
         command.CommandText = "SELECT StateJson FROM dbo.AllianceResearch WHERE AllianceId=@allianceId";
         command.Parameters.Add(new SqlParameter("@allianceId", SqlDbType.UniqueIdentifier) { Value = allianceId });
         object? json = await command.ExecuteScalarAsync(cancellationToken);
-        return json is string value ? JsonSerializer.Deserialize<AllianceResearchState>(value, JsonOptions) : null;
+        return json is string value ? AllianceResearchStateMigrator.ToCurrent(JsonSerializer.Deserialize<AllianceResearchState>(value, JsonOptions)!) : null;
     }
 
     private static async Task AcquireLockAsync(SqlConnection connection, SqlTransaction transaction, Guid allianceId, CancellationToken ct)

@@ -35,7 +35,14 @@ public enum AllianceActivityType
     // Reserved for future subsystems out of scope tonight (territory/buildings/tech).
     AllianceTerritoryCaptured = 300,
     AllianceBuildingUpgraded = 301,
-    AllianceTechnologyCompleted = 302
+    // M052-CL: reused for funded/launched/completed Alliance Research milestones (Bible section 21)
+    // - differentiated via AllianceActivityPayload.Result ("funded"/"launched"/"completed") rather
+    // than one new enum value per milestone.
+    AllianceTechnologyCompleted = 302,
+    // M052-CL: the Chef's own funding-target selection - distinct enough from the technology's own
+    // lifecycle milestones above to warrant its own type (Bible section 21's own example sentence:
+    // "Stara a désigné « Maîtrise du Miel III » comme nouvel objectif de l'Alliance").
+    AllianceResearchFundingTargetSelected = 310
 }
 
 // Who is allowed to see this activity entry. The public Web page must only ever be handed entries

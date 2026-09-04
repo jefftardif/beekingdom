@@ -9,14 +9,19 @@ using Microsoft.Extensions.Options;
 
 namespace BeeKingdom.Tests;
 
-// M051-CL: exercises AllianceResearchService against the SAME PlayerHiveState resource-debit shape
-// every other paid action in this codebase mutates (see e.g. AllianceHelpServiceTests' own class
-// comment for the equivalent convention) - never a parallel/fabricated resource model. Runs against
-// InMemory repositories (InMemoryAllianceRepository shared with AllianceService, so real membership
-// truth backs every test) with a real AllianceService for alliance/membership setup.
+// M052-CL: exercises the Bible-aligned AllianceResearchService (BIBLE_ALLIANCE_RESEARCH.md V1.0)
+// against the same real PlayerHiveState resource-debit shape every other paid action in this
+// codebase mutates. Runs against InMemory repositories (InMemoryAllianceRepository shared with a
+// real AllianceService, so real membership/role truth backs every test).
 public sealed class AllianceResearchServiceTests
 {
     private static PlayerId NewPlayer() => PlayerId.New();
+
+    private const string Minor1 = "prosperity_shared_reserves_i";     // no prereq
+    private const string Minor2 = "prosperity_honey_mastery_i";       // prereq: Minor1
+    private const string MinorOther = "cooperation_coordinated_aid_i"; // independent branch, no prereq
+    private const string MinorThird = "expansion_coordinated_harvest_i"; // independent branch, no prereq
+    private const string Major1 = "prosperity_age_of_abundance";      // prereq: Minor1 + Minor2
 
     private sealed record Fixture(
         AllianceService Alliances,
@@ -34,7 +39,7 @@ public sealed class AllianceResearchServiceTests
         var researchRepository = new InMemoryAllianceResearchRepository();
         var hiveStates = new MemoryHiveStateRepository();
         var clock = new TestClock(DateTimeOffset.UtcNow);
-        var researchOptions = Options.Create(new AllianceResearchOptions { Enabled = true });
+        var researchOptions = Options.Create(new AllianceResearchOptions { Enabled = true, AllianceCurrencyPerContributionPoint = 0.1 });
 
         var alliances = new AllianceService(
             allianceRepository, new InMemoryAllianceActivityRepository(), new InMemoryAllianceDiplomacyRepository(), new InMemoryAllianceWarRepository(),
@@ -45,326 +50,580 @@ public sealed class AllianceResearchServiceTests
         return new Fixture(alliances, research, bonusResolver, hiveStates, clock, allianceRepository, researchRepository);
     }
 
-    private static (AllianceId AllianceId, Guid MemberHiveId) SetUpAllianceOfTwo(Fixture fixture, PlayerId leader, PlayerId member, long honey = 10_000, long pollen = 10_000, long wax = 10_000)
+    // Chef = leader; also seeds an Officer and a plain Member, and gives everyone ample resources.
+    private static (AllianceId AllianceId, PlayerId Chef, Guid ChefHiveId, PlayerId Officer, Guid OfficerHiveId, PlayerId Member, Guid MemberHiveId) SetUpAlliance(Fixture fx)
     {
-        AllianceEntity alliance = fixture.Alliances.CreateAlliance(leader, new CreateAllianceRequest("Golden Hive", "GLD", "desc", "fr-CA", "", AllianceJoinMode.Open, "create-" + leader.Value)).Alliance;
-        fixture.AllianceRepository.SaveMembership(new AllianceMembership
-        {
-            AllianceId = alliance.AllianceId,
-            PlayerId = member,
-            Role = AllianceRole.Member,
-            JoinedAtUtc = fixture.Clock.UtcNow,
-            LastRoleChangedAtUtc = fixture.Clock.UtcNow,
-            Revision = 0
-        });
-        Guid leaderHiveId = Guid.NewGuid(), memberHiveId = Guid.NewGuid();
-        fixture.HiveStates.Seed(SeedState(leader.Value, leaderHiveId, honey, pollen, wax));
-        fixture.HiveStates.Seed(SeedState(member.Value, memberHiveId, honey, pollen, wax));
-        return (alliance.AllianceId, memberHiveId);
+        PlayerId chef = NewPlayer(), officer = NewPlayer(), member = NewPlayer();
+        AllianceEntity alliance = fx.Alliances.CreateAlliance(chef, new CreateAllianceRequest("Golden Hive", "GLD", "desc", "fr-CA", "", AllianceJoinMode.Open, "create-" + chef.Value)).Alliance;
+        fx.AllianceRepository.SaveMembership(new AllianceMembership { AllianceId = alliance.AllianceId, PlayerId = officer, Role = AllianceRole.Officer, JoinedAtUtc = fx.Clock.UtcNow, LastRoleChangedAtUtc = fx.Clock.UtcNow, Revision = 0 });
+        fx.AllianceRepository.SaveMembership(new AllianceMembership { AllianceId = alliance.AllianceId, PlayerId = member, Role = AllianceRole.Member, JoinedAtUtc = fx.Clock.UtcNow, LastRoleChangedAtUtc = fx.Clock.UtcNow, Revision = 0 });
+
+        Guid chefHiveId = Guid.NewGuid(), officerHiveId = Guid.NewGuid(), memberHiveId = Guid.NewGuid();
+        fx.HiveStates.Seed(SeedState(chef.Value, chefHiveId));
+        fx.HiveStates.Seed(SeedState(officer.Value, officerHiveId));
+        fx.HiveStates.Seed(SeedState(member.Value, memberHiveId));
+        return (alliance.AllianceId, chef, chefHiveId, officer, officerHiveId, member, memberHiveId);
     }
 
-    private static PlayerHiveState SeedState(Guid playerId, Guid hiveId, long honey, long pollen, long wax) => new(
+    private static PlayerHiveState SeedState(Guid playerId, Guid hiveId, long amount = 1_000_000) => new(
         playerId, hiveId, 10, 0,
-        new Dictionary<string, ResourceBalance> { ["honey"] = new(honey, 1_000_000), ["pollen"] = new(pollen, 1_000_000), ["wax"] = new(wax, 1_000_000) },
+        new Dictionary<string, ResourceBalance> { ["honey"] = new(amount, 100_000_000), ["pollen"] = new(amount, 100_000_000), ["wax"] = new(amount, 100_000_000) },
         new(), new(), new());
 
-    private const string TechA1 = "prosperity_shared_reserves_i";
-    private const string TechA2 = "prosperity_shared_reserves_ii";
+    private static async Task<AllianceResearchCommandResult> SelectTarget(Fixture fx, PlayerId actor, string technologyId, string key = "req")
+        => await fx.Research.SelectFundingTargetAsync(actor, new SelectAllianceResearchFundingTargetCommand(technologyId, key));
 
-    // ---------------- 1: read ----------------
+    private static async Task<AllianceResearchCommandResult> Donate(Fixture fx, PlayerId actor, Guid hiveId, string technologyId, string resource, long amount, string key)
+        => await fx.Research.DonateAsync(actor, new DonateToAllianceResearchCommand(hiveId, technologyId, resource, amount, key));
 
-    [Test]
-    public async Task GetSnapshot_Member_ListsAllAlphaTechnologies()
+    private static async Task<AllianceResearchCommandResult> Launch(Fixture fx, PlayerId actor, string technologyId, string key = "launch")
+        => await fx.Research.LaunchAsync(actor, new LaunchAllianceResearchCommand(technologyId, key));
+
+    // Fully funds a technology (chef selects it, then donates exactly what's required from the
+    // Chef's own ample resources) - real flow, not fabricated state, used as setup for tests whose
+    // real subject is a LATER lifecycle step (launch/timer/bonus).
+    private static async Task FullyFund(Fixture fx, PlayerId chef, Guid chefHiveId, string technologyId, string keyPrefix)
     {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid hiveId) = SetUpAllianceOfTwo(fx, leader, member);
-        _ = hiveId;
-
-        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(leader);
-
-        Assert.That(snapshot.Technologies.Count, Is.EqualTo(AllianceResearchCatalog.Technologies.Count));
-        Assert.That(snapshot.Technologies.Single(t => t.TechnologyId == TechA1).Available, Is.True);
-        Assert.That(snapshot.Technologies.Single(t => t.TechnologyId == TechA2).Locked, Is.True, "tier 2 must be locked until tier 1 completes");
+        await SelectTarget(fx, chef, technologyId, keyPrefix + "-select");
+        AllianceResearchCatalog.TryGet(technologyId, out AllianceResearchCatalog.TechnologyDefinition def);
+        int i = 0;
+        foreach ((string resource, long amount) in def.FundingRequirements)
+            await Donate(fx, chef, chefHiveId, technologyId, resource, amount, keyPrefix + "-fund-" + i++);
     }
 
-    // ---------------- 2: non-member ----------------
+    // ---------------- 1/2/3: authority over funding target selection ----------------
 
     [Test]
-    public async Task Donate_NonMember_Rejected()
+    public async Task Member_CannotSelectFundingTarget()
     {
         Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer(), outsider = NewPlayer();
-        (_, _) = SetUpAllianceOfTwo(fx, leader, member);
-        fx.HiveStates.Seed(SeedState(outsider.Value, Guid.NewGuid(), 10_000, 10_000, 10_000));
-        Guid outsiderHiveId = (await fx.HiveStates.ListHiveIdsAsync(outsider.Value)).Single();
-
-        AllianceResearchDonateResult result = await fx.Research.DonateAsync(outsider, new DonateToAllianceResearchCommand(outsiderHiveId, TechA1, "req-1"));
-
+        (_, _, _, _, _, PlayerId member, _) = SetUpAlliance(fx);
+        AllianceResearchCommandResult result = await SelectTarget(fx, member, Minor1);
         Assert.That(result.Succeeded, Is.False);
-        Assert.That(result.Code, Is.EqualTo("not_a_member"));
+        Assert.That(result.Code, Is.EqualTo("not_authorized"));
     }
 
-    // ---------------- 3: locked ----------------
-
     [Test]
-    public async Task Donate_LockedTechnology_Rejected()
+    public async Task Officer_CannotSelectFundingTarget()
     {
         Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-
-        AllianceResearchDonateResult result = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA2, "req-1"));
-
+        (_, _, _, PlayerId officer, _, _, _) = SetUpAlliance(fx);
+        AllianceResearchCommandResult result = await SelectTarget(fx, officer, Minor1);
         Assert.That(result.Succeeded, Is.False);
-        Assert.That(result.Code, Is.EqualTo("technology_locked"));
+        Assert.That(result.Code, Is.EqualTo("not_authorized"));
     }
 
-    // ---------------- 4: completed ----------------
-
     [Test]
-    public async Task Donate_CompletedTechnology_Rejected()
+    public async Task Chef_CanSelectEligibleMinorAndMajorFundingTargets()
     {
         Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-        await CompleteTechnology(fx, member, memberHiveId, TechA1);
+        (_, PlayerId chef, _, _, _, _, _) = SetUpAlliance(fx);
 
-        AllianceResearchDonateResult result = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "req-after-complete"));
+        AllianceResearchCommandResult minorResult = await SelectTarget(fx, chef, Minor1, "select-minor");
+        Assert.That(minorResult.Succeeded, Is.True);
+        Assert.That(minorResult.Snapshot!.MinorFundingTargetId, Is.EqualTo(Minor1));
 
+        // Major1 needs its own prerequisites - selecting it before they're met must fail (proves
+        // the Chef cannot bypass prerequisite gating either).
+        AllianceResearchCommandResult majorBlocked = await SelectTarget(fx, chef, Major1, "select-major-early");
+        Assert.That(majorBlocked.Succeeded, Is.False);
+        Assert.That(majorBlocked.Code, Is.EqualTo("technology_locked"));
+    }
+
+    // ---------------- 5: changing target preserves prior funding ----------------
+
+    [Test]
+    public async Task ChangingFundingTarget_PreservesPriorPartialFunding()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1, "select-1");
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 1000, "fund-1");
+
+        await SelectTarget(fx, chef, MinorOther, "select-2");
+        AllianceResearchReadSnapshot afterSwitch = (await SelectTarget(fx, chef, MinorOther, "select-2")).Snapshot!;
+        AllianceTechnologyReadModel minor1AfterSwitch = afterSwitch.Technologies.Single(t => t.TechnologyId == Minor1);
+        Assert.That(minor1AfterSwitch.FundingContributed.GetValueOrDefault("honey"), Is.EqualTo(1000), "switching the target must not erase Minor1's prior contribution");
+
+        AllianceResearchReadSnapshot backToMinor1 = (await SelectTarget(fx, chef, Minor1, "select-3")).Snapshot!;
+        Assert.That(backToMinor1.Technologies.Single(t => t.TechnologyId == Minor1).FundingContributed.GetValueOrDefault("honey"), Is.EqualTo(1000), "reselecting must resume from the preserved 1000, not reset to 0");
+    }
+
+    // ---------------- 6: donation to non-selected technology rejected ----------------
+
+    [Test]
+    public async Task Donate_ToTechnologyThatIsNotTheCurrentFundingTarget_Rejected()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        // MinorOther is eligible (no prereq) but was never selected by the Chef.
+        AllianceResearchCommandResult result = await Donate(fx, chef, chefHiveId, MinorOther, "honey", 100, "fund");
         Assert.That(result.Succeeded, Is.False);
-        Assert.That(result.Code, Is.EqualTo("technology_completed"));
+        Assert.That(result.Code, Is.EqualTo("not_the_funding_target"));
     }
 
-    // ---------------- 5: insufficient resources ----------------
+    // ---------------- 7/8: real multi-resource debit and per-resource tracking ----------------
 
     [Test]
-    public async Task Donate_InsufficientResources_Rejected()
+    public async Task Donate_DebitsRealResourcesAndTracksEachRequiredResourceIndependently()
     {
         Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member, honey: 1, pollen: 1, wax: 1);
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        AllianceResearchCatalog.TryGet(Minor1, out AllianceResearchCatalog.TechnologyDefinition def); // honey+pollen+wax
+        await SelectTarget(fx, chef, Minor1);
 
-        AllianceResearchDonateResult result = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "req-1"));
-
-        Assert.That(result.Succeeded, Is.False);
-        Assert.That(result.Code, Is.EqualTo("insufficient_resources"));
-        PlayerHiveState state = (await fx.HiveStates.ReadAsync(member.Value, memberHiveId))!;
-        Assert.That(state.Resources["honey"].Amount, Is.EqualTo(1), "a rejected donation must never debit anything");
-    }
-
-    // ---------------- 6/7/8: successful donation ----------------
-
-    [Test]
-    public async Task Donate_Success_DebitsResourcesIncrementsProgressAndContribution()
-    {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-        AllianceResearchCatalog.TryGet(TechA1, out AllianceResearchCatalog.TechnologyDefinition definition);
-
-        AllianceResearchDonateResult result = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "req-1"));
+        AllianceResearchCommandResult result = await Donate(fx, chef, chefHiveId, Minor1, "pollen", 500, "fund-pollen");
 
         Assert.That(result.Succeeded, Is.True);
-        PlayerHiveState state = (await fx.HiveStates.ReadAsync(member.Value, memberHiveId))!;
-        foreach ((string resourceKey, long cost) in definition.DonationCost)
-            Assert.That(state.Resources[resourceKey].Amount, Is.EqualTo(10_000 - cost), $"{resourceKey} must be debited by the real donation cost");
-
-        AllianceTechnologyReadModel tech = result.Snapshot!.Technologies.Single(t => t.TechnologyId == TechA1);
-        Assert.That(tech.CurrentProgress, Is.EqualTo(definition.DonationProgressPerDonation));
-        Assert.That(result.Snapshot.MyContributionPoints, Is.EqualTo(definition.DonationProgressPerDonation));
-        Assert.That(result.Snapshot.MyDonationCount, Is.EqualTo(1));
+        PlayerHiveState state = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(state.Resources["pollen"].Amount, Is.EqualTo(1_000_000 - 500));
+        Assert.That(state.Resources["honey"].Amount, Is.EqualTo(1_000_000), "only the donated resource must be debited");
+        AllianceTechnologyReadModel tech = result.Snapshot!.Technologies.Single(t => t.TechnologyId == Minor1);
+        Assert.That(tech.FundingContributed.GetValueOrDefault("pollen"), Is.EqualTo(500));
+        Assert.That(tech.FundingContributed.GetValueOrDefault("honey"), Is.EqualTo(0), "an unrelated required resource must not appear funded");
+        _ = def;
     }
 
-    // ---------------- 9: persistence ----------------
-
     [Test]
-    public async Task Donate_Success_PersistsInRepository()
+    public async Task Donate_ClampsToRemainingNeed_NeverOvershoots()
     {
         Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (AllianceId allianceId, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        AllianceResearchCatalog.TryGet(MinorOther, out AllianceResearchCatalog.TechnologyDefinition def); // honey:2000, pollen:1500
+        await SelectTarget(fx, chef, MinorOther);
 
-        await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "req-1"));
+        AllianceResearchCommandResult result = await Donate(fx, chef, chefHiveId, MinorOther, "honey", 999_999, "fund-huge");
 
-        AllianceResearchState? persisted = await fx.ResearchRepository.ReadAsync(allianceId.Value);
-        Assert.That(persisted, Is.Not.Null);
-        Assert.That(persisted!.Technologies[TechA1].CurrentProgress, Is.EqualTo(10));
-        // A second, independent read (Jeff donates, Stara must see the increase) - both go through
-        // the same AllianceResearchService reading the same shared aggregate, never a per-player copy.
-        AllianceResearchReadSnapshot leaderView = await fx.Research.GetSnapshotAsync(leader);
-        Assert.That(leaderView.Technologies.Single(t => t.TechnologyId == TechA1).CurrentProgress, Is.EqualTo(10));
+        Assert.That(result.Succeeded, Is.True);
+        AllianceTechnologyReadModel tech = result.Snapshot!.Technologies.Single(t => t.TechnologyId == MinorOther);
+        Assert.That(tech.FundingContributed["honey"], Is.EqualTo(def.FundingRequirements["honey"]), "must clamp to exactly the requirement, never store more");
+        PlayerHiveState state = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(state.Resources["honey"].Amount, Is.EqualTo(1_000_000 - def.FundingRequirements["honey"]), "must only ever debit the clamped amount, not the requested amount");
     }
 
-    // ---------------- 10: concurrency ----------------
+    // ---------------- 9/10: 100% funding => READY, never COMPLETED, no bonus ----------------
 
     [Test]
-    public async Task ConcurrentDonations_FromTwoMembers_NeitherProgressIsLost()
+    public async Task FullyFunding_ProducesReady_NotCompleted_AndGrantsNoBonus()
     {
         Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-        Guid leaderHiveId = (await fx.HiveStates.ListHiveIdsAsync(leader.Value)).Single();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
 
-        Task<AllianceResearchDonateResult> a = fx.Research.DonateAsync(leader, new DonateToAllianceResearchCommand(leaderHiveId, TechA1, "leader-1"));
-        Task<AllianceResearchDonateResult> b = fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "member-1"));
+        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(chef);
+        AllianceTechnologyReadModel tech = snapshot.Technologies.Single(t => t.TechnologyId == Minor1);
+        Assert.That(tech.State, Is.EqualTo(AllianceTechnologyState.Ready));
+        Assert.That(tech.CompletedAtUtc, Is.Null);
+
+        AllianceResearchBonus bonus = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(bonus, Is.EqualTo(AllianceResearchBonus.None), "100% funded (READY) must grant no bonus");
+    }
+
+    // ---------------- 11/12/13: launch authorization ----------------
+
+    [Test]
+    public async Task Member_CannotLaunch()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, PlayerId member, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+
+        AllianceResearchCommandResult result = await Launch(fx, member, Minor1);
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("not_authorized"));
+    }
+
+    [Test]
+    public async Task Officer_CanLaunchReadyTechnology()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, PlayerId officer, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+
+        AllianceResearchCommandResult result = await Launch(fx, officer, Minor1);
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Snapshot!.MinorResearchingTechnologyId, Is.EqualTo(Minor1));
+    }
+
+    [Test]
+    public async Task Chef_CanLaunchReadyTechnology()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+
+        AllianceResearchCommandResult result = await Launch(fx, chef, Minor1);
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Snapshot!.Technologies.Single(t => t.TechnologyId == Minor1).State, Is.EqualTo(AllianceTechnologyState.Researching));
+    }
+
+    // ---------------- 14/15: launch rejection ----------------
+
+    [Test]
+    public async Task Launch_RejectedIfFundingIncomplete()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 1, "partial");
+
+        AllianceResearchCommandResult result = await Launch(fx, chef, Minor1);
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("funding_incomplete"));
+    }
+
+    [Test]
+    public async Task Launch_RejectedIfCorrespondingSlotOccupied()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1, "launch-1");
+        await FullyFund(fx, chef, chefHiveId, MinorOther, "m2");
+
+        AllianceResearchCommandResult result = await Launch(fx, chef, MinorOther, "launch-2");
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("slot_occupied"));
+    }
+
+    // ---------------- 16/17/18: two independent slots, next funding while researching ----------------
+
+    [Test]
+    public async Task MinorAndMajor_ResearchSimultaneously_AndNextMinorCanFundWhileMinorResearches()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+
+        // Seed Major1's prerequisites as already completed (arrange-only shortcut - Minor1/Minor2's
+        // own real funding->launch->timer->completion flow is exercised end to end by the other
+        // tests in this file; this test's real subject is dual-slot + next-funding behavior).
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+
+        await FullyFund(fx, chef, chefHiveId, Major1, "major");
+        await Launch(fx, chef, Major1, "launch-major");
+
+        await FullyFund(fx, chef, chefHiveId, MinorOther, "minorother");
+        AllianceResearchCommandResult launchMinor = await Launch(fx, chef, MinorOther, "launch-minor");
+        Assert.That(launchMinor.Succeeded, Is.True, "a Minor must be launchable while a Major is researching - independent slots");
+        Assert.That(launchMinor.Snapshot!.MajorResearchingTechnologyId, Is.EqualTo(Major1), "the Major slot must be untouched by launching a Minor");
+        Assert.That(launchMinor.Snapshot.MinorResearchingTechnologyId, Is.EqualTo(MinorOther));
+
+        // Bible section 7: while MinorOther researches, the Chef may already open funding for the
+        // NEXT minor (a different technology, since a technology cannot be both its own slot's
+        // active research AND its own slot's funding target at once).
+        AllianceResearchCommandResult nextTarget = await SelectTarget(fx, chef, MinorThird, "next-minor-target");
+        Assert.That(nextTarget.Succeeded, Is.True);
+        Assert.That(nextTarget.Snapshot!.MinorFundingTargetId, Is.EqualTo(MinorThird));
+        Assert.That(nextTarget.Snapshot.MinorResearchingTechnologyId, Is.EqualTo(MinorOther), "selecting the next funding target must not disturb the currently researching technology");
+    }
+
+    // ---------------- 19/20/21: server-authoritative timer, persists, resolves exactly once ----------------
+
+    [Test]
+    public async Task ResearchTimer_PersistsAcrossReads_AndElapsedTimerCompletesExactlyOnce()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        AllianceResearchCatalog.TryGet(Minor1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Minor1);
+
+        AllianceResearchReadSnapshot mid = await fx.Research.GetSnapshotAsync(chef);
+        AllianceTechnologyReadModel midTech = mid.Technologies.Single(t => t.TechnologyId == Minor1);
+        Assert.That(midTech.State, Is.EqualTo(AllianceTechnologyState.Researching));
+        Assert.That(midTech.ResearchCompletesAtUtc, Is.Not.Null);
+
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        AllianceResearchReadSnapshot afterFirstRead = await fx.Research.GetSnapshotAsync(chef);
+        AllianceTechnologyReadModel completedTech = afterFirstRead.Technologies.Single(t => t.TechnologyId == Minor1);
+        Assert.That(completedTech.State, Is.EqualTo(AllianceTechnologyState.Completed));
+        Assert.That(completedTech.CompletedAtUtc, Is.Not.Null);
+
+        // A second, independent read must observe the SAME already-resolved completion - proves
+        // "exactly once" (no re-triggering, no double completion artifact) via repository state.
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync((await fx.Research.GetSnapshotAsync(chef)).AllianceId))!;
+        Assert.That(raw.Completed.Count, Is.EqualTo(1));
+        Assert.That(raw.MinorResearch, Is.Null, "the slot must be cleared once resolved");
+    }
+
+    // ---------------- 22/23: bonus only from Completed ----------------
+
+    [Test]
+    public async Task Bonus_OnlyActivatesAfterRealCompletion_NeverWhileResearching()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        AllianceResearchCatalog.TryGet(Minor1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Minor1);
+
+        AllianceResearchBonus whileResearching = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(whileResearching, Is.EqualTo(AllianceResearchBonus.None), "RESEARCHING must grant no bonus");
+
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        await fx.Research.GetSnapshotAsync(chef); // triggers the lazy resolution to Completed
+
+        AllianceResearchBonus afterCompletion = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(afterCompletion.ProductionBp, Is.EqualTo(def.ProductionBp), "COMPLETED must grant its real bonus");
+    }
+
+    // ---------------- 24/25: membership semantics ----------------
+
+    [Test]
+    public async Task Bonus_LeavingAlliance_RemovesCompletedBonus_JoiningGrantsIt()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, PlayerId member, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        AllianceResearchCatalog.TryGet(Minor1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Minor1);
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        await fx.Research.GetSnapshotAsync(chef);
+
+        AllianceResearchBonus memberWhileIn = await fx.BonusResolver.ResolveForPlayerAsync(member);
+        Assert.That(memberWhileIn.ProductionBp, Is.GreaterThan(0));
+
+        fx.Alliances.Leave(member);
+        Assert.That((await fx.BonusResolver.ResolveForPlayerAsync(member)), Is.EqualTo(AllianceResearchBonus.None));
+
+        PlayerId newcomer = NewPlayer();
+        fx.AllianceRepository.SaveMembership(new AllianceMembership { AllianceId = allianceId, PlayerId = newcomer, Role = AllianceRole.Member, JoinedAtUtc = fx.Clock.UtcNow, LastRoleChangedAtUtc = fx.Clock.UtcNow, Revision = 0 });
+        Assert.That((await fx.BonusResolver.ResolveForPlayerAsync(newcomer)).ProductionBp, Is.GreaterThan(0), "a newcomer must see the alliance's already-completed research bonus immediately");
+    }
+
+    // ---------------- 26/27/28/29/30: SpeedUp ----------------
+
+    [Test]
+    public async Task SpeedUp_RejectedDuringFunding()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_1h", "su-1"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("technology_not_researching"));
+    }
+
+    [Test]
+    public async Task SpeedUp_RejectedWhileReady()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_1h", "su-1"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("technology_not_researching"));
+    }
+
+    [Test]
+    public async Task SpeedUp_AcceptedWhileResearching_ReducesRealRemainingTime()
+    {
+        // Uses Major1 (2h Alpha duration) rather than a Minor (15-25min) specifically so the 1h
+        // item's reduction does NOT hit the "cannot overshoot below zero" clamp - that clamp
+        // behavior has its own dedicated test (SpeedUp_CannotOvershootBelowNow) using a Minor.
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "maj1");
+        await Launch(fx, chef, Major1, "launch-1");
+        DateTimeOffset before = fx.Research.GetSnapshotAsync(chef).Result.Technologies.Single(t => t.TechnologyId == Major1).ResearchCompletesAtUtc!.Value;
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Major1, "alliance_research_speedup_1h", "su-1"));
+
+        Assert.That(result.Succeeded, Is.True);
+        DateTimeOffset after = result.Snapshot!.Technologies.Single(t => t.TechnologyId == Major1).ResearchCompletesAtUtc!.Value;
+        Assert.That(after, Is.EqualTo(before - TimeSpan.FromHours(1)));
+        PlayerHiveState state = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(state.SpeedUps!.GetValueOrDefault("alliance_research_speedup_1h"), Is.EqualTo(0), "the item must be consumed exactly once");
+    }
+
+    [Test]
+    public async Task SpeedUp_CannotOvershootBelowNow()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1"); // 15 minute duration
+        await Launch(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_24h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_24h", "su-1"));
+
+        Assert.That(result.Succeeded, Is.True);
+        DateTimeOffset completesAt = result.Snapshot!.Technologies.Single(t => t.TechnologyId == Minor1).ResearchCompletesAtUtc!.Value;
+        Assert.That(completesAt, Is.GreaterThanOrEqualTo(fx.Clock.UtcNow), "must clamp at 'now', never go negative/into the past");
+    }
+
+    [Test]
+    public async Task SpeedUp_CompletionAfterReducedTimer_ActivatesExactlyOnce()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_24h");
+        await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_24h", "su-1"));
+
+        AllianceResearchReadSnapshot afterSpeedUp = await fx.Research.GetSnapshotAsync(chef);
+        Assert.That(afterSpeedUp.Technologies.Single(t => t.TechnologyId == Minor1).State, Is.EqualTo(AllianceTechnologyState.Completed), "the 24h item must fully clear the 15-minute duration, resolving completion on the very next read");
+        AllianceResearchBonus bonus = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(bonus.ProductionBp, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public async Task Member_CannotUseAllianceResearchSpeedUp()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, PlayerId member, Guid memberHiveId) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, member.Value, memberHiveId, "alliance_research_speedup_1h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(member, new ApplyAllianceResearchSpeedUpCommand(memberHiveId, Minor1, "alliance_research_speedup_1h", "su-1"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("not_authorized"));
+    }
+
+    // ---------------- 32/33/34: idempotent retries ----------------
+
+    [Test]
+    public async Task Donate_SameClientRequestIdRetried_DoesNotDoubleDebit()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "same-key");
+        AllianceResearchCommandResult retry = await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "same-key");
+
+        Assert.That(retry.Succeeded, Is.True);
+        PlayerHiveState state = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(state.Resources["honey"].Amount, Is.EqualTo(1_000_000 - 500), "must debit exactly once across the retry");
+        Assert.That(retry.Snapshot!.Technologies.Single(t => t.TechnologyId == Minor1).FundingContributed.GetValueOrDefault("honey"), Is.EqualTo(500), "must apply exactly once across the retry");
+    }
+
+    [Test]
+    public async Task Launch_SameClientRequestIdRetried_IsSafe()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+
+        AllianceResearchCommandResult first = await Launch(fx, chef, Minor1, "same-launch-key");
+        AllianceResearchCommandResult retry = await Launch(fx, chef, Minor1, "same-launch-key");
+
+        Assert.That(first.Succeeded, Is.True);
+        Assert.That(retry.Succeeded, Is.True);
+        Assert.That(retry.Snapshot!.MinorResearchingTechnologyId, Is.EqualTo(Minor1));
+    }
+
+    [Test]
+    public async Task SpeedUp_SameClientRequestIdRetried_DoesNotDoubleReduce()
+    {
+        // Major1 again (see SpeedUp_AcceptedWhileResearching's own comment) - a retry that DID
+        // double-apply against a short Minor would be masked by the completion clamp either way.
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "maj1");
+        await Launch(fx, chef, Major1, "launch-1");
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h", quantity: 2);
+
+        AllianceResearchCommandResult first = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Major1, "alliance_research_speedup_1h", "same-su-key"));
+        AllianceResearchCommandResult retry = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Major1, "alliance_research_speedup_1h", "same-su-key"));
+
+        Assert.That(first.Snapshot!.Technologies.Single(t => t.TechnologyId == Major1).ResearchCompletesAtUtc,
+            Is.EqualTo(retry.Snapshot!.Technologies.Single(t => t.TechnologyId == Major1).ResearchCompletesAtUtc), "a retried speedup must not reduce the timer a second time");
+    }
+
+    // ---------------- 35: concurrent donations remain safe ----------------
+
+    [Test]
+    public async Task ConcurrentDonations_FromTwoMembers_NeitherContributionIsLost()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, PlayerId officer, Guid officerHiveId, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        Task<AllianceResearchCommandResult> a = Donate(fx, chef, chefHiveId, Minor1, "honey", 1000, "chef-donate");
+        Task<AllianceResearchCommandResult> b = Donate(fx, officer, officerHiveId, Minor1, "honey", 1000, "officer-donate");
         await Task.WhenAll(a, b);
 
         Assert.That(a.Result.Succeeded, Is.True);
         Assert.That(b.Result.Succeeded, Is.True);
-        AllianceTechnologyProgress progress = (await fx.ResearchRepository.ReadAsync(fx.AllianceRepository.GetActiveMembershipForPlayer(leader)!.AllianceId.Value))!.Technologies[TechA1];
-        Assert.That(progress.CurrentProgress, Is.EqualTo(20), "two concurrent +10 donations must both land - no lost update");
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync((await fx.Research.GetSnapshotAsync(chef)).AllianceId))!;
+        Assert.That(raw.Funding[Minor1].Contributed["honey"], Is.EqualTo(2000), "two concurrent 1000-honey donations must both land - no lost update");
     }
 
-    // ---------------- 11: completion exactly once ----------------
+    // ---------------- 37: Gelée Royale never accepted ----------------
 
     [Test]
-    public async Task Completion_HappensExactlyOnce_AndClampsAtRequiredProgress()
+    public async Task Donate_RoyalJellyIsNeverAValidFundingResource()
     {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (AllianceId allianceId, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member, honey: 1_000_000, pollen: 1_000_000, wax: 1_000_000);
-        AllianceResearchCatalog.TryGet(TechA1, out AllianceResearchCatalog.TechnologyDefinition definition);
-        long donationsToComplete = definition.RequiredProgress / definition.DonationProgressPerDonation;
+        // No Alpha technology's FundingRequirements references Royal Jelly at all - proven by
+        // direct catalog inspection (the Bible's own explicit rule: it is never normal funding).
+        Assert.That(AllianceResearchCatalog.Technologies.Any(t => t.FundingRequirements.Keys.Any(k => k.Contains("royal_jelly", StringComparison.OrdinalIgnoreCase) || k.Contains("jelly", StringComparison.OrdinalIgnoreCase))), Is.False);
 
-        DateTimeOffset? completedAt = null;
-        for (int i = 0; i < donationsToComplete; i++)
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        AllianceResearchCommandResult result = await Donate(fx, chef, chefHiveId, Minor1, "royal_jelly", 1, "attempt-jelly");
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("invalid_resource"), "even if a caller tries, a resource outside the technology's own FundingRequirements is always rejected");
+    }
+
+    // ---------------- architecture: long durations (30-60 days) are structurally supported ----------------
+
+    [Test]
+    public void LongDurationMathIsExact_60DayMajorDoesNotOverflowOrTruncate()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow;
+        TimeSpan sixtyDays = TimeSpan.FromDays(60);
+        AllianceResearchSlot slot = new("test_tech", start, start + sixtyDays);
+        Assert.That((slot.CompletesAtUtc - slot.StartedAtUtc), Is.EqualTo(sixtyDays));
+        Assert.That(start + sixtyDays >= start, Is.True);
+        // The exact same arithmetic (DateTimeOffset + TimeSpan, no custom overflow-prone integer
+        // day/second math) is what LaunchAsync/ApplySpeedUpAsync use for every duration, Alpha or
+        // final-balance alike - this proves the architecture, independent of which duration value
+        // the current Alpha catalog happens to configure.
+    }
+
+    // Arrange-only shortcut: writes a technology directly into Completed, bypassing the real
+    // funding/launch/timer flow - used only to set up a LATER lifecycle step's own test (e.g. a
+    // Major's prerequisites), never to substitute for testing the flow itself (see the other tests
+    // in this file, which all go through the real DonateAsync/LaunchAsync/timer path).
+    private static async Task SeedCompleted(Fixture fx, AllianceId allianceId, string technologyId)
+    {
+        await fx.ResearchRepository.ExecuteAtomicallyAsync(allianceId.Value, state => state with
         {
-            AllianceResearchDonateResult result = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, $"req-{i}"));
-            AllianceTechnologyReadModel tech = result.Snapshot!.Technologies.Single(t => t.TechnologyId == TechA1);
-            if (tech.Completed)
-            {
-                Assert.That(completedAt, Is.Null, "completion must be observed exactly once");
-                completedAt = tech.CompletedAtUtc;
-            }
-        }
-
-        Assert.That(completedAt, Is.Not.Null);
-        AllianceResearchState final = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
-        Assert.That(final.Technologies[TechA1].CurrentProgress, Is.EqualTo(definition.RequiredProgress), "progress must never exceed RequiredProgress");
-    }
-
-    // ---------------- 12: prerequisite unlock ----------------
-
-    [Test]
-    public async Task PrerequisiteUnlock_TierTwoBecomesAvailableAfterTierOneCompletes()
-    {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-
-        AllianceResearchReadSnapshot before = await fx.Research.GetSnapshotAsync(member);
-        Assert.That(before.Technologies.Single(t => t.TechnologyId == TechA2).Locked, Is.True);
-
-        await CompleteTechnology(fx, member, memberHiveId, TechA1);
-
-        AllianceResearchReadSnapshot after = await fx.Research.GetSnapshotAsync(member);
-        Assert.That(after.Technologies.Single(t => t.TechnologyId == TechA2).Locked, Is.False);
-        Assert.That(after.Technologies.Single(t => t.TechnologyId == TechA2).Available, Is.True);
-    }
-
-    // ---------------- 13: idempotent retry ----------------
-
-    [Test]
-    public async Task Donate_SameClientRequestIdRetried_DoesNotDoubleCharge()
-    {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (_, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-
-        AllianceResearchDonateResult first = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "same-req"));
-        AllianceResearchDonateResult retry = await fx.Research.DonateAsync(member, new DonateToAllianceResearchCommand(memberHiveId, TechA1, "same-req"));
-
-        Assert.That(first.Succeeded, Is.True);
-        Assert.That(retry.Succeeded, Is.True);
-        PlayerHiveState state = (await fx.HiveStates.ReadAsync(member.Value, memberHiveId))!;
-        AllianceResearchCatalog.TryGet(TechA1, out AllianceResearchCatalog.TechnologyDefinition definition);
-        foreach ((string resourceKey, long cost) in definition.DonationCost)
-            Assert.That(state.Resources[resourceKey].Amount, Is.EqualTo(10_000 - cost), $"{resourceKey} must be debited exactly once across the retry");
-        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(member);
-        Assert.That(snapshot.Technologies.Single(t => t.TechnologyId == TechA1).CurrentProgress, Is.EqualTo(definition.DonationProgressPerDonation), "progress must only advance once across the retry");
-        Assert.That(snapshot.MyDonationCount, Is.EqualTo(1));
-    }
-
-    // ---------------- M051C-CL: real bonus magnitude reaches the read contract ----------------
-
-    [Test]
-    public async Task GetSnapshot_ExposesRealCatalogBonusMagnitudes_NotJustAGenericSummaryKey()
-    {
-        // M051C-CL: Stage 1 visual certification failed because the client had nowhere to read a
-        // real number from - only a generic BonusSummaryKey existed. This proves the read contract
-        // now carries the actual AllianceResearchCatalog values, so the UI can format "+X %" from
-        // server truth instead of a client-hardcoded number that could drift from the catalog.
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        SetUpAllianceOfTwo(fx, leader, member);
-        AllianceResearchCatalog.TryGet(TechA1, out AllianceResearchCatalog.TechnologyDefinition definition);
-
-        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(leader);
-
-        AllianceTechnologyReadModel tech = snapshot.Technologies.Single(t => t.TechnologyId == TechA1);
-        Assert.That(tech.ProductionBp, Is.EqualTo(definition.ProductionBp));
-        Assert.That(tech.CapacityBp, Is.EqualTo(definition.CapacityBp));
-        Assert.That(tech.CombatPowerBp, Is.EqualTo(definition.CombatPowerBp));
-        Assert.That(tech.ProductionBp, Is.GreaterThan(0), "prosperity_shared_reserves_i must actually carry its real production bonus");
-    }
-
-    // ---------------- 14/15: membership bonus semantics ----------------
-
-    [Test]
-    public async Task Bonus_LeavingAlliance_NoLongerApplies()
-    {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer();
-        (AllianceId allianceId, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-        await CompleteTechnology(fx, member, memberHiveId, TechA1);
-
-        AllianceResearchBonus whileJoined = await fx.BonusResolver.ResolveForPlayerAsync(member);
-        Assert.That(whileJoined.ProductionBp, Is.GreaterThan(0));
-
-        fx.Alliances.Leave(member);
-        AllianceResearchBonus afterLeaving = await fx.BonusResolver.ResolveForPlayerAsync(member);
-        Assert.That(afterLeaving, Is.EqualTo(AllianceResearchBonus.None), "a player who left must not keep their former alliance's bonus");
-    }
-
-    [Test]
-    public async Task Bonus_JoiningAllianceWithCompletedTech_AppliesImmediately()
-    {
-        Fixture fx = CreateFixture();
-        PlayerId leader = NewPlayer(), member = NewPlayer(), newcomer = NewPlayer();
-        (AllianceId allianceId, Guid memberHiveId) = SetUpAllianceOfTwo(fx, leader, member);
-        await CompleteTechnology(fx, member, memberHiveId, TechA1);
-
-        AllianceResearchBonus beforeJoining = await fx.BonusResolver.ResolveForPlayerAsync(newcomer);
-        Assert.That(beforeJoining, Is.EqualTo(AllianceResearchBonus.None));
-
-        fx.AllianceRepository.SaveMembership(new AllianceMembership
-        {
-            AllianceId = allianceId, PlayerId = newcomer, Role = AllianceRole.Member,
-            JoinedAtUtc = fx.Clock.UtcNow, LastRoleChangedAtUtc = fx.Clock.UtcNow, Revision = 0
+            Revision = state.Revision + 1,
+            Completed = new Dictionary<string, AllianceCompletedTechnology>(state.Completed, StringComparer.Ordinal) { [technologyId] = new AllianceCompletedTechnology(technologyId, fx.Clock.UtcNow) }
         });
-        AllianceResearchBonus afterJoining = await fx.BonusResolver.ResolveForPlayerAsync(newcomer);
-        Assert.That(afterJoining.ProductionBp, Is.GreaterThan(0), "a newcomer must see the alliance's ALREADY completed research bonus immediately");
     }
 
-    private static async Task CompleteTechnology(Fixture fx, PlayerId donor, Guid hiveId, string technologyId)
+    private static void GiveSpeedUpItem(Fixture fx, Guid playerId, Guid hiveId, string itemId, int quantity = 1)
     {
-        AllianceResearchCatalog.TryGet(technologyId, out AllianceResearchCatalog.TechnologyDefinition definition);
-        long donations = definition.RequiredProgress / definition.DonationProgressPerDonation;
-        for (int i = 0; i < donations; i++)
+        fx.HiveStates.Seed((fx.HiveStates.ReadAsync(playerId, hiveId).Result!) with
         {
-            AllianceResearchDonateResult result = await fx.Research.DonateAsync(donor, new DonateToAllianceResearchCommand(hiveId, technologyId, $"complete-{technologyId}-{i}"));
-            if (!result.Succeeded) throw new InvalidOperationException($"Failed to complete {technologyId} in test setup: {result.Code}");
-        }
+            SpeedUps = new Dictionary<string, int>(StringComparer.Ordinal) { [itemId] = quantity }
+        });
     }
 
     private sealed class TestClock(DateTimeOffset value) : IServerClock
     {
-        public DateTimeOffset UtcNow { get; } = value;
+        public DateTimeOffset UtcNow { get; set; } = value;
     }
 
-    // Multi-player-aware in-memory PlayerHiveState repository - same convention as
-    // AllianceHelpServiceTests' own MemoryHiveStateRepository.
     private sealed class MemoryHiveStateRepository : IHiveStateRepository
     {
         private readonly object gate = new();

@@ -6,13 +6,12 @@ using NUnit.Framework;
 
 namespace BeeKingdom.Tests.Editor
 {
-    // M051-CL: wire-level coverage for the Alliance Research client methods added on top of the
-    // existing AllianceClient. Same architecture constraint as AllianceHelpClientTests.cs (see its
-    // top-of-file comment): AllianceCenterPanelController's new RefreshResearch/DonateToResearch
-    // state machine lives in the default Assembly-CSharp assembly, unreachable from this
-    // BeeKingdom.Tests.asmdef-scoped project - so this proves the client sends exactly the request
-    // M051's real server contract expects (single call, correct path, correct body), which is the
-    // layer this project can actually unit test.
+    // M052-CL: wire-level coverage for the Bible-aligned Alliance Research client surface
+    // (BIBLE_ALLIANCE_RESEARCH.md V1.0) - same architecture constraint as AllianceHelpClientTests.cs
+    // (see its top-of-file comment): AllianceCenterPanelController's Research state machine lives in
+    // the default Assembly-CSharp assembly, unreachable from this BeeKingdom.Tests.asmdef-scoped
+    // project - so this proves the client sends exactly the request the real server contract
+    // expects (path, method, body), which is the layer this project can actually unit test.
     public sealed class AllianceResearchClientTests
     {
         private static readonly Guid PlayerId = Guid.Parse("11111111-2222-3333-4444-555555555555");
@@ -29,27 +28,33 @@ namespace BeeKingdom.Tests.Editor
                 AllianceId = AllianceId,
                 Technologies = new List<RemoteAllianceTechnology>
                 {
-                    new RemoteAllianceTechnology { TechnologyId = TechnologyId, RequiredProgress = 60, CurrentProgress = 10, Available = true }
+                    new RemoteAllianceTechnology
+                    {
+                        TechnologyId = TechnologyId,
+                        State = "Funding",
+                        FundingRequired = new Dictionary<string, long> { ["honey"] = 3000 },
+                        FundingContributed = new Dictionary<string, long> { ["honey"] = 500 },
+                    }
                 },
                 MyContributionPoints = 10,
-                MyDonationCount = 1
+                MyDonationCount = 1,
             };
             var transport = new TypeCapturingTransport(snapshot);
             var client = NewClient(transport);
 
             RemoteAllianceResearchSnapshot result = await client.GetAllianceResearchAsync();
 
-            Assert.That(transport.Requests, Has.Count.EqualTo(1), "must call the real M051 read path exactly once, never a local/fabricated one");
+            Assert.That(transport.Requests, Has.Count.EqualTo(1), "must call the real M052 read path exactly once, never a local/fabricated one");
             Assert.That(transport.Requests[0].Method, Is.EqualTo("GET"));
             Assert.That(transport.Requests[0].Path, Is.EqualTo("/alliance/v1/research"));
             Assert.That(result.Technologies[0].TechnologyId, Is.EqualTo(TechnologyId));
+            Assert.That(result.Technologies[0].State, Is.EqualTo("Funding"));
             Assert.That(result.MyContributionPoints, Is.EqualTo(10), "contribution total must be exactly what the server returned, never re-derived client-side");
         }
 
-        // M051C-CL: Stage 1 certification failed because the UI had no real number to format an
-        // effect from - proves the wire DTO now round-trips the real catalog bonus magnitude the
-        // server exposes (ProductionBp/CapacityBp/CombatPowerBp), so "+1 %" on screen always comes
-        // from server truth, never a client-hardcoded value.
+        // M051C-CL (still true under M052): proves the wire DTO round-trips the real catalog bonus
+        // magnitude the server exposes (ProductionBp/CapacityBp/CombatPowerBp), so "+1 %" on screen
+        // always comes from server truth, never a client-hardcoded value.
         [Test]
         public async Task GetAllianceResearchAsync_RoundTripsRealBonusMagnitudes()
         {
@@ -58,7 +63,7 @@ namespace BeeKingdom.Tests.Editor
                 AllianceId = AllianceId,
                 Technologies = new List<RemoteAllianceTechnology>
                 {
-                    new RemoteAllianceTechnology { TechnologyId = TechnologyId, RequiredProgress = 60, ProductionBp = 100, CapacityBp = 0, CombatPowerBp = 0 }
+                    new RemoteAllianceTechnology { TechnologyId = TechnologyId, State = "Completed", ProductionBp = 100, CapacityBp = 0, CombatPowerBp = 0 }
                 }
             };
             var transport = new TypeCapturingTransport(snapshot);
@@ -71,25 +76,81 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(result.Technologies[0].CombatPowerBp, Is.EqualTo(0));
         }
 
+        // M052-CL: server-computed authorization booleans must round-trip untouched - the client
+        // never re-derives Chef/Officer/Member permission from role data itself.
         [Test]
-        public async Task DonateToAllianceResearchAsync_PostsToTheSpecificTechnologyWithHiveIdAndClientRequestId()
+        public async Task GetAllianceResearchAsync_RoundTripsAuthorizationBooleansAndCurrency()
         {
-            var response = new RemoteAllianceResearchDonateResult
+            var snapshot = new RemoteAllianceResearchSnapshot
+            {
+                AllianceId = AllianceId,
+                Technologies = new List<RemoteAllianceTechnology>(),
+                MinorFundingTargetId = TechnologyId,
+                MajorFundingTargetId = null,
+                MinorResearchingTechnologyId = null,
+                MajorResearchingTechnologyId = null,
+                MyAllianceCurrencyBalance = 42,
+                CanSelectFundingTarget = true,
+                CanLaunch = false,
+                CanUseSpeedUp = false,
+            };
+            var transport = new TypeCapturingTransport(snapshot);
+            var client = NewClient(transport);
+
+            RemoteAllianceResearchSnapshot result = await client.GetAllianceResearchAsync();
+
+            Assert.That(result.MinorFundingTargetId, Is.EqualTo(TechnologyId));
+            Assert.That(result.MyAllianceCurrencyBalance, Is.EqualTo(42));
+            Assert.That(result.CanSelectFundingTarget, Is.True);
+            Assert.That(result.CanLaunch, Is.False);
+            Assert.That(result.CanUseSpeedUp, Is.False);
+        }
+
+        [Test]
+        public async Task SelectAllianceResearchFundingTargetAsync_PostsTheChosenTechnologyAndClientRequestId()
+        {
+            var response = new RemoteAllianceResearchCommandResult
             {
                 Succeeded = true,
-                Code = "donation_applied",
-                Snapshot = new RemoteAllianceResearchSnapshot { AllianceId = AllianceId, Technologies = new List<RemoteAllianceTechnology>(), MyContributionPoints = 10, MyDonationCount = 1 }
+                Code = "target_selected",
+                Snapshot = new RemoteAllianceResearchSnapshot { AllianceId = AllianceId, Technologies = new List<RemoteAllianceTechnology>(), MinorFundingTargetId = TechnologyId },
             };
             var transport = new TypeCapturingTransport(response);
             var client = NewClient(transport);
 
-            RemoteAllianceResearchDonateResult result = await client.DonateToAllianceResearchAsync(TechnologyId, HiveId, "donate-key-1");
+            RemoteAllianceResearchCommandResult result = await client.SelectAllianceResearchFundingTargetAsync(TechnologyId, "target-key-1");
+
+            Assert.That(transport.Requests, Has.Count.EqualTo(1));
+            Assert.That(transport.Requests[0].Path, Is.EqualTo("/alliance/v1/research/funding-target"));
+            Assert.That(transport.Requests[0].Method, Is.EqualTo("POST"));
+            var body = (AllianceResearchFundingTargetWireRequest)transport.Requests[0].Body;
+            Assert.That(body.TechnologyId, Is.EqualTo(TechnologyId));
+            Assert.That(body.ClientRequestId, Is.EqualTo("target-key-1"));
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(result.Snapshot.MinorFundingTargetId, Is.EqualTo(TechnologyId));
+        }
+
+        [Test]
+        public async Task DonateToAllianceResearchAsync_PostsToTheSpecificTechnologyWithHiveIdResourceKeyAmountAndClientRequestId()
+        {
+            var response = new RemoteAllianceResearchCommandResult
+            {
+                Succeeded = true,
+                Code = "donation_applied",
+                Snapshot = new RemoteAllianceResearchSnapshot { AllianceId = AllianceId, Technologies = new List<RemoteAllianceTechnology>(), MyContributionPoints = 10, MyDonationCount = 1 },
+            };
+            var transport = new TypeCapturingTransport(response);
+            var client = NewClient(transport);
+
+            RemoteAllianceResearchCommandResult result = await client.DonateToAllianceResearchAsync(TechnologyId, HiveId, "honey", 500, "donate-key-1");
 
             Assert.That(transport.Requests, Has.Count.EqualTo(1));
             Assert.That(transport.Requests[0].Path, Is.EqualTo("/alliance/v1/research/" + TechnologyId + "/donate"));
             Assert.That(transport.Requests[0].Method, Is.EqualTo("POST"));
             var body = (AllianceResearchDonateWireRequest)transport.Requests[0].Body;
             Assert.That(body.HiveId, Is.EqualTo(HiveId));
+            Assert.That(body.ResourceKey, Is.EqualTo("honey"));
+            Assert.That(body.Amount, Is.EqualTo(500));
             Assert.That(body.ClientRequestId, Is.EqualTo("donate-key-1"));
             Assert.That(result.Succeeded, Is.True);
             Assert.That(result.Snapshot.MyDonationCount, Is.EqualTo(1));
@@ -98,13 +159,60 @@ namespace BeeKingdom.Tests.Editor
         [Test]
         public async Task DonateToAllianceResearchAsync_EscapesTheTechnologyIdInThePath()
         {
-            var response = new RemoteAllianceResearchDonateResult { Succeeded = false, Code = "technology_not_found" };
+            var response = new RemoteAllianceResearchCommandResult { Succeeded = false, Code = "technology_not_found" };
             var transport = new TypeCapturingTransport(response);
             var client = NewClient(transport);
 
-            await client.DonateToAllianceResearchAsync("weird id/segment", HiveId, "donate-key-2");
+            await client.DonateToAllianceResearchAsync("weird id/segment", HiveId, "honey", 500, "donate-key-2");
 
             Assert.That(transport.Requests[0].Path, Is.EqualTo("/alliance/v1/research/weird%20id%2Fsegment/donate"));
+        }
+
+        [Test]
+        public async Task LaunchAllianceResearchAsync_PostsToTheLaunchPathWithClientRequestId()
+        {
+            var response = new RemoteAllianceResearchCommandResult
+            {
+                Succeeded = true,
+                Code = "launched",
+                Snapshot = new RemoteAllianceResearchSnapshot { AllianceId = AllianceId, Technologies = new List<RemoteAllianceTechnology>(), MinorResearchingTechnologyId = TechnologyId },
+            };
+            var transport = new TypeCapturingTransport(response);
+            var client = NewClient(transport);
+
+            RemoteAllianceResearchCommandResult result = await client.LaunchAllianceResearchAsync(TechnologyId, "launch-key-1");
+
+            Assert.That(transport.Requests, Has.Count.EqualTo(1));
+            Assert.That(transport.Requests[0].Path, Is.EqualTo("/alliance/v1/research/" + TechnologyId + "/launch"));
+            Assert.That(transport.Requests[0].Method, Is.EqualTo("POST"));
+            var body = (AllianceResearchLaunchWireRequest)transport.Requests[0].Body;
+            Assert.That(body.ClientRequestId, Is.EqualTo("launch-key-1"));
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(result.Snapshot.MinorResearchingTechnologyId, Is.EqualTo(TechnologyId));
+        }
+
+        [Test]
+        public async Task ApplyAllianceResearchSpeedUpAsync_PostsToTheSpeedUpPathWithHiveIdItemIdAndClientRequestId()
+        {
+            var response = new RemoteAllianceResearchCommandResult
+            {
+                Succeeded = true,
+                Code = "speedup_applied",
+                Snapshot = new RemoteAllianceResearchSnapshot { AllianceId = AllianceId, Technologies = new List<RemoteAllianceTechnology>() },
+            };
+            var transport = new TypeCapturingTransport(response);
+            var client = NewClient(transport);
+
+            RemoteAllianceResearchCommandResult result = await client.ApplyAllianceResearchSpeedUpAsync(TechnologyId, HiveId, "alliance_research_speedup_1h", "speedup-key-1");
+
+            Assert.That(transport.Requests, Has.Count.EqualTo(1));
+            Assert.That(transport.Requests[0].Path, Is.EqualTo("/alliance/v1/research/" + TechnologyId + "/speedup"));
+            Assert.That(transport.Requests[0].Method, Is.EqualTo("POST"));
+            var body = (AllianceResearchSpeedUpWireRequest)transport.Requests[0].Body;
+            Assert.That(body.HiveId, Is.EqualTo(HiveId));
+            Assert.That(body.ItemId, Is.EqualTo("alliance_research_speedup_1h"));
+            Assert.That(body.ClientRequestId, Is.EqualTo("speedup-key-1"));
+            Assert.That(result.Succeeded, Is.True);
         }
 
         private static AllianceClient NewClient(TypeCapturingTransport transport)
