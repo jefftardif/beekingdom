@@ -15,6 +15,7 @@ Shader "BeeKingdom/Experiments/ArtworkOutline"
         _MainTex ("Artwork", 2D) = "white" {}
         _Color ("Outline Color", Color) = (1, 0.86, 0.3, 1)
         _OutlineWidth ("Outline Width (texels)", Float) = 2
+        _Intensity ("Outline Intensity", Float) = 1
         _AlphaCutoff ("Alpha Cutoff", Float) = 0.0314
     }
     SubShader
@@ -55,6 +56,7 @@ Shader "BeeKingdom/Experiments/ArtworkOutline"
                 float4 _MainTex_TexelSize;
                 float4 _Color;
                 float _OutlineWidth;
+                float _Intensity;
                 float _AlphaCutoff;
             CBUFFER_END
 
@@ -80,7 +82,7 @@ Shader "BeeKingdom/Experiments/ArtworkOutline"
                 if (SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv - float2(0.0, step.y)).a < _AlphaCutoff) onEdge = 1.0h;
 
                 if (onEdge < 0.5) discard;
-                return half4(_Color.rgb, _Color.a);
+                return half4(_Color.rgb * _Intensity, _Color.a);
             }
             ENDHLSL
         }

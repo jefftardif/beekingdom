@@ -1034,6 +1034,8 @@ private const string LeftNavigationAssetPath = "Assets/Art/UI/Navigation/closing
 
 		private static bool playerMenuOpen;
 
+        private static bool playerProfileOpen;
+
 		private static bool vipMenuOpen;
 
 		private static bool powerMenuOpen;
@@ -1071,6 +1073,7 @@ private static bool resourceInventoryOpen;
 private static float resourceInventoryOpenedAt = -10f;
 
 		private static bool prevPlayerMenuOpen;
+        private static bool prevPlayerProfileOpen;
 		private static bool prevVipMenuOpen;
 		private static bool prevPowerMenuOpen;
 		private static bool prevChampionBeesPanelOpen;
@@ -4256,8 +4259,18 @@ private static string courierToast = string.Empty;
             // file.
             bool official = IsOfficialUpgradeBuilding(selectedHotspot.HotspotId) && OfficialBuildingUpgradeConfigured();
             HiveBuildingUpgradeScreenModel officialModel = official ? OfficialBuildingUpgradeModel() : null;
+            // M045E-CL: this used to stay true even once the real operation reached
+            // IsAwaitingCompletion ("À valider") - the countdown/progress branch below has no
+            // action button of its own, so once an upgrade finished, this screen got stuck
+            // showing "Amelioration en cours : 100%" forever with no way to validate. Excluding
+            // awaiting-completion here lets execution correctly fall through to the existing
+            // "else if" button branch, which already shows the real "Terminer" action
+            // (OfficialBuildingUpgradeActionLabel/RunOfficialBuildingUpgradeAction -> the exact
+            // same server-authoritative Complete() call the old reference-hotspot tap-to-validate
+            // path used) - no new UI, no new server call, just the pre-existing button finally
+            // being reachable.
             bool runningHere = official
-                ? officialModel?.ActiveOperation != null && string.Equals(officialModel.ActiveOperation.BuildingKey, selectedHotspot.HotspotId, StringComparison.Ordinal)
+                ? officialModel?.ActiveOperation != null && !officialModel.ActiveOperation.IsAwaitingCompletion && string.Equals(officialModel.ActiveOperation.BuildingKey, selectedHotspot.HotspotId, StringComparison.Ordinal)
                 : IsUpgradeRunning() && string.Equals(localPreviewUpgradeHotspotId, selectedHotspot.HotspotId, StringComparison.Ordinal);
             float detailHeight = 96f;
             Rect detailRect = new Rect(margin, y, contentWidth, detailHeight);
@@ -4288,8 +4301,22 @@ private static string courierToast = string.Empty;
                     // left off rather than wired to something that would silently no-op.
                     GUI.Label(new Rect(margin, y, contentWidth, 18f), "Amelioration en cours : " + Mathf.RoundToInt((float)officialModel.Progress01(buildingUpgradeController.Elapsed) * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
                     DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), (float)officialModel.Progress01(buildingUpgradeController.Elapsed));
+                    // M045D-CL: THIS is the real Construction screen the CEO actually reaches from
+                    // the bottom rail "Construction" button (DrawConstructionOverlayForExternalHost)
+                    // - DrawOfficialBuildingUpgradeOnlyDetail (wired in M045B) is a different screen
+                    // entirely, never reached from here, which is why the button never appeared on a
+                    // real 7-minute Réserve de miel upgrade. Same real ActiveOperation the countdown
+                    // above already reads (BuildingKey == selectedHotspot.HotspotId, not awaiting
+                    // completion) - no new/duplicate ID mapping.
+                    if (officialModel.ActiveOperation != null && !officialModel.ActiveOperation.IsAwaitingCompletion)
+                    {
+                        double estimatedOriginalDurationSeconds = (officialModel.ActiveOperation.CompletesAtUtc - officialModel.ActiveOperation.StartedAtUtc).TotalSeconds;
+                        DrawAllianceHelpAction(new Rect(margin, y + 38f, contentWidth, 34f),
+                            MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Construction, selectedHotspot.HotspotId, estimatedOriginalDurationSeconds, compact);
+                    }
                 }
-                else if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), OfficialBuildingUpgradeActionLabel(selectedHotspot.HotspotId), OfficialBuildingUpgradeActionEnabled(selectedHotspot.HotspotId)))
+                else if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), OfficialBuildingUpgradeActionLabel(selectedHotspot.HotspotId), OfficialBuildingUpgradeActionEnabled(selectedHotspot.HotspotId),
+                    officialDisabledReason: () => OfficialBuildingUpgradeStatusText(selectedHotspot.HotspotId)))
                 {
                     RunOfficialBuildingUpgradeAction(selectedHotspot.HotspotId);
                 }
@@ -20676,7 +20703,54 @@ public static string[] ConnectionTruthForProof()
         {
             if (!OfficialBuildingUpgradeConfigured()) return null;
             HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
-            return model?.ActiveOperation?.BuildingKey;
+            HiveBuildingUpgradeOperationModel operation = model?.ActiveOperation;
+            if (operation == null) return null;
+            return string.Equals(operation.Status, HiveBuildingUpgradeClient.RunningStatus, StringComparison.Ordinal)
+                ? operation.BuildingKey
+                : null;
+        }
+
+        // M045E-CL: companion to ActiveOfficialUpgradeHotspotIdForExternalHost for the OTHER real
+        // state a building-upgrade operation can be in - awaiting completion ("A valider"). Lets a
+        // HiveMap bootstrap show a real ready-to-validate badge on the building itself (mirrors
+        // TryClaimReadyTrainingOnTapForExternalHost/DrawTrainingReadyBadgeForExternalHost, the
+        // already-shipped equivalent for the Barrack) instead of requiring the player to open the
+        // Construction screen at all - the same "tap the building directly" UX
+        // DrawBuildingUpgradeReadyMarkers/TryCompleteReadyBuildingUpgradeOnTap already provided in
+        // the legacy reference-hotspot renderer (LivingHive-only, never reachable from HiveMap).
+        public static string ReadyToCompleteOfficialUpgradeHotspotIdForExternalHost()
+        {
+            if (!OfficialBuildingUpgradeConfigured()) return null;
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            HiveBuildingUpgradeOperationModel operation = model?.ActiveOperation;
+            return operation != null && operation.IsAwaitingCompletion ? operation.BuildingKey : null;
+        }
+
+        // Real server-authoritative completion, reusing the exact same path the Construction
+        // screen's own "Terminer" button calls (RunOfficialBuildingUpgradeAction ->
+        // buildingUpgradeController.Complete()) - no local level increment, no fake success.
+        public static bool TryCompleteReadyBuildingUpgradeOnTapForExternalHost(string hotspotId)
+            => TryCompleteReadyBuildingUpgradeOnTap(hotspotId);
+
+        // Pulsing "ready to validate" badge drawn directly on the building in HiveMap's 3D world,
+        // same shape/sizing convention as DrawTrainingReadyBadgeForExternalHost.
+        public static void DrawBuildingUpgradeReadyBadgeForExternalHost(Rect buildingRect, float time, float glowSize)
+        {
+            if (string.IsNullOrEmpty(ReadyToCompleteOfficialUpgradeHotspotIdForExternalHost())) return;
+            EnsureStyles();
+
+            float pulse = 1f + Mathf.Sin(time * 3.4f) * 0.08f;
+            float pulsedGlowSize = glowSize * pulse;
+            float size = pulsedGlowSize * 0.64f;
+            Rect iconRect = new Rect(buildingRect.center.x - size * 0.5f, buildingRect.center.y - size * 0.5f, size, size);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(1f, 0.92f, 0.58f, 0.78f);
+            Rect glow = new Rect(buildingRect.center.x - pulsedGlowSize * 0.5f, buildingRect.center.y - pulsedGlowSize * 0.5f, pulsedGlowSize, pulsedGlowSize);
+            GUI.DrawTexture(glow, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
+            GUI.color = Color.white;
+            DrawGameIcon(iconRect, "upgrade-ready", Color.white);
+            GUI.color = previous;
         }
 
         public static bool ColonyOverviewOpenForExternalHost => colonyOverviewOpen;
@@ -21938,9 +22012,15 @@ public static string[] ConnectionTruthForProof()
         {
             if (prevPlayerMenuOpen != playerMenuOpen)
             {
-                if (playerMenuOpen) UIAnimationLibrary.BeginWindowOpen("player_menu", 0.2f);
-                else UIAnimationLibrary.BeginWindowClose("player_menu", 0.18f);
-                prevPlayerMenuOpen = playerMenuOpen;
+			if (playerMenuOpen) UIAnimationLibrary.BeginWindowOpen("player_menu", 0.2f);
+			else UIAnimationLibrary.BeginWindowClose("player_menu", 0.18f);
+			prevPlayerMenuOpen = playerMenuOpen;
+		}
+            if (prevPlayerProfileOpen != playerProfileOpen)
+            {
+                if (playerProfileOpen) UIAnimationLibrary.BeginWindowOpen("player_profile", 0.2f);
+                else UIAnimationLibrary.BeginWindowClose("player_profile", 0.18f);
+                prevPlayerProfileOpen = playerProfileOpen;
             }
             if (prevVipMenuOpen != vipMenuOpen)
             {
@@ -23710,11 +23790,17 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             if (IsPortraitLayout())
             {
                 if (playerMenuOpen)
-            {
-                Rect panelRect = new Rect(8f, 128f, Screen.width - 16f, PlayerProfilePanelHeight);
-                panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_menu");
-                DrawPlayerPanel(panelRect);
-            }
+                {
+                    Rect panelRect = PlayerSummaryPanelRectForProof(true, Screen.width, Screen.height);
+                    panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_menu");
+                    DrawPlayerSummaryPanel(panelRect, true);
+                }
+                if (playerProfileOpen)
+                {
+                    Rect panelRect = PlayerProfilePanelRectForProof(true, Screen.width, Screen.height);
+                    panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_profile");
+                    DrawPlayerProfilePanel(panelRect, true);
+                }
                 return;
             }
 
@@ -23723,9 +23809,15 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             Rect power = new Rect(vip.xMax + 8f, 12f, 150f, 32f);
             if (playerMenuOpen) 
             {
-                Rect panelRect = new Rect(player.x, player.yMax + 8f, 300f, PlayerProfilePanelHeight);
+                Rect panelRect = PlayerSummaryPanelRectForProof(false, Screen.width, Screen.height);
                 panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_menu");
-                DrawPlayerPanel(panelRect);
+                DrawPlayerSummaryPanel(panelRect, false);
+            }
+            if (playerProfileOpen)
+            {
+                Rect panelRect = PlayerProfilePanelRectForProof(false, Screen.width, Screen.height);
+                panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_profile");
+                DrawPlayerProfilePanel(panelRect, false);
             }
             if (vipMenuOpen)
             {
@@ -23939,20 +24031,87 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             }
         }
 
-private static void DrawPlayerPanel(Rect rect, string animKey = null)
+        public static Rect PlayerSummaryPanelRectForProof(bool portrait, float screenWidth, float screenHeight)
         {
-            float fade = animKey != null ? UIAnimationLibrary.GetFadeProgress(animKey, 1f) : 1f;
+            if (portrait)
+            {
+                float height = Mathf.Min(308f, screenHeight - 150f);
+                return new Rect(8f, 112f, screenWidth - 16f, height);
+            }
+
+            return new Rect(10f, 80f, 328f, 286f);
+        }
+
+        public static Rect PlayerProfilePanelRectForProof(bool portrait, float screenWidth, float screenHeight)
+        {
+            if (portrait)
+            {
+                float margin = 8f;
+                float height = Mathf.Min(PlayerProfilePanelHeight, screenHeight - 136f);
+                return new Rect(margin, 118f, screenWidth - margin * 2f, height);
+            }
+
+            float x = Mathf.Min(348f, Mathf.Max(10f, screenWidth - 396f));
+            float height = Mathf.Min(PlayerProfilePanelHeight, screenHeight - 96f);
+            return new Rect(x, 80f, 386f, height);
+        }
+
+        private static void DrawPlayerSummaryPanel(Rect rect, bool portrait)
+        {
+            float fade = UIAnimationLibrary.GetFadeProgress("player_menu", 1f);
+            DrawPremiumPanel(rect, new Color(0.028f, 0.024f, 0.018f, 0.985f * fade), new Color(0.92f, 0.64f, 0.18f, 0.94f * fade));
+            DrawPremiumHeaderBand(new Rect(rect.x + 10f, rect.y + 8f, rect.width - 20f, 38f));
+            if (DrawPremiumBackButton(new Rect(rect.x + 4f, rect.y + 4f, 44f, 44f)))
+            {
+                ClosePlayerSummary();
+                return;
+            }
+
+            string displayName = CurrentPlayerDisplayName();
+            GUI.Label(new Rect(rect.x + 58f, rect.y + 10f, rect.width - 112f, 22f), TrimForUi(displayName, portrait ? 30 : 24), new GUIStyle(titleStyle) { fontSize = portrait ? 17 : 18, clipping = TextClipping.Clip });
+            GUI.Label(new Rect(rect.x + 58f, rect.y + 32f, rect.width - 112f, 14f), PlayerIdentitySubtitle(), new GUIStyle(tinyLabelStyle) { clipping = TextClipping.Clip });
+
+            Rect avatar = new Rect(rect.x + 18f, rect.y + 62f, 66f, 66f);
+            DrawPremiumPanel(avatar, new Color(0.035f, 0.031f, 0.024f, 0.94f), new Color(0.85f, 0.62f, 0.20f, 0.78f));
+            DrawGameIcon(new Rect(avatar.x + 9f, avatar.y + 9f, 48f, 48f), "queen", Color.white);
+
+            float contentX = avatar.xMax + 12f;
+            float rowW = rect.xMax - contentX - 14f;
+            DrawPlayerSummaryRow(new Rect(contentX, avatar.y, rowW, 28f), "Niveau", "Coeur royal " + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture));
+            DrawPlayerSummaryRow(new Rect(contentX, avatar.y + 34f, rowW, 28f), "Puissance", FormatRealPowerNumber(ComputeRealTotalPower()));
+
+            float y = avatar.yMax + 14f;
+            DrawPlayerSummaryRow(new Rect(rect.x + 14f, y, rect.width - 28f, 30f), "Session", CurrentPlayerSessionLabel());
+            DrawPlayerSummaryRow(new Rect(rect.x + 14f, y + 38f, rect.width - 28f, 30f), "Profil", "Résumé royal et progression stratégique");
+
+            Rect profileButton = new Rect(rect.x + 14f, rect.yMax - 52f, rect.width - 28f, 38f);
+            if (DrawPremiumButton(profileButton, "Profil", "queen"))
+            {
+                OpenPlayerProfileFromSummary();
+            }
+        }
+
+        private static void DrawPlayerSummaryRow(Rect rect, string label, string value)
+        {
+            DrawPremiumPanel(rect, new Color(0.020f, 0.021f, 0.018f, 0.66f), new Color(0.58f, 0.44f, 0.18f, 0.38f));
+            GUI.Label(new Rect(rect.x + 10f, rect.y + 5f, Mathf.Min(82f, rect.width * 0.36f), rect.height - 8f), label, new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleLeft, clipping = TextClipping.Clip });
+            GUI.Label(new Rect(rect.x + 94f, rect.y + 4f, rect.width - 104f, rect.height - 8f), TrimForUi(value, 36), new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleRight, clipping = TextClipping.Clip });
+        }
+
+private static void DrawPlayerProfilePanel(Rect rect, bool portrait)
+        {
+            float fade = UIAnimationLibrary.GetFadeProgress("player_profile", 1f);
             Color fill = new Color(0.034f, 0.030f, 0.023f, 0.96f * fade);
             Color border = new Color(0.92f, 0.64f, 0.18f, 0.88f * fade);
             DrawPremiumPanel(rect, fill, border);
             DrawPremiumHeaderBand(new Rect(rect.x + 10f, rect.y + 8f, rect.width - 20f, 30f));
             if (DrawPremiumBackButton(new Rect(rect.x + 4f, rect.y + 2f, 44f, 44f)))
             {
-                playerMenuOpen = false;
+                playerProfileOpen = false;
                 localPreviewLoopMessage = "Profil joueur ferme";
                 return;
             }
-            GUI.Label(new Rect(rect.x + 56f, rect.y + 10f, rect.width - 68f, 22f), "Profil joueur", titleStyle);
+            GUI.Label(new Rect(rect.x + 56f, rect.y + 10f, rect.width - 68f, 22f), "Profil joueur", new GUIStyle(titleStyle) { fontSize = portrait ? 17 : titleStyle.fontSize, clipping = TextClipping.Clip });
 
             Rect levelCard = new Rect(rect.x + 14f, rect.y + 48f, rect.width - 28f, 48f);
             DrawPremiumPanel(levelCard, new Color(0.025f, 0.024f, 0.020f, 0.74f), new Color(0.72f, 0.54f, 0.20f, 0.56f));
@@ -23977,7 +24136,7 @@ private static void DrawPlayerPanel(Rect rect, string animKey = null)
                 combatDoctrineOpen = false;
                 combatDoctrineAttackerIndex = 0;
                 combatDoctrineDefenderIndex = -1;
-                playerMenuOpen = false;
+                playerProfileOpen = false;
                 vipMenuOpen = false;
                 powerMenuOpen = false;
                 localPreviewLoopMessage = BeeLocalization.Text("strategic_path.opened", "Aperçu des voies ouvert");
@@ -30824,14 +30983,32 @@ if (leftNavigationTexture == null)
                     OfficialResearchActionEnabled(researchId)))
                     RunOfficialResearchAction(researchId);
 
+                bool activeHere = running && model?.ActiveOperation != null && !model.ActiveOperation.IsAwaitingCompletion;
                 if (running && model != null)
                     DrawProgressBar(new Rect(action.x, action.yMax + 8f, action.width, 7f),
                         (float)model.Progress01(researchController.Elapsed));
-                GUI.Label(
-                    new Rect(action.x - 3f, action.yMax + (running ? 16f : 5f), action.width + 6f,
-                        card.yMax - action.yMax - (running ? 18f : 7f)),
-                    OfficialResearchStatusText(researchId),
-                    new GUIStyle(centeredTinyLabelStyle) { wordWrap = true, fontSize = compact ? 8 : 9 });
+                if (activeHere)
+                {
+                    // M045D-CL: THIS is the real Research screen the CEO actually reaches from the
+                    // bottom rail "Recherche" button (DrawResearchOverlayForExternalHost ->
+                    // DrawActiveHiveMenuPanel -> DrawResearchMenuPanel -> here when a real session is
+                    // configured) - DrawResearchFullscreenCard (wired in M045B) is a different,
+                    // separately-reached screen, same structural gap as Construction's. Replaces the
+                    // passive status text with the real action while running - the remaining-time
+                    // text this used to show is redundant with the progress bar just above it.
+                    double estimatedOriginalDurationSeconds = (model.ActiveOperation.CompletesAtUtc - model.ActiveOperation.StartedAtUtc).TotalSeconds;
+                    DrawAllianceHelpAction(
+                        new Rect(action.x - 3f, action.yMax + 16f, action.width + 6f, card.yMax - action.yMax - 18f),
+                        MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Research, researchId, estimatedOriginalDurationSeconds, true);
+                }
+                else
+                {
+                    GUI.Label(
+                        new Rect(action.x - 3f, action.yMax + (running ? 16f : 5f), action.width + 6f,
+                            card.yMax - action.yMax - (running ? 18f : 7f)),
+                        OfficialResearchStatusText(researchId),
+                        new GUIStyle(centeredTinyLabelStyle) { wordWrap = true, fontSize = compact ? 8 : 9 });
+                }
             }
             GUI.EndScrollView();
         }
@@ -42921,7 +43098,18 @@ public static void ResetMissionsStateForProof()
         // gameplay liees a un batiment/ressource/troupe (Collecter, Ameliorer, Entrainer...), qui ne
         // doivent jamais declencher le son de clic d'interface (elles recevront leurs propres effets
         // sonores plus tard). Seuls les appels purement UI passent explicitement "true".
-        private static bool DrawPreviewActionButton(Rect rect, string label, bool enabled, bool playUiClickSound = false)
+        // M045G-CL: optional `officialDisabledReason` lets a real server-backed button (e.g.
+        // Construction's "Terminer") supply its OWN live, state-derived reason instead of
+        // `localPreviewDisabledReason` when disabled and clicked. That field is a single shared
+        // scratch variable written by dozens of unrelated local-preview code paths across this
+        // file every frame ("Miel insuffisant", "File entrainement occupee", the dev-only QA
+        // harness's "Service futur requis", ...) - whichever one last wrote to it before a
+        // disabled click on a COMPLETELY UNRELATED official button is what got shown, which is
+        // how a real, successful server completion could still be followed by a stale, false
+        // "Serveur requis" the moment the button was next clicked in ANY disabled state (e.g. a
+        // legitimate transient IsBusy click). Every other of this helper's ~100 existing call
+        // sites omit the parameter and keep their exact previous behavior.
+        private static bool DrawPreviewActionButton(Rect rect, string label, bool enabled, bool playUiClickSound = false, Func<string> officialDisabledReason = null)
         {
             DrawPremiumPanel(rect, enabled ? new Color(0.28f, 0.16f, 0.035f, 0.98f) : new Color(0.080f, 0.075f, 0.065f, 0.92f), enabled ? new Color(1f, 0.72f, 0.16f, 0.94f) : new Color(0.46f, 0.42f, 0.34f, 0.72f));
             bool clicked = enabled && GUI.Button(rect, string.Empty, GUIStyle.none);
@@ -42929,9 +43117,12 @@ public static void ResetMissionsStateForProof()
             GUI.Label(rect, label, new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter });
             if (!enabled && GUI.Button(rect, string.Empty, GUIStyle.none))
             {
-                localPreviewLoopMessage = string.IsNullOrWhiteSpace(localPreviewDisabledReason) ? "Action indisponible" : localPreviewDisabledReason;
-                localPreviewLastActionStatus = "Bloque: " + localPreviewLoopMessage;
-                SetPlayerFacingActionState("disabled", "Action indisponible", ShortDisabledReason(localPreviewLoopMessage) + " - " + localPreviewRecoveryGuidance);
+                string reason = officialDisabledReason != null
+                    ? officialDisabledReason()
+                    : (string.IsNullOrWhiteSpace(localPreviewDisabledReason) ? "Action indisponible" : localPreviewDisabledReason);
+                localPreviewLoopMessage = reason;
+                localPreviewLastActionStatus = "Bloque: " + reason;
+                SetPlayerFacingActionState("disabled", "Action indisponible", ShortDisabledReason(reason) + " - " + localPreviewRecoveryGuidance);
                 BeginReferenceFeedbackPulse("locked");
             }
 

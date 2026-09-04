@@ -25,6 +25,8 @@ namespace BeeKingdom.Playground.Editor
             tests.NetworkRetryReusesStartIdempotencyKey().GetAwaiter().GetResult();
             tests.ServerRefusalKeepsSpecificPlayerFacingCode().GetAwaiter().GetResult();
             tests.ControllerCompletesOnlyServerAwaitingOperation().GetAwaiter().GetResult();
+            tests.ActiveUpgradeOutlinePulseUsesOnlyRunningServerOperation();
+            tests.UpgradeOutlinePulseStaysVisibleAndKeepsExistingBlue();
         }
 
         [Test]
@@ -178,6 +180,76 @@ namespace BeeKingdom.Playground.Editor
                 Assert.That(controller.Model.LevelFor("wax_workshop"), Is.EqualTo(2));
                 Assert.That(controller.Model.Offers, Is.Empty);
             }
+        }
+
+        [Test]
+        public void ActiveUpgradeOutlinePulseUsesOnlyRunningServerOperation()
+        {
+            try
+            {
+                HiveViewProductUiPresenter.UseBuildingUpgradeControllerForProof(new FakePanelController(
+                    HiveBuildingUpgradePresentation.Ready(
+                        SnapshotWithOperation(HiveBuildingUpgradeClient.RunningStatus),
+                        TimeSpan.Zero),
+                    TimeSpan.FromMinutes(1)));
+                Assert.That(HiveViewProductUiPresenter.ActiveOfficialUpgradeHotspotIdForExternalHost(),
+                    Is.EqualTo("wax_workshop"));
+
+                HiveViewProductUiPresenter.UseBuildingUpgradeControllerForProof(new FakePanelController(
+                    HiveBuildingUpgradePresentation.Ready(
+                        SnapshotWithOperation(HiveBuildingUpgradeClient.AwaitingCompletionStatus),
+                        TimeSpan.Zero),
+                    TimeSpan.FromMinutes(11)));
+                Assert.That(HiveViewProductUiPresenter.ActiveOfficialUpgradeHotspotIdForExternalHost(),
+                    Is.Null,
+                    "Le pulse doit s'arreter en awaiting_completion pour préserver l'indicateur de validation.");
+
+                HiveViewProductUiPresenter.UseBuildingUpgradeControllerForProof(new FakePanelController(
+                    HiveBuildingUpgradePresentation.Ready(Snapshot(), TimeSpan.Zero),
+                    TimeSpan.Zero));
+                Assert.That(HiveViewProductUiPresenter.ActiveOfficialUpgradeHotspotIdForExternalHost(), Is.Null);
+            }
+            finally
+            {
+                HiveViewProductUiPresenter.UseBuildingUpgradeControllerForProof(null);
+            }
+        }
+
+        [Test]
+        public void UpgradeOutlinePulseStaysVisibleAndKeepsExistingBlue()
+        {
+            float alphaMin = float.MaxValue;
+            float alphaMax = float.MinValue;
+            float intensityMin = float.MaxValue;
+            float intensityMax = float.MinValue;
+            float widthMin = float.MaxValue;
+            float widthMax = float.MinValue;
+            for (int i = 0; i < 32; i++)
+            {
+                float alpha = HiveMapBuildingUpgradeVisualStateBootstrap.UpgradeOutlinePulseAlpha(i * 0.125f);
+                float intensity = HiveMapBuildingUpgradeVisualStateBootstrap.UpgradeOutlinePulseIntensity(i * 0.125f);
+                float width = HiveMapBuildingUpgradeVisualStateBootstrap.UpgradeOutlinePulseWidth(i * 0.125f);
+                alphaMin = Math.Min(alphaMin, alpha);
+                alphaMax = Math.Max(alphaMax, alpha);
+                intensityMin = Math.Min(intensityMin, intensity);
+                intensityMax = Math.Max(intensityMax, intensity);
+                widthMin = Math.Min(widthMin, width);
+                widthMax = Math.Max(widthMax, width);
+            }
+
+            Assert.That(alphaMin, Is.GreaterThanOrEqualTo(0.86f));
+            Assert.That(alphaMax, Is.LessThanOrEqualTo(1f));
+            Assert.That(widthMin, Is.GreaterThanOrEqualTo(4.5f));
+            Assert.That(widthMax, Is.LessThanOrEqualTo(8.1f));
+            Assert.That(widthMax - widthMin, Is.GreaterThan(3f));
+            Assert.That(intensityMin, Is.GreaterThanOrEqualTo(1f));
+            Assert.That(intensityMax, Is.LessThanOrEqualTo(1.5f));
+            Assert.That(intensityMax - intensityMin, Is.GreaterThan(0.4f));
+
+            UnityEngine.Color color = HiveMapBuildingUpgradeVisualStateBootstrap.UpgradeOutlinePulseColorForProof(0.5f);
+            Assert.That(color.r, Is.EqualTo(0.35f).Within(0.001f));
+            Assert.That(color.g, Is.EqualTo(0.75f).Within(0.001f));
+            Assert.That(color.b, Is.EqualTo(1f).Within(0.001f));
         }
 
         private static RemoteBuildingUpgradeSnapshot Snapshot()

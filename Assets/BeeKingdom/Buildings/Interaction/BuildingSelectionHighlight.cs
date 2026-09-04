@@ -22,7 +22,8 @@ namespace BeeKingdom.Buildings.Interaction
         private const string OverlayName = "SelectionOverlay";
         private const string OutlineShaderName = "BeeKingdom/Experiments/ArtworkOutline";
         private const float AlphaCutoff = 8f / 255f;
-        private const float OutlineWidthTexels = 2f;
+        private const float DefaultOutlineWidthTexels = 2f;
+        private const float DefaultOutlineIntensity = 1f;
 
         private static readonly Color HighlightColor = new Color(1f, 0.86f, 0.3f, 1f);
 
@@ -38,6 +39,11 @@ namespace BeeKingdom.Buildings.Interaction
         // building state (e.g. "upgrading in progress") with its own color, without
         // duplicating the silhouette/shader logic. Defaults to the original selection gold.
         public Color TintColor { get; set; } = HighlightColor;
+        public float CurrentAlphaForProof { get; private set; } = HighlightColor.a;
+        public float CurrentIntensityForProof { get; private set; } = DefaultOutlineIntensity;
+        public float CurrentOutlineWidthForProof { get; private set; } = DefaultOutlineWidthTexels;
+        public float OutlineIntensity { get; set; } = DefaultOutlineIntensity;
+        public float OutlineWidthTexels { get; set; } = DefaultOutlineWidthTexels;
 
         public void Show(BuildingDefinition definition, GameObject target)
         {
@@ -102,11 +108,10 @@ namespace BeeKingdom.Buildings.Interaction
                 _material = new Material(shader != null ? shader : Shader.Find("Unlit/Color"));
                 _material.name = "SelectionOverlayMaterial";
                 if (_material.HasProperty("_AlphaCutoff")) _material.SetFloat("_AlphaCutoff", AlphaCutoff);
-                if (_material.HasProperty("_OutlineWidth")) _material.SetFloat("_OutlineWidth", OutlineWidthTexels);
             }
             _material.mainTexture = texture;
-            _material.color = TintColor;
             _material.renderQueue = 3001;
+            SetVisualState(TintColor.a, OutlineWidthTexels, OutlineIntensity);
             return _material;
         }
 
@@ -116,10 +121,25 @@ namespace BeeKingdom.Buildings.Interaction
         // silhouette-clone cost each time.
         public void SetAlpha(float alpha)
         {
+            SetVisualState(alpha, OutlineWidthTexels, OutlineIntensity);
+        }
+
+        public void SetVisualState(float alpha, float outlineWidthTexels)
+        {
+            SetVisualState(alpha, outlineWidthTexels, OutlineIntensity);
+        }
+
+        public void SetVisualState(float alpha, float outlineWidthTexels, float intensity)
+        {
+            CurrentAlphaForProof = Mathf.Clamp01(alpha);
+            CurrentOutlineWidthForProof = Mathf.Max(0.1f, outlineWidthTexels);
+            CurrentIntensityForProof = Mathf.Max(0.1f, intensity);
             if (_material == null) return;
             Color c = TintColor;
-            c.a = alpha;
+            c.a = CurrentAlphaForProof;
             _material.color = c;
+            if (_material.HasProperty("_OutlineWidth")) _material.SetFloat("_OutlineWidth", CurrentOutlineWidthForProof);
+            if (_material.HasProperty("_Intensity")) _material.SetFloat("_Intensity", CurrentIntensityForProof);
         }
 
         public void Hide()

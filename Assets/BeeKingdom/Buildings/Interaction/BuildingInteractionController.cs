@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -78,6 +79,21 @@ namespace BeeKingdom.Buildings.Interaction
             get { return 1 << InteractionLayer; }
         }
 
+        // M045F-CL: a click's real-world priority target (e.g. "this building's upgrade is
+        // AwaitingCompletion, so ANY click on it must validate, not open its window") cannot be
+        // decided by ordering multiple independent Selection.BuildingClicked subscribers against
+        // each other - that event has no consumption mechanism, and separate HiveMap bootstraps
+        // (Barrack, Production, generic Construction-click...) each subscribe lazily and
+        // independently, in an order this controller has no control over. This hook runs BEFORE
+        // any of them, unconditionally: returning true means the click is fully handled and
+        // NotifyClicked/Select for this click never happen at all - no building window opens, no
+        // selection changes, exactly one action occurs. A plain delegate (not an event) so there
+        // is only ever one owner deciding preemption, by design - this project's static bridge
+        // convention (HiveViewProductUiPresenter's *ForExternalHost methods) is the intended
+        // caller, kept here as a Func<BuildingDefinition,bool> so this Buildings-assembly type
+        // never needs to reference anything in the default Assembly-CSharp assembly.
+        public static Func<BuildingDefinition, bool> InteractionPreemptionHook;
+
         public void HandlePointer()
         {
             if (!_enabled) return;
@@ -101,6 +117,20 @@ namespace BeeKingdom.Buildings.Interaction
 
             BuildingDefinition definition = interaction.Definition;
             if (definition == null) return;
+
+            DispatchClick(definition);
+        }
+
+        // M045F-CL: extracted so the click-priority decision (preempted vs. normal
+        // dispatch) is testable without a live Camera/Physics.Raycast/Input.GetMouseButtonDown
+        // setup - HandlePointer only resolves WHICH BuildingDefinition was hit, this method
+        // decides WHAT happens to that click. Public (not private) so BeeKingdom.Tests.asmdef
+        // can exercise it directly, same reason ISelectionService/BuildingSelectionService are
+        // public rather than internal.
+        public void DispatchClick(BuildingDefinition definition)
+        {
+            if (definition == null) return;
+            if (InteractionPreemptionHook != null && InteractionPreemptionHook(definition)) return;
 
             _selection.NotifyClicked(definition);
             _selection.Select(definition);
