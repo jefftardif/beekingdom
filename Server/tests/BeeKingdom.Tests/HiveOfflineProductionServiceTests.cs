@@ -50,6 +50,35 @@ public sealed class HiveOfflineProductionServiceTests
     [Test] public async Task ReceiptRetentionStaysAt512AndEvictsOldestDeterministically() { var(s,c,p,h,r)=Create(); await s.ReadSnapshotAsync(p,h); OfflineProductionCollectResponse? last=null; for(int i=0;i<=512;i++){ c.UtcNow=c.UtcNow.AddMinutes(7); var x=await s.CollectAsync(p,h,"honey_storage",new(i,$"k-{i:D3}")); Assert.That(x.Succeeded,Is.True); last=x.Response; } var state=(await r.ReadAsync(p,h))!; Assert.That(state.OfflineProduction!.Receipts.Count,Is.EqualTo(512)); Assert.That(state.OfflineProduction.Receipts.ContainsKey("k-000"),Is.False); Assert.That(state.OfflineProduction.Receipts.ContainsKey("k-001"),Is.True); Assert.That(state.OfflineProduction.Receipts.ContainsKey("k-512"),Is.True); var replay=await s.CollectAsync(p,h,"honey_storage",new(512,"k-512")); Assert.That(replay.Code,Is.EqualTo("game.idempotency_replay")); Assert.That(System.Text.Json.JsonSerializer.Serialize(replay.Response),Is.EqualTo(System.Text.Json.JsonSerializer.Serialize(last))); }
     private async Task<PlayerHiveState> ValidReceiptState() { var(s,c,p,h,r)=Create(); await s.ReadSnapshotAsync(p,h); c.UtcNow=c.UtcNow.AddHours(1); await s.CollectAsync(p,h,"honey_storage",new(0,"corrupt")); return (await r.ReadAsync(p,h))!; }
 
+    // M051-CL: item 16 of the mission's required test list - "completed research bonus actually
+    // modifies target gameplay calculation" for the Prosperity/Cooperation branches' real
+    // integration point (EffectiveRate/EffectiveCapacity via the optional IAllianceGameplayBonusResolver).
+    [Test]
+    public async Task AllianceResearchProductionAndCapacityBonusAppliesFromResolver()
+    {
+        Guid p = Guid.NewGuid(), h = Guid.NewGuid();
+        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var repo = new MemoryRepo();
+        repo.Seed(new PlayerHiveState(p, h, 10, 0, new Dictionary<string, ResourceBalance> { { "honey", new(0, 1000) }, { "wax", new(0, 1000) }, { "pollen", new(0, 1000) } }, new(), new(), new()));
+        var options = new HiveOfflineProductionOptions { Enabled = true, CatalogVersion = "test-v1", Catalog = [new("honey_storage", "honey", 100m, 1000), new("wax_workshop", "wax", 1, 1), new("warehouse_cells", "pollen", 1, 1)] };
+        var resolver = new StubAllianceBonusResolver(new AllianceGameplayBonus(1000, 500, 0)); // +10% production, +5% capacity
+        var service = new HiveOfflineProductionService(repo, clock, options, allianceBonusResolver: resolver);
+
+        var withBonus = await service.ReadSnapshotAsync(p, h);
+        var line = withBonus.Lines.Single(x => x.ResourceKey == "honey");
+        Assert.That(line.HourlyRate, Is.EqualTo(110m), "1000bp (+10%) alliance production bonus must apply to the real rate");
+        Assert.That(line.Capacity, Is.EqualTo(1050), "500bp (+5%) alliance capacity bonus must apply to the real capacity");
+
+        var withoutBonus = await new HiveOfflineProductionService(repo, clock, options).ReadSnapshotAsync(p, h);
+        var baseline = withoutBonus.Lines.Single(x => x.ResourceKey == "honey");
+        Assert.That(baseline.HourlyRate, Is.EqualTo(100m), "no resolver registered must behave exactly as before (AllianceGameplayBonus.None)");
+        Assert.That(baseline.Capacity, Is.EqualTo(1000));
+    }
+    private sealed class StubAllianceBonusResolver(AllianceGameplayBonus bonus) : IAllianceGameplayBonusResolver
+    {
+        public Task<AllianceGameplayBonus> ResolveAsync(Guid playerId, CancellationToken cancellationToken = default) => Task.FromResult(bonus);
+    }
+
     private static (HiveOfflineProductionService service, FakeClock clock, Guid player, Guid hive, MemoryRepo repo) Create(TimeSpan? max = null, bool invalidResources = false, bool nonUtc = false, decimal catalogRate = 10, long catalogCapacity = 1_000_000_000)
     {
         Guid p=Guid.NewGuid(), h=Guid.NewGuid(); var clock=new FakeClock(nonUtc ? new DateTimeOffset(DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified), TimeSpan.FromHours(1)) : DateTimeOffset.UtcNow); var repo=new MemoryRepo(); var resources=invalidResources ? new Dictionary<string,ResourceBalance>{{"honey",new(10,1)}} : new(){{"honey",new(0,1_000_000_000)},{"wax",new(0,1_000_000_000)},{"pollen",new(0,1_000_000_000)}}; repo.Seed(new PlayerHiveState(p,h,10,0,resources,new(),new(),new())); var options=new HiveOfflineProductionOptions{Enabled=true,CatalogVersion="test-v1",MaxRecognizedDuration=max??TimeSpan.FromHours(2),Catalog=[new("honey_storage","honey",catalogRate,catalogCapacity),new("wax_workshop","wax",5,catalogCapacity),new("warehouse_cells","pollen",8,catalogCapacity)]}; return (new HiveOfflineProductionService(repo,clock,options),clock,p,h,repo);

@@ -28,7 +28,21 @@ public sealed class CombatPatrolService
     private static readonly string[] Families = ["guardians", "wingrunners", "darters"];
     private readonly IHiveStateRepository repository;
     private readonly IServerClock clock;
-    public CombatPatrolService(IHiveStateRepository repository, IServerClock clock) { this.repository = repository; this.clock = clock; }
+    // M051-CL: optional so every existing caller/test that constructs this service without an
+    // Alliance context keeps compiling and behaving exactly as before (AllianceGameplayBonus.None).
+    private readonly IAllianceGameplayBonusResolver? allianceBonusResolver;
+    public CombatPatrolService(IHiveStateRepository repository, IServerClock clock, IAllianceGameplayBonusResolver? allianceBonusResolver = null) { this.repository = repository; this.clock = clock; this.allianceBonusResolver = allianceBonusResolver; }
+
+    private async Task<AllianceGameplayBonus> ResolveAllianceBonusAsync(Guid playerId, CancellationToken ct)
+        => allianceBonusResolver != null ? await allianceBonusResolver.ResolveAsync(playerId, ct) : AllianceGameplayBonus.None;
+
+    // Alliance Research's Defense Royale bonus applies uniformly to every troop family - a flat
+    // combat-power percentage, not a per-family specialization (none of the Alpha technologies
+    // target a specific family), so the single resolved bps is simply broadcast across the same
+    // family keys the other bonus sources (champion bees, troop tier, strategic path) already use.
+    private static IReadOnlyDictionary<string, long> AllianceCombatPowerBonusByFamily(long combatPowerBp)
+        => combatPowerBp == 0 ? EmptyPowerBonus : Families.ToDictionary(f => f, _ => combatPowerBp, StringComparer.Ordinal);
+    private static readonly IReadOnlyDictionary<string, long> EmptyPowerBonus = new Dictionary<string, long>(StringComparer.Ordinal);
 
     public async Task<CombatPatrolSnapshot> ReadAsync(Guid player, Guid hive, CancellationToken ct)
         => Snapshot(await ReadMaturedAsync(player, hive, ct));
@@ -37,12 +51,13 @@ public sealed class CombatPatrolService
     {
         if (!CombatPatrolCatalog.TryGet(query.Tier, out BestiaryTierDefinition tier)) throw new ArgumentException("game.invalid_tier");
         PlayerHiveState state = await ReadMaturedAsync(query.PlayerId, query.HiveId, ct);
+        AllianceGameplayBonus allianceBonus = await ResolveAllianceBonusAsync(query.PlayerId, ct);
         CombatPatrolState patrol = state.CombatPatrol ?? EmptyPatrol();
         Dictionary<string, long> requested = Quantities(query.Guardians, query.Wingrunners, query.Darters);
         ChampionCombatContribution championContribution = ChampionBeeCatalog.CombatContribution(state.ChampionBees);
         TroopTierCombatContribution troopTierContribution = TroopTierCatalog.CombatContribution(state.TroopTierProgress);
         IReadOnlyDictionary<string, long> strategicPathBonus = StrategicPathBonusCatalog.CombatPowerBonusBpByFamily(state.StrategicPath?.SelectedPath);
-        long availablePower = CombatPatrolResolution.ComputeAvailablePower(requested, tier.HazardFamily, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus));
+        long availablePower = CombatPatrolResolution.ComputeAvailablePower(requested, tier.HazardFamily, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus, AllianceCombatPowerBonusByFamily(allianceBonus.CombatPowerBp)));
         long readinessBp = CombatPatrolResolution.ComputeReadinessBp(availablePower, tier.RequiredPower);
         bool meetsPower = CombatPatrolResolution.CanLaunch(readinessBp);
         DateTimeOffset now = RequireUtc(clock.UtcNow);
@@ -76,6 +91,7 @@ public sealed class CombatPatrolService
         if (command.ExpectedRevision < 0 || command.ExpectedRevision == long.MaxValue) throw new ArgumentOutOfRangeException(nameof(command.ExpectedRevision));
         if (!CombatPatrolCatalog.TryGet(command.Tier, out BestiaryTierDefinition tier)) throw new ArgumentException("game.invalid_tier");
         CombatPatrolResult? result = null;
+        AllianceGameplayBonus allianceBonus = await ResolveAllianceBonusAsync(command.PlayerId, ct);
         await repository.ExecuteAtomicallyAsync(command.PlayerId, command.HiveId, state =>
         {
             DateTimeOffset now = RequireUtc(clock.UtcNow);
@@ -109,7 +125,7 @@ public sealed class CombatPatrolService
             ChampionCombatContribution championContribution = ChampionBeeCatalog.CombatContribution(state.ChampionBees);
             TroopTierCombatContribution troopTierContribution = TroopTierCatalog.CombatContribution(state.TroopTierProgress);
             IReadOnlyDictionary<string, long> strategicPathBonus = StrategicPathBonusCatalog.CombatPowerBonusBpByFamily(state.StrategicPath?.SelectedPath);
-            long availablePower = CombatPatrolResolution.ComputeAvailablePower(requested, tier.HazardFamily, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus));
+            long availablePower = CombatPatrolResolution.ComputeAvailablePower(requested, tier.HazardFamily, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus, AllianceCombatPowerBonusByFamily(allianceBonus.CombatPowerBp)));
             long readinessBp = CombatPatrolResolution.ComputeReadinessBp(availablePower, tier.RequiredPower);
             if (!CombatPatrolResolution.CanLaunch(readinessBp))
             { result = new(false, "game.patrol_underpowered", Snapshot(state)); return state; }
@@ -209,6 +225,7 @@ public sealed class CombatPatrolService
     {
         if (expectedRevision < 0 || expectedRevision == long.MaxValue) throw new ArgumentOutOfRangeException(nameof(expectedRevision));
         CombatPatrolResult? result = null;
+        AllianceGameplayBonus allianceBonus = await ResolveAllianceBonusAsync(player, ct);
         await repository.ExecuteAtomicallyAsync(player, hive, state =>
         {
             DateTimeOffset now = RequireUtc(clock.UtcNow);
@@ -254,7 +271,7 @@ public sealed class CombatPatrolService
             ActiveWorldEvent worldEvent = WorldEventCatalog.Active(now);
             if (resolve)
             {
-                resolution = CombatPatrolResolution.Resolve(active.CommittedTroops, tier, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus));
+                resolution = CombatPatrolResolution.Resolve(active.CommittedTroops, tier, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus, AllianceCombatPowerBonusByFamily(allianceBonus.CombatPowerBp)));
                 DoctrineRosterState roster = state.DoctrineRoster ?? new DoctrineRosterState(0, new(), null, new());
                 var counts = new Dictionary<string, long>(roster.Counts, StringComparer.Ordinal);
                 TimeSpan recoveryDuration = CombatPatrolResolution.ComputeRecoveryDuration(tier);

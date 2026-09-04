@@ -15,13 +15,17 @@ public sealed class HiveOfflineProductionService
     private readonly HiveOfflineProductionOptions options;
     private readonly bool dailyRoundEnabled;
     private readonly IReadOnlyList<OfflineProductionCatalogEntry> catalog;
+    // M051-CL: optional so every existing caller/test that constructs this service without an
+    // Alliance context keeps compiling and behaving exactly as before (AllianceGameplayBonus.None).
+    private readonly IAllianceGameplayBonusResolver? allianceBonusResolver;
 
-    public HiveOfflineProductionService(IHiveStateRepository repository, IServerClock clock, HiveOfflineProductionOptions options, bool dailyRoundEnabled = false)
+    public HiveOfflineProductionService(IHiveStateRepository repository, IServerClock clock, HiveOfflineProductionOptions options, bool dailyRoundEnabled = false, IAllianceGameplayBonusResolver? allianceBonusResolver = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
         this.options = options ?? throw new ArgumentNullException(nameof(options));
         this.dailyRoundEnabled = dailyRoundEnabled;
+        this.allianceBonusResolver = allianceBonusResolver;
         options.Validate();
         if (!options.Enabled) throw new InvalidOperationException("Offline production is disabled");
         catalog = options.Catalog.OrderBy(x => x.BuildingKey, StringComparer.Ordinal).ToArray();
@@ -31,9 +35,13 @@ public sealed class HiveOfflineProductionService
     {
         ValidateIds(playerId, hiveId);
         DateTimeOffset now = clock.UtcNow;
-        PlayerHiveState state = await repository.ExecuteAtomicallyAsync(playerId, hiveId, current => Accrue(current, playerId, hiveId, now), ct);
-        return BuildSnapshot(state, now);
+        AllianceGameplayBonus bonus = await ResolveAllianceBonusAsync(playerId, ct);
+        PlayerHiveState state = await repository.ExecuteAtomicallyAsync(playerId, hiveId, current => Accrue(current, playerId, hiveId, now, bonus), ct);
+        return BuildSnapshot(state, now, bonus);
     }
+
+    private async Task<AllianceGameplayBonus> ResolveAllianceBonusAsync(Guid playerId, CancellationToken ct)
+        => allianceBonusResolver != null ? await allianceBonusResolver.ResolveAsync(playerId, ct) : AllianceGameplayBonus.None;
 
     public async Task<OfflineProductionCollectionResult> CollectAsync(Guid playerId, Guid hiveId, string buildingKey, CollectOfflineProductionRequest request, CancellationToken ct = default)
     {
@@ -42,6 +50,7 @@ public sealed class HiveOfflineProductionService
             throw new ArgumentException("game.invalid_request");
         OfflineProductionCollectionResult? result = null;
         DateTimeOffset now = clock.UtcNow;
+        AllianceGameplayBonus bonus = await ResolveAllianceBonusAsync(playerId, ct);
         await repository.ExecuteAtomicallyAsync(playerId, hiveId, state =>
         {
             string hash = Hash(buildingKey, request.ExpectedProductionRevision);
@@ -50,23 +59,23 @@ public sealed class HiveOfflineProductionService
                 result = stored.PayloadHash == hash ? new(true, "game.idempotency_replay", stored.Response, stored.Response.Snapshot) : new(false, "game.idempotency_conflict", null, null);
                 return state;
             }
-            PlayerHiveState accrued = Accrue(state, playerId, hiveId, now);
+            PlayerHiveState accrued = Accrue(state, playerId, hiveId, now, bonus);
             HiveOfflineProductionState production = accrued.OfflineProduction!;
-            if (request.ExpectedProductionRevision != production.Revision) { result = new(false, "game.production_conflict", null, BuildSnapshot(accrued, now)); return accrued; }
+            if (request.ExpectedProductionRevision != production.Revision) { result = new(false, "game.production_conflict", null, BuildSnapshot(accrued, now, bonus)); return accrued; }
             OfflineProductionCatalogEntry definition = catalog.Single(x => x.BuildingKey == buildingKey);
             decimal pending = production.PendingByBuilding.GetValueOrDefault(buildingKey);
             ResourceBalance balance = accrued.Resources.GetValueOrDefault(definition.ResourceKey, new ResourceBalance(0, 0));
             long whole = decimal.ToInt64(decimal.Floor(pending));
-            long headroom = Math.Max(0, Math.Min(balance.Capacity, EffectiveCapacity(accrued, definition)) - balance.Amount);
+            long headroom = Math.Max(0, Math.Min(balance.Capacity, EffectiveCapacity(accrued, definition, bonus.CapacityBp)) - balance.Amount);
             long credited = Math.Min(whole, headroom);
-            if (credited <= 0) { result = new(false, whole > 0 ? "game.resource_capacity_full" : "game.production_not_ready", null, BuildSnapshot(accrued, now)); return accrued; }
+            if (credited <= 0) { result = new(false, whole > 0 ? "game.resource_capacity_full" : "game.production_not_ready", null, BuildSnapshot(accrued, now, bonus)); return accrued; }
             Dictionary<string, decimal> pendingMap = new(production.PendingByBuilding) { [buildingKey] = pending - credited };
             long nextRevision = production.Revision + 1;
             ResourceBalance resulting = balance with { Amount = checked(balance.Amount + credited) };
             Dictionary<string, ResourceBalance> resources = new(accrued.Resources) { [definition.ResourceKey] = resulting };
             PlayerHiveState updated = accrued with { Revision = checked(state.Revision + 1), Resources = resources, OfflineProduction = production with { Revision = nextRevision, PendingByBuilding = pendingMap } };
             // DailyRoundFacts is applied by the owning composition when enabled; the core remains flag-agnostic.
-            OfflineProductionReadSnapshot snapshot = BuildSnapshot(updated, now);
+            OfflineProductionReadSnapshot snapshot = BuildSnapshot(updated, now, bonus);
             OfflineProductionReceipt receipt = new(playerId, hiveId, request.IdempotencyKey, buildingKey, definition.ResourceKey, credited, pendingMap[buildingKey], nextRevision, now, resulting);
             OfflineProductionCollectResponse response = new(receipt, snapshot);
             Dictionary<string, OfflineProductionStoredReceipt> receipts = new(production.Receipts) { [request.IdempotencyKey] = new(Hash(buildingKey, request.ExpectedProductionRevision), now, response) };
@@ -79,7 +88,7 @@ public sealed class HiveOfflineProductionService
         return result!;
     }
 
-    private PlayerHiveState Accrue(PlayerHiveState state, Guid playerId, Guid hiveId, DateTimeOffset now)
+    private PlayerHiveState Accrue(PlayerHiveState state, Guid playerId, Guid hiveId, DateTimeOffset now, AllianceGameplayBonus bonus)
     {
         if (now.Offset != TimeSpan.Zero) throw new InvalidOperationException("Server clock must be UTC");
         if (state.PlayerId != playerId || state.HiveId != hiveId) throw new InvalidDataException("Hive identity mismatch");
@@ -90,18 +99,18 @@ public sealed class HiveOfflineProductionService
         if (elapsed > options.MaxRecognizedDuration) elapsed = options.MaxRecognizedDuration;
         Dictionary<string, decimal> pending = new(production.PendingByBuilding, StringComparer.Ordinal);
         foreach (OfflineProductionCatalogEntry item in catalog)
-            pending[item.BuildingKey] = Math.Min(EffectiveCapacity(state, item), pending.GetValueOrDefault(item.BuildingKey) + EffectiveRate(state, item) * elapsed.Ticks / (decimal)TimeSpan.TicksPerHour);
+            pending[item.BuildingKey] = Math.Min(EffectiveCapacity(state, item, bonus.CapacityBp), pending.GetValueOrDefault(item.BuildingKey) + EffectiveRate(state, item, bonus.ProductionBp) * elapsed.Ticks / (decimal)TimeSpan.TicksPerHour);
         bool changed = state.OfflineProduction is null || production.ProductionAsOfUtc != now || pending.Any(pair => production.PendingByBuilding.GetValueOrDefault(pair.Key) != pair.Value);
         production = production with { ProductionAsOfUtc = now, PendingByBuilding = pending };
         return state with { Revision = changed ? state.Revision + 1 : state.Revision, OfflineProduction = production };
     }
 
-    private OfflineProductionReadSnapshot BuildSnapshot(PlayerHiveState state, DateTimeOffset now)
+    private OfflineProductionReadSnapshot BuildSnapshot(PlayerHiveState state, DateTimeOffset now, AllianceGameplayBonus bonus)
     {
         HiveOfflineProductionState production = state.OfflineProduction!;
         Dictionary<string, ResourceBalance> balances = new(StringComparer.Ordinal);
         foreach (string key in new[] { "honey", "wax", "pollen" }) { if (!state.Resources.TryGetValue(key, out ResourceBalance? balance) || balance.Amount < 0 || balance.Capacity < 0 || balance.Amount > balance.Capacity) throw new InvalidDataException("Invalid resource balance"); balances[key] = balance; }
-        List<OfflineProductionLine> lines = catalog.Select(item => { ResourceBalance balance = balances[item.ResourceKey]; decimal pending = production.PendingByBuilding.GetValueOrDefault(item.BuildingKey); long whole = decimal.ToInt64(decimal.Floor(pending)); return new OfflineProductionLine(item.BuildingKey, item.ResourceKey, pending, EffectiveRate(state, item), EffectiveCapacity(state, item), Math.Min(whole, Math.Max(0, balance.Capacity - balance.Amount))); }).ToList();
+        List<OfflineProductionLine> lines = catalog.Select(item => { ResourceBalance balance = balances[item.ResourceKey]; decimal pending = production.PendingByBuilding.GetValueOrDefault(item.BuildingKey); long whole = decimal.ToInt64(decimal.Floor(pending)); return new OfflineProductionLine(item.BuildingKey, item.ResourceKey, pending, EffectiveRate(state, item, bonus.ProductionBp), EffectiveCapacity(state, item, bonus.CapacityBp), Math.Min(whole, Math.Max(0, balance.Capacity - balance.Amount))); }).ToList();
         return new(state.PlayerId, state.HiveId, ContractVersion, options.CatalogVersion, production.Revision, now, production.ProductionAsOfUtc, options.MaxRecognizedDuration, lines.ToArray(), new Dictionary<string, ResourceBalance>(balances, StringComparer.Ordinal));
     }
 
@@ -128,7 +137,7 @@ public sealed class HiveOfflineProductionService
         return total;
     }
 
-    private static decimal EffectiveRate(PlayerHiveState state, OfflineProductionCatalogEntry item)
+    private static decimal EffectiveRate(PlayerHiveState state, OfflineProductionCatalogEntry item, long allianceProductionBp = 0)
     {
         int level = EffectiveBuildingLevel(state, item);
         int bps = item.ResourceKey switch
@@ -140,9 +149,9 @@ public sealed class HiveOfflineProductionService
         };
         bps += (int)StrategicPathBonusCatalog.ProductionRateBonusBpFor(state.StrategicPath?.SelectedPath);
         decimal levelMultiplier = 1m + 0.10m * (level - 1);
-        return item.HourlyRate * levelMultiplier * (1m + bps / 10_000m);
+        return item.HourlyRate * levelMultiplier * (1m + (bps + allianceProductionBp) / 10_000m);
     }
-    private static long EffectiveCapacity(PlayerHiveState state, OfflineProductionCatalogEntry item)
+    private static long EffectiveCapacity(PlayerHiveState state, OfflineProductionCatalogEntry item, long allianceCapacityBp = 0)
     {
         int level = EffectiveBuildingLevel(state, item);
         long leveledCapacity = checked(item.Capacity * level);
@@ -155,7 +164,7 @@ public sealed class HiveOfflineProductionService
         int globalBps = SumResearchBps(state, effects => effects.GlobalCapacityBonusBps);
         int vipBps = VipCatalog.CapacityBonusBps(VipCatalog.LevelForPoints(state.Vip?.LifetimePoints ?? 0));
         long strategicPathBps = StrategicPathBonusCatalog.CapacityBonusBpFor(state.StrategicPath?.SelectedPath);
-        long bps = researchBps + globalBps + vipBps + strategicPathBps;
+        long bps = researchBps + globalBps + vipBps + strategicPathBps + allianceCapacityBp;
         return checked(leveledCapacity + (long)Math.Floor(leveledCapacity * (decimal)bps / 10_000m));
     }
     private static void ValidateIds(Guid playerId, Guid hiveId) { if (playerId == Guid.Empty || hiveId == Guid.Empty) throw new ArgumentException("game.invalid_request"); }

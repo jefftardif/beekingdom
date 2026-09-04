@@ -767,6 +767,25 @@ public static class DatabaseCatalog
                         REFERENCES dbo.AllianceHelpRequests(HelpRequestId)
                 );
             END
+            """),
+        // M051-CL: Alliance Research (Alliance Donations + collective progression) - NOT applied
+        // to production by that mission, per explicit CEO instruction. One row per Alliance, the
+        // whole AllianceResearchState serialized as JSON (same durable-document-per-aggregate shape
+        // as dbo.HivePlayerStates) - see SqlAllianceResearchRepository's own class comment for why.
+        new DatabaseScript(
+            "092_alliance_research.sql",
+            """
+            IF OBJECT_ID(N'dbo.AllianceResearch', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.AllianceResearch
+                (
+                    AllianceId uniqueidentifier NOT NULL CONSTRAINT PK_AllianceResearch PRIMARY KEY,
+                    ModelVersion int NOT NULL,
+                    Revision bigint NOT NULL,
+                    StateJson nvarchar(max) NOT NULL,
+                    UpdatedAtUtc datetime2 NOT NULL CONSTRAINT DF_AllianceResearch_UpdatedAtUtc DEFAULT SYSUTCDATETIME()
+                );
+            END
             """)
     ];
 }

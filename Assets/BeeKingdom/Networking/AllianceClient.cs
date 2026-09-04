@@ -312,6 +312,51 @@ namespace BeeKingdom.Networking
     [Serializable] public sealed class UpdateProfileWireRequest { public string Description, Language, EmblemKey; public RemoteAllianceJoinMode? JoinMode; public long ExpectedRevision; }
     [Serializable] public sealed class CreateAllianceHelpRequestWireRequest { public Guid HiveId; public string OperationCategory, OperationTargetId, ClientRequestId; }
     [Serializable] public sealed class AllianceHelpContributeWireRequest { public string ClientRequestId; }
+    [Serializable] public sealed class AllianceResearchDonateWireRequest { public Guid HiveId; public string ClientRequestId; }
+
+    // M051-CL: Alliance Research (Alliance Donations + collective progression) - field-for-field
+    // mirror of the server's AllianceTechnologyReadModel/AllianceResearchReadSnapshot. Costs are
+    // server-declared (DonationCost) rather than hardcoded client-side, same convention as every
+    // other paid action in this codebase.
+    [Serializable]
+    public sealed class RemoteAllianceTechnology
+    {
+        public string TechnologyId { get; set; }
+        public string Branch { get; set; }
+        public int Tier { get; set; }
+        public string DisplayNameKey { get; set; }
+        public string DescriptionKey { get; set; }
+        public string BonusSummaryKey { get; set; }
+        public long RequiredProgress { get; set; }
+        public long CurrentProgress { get; set; }
+        public bool Completed { get; set; }
+        public DateTimeOffset? CompletedAtUtc { get; set; }
+        public List<string> PrerequisiteIds { get; set; }
+        public bool Locked { get; set; }
+        public bool Available { get; set; }
+        public Dictionary<string, long> DonationCost { get; set; }
+        public long DonationProgressPerDonation { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceResearchSnapshot
+    {
+        public Guid AllianceId { get; set; }
+        public string ContractVersion { get; set; }
+        public DateTimeOffset ServerTimeUtc { get; set; }
+        public long Revision { get; set; }
+        public List<RemoteAllianceTechnology> Technologies { get; set; }
+        public long MyContributionPoints { get; set; }
+        public long MyDonationCount { get; set; }
+    }
+
+    [Serializable]
+    public sealed class RemoteAllianceResearchDonateResult
+    {
+        public bool Succeeded { get; set; }
+        public string Code { get; set; }
+        public RemoteAllianceResearchSnapshot Snapshot { get; set; }
+    }
 
     public interface IAllianceClient
     {
@@ -349,6 +394,12 @@ namespace BeeKingdom.Networking
         Task<RemoteAllianceHelpCommandResult> CreateHelpRequestAsync(Guid hiveId, string operationCategory, string operationTargetId, string clientRequestId, CancellationToken cancellationToken = default);
         Task<RemoteContributeAllianceHelpResult> ContributeHelpAsync(Guid helpRequestId, string clientRequestId, CancellationToken cancellationToken = default);
         Task<RemoteContributeAllianceHelpAllResult> ContributeHelpAllAsync(string clientRequestId, CancellationToken cancellationToken = default);
+
+        // M051-CL: Alliance Research. Never a parallel/fabricated progress model client-side either -
+        // CurrentProgress/Completed/MyContributionPoints all come straight from the server's shared,
+        // Alliance-owned AllianceResearchState.
+        Task<RemoteAllianceResearchSnapshot> GetAllianceResearchAsync(CancellationToken cancellationToken = default);
+        Task<RemoteAllianceResearchDonateResult> DonateToAllianceResearchAsync(string technologyId, Guid hiveId, string clientRequestId, CancellationToken cancellationToken = default);
     }
 
     public sealed class AllianceClient : IAllianceClient
@@ -546,6 +597,15 @@ namespace BeeKingdom.Networking
         public Task<RemoteContributeAllianceHelpAllResult> ContributeHelpAllAsync(string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
             => SendAsync<RemoteContributeAllianceHelpAllResult>("POST", BasePath + "/help/contribute-all",
                 new AllianceHelpContributeWireRequest { ClientRequestId = clientRequestId }, cancellationToken);
+
+        // ---------------- M051-CL: Alliance Research ----------------
+
+        public Task<RemoteAllianceResearchSnapshot> GetAllianceResearchAsync(CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteAllianceResearchSnapshot>("GET", BasePath + "/research", null, cancellationToken);
+
+        public Task<RemoteAllianceResearchDonateResult> DonateToAllianceResearchAsync(string technologyId, Guid hiveId, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
+            => SendAsync<RemoteAllianceResearchDonateResult>("POST", BasePath + "/research/" + Uri.EscapeDataString(technologyId) + "/donate",
+                new AllianceResearchDonateWireRequest { HiveId = hiveId, ClientRequestId = clientRequestId }, cancellationToken);
 
         // ---------------- plumbing (mirrors HiveResearchClient) ----------------
 

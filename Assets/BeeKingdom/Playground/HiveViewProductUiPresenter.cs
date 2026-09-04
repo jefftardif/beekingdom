@@ -36532,6 +36532,17 @@ if (leftNavigationTexture == null)
                 return;
             }
 
+            // M051-CL: "Recherches" was still routing into the generic DrawAllianceComingSoon
+            // placeholder - real server-authoritative Alliance Research (AllianceResearchService,
+            // shared identically by every current member) now exists, so this reuses the same
+            // full-screen-real-content convention as the Journal/Chat fixes above.
+            if (allianceOverviewTab == "research")
+            {
+                DrawAllianceResearchTab(area, compact);
+                GUI.color = Color.white;
+                return;
+            }
+
             if (allianceOverviewTab != "overview")
             {
                 DrawAllianceComingSoon(area, compact);
@@ -36745,6 +36756,99 @@ if (leftNavigationTexture == null)
                     if (isLeader) allianceCenterController.Dissolve();
                     else allianceCenterController.Leave();
                 }
+            }
+        }
+
+        private static Vector2 allianceResearchScroll;
+
+        // M051-CL: real Alliance Research / Alliance Donations screen inside the existing Alliance
+        // Center - reuses the same controller/model plumbing (allianceCenterController.ResearchModel)
+        // every other real Alliance Center section already uses, never a second UI-owned data source.
+        private static void DrawAllianceResearchTab(Rect rect, bool compact)
+        {
+            allianceCenterController.RefreshResearch();
+            AllianceResearchScreenModel model = allianceCenterController.ResearchModel;
+
+            GUI.Label(new Rect(rect.x + 12f, rect.y + 6f, rect.width - 24f, 22f),
+                "Ma contribution : " + model.MyContributionPoints.ToString(CultureInfo.InvariantCulture) + " pts · "
+                + model.MyDonationCount.ToString(CultureInfo.InvariantCulture) + " dons",
+                new GUIStyle(tinyLabelStyle) { fontSize = compact ? 10 : 11 });
+
+            if (!model.Loaded)
+            {
+                GUI.Label(new Rect(rect.x + 12f, rect.y + 34f, rect.width - 24f, 30f),
+                    "Synchronisation avec le serveur…", tinyLabelStyle);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(model.ErrorCode) && model.DonationState == AllianceResearchDonationState.Error)
+            {
+                GUI.Label(new Rect(rect.x + 12f, rect.y + 30f, rect.width - 24f, 18f),
+                    AllianceResearchErrorText(model.ErrorCode), new GUIStyle(tinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.55f, 0.5f) } });
+            }
+
+            Rect scrollArea = new Rect(rect.x, rect.y + 50f, rect.width, rect.height - 54f);
+            float cardHeight = compact ? 138f : 118f;
+            float cardGap = 10f;
+            float contentHeight = model.Technologies.Count * (cardHeight + cardGap) + 8f;
+            Rect viewRect = new Rect(0f, 0f, scrollArea.width - 18f, contentHeight);
+            allianceResearchScroll = GUI.BeginScrollView(scrollArea, allianceResearchScroll, viewRect);
+            float y = 4f;
+            foreach (AllianceTechnologyRowModel tech in model.Technologies)
+            {
+                DrawAllianceTechnologyCard(new Rect(6f, y, viewRect.width - 12f, cardHeight), tech, model, compact);
+                y += cardHeight + cardGap;
+            }
+            GUI.EndScrollView();
+        }
+
+        private static void DrawAllianceTechnologyCard(Rect card, AllianceTechnologyRowModel tech, AllianceResearchScreenModel model, bool compact)
+        {
+            Color accent = tech.Completed ? new Color(0.42f, 0.82f, 0.48f, 0.88f)
+                : tech.Locked ? new Color(0.45f, 0.42f, 0.38f, 0.55f)
+                : new Color(0.86f, 0.58f, 0.16f, 0.76f);
+            DrawPremiumPanel(card, new Color(0.035f, 0.052f, 0.070f, 0.94f), accent);
+
+            string name = BeeLocalization.Text(tech.DisplayNameKey, tech.TechnologyId);
+            string desc = BeeLocalization.Text(tech.DescriptionKey, string.Empty);
+            string bonus = BeeLocalization.Text(tech.BonusSummaryKey, string.Empty);
+            string stateLabel = tech.Completed ? "TERMINÉE" : tech.Locked ? "VERROUILLÉE" : "DISPONIBLE";
+
+            GUI.Label(new Rect(card.x + 12f, card.y + 8f, card.width - 108f, 20f), name, new GUIStyle(smallStyle) { fontStyle = FontStyle.Bold });
+            GUI.Label(new Rect(card.xMax - 100f, card.y + 8f, 92f, 20f), stateLabel, new GUIStyle(badgeStyle) { alignment = TextAnchor.MiddleRight, fontSize = 10 });
+            GUI.Label(new Rect(card.x + 12f, card.y + 28f, card.width - 24f, compact ? 32f : 20f), desc, new GUIStyle(tinyLabelStyle) { wordWrap = true, fontSize = 10 });
+
+            float progressY = card.y + (compact ? 64f : 52f);
+            float progress01 = tech.RequiredProgress > 0 ? Mathf.Clamp01((float)tech.CurrentProgress / tech.RequiredProgress) : 0f;
+            DrawProgressBar(new Rect(card.x + 12f, progressY, card.width - 24f, 8f), progress01);
+            GUI.Label(new Rect(card.x + 12f, progressY + 10f, card.width - 24f, 16f),
+                tech.CurrentProgress.ToString(CultureInfo.InvariantCulture) + " / " + tech.RequiredProgress.ToString(CultureInfo.InvariantCulture)
+                + (string.IsNullOrEmpty(bonus) ? string.Empty : "  ·  " + bonus),
+                new GUIStyle(tinyLabelStyle) { fontSize = 9 });
+
+            string costText = tech.DonationCost.Count == 0 ? string.Empty : string.Join("  ", tech.DonationCost
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => kv.Value.ToString(CultureInfo.InvariantCulture) + " " + OfficialBuildingUpgradeResourceLabel(kv.Key)));
+            GUI.Label(new Rect(card.x + 12f, progressY + 30f, card.width - 112f, 20f), costText, new GUIStyle(tinyLabelStyle) { fontSize = 9 });
+
+            Rect donateButton = new Rect(card.xMax - 100f, progressY + 26f, 90f, 28f);
+            bool sendingThis = model.DonationState == AllianceResearchDonationState.Sending && string.Equals(model.DonatingTechnologyId, tech.TechnologyId, StringComparison.Ordinal);
+            bool sendingOther = model.DonationState == AllianceResearchDonationState.Sending && !sendingThis;
+            bool enabled = tech.Available && !tech.Completed && !tech.Locked && !sendingOther;
+            string label = sendingThis ? "Envoi…" : "DONNER";
+            if (DrawPreviewActionButton(donateButton, label, enabled, true) && enabled)
+                allianceCenterController.DonateToResearch(MobileAccountSessionRuntimeBootstrap.GameplayHiveId, tech.TechnologyId);
+        }
+
+        private static string AllianceResearchErrorText(string code)
+        {
+            switch (code)
+            {
+                case "insufficient_resources": return "Ressources insuffisantes pour ce don.";
+                case "technology_locked": return "Technologie verrouillée · prérequis manquant.";
+                case "technology_completed": return "Technologie déjà terminée.";
+                case "not_a_member": return "Rejoignez une alliance pour contribuer.";
+                default: return "Le don a échoué · réessayez.";
             }
         }
 

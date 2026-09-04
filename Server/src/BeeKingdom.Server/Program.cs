@@ -6,6 +6,7 @@ using BeeKingdom.Alliance.Configuration;
 using BeeKingdom.Alliance.DependencyInjection;
 using BeeKingdom.Alliance.Help;
 using BeeKingdom.Alliance.Models;
+using BeeKingdom.Alliance.Research;
 using BeeKingdom.Authentication;
 using BeeKingdom.Authentication.DependencyInjection;
 using BeeKingdom.Authentication.Models;
@@ -102,10 +103,11 @@ builder.Services.AddSingleton<CombatRecruitmentService>(sp => new CombatRecruitm
 builder.Services.AddSingleton<CombatSquadReservationService>(sp => new CombatSquadReservationService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
 builder.Services.AddSingleton<BeeKingdom.HiveOperations.IServerClock, BeeKingdom.HiveOperations.SystemServerClock>();
 builder.Services.AddSingleton<HivePerimeterSortieService>(sp => new HivePerimeterSortieService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
-builder.Services.AddSingleton<CombatPatrolService>(sp => new CombatPatrolService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
+builder.Services.AddSingleton<CombatPatrolService>(sp => new CombatPatrolService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IAllianceGameplayBonusResolver>()));
 builder.Services.AddSingleton<AdminSupportService>(sp => new AdminSupportService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
 builder.Services.AddSingleton<RewardLedgerService>(sp => new RewardLedgerService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IOptions<RewardLedgerOptions>>().Value));
 builder.Services.AddBeeKingdomAllianceHelp(builder.Configuration);
+builder.Services.AddBeeKingdomAllianceResearch(builder.Configuration);
 builder.Services.AddOptions<AdminSupportOptions>()
     .Bind(builder.Configuration.GetSection(AdminSupportOptions.SectionName));
 builder.Services.AddOptions<DevToolsOptions>()
@@ -594,19 +596,19 @@ app.MapPost("/game/v1/hives/{hiveId}/ensure", async (HttpContext context, string
     return Results.Ok(new { revision = state.Revision });
 });
 
-app.MapGet("/game/v1/hives/{hiveId}/offline-production", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveOfflineProductionOptions> configured, IOptions<HiveDailyRoundOptions> daily, CancellationToken ct) =>
+app.MapGet("/game/v1/hives/{hiveId}/offline-production", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveOfflineProductionOptions> configured, IOptions<HiveDailyRoundOptions> daily, IAllianceGameplayBonusResolver allianceBonusResolver, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsedHive)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
-    try { configured.Value.Validate(); var service = new HiveOfflineProductionService(repository, clock, configured.Value, daily.Value.Enabled); return Results.Ok(await service.ReadSnapshotAsync(auth.PlayerId.Value, parsedHive, ct)); }
+    try { configured.Value.Validate(); var service = new HiveOfflineProductionService(repository, clock, configured.Value, daily.Value.Enabled, allianceBonusResolver); return Results.Ok(await service.ReadSnapshotAsync(auth.PlayerId.Value, parsedHive, ct)); }
     catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
     catch (InvalidOperationException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 
-app.MapPost("/game/v1/hives/{hiveId}/offline-production/{buildingKey}/collect", async (HttpContext context, string hiveId, string buildingKey, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveOfflineProductionOptions> configured, IOptions<HiveDailyRoundOptions> daily, CollectOfflineProductionRequest request, CancellationToken ct) =>
+app.MapPost("/game/v1/hives/{hiveId}/offline-production/{buildingKey}/collect", async (HttpContext context, string hiveId, string buildingKey, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveOfflineProductionOptions> configured, IOptions<HiveDailyRoundOptions> daily, IAllianceGameplayBonusResolver allianceBonusResolver, CollectOfflineProductionRequest request, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
@@ -615,7 +617,7 @@ app.MapPost("/game/v1/hives/{hiveId}/offline-production/{buildingKey}/collect", 
         return GameError(400, "game.invalid_request", "game.error.invalid_request");
     try
     {
-        configured.Value.Validate(); var service = new HiveOfflineProductionService(repository, clock, configured.Value, daily.Value.Enabled); var result = await service.CollectAsync(auth.PlayerId.Value, parsedHive, buildingKey, request, ct);
+        configured.Value.Validate(); var service = new HiveOfflineProductionService(repository, clock, configured.Value, daily.Value.Enabled, allianceBonusResolver); var result = await service.CollectAsync(auth.PlayerId.Value, parsedHive, buildingKey, request, ct);
         if (result.Succeeded) return Results.Ok(result.Response);
         return result.Code switch { "game.invalid_request" => GameError(400, result.Code, "game.error.invalid_request"), _ => GameError(409, result.Code, "game.error.conflict") };
     }
@@ -1722,6 +1724,28 @@ app.MapPost("/alliance/v1/help/contribute-all", async (HttpContext context, Auth
     return await ExecuteAllianceHelpAsync(async () => Results.Ok(await helpService.ContributeAllAsync(auth.PlayerId, request.ClientRequestId, cancellationToken)));
 });
 
+// M051-CL: Alliance Research - real server-authoritative collective progression, shared identically
+// by every current member of the same Alliance. See AllianceResearchService's own class comment for
+// the two-aggregate donation/atomicity strategy (resources debited from the player's own
+// PlayerHiveState, progress applied to the Alliance-owned AllianceResearchState).
+app.MapGet("/alliance/v1/research", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceResearchAsync(async () => Results.Ok(await researchService.GetSnapshotAsync(auth.PlayerId, cancellationToken)));
+});
+
+app.MapPost("/alliance/v1/research/{technologyId}/donate", async (HttpContext context, AuthenticationManager authentication, AllianceResearchService researchService, string technologyId, AllianceResearchDonateWireRequest request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "alliance.session_required", "alliance.error.session_required");
+    return await ExecuteAllianceResearchAsync(async () =>
+    {
+        AllianceResearchDonateResult result = await researchService.DonateAsync(auth.PlayerId, new DonateToAllianceResearchCommand(request.HiveId, technologyId, request.ClientRequestId), cancellationToken);
+        return result.Succeeded ? Results.Ok(result) : AllianceResearchError(result.Code);
+    });
+});
+
 app.MapGet("/ops/migrations/pending", async (HttpContext context, IOptions<OpsSecurityOptions> ops, IMigrationRunner migrations, CancellationToken cancellationToken) =>
 {
     IResult? authorization = AuthorizeOps(context, ops.Value);
@@ -2510,6 +2534,49 @@ static int CodeToStatus(string code) => code switch
     _ => 409
 };
 
+// M051-CL: AllianceResearchService returns result records (Succeeded/Code) rather than throwing
+// for expected domain rejections (locked technology, already completed, insufficient resources) -
+// this wrapper only needs to catch the one exception it DOES throw (feature disabled) plus the
+// generic unauthorized/not-found/invalid-request vocabulary shared with the rest of Alliance.
+static async Task<IResult> ExecuteAllianceResearchAsync(Func<Task<IResult>> action)
+{
+    try
+    {
+        return await action();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return AllianceError(403, "alliance.forbidden");
+    }
+    catch (KeyNotFoundException)
+    {
+        return AllianceError(404, "alliance.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return AllianceError(400, "alliance.invalid_request");
+    }
+    catch (InvalidOperationException exception) when (exception.Message == "not_a_member")
+    {
+        return AllianceError(403, "alliance.research.not_a_member");
+    }
+    catch (InvalidOperationException exception) when (exception.Message == "alliance_research_disabled")
+    {
+        return AllianceError(503, "alliance.unavailable");
+    }
+}
+
+static IResult AllianceResearchError(string code) => AllianceError(AllianceResearchCodeToStatus(code), "alliance.research." + code);
+
+static int AllianceResearchCodeToStatus(string code) => code switch
+{
+    "not_a_member" or "hive_not_owned" => 403,
+    "technology_not_found" or "hive_not_found" => 404,
+    "invalid_request" => 400,
+    "technology_locked" or "technology_completed" or "insufficient_resources" => 409,
+    _ => 409
+};
+
 static ResearchReadSnapshot BuildResearchSnapshot(PlayerHiveState state, DateTimeOffset now, string catalogVersion, IReadOnlyList<string> configuredCatalog)
 {
     var offers = HiveOperationService.ResearchCatalog.Where(x=>configuredCatalog.Contains(x.Key,StringComparer.Ordinal)).Select(x => new ResearchOffer(x.Key, x.Value.Duration, x.Value.Costs, x.Value.Effects, x.Value.Prerequisites)).Where(x => !(state.Research?.Completed.ContainsKey(x.ResearchId) ?? false)).ToArray();
@@ -3220,4 +3287,5 @@ public sealed record SetDisplayNameHttpRequest(string DisplayName);
 public sealed record GameErrorEnvelope(string Code, string Message, int? RetryAfterSeconds);
 public sealed record AllianceErrorEnvelope(string Code);
 public sealed record AllianceHelpContributeWireRequest(string ClientRequestId);
+public sealed record AllianceResearchDonateWireRequest(Guid HiveId, string ClientRequestId);
 public sealed record AuthenticationUnavailableEnvelope(string Code, string Message);
