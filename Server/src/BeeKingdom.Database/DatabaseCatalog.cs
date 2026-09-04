@@ -722,6 +722,51 @@ public static class DatabaseCatalog
                     CONSTRAINT PK_AllianceWarDeclareReceipts PRIMARY KEY (PlayerId, ClientRequestId)
                 );
             END
+            """),
+        new DatabaseScript(
+            "091_alliance_help.sql",
+            """
+            IF OBJECT_ID(N'dbo.AllianceHelpRequests', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.AllianceHelpRequests
+                (
+                    HelpRequestId uniqueidentifier NOT NULL CONSTRAINT PK_AllianceHelpRequests PRIMARY KEY,
+                    AllianceId uniqueidentifier NOT NULL,
+                    RequestingPlayerId uniqueidentifier NOT NULL,
+                    RequestingHiveId uniqueidentifier NOT NULL,
+                    OperationCategory nvarchar(32) NOT NULL,
+                    OperationTargetId nvarchar(128) NOT NULL,
+                    OperationId uniqueidentifier NOT NULL,
+                    CreatedAtUtc datetime2 NOT NULL,
+                    Status nvarchar(16) NOT NULL,
+                    OriginalDurationSeconds bigint NOT NULL,
+                    HelpCount int NOT NULL,
+                    MaxHelpCount int NOT NULL,
+                    Revision bigint NOT NULL,
+                    ClientRequestId nvarchar(256) NOT NULL
+                );
+
+                CREATE UNIQUE INDEX UX_AllianceHelpRequests_Player_Operation_Open
+                    ON dbo.AllianceHelpRequests(RequestingPlayerId, OperationCategory, OperationTargetId)
+                    WHERE Status = N'Open';
+
+                CREATE INDEX IX_AllianceHelpRequests_Alliance_Status ON dbo.AllianceHelpRequests(AllianceId, Status, CreatedAtUtc);
+            END
+
+            IF OBJECT_ID(N'dbo.AllianceHelpContributions', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.AllianceHelpContributions
+                (
+                    HelpRequestId uniqueidentifier NOT NULL,
+                    HelperPlayerId uniqueidentifier NOT NULL,
+                    HelpedAtUtc datetime2 NOT NULL,
+                    DurationReductionSeconds bigint NOT NULL,
+                    ClientRequestId nvarchar(256) NOT NULL,
+                    CONSTRAINT PK_AllianceHelpContributions PRIMARY KEY (HelpRequestId, HelperPlayerId),
+                    CONSTRAINT FK_AllianceHelpContributions_Request FOREIGN KEY (HelpRequestId)
+                        REFERENCES dbo.AllianceHelpRequests(HelpRequestId)
+                );
+            END
             """)
     ];
 }
