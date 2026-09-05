@@ -181,7 +181,7 @@ public sealed class AuthenticationService : IAuthenticationService
         Diagnostics.RecordSuccess(Stopwatch.GetTimestamp() - start);
         eventSink.Publish(new PlayerAuthenticated(clock.UtcNow, account.PlayerId, account.AccountId, sessionId));
         eventSink.Publish(new SessionCreated(clock.UtcNow, account.PlayerId, account.AccountId, sessionId));
-        return AuthenticationResult.Success(account.PlayerId, account.AccountId, session, tokens, isNewAccount, account.DisplayName, account.IsOnboarded);
+        return AuthenticationResult.Success(account.PlayerId, account.AccountId, session, tokens, isNewAccount, account.DisplayName, account.IsOnboarded, account.Role);
     }
 
     public Task<AuthenticationTokenPair?> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)

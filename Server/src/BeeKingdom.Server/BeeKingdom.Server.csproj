@@ -13,6 +13,7 @@
     <ProjectReference Include="..\BeeKingdom.Colony\BeeKingdom.Colony.csproj" />
     <ProjectReference Include="..\BeeKingdom.Simulation\BeeKingdom.Simulation.csproj" />
     <ProjectReference Include="..\BeeKingdom.HiveOperations\BeeKingdom.HiveOperations.csproj" />
+    <ProjectReference Include="..\BeeKingdom.News\BeeKingdom.News.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

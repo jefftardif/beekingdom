@@ -26,6 +26,7 @@ using BeeKingdom.Gateway;
 using BeeKingdom.Gateway.DependencyInjection;
 using BeeKingdom.Gateway.Models;
 using BeeKingdom.HiveOperations;
+using BeeKingdom.News;
 using IServerClock = BeeKingdom.Infrastructure.Time.IServerClock;
 using BeeKingdom.Infrastructure.Configuration;
 using BeeKingdom.Infrastructure.DependencyInjection;
@@ -108,6 +109,7 @@ builder.Services.AddSingleton<AdminSupportService>(sp => new AdminSupportService
 builder.Services.AddSingleton<RewardLedgerService>(sp => new RewardLedgerService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IOptions<RewardLedgerOptions>>().Value));
 builder.Services.AddBeeKingdomAllianceHelp(builder.Configuration);
 builder.Services.AddBeeKingdomAllianceResearch(builder.Configuration);
+builder.Services.AddBeeKingdomNews(builder.Configuration);
 builder.Services.AddOptions<AdminSupportOptions>()
     .Bind(builder.Configuration.GetSection(AdminSupportOptions.SectionName));
 builder.Services.AddOptions<DevToolsOptions>()
@@ -1781,6 +1783,111 @@ app.MapPost("/alliance/v1/research/{technologyId}/speedup", async (HttpContext c
     });
 });
 
+// M0??-CL: bilingual (EN/FR) News/Actualites CMS backing the companion website
+// (beekingdom-web). Admin authoring gates on the EXISTING AuthenticationAccount.Role ==
+// AccountRole.Admin - the exact pattern used by /accounts/v1/role/lookup above, no separate
+// password system. Public read endpoints (list + detail) require no auth at all.
+app.MapGet("/news/v1/articles", async (NewsService news, int? limit, string? cursor, CancellationToken cancellationToken) =>
+{
+    return await ExecuteNewsAsync(async () =>
+    {
+        int offset = ParseNewsCursor(cursor);
+        IReadOnlyList<NewsArticle> page = await news.ListPublishedAsync(offset, limit, cancellationToken);
+        var summaries = page.Select(NewsArticleSummary.FromArticle).ToArray();
+        string? nextCursor = summaries.Length > 0 ? (offset + summaries.Length).ToString() : null;
+        return Results.Ok(new NewsArticlePage<NewsArticleSummary>(summaries, nextCursor));
+    });
+});
+
+app.MapGet("/news/v1/articles/{slug}", async (NewsService news, string slug, CancellationToken cancellationToken) =>
+{
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticle? article = await news.GetPublishedBySlugAsync(slug, cancellationToken);
+        return article is null ? NewsError(404, "not_found") : Results.Ok(NewsArticleDetail.FromArticle(article));
+    });
+});
+
+app.MapGet("/news/v1/admin/articles", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, int? limit, string? cursor, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out _);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        int offset = ParseNewsCursor(cursor);
+        IReadOnlyList<NewsArticle> page = await news.ListAllAsync(offset, limit, cancellationToken);
+        var summaries = page.Select(NewsArticleSummary.FromArticle).ToArray();
+        string? nextCursor = summaries.Length > 0 ? (offset + summaries.Length).ToString() : null;
+        return Results.Ok(new NewsArticlePage<NewsArticleSummary>(summaries, nextCursor));
+    });
+});
+
+app.MapGet("/news/v1/admin/articles/{slug}", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, string slug, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out _);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticle? article = await news.GetAnyBySlugAsync(slug, cancellationToken);
+        return article is null ? NewsError(404, "not_found") : Results.Ok(article);
+    });
+});
+
+app.MapPost("/news/v1/admin/articles", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, NewsArticleCreateRequest request, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out AuthenticationAccount caller);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticleCommandResult result = await news.CreateAsync(caller.AccountId, request, cancellationToken);
+        return result.Succeeded ? Results.Ok(result.Article) : NewsCommandError(result.Code);
+    });
+});
+
+app.MapPut("/news/v1/admin/articles/{slug}", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, string slug, NewsArticleUpdateRequest request, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out _);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticleCommandResult result = await news.UpdateAsync(slug, request, cancellationToken);
+        return result.Succeeded ? Results.Ok(result.Article) : NewsCommandError(result.Code);
+    });
+});
+
+app.MapPost("/news/v1/admin/articles/{slug}/publish", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, string slug, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out _);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticleCommandResult result = await news.PublishAsync(slug, cancellationToken);
+        return result.Succeeded ? Results.Ok(result.Article) : NewsCommandError(result.Code);
+    });
+});
+
+app.MapPost("/news/v1/admin/articles/{slug}/unpublish", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, string slug, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out _);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticleCommandResult result = await news.UnpublishAsync(slug, cancellationToken);
+        return result.Succeeded ? Results.Ok(result.Article) : NewsCommandError(result.Code);
+    });
+});
+
+app.MapDelete("/news/v1/admin/articles/{slug}", async (HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, NewsService news, string slug, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAdmin(context, authentication, credentials, out _);
+    if (authorization != null) return authorization;
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticleCommandResult result = await news.DeleteAsync(slug, cancellationToken);
+        return result.Succeeded ? Results.Ok() : NewsCommandError(result.Code);
+    });
+});
+
 app.MapGet("/ops/migrations/pending", async (HttpContext context, IOptions<OpsSecurityOptions> ops, IMigrationRunner migrations, CancellationToken cancellationToken) =>
 {
     IResult? authorization = AuthorizeOps(context, ops.Value);
@@ -2565,6 +2672,55 @@ static IResult ExecuteAlliance(Func<IResult> action)
 
 static IResult AllianceError(int statusCode, string code)
     => Results.Json(new AllianceErrorEnvelope(code), statusCode: statusCode);
+
+// M0??-CL: News admin gate - exact same pattern as /accounts/v1/role/lookup (AuthenticateGameRequest
+// then AccountRole.Admin check via IAccountCredentialStore). `caller` is only meaningful when this
+// returns null (authorized); callers that don't need the account can discard it.
+static IResult? AuthorizeNewsAdmin(HttpContext context, AuthenticationManager authentication, IAccountCredentialStore credentials, out AuthenticationAccount caller)
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+    {
+        caller = default;
+        return GameError(401, "news.session_required", "news.error.session_required");
+    }
+
+    if (!credentials.TryGetByAccountId(auth.AccountId, out caller) || caller.Role != AccountRole.Admin)
+    {
+        return NewsError(403, "forbidden");
+    }
+
+    return null;
+}
+
+static int ParseNewsCursor(string? cursor) => int.TryParse(cursor, out int offset) && offset >= 0 ? offset : 0;
+
+static IResult NewsError(int statusCode, string code)
+    => Results.Json(new AllianceErrorEnvelope("news." + code), statusCode: statusCode);
+
+static IResult NewsCommandError(string code) => NewsError(code switch
+{
+    "not_found" => 404,
+    "slug_taken" => 409,
+    "locale_incomplete" => 409,
+    "invalid_request" => 400,
+    _ => 400
+}, code);
+
+// News, like AllianceResearch, returns result records (Succeeded/Code) rather than throwing for
+// expected domain rejections (slug taken, locale incomplete, not found) - this wrapper only needs
+// to catch the one exception NewsService DOES throw (feature disabled).
+static async Task<IResult> ExecuteNewsAsync(Func<Task<IResult>> action)
+{
+    try
+    {
+        return await action();
+    }
+    catch (InvalidOperationException exception) when (exception.Message == "news_disabled")
+    {
+        return NewsError(503, "unavailable");
+    }
+}
 
 // M045-CL: AllianceHelpService returns result records (Succeeded/Code) rather than throwing for
 // expected domain rejections (already helped, request full, wrong alliance, etc.) - this wrapper

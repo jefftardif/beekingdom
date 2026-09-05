@@ -56,7 +56,11 @@ public sealed record AuthenticationResult(
     string? ErrorMessage,
     bool IsNewAccount = false,
     string? DisplayName = null,
-    bool IsOnboarded = false)
+    bool IsOnboarded = false,
+    // M0??-CL: lets the website (and any other client) learn "is this signed-in visitor an
+    // Admin" from the login response itself, no second round-trip. Defaulted so every pre-existing
+    // AuthenticationResult.Success(...) call site keeps compiling unchanged.
+    AccountRole Role = AccountRole.Player)
 {
     public static AuthenticationResult Success(
         PlayerId playerId,
@@ -65,9 +69,10 @@ public sealed record AuthenticationResult(
         AuthenticationTokenPair tokens,
         bool isNewAccount = false,
         string? displayName = null,
-        bool isOnboarded = false)
+        bool isOnboarded = false,
+        AccountRole role = AccountRole.Player)
     {
-        return new AuthenticationResult(true, playerId, accountId, session, tokens, null, null, isNewAccount, displayName, isOnboarded);
+        return new AuthenticationResult(true, playerId, accountId, session, tokens, null, null, isNewAccount, displayName, isOnboarded, role);
     }
 
     public static AuthenticationResult Failure(string code, string message)

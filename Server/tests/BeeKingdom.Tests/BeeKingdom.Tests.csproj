@@ -39,6 +39,7 @@
     <ProjectReference Include="..\..\src\BeeKingdom.Gateway\BeeKingdom.Gateway.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Colony\BeeKingdom.Colony.csproj" />
     <ProjectReference Include="..\..\src\BeeKingdom.Simulation\BeeKingdom.Simulation.csproj" />
+    <ProjectReference Include="..\..\src\BeeKingdom.News\BeeKingdom.News.csproj" />
   </ItemGroup>
 
 </Project>
