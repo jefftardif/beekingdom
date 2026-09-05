@@ -1,5 +1,6 @@
 using BeeKingdom.Alliance.Models;
 using BeeKingdom.Alliance.Repositories;
+using BeeKingdom.HiveOperations;
 using BeeKingdom.Shared.ValueObjects;
 
 namespace BeeKingdom.Alliance.Research;
@@ -13,11 +14,13 @@ public sealed class AllianceResearchBonusResolver
 {
     private readonly IAllianceRepository allianceRepository;
     private readonly IAllianceResearchRepository researchRepository;
+    private readonly IServerClock clock;
 
-    public AllianceResearchBonusResolver(IAllianceRepository allianceRepository, IAllianceResearchRepository researchRepository)
+    public AllianceResearchBonusResolver(IAllianceRepository allianceRepository, IAllianceResearchRepository researchRepository, IServerClock clock)
     {
         this.allianceRepository = allianceRepository;
         this.researchRepository = researchRepository;
+        this.clock = clock;
     }
 
     public async Task<AllianceResearchBonus> ResolveForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken = default)
@@ -41,10 +44,27 @@ public sealed class AllianceResearchBonusResolver
     public async Task<AllianceResearchBonus> ResolveForAllianceAsync(Guid allianceId, CancellationToken cancellationToken = default)
     {
         AllianceResearchState? state = await researchRepository.ReadAsync(allianceId, cancellationToken);
-        if (state == null || state.Completed.Count == 0) return AllianceResearchBonus.None;
+        if (state == null) return AllianceResearchBonus.None;
+
+        // M053-CL: close the "must reopen Alliance Center to receive an already-earned bonus" gap
+        // documented as a known compromise in the M052 report - a research slot whose CompletesAtUtc
+        // has already passed is, by Bible definition (section 2/3), objectively TERMINÉE even if no
+        // mutation has yet persisted that fact into state.Completed. Counting it here is purely
+        // additive and READ-ONLY (no write, no lazy-resolution side effect) - the authoritative
+        // write-path resolution (AllianceResearchService.ResolveElapsedResearch, which actually moves
+        // the slot into Completed and clears it) still happens exactly once, the next time any
+        // request touches this Alliance. This intentionally avoids adding a write on the hottest
+        // calculation path in the game (every production/combat tick) while still making the bonus
+        // available from the instant it is objectively true, not from the instant someone happens to
+        // open the Alliance Center. No polling, no background worker - purely a function of "now".
+        HashSet<string> effectivelyCompleted = new(state.Completed.Keys, StringComparer.Ordinal);
+        DateTimeOffset now = clock.UtcNow;
+        if (state.MinorResearch != null && now >= state.MinorResearch.CompletesAtUtc) effectivelyCompleted.Add(state.MinorResearch.TechnologyId);
+        if (state.MajorResearch != null && now >= state.MajorResearch.CompletesAtUtc) effectivelyCompleted.Add(state.MajorResearch.TechnologyId);
+        if (effectivelyCompleted.Count == 0) return AllianceResearchBonus.None;
 
         long productionBp = 0, capacityBp = 0, combatPowerBp = 0;
-        foreach (string technologyId in state.Completed.Keys)
+        foreach (string technologyId in effectivelyCompleted)
         {
             if (!AllianceResearchCatalog.TryGet(technologyId, out AllianceResearchCatalog.TechnologyDefinition definition)) continue;
             productionBp += definition.ProductionBp;

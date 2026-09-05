@@ -45,7 +45,7 @@ public sealed class AllianceResearchServiceTests
             allianceRepository, new InMemoryAllianceActivityRepository(), new InMemoryAllianceDiplomacyRepository(), new InMemoryAllianceWarRepository(),
             allianceOptions);
         var research = new AllianceResearchService(allianceRepository, researchRepository, hiveStates, researchOptions, clock);
-        var bonusResolver = new AllianceResearchBonusResolver(allianceRepository, researchRepository);
+        var bonusResolver = new AllianceResearchBonusResolver(allianceRepository, researchRepository, clock);
 
         return new Fixture(alliances, research, bonusResolver, hiveStates, clock, allianceRepository, researchRepository);
     }
@@ -596,6 +596,551 @@ public sealed class AllianceResearchServiceTests
         // day/second math) is what LaunchAsync/ApplySpeedUpAsync use for every duration, Alpha or
         // final-balance alike - this proves the architecture, independent of which duration value
         // the current Alpha catalog happens to configure.
+    }
+
+    // ================================================================================
+    // M053-CL: Major track certification (Part 1) - exercises the exact same code paths as the
+    // Minor tests above, but against Major1 specifically, since AllianceResearchService branches
+    // uniformly on Category (never a Major-specific special case) - see e.g. SelectFundingTargetAsync/
+    // LaunchAsync/ApplySpeedUpAsync/ResolveTechnologyState in AllianceResearchService.cs.
+    // ================================================================================
+
+    [Test]
+    public async Task Major_LockedBeforePrerequisites_EligibleOnceBothCompleted()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, _, _, _, _, _) = SetUpAlliance(fx);
+
+        AllianceResearchReadSnapshot before = await fx.Research.GetSnapshotAsync(chef);
+        Assert.That(before.Technologies.Single(t => t.TechnologyId == Major1).State, Is.EqualTo(AllianceTechnologyState.Locked));
+
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        AllianceResearchReadSnapshot after = await fx.Research.GetSnapshotAsync(chef);
+        Assert.That(after.Technologies.Single(t => t.TechnologyId == Major1).State, Is.EqualTo(AllianceTechnologyState.Eligible), "both real prerequisites completed must unlock Major1 for selection");
+    }
+
+    [Test]
+    public async Task Major_StaysLockedWhilePrerequisiteOnlyFundingReadyOrResearching_NeverUnlocksEarly()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+
+        // Minor1 in FUNDING (selected, partially donated) - Major1 must remain Locked.
+        await SelectTarget(fx, chef, Minor1, "sel-fund");
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 1, "partial-fund");
+        AllianceResearchCommandResult majorWhileFunding = await SelectTarget(fx, chef, Major1, "major-during-funding");
+        Assert.That(majorWhileFunding.Succeeded, Is.False);
+        Assert.That(majorWhileFunding.Code, Is.EqualTo("technology_locked"));
+
+        // Minor1 reaches READY (100% funded, not launched) - still must not unlock Major1.
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1-ready-only");
+        AllianceResearchCommandResult majorWhileReady = await SelectTarget(fx, chef, Major1, "major-during-ready");
+        Assert.That(majorWhileReady.Succeeded, Is.False);
+        Assert.That(majorWhileReady.Code, Is.EqualTo("technology_locked"), "a fully-FUNDED-but-not-launched prerequisite must not unlock a dependent Major");
+
+        // Minor1 RESEARCHING (launched, timer running, not yet elapsed) - still must not unlock Major1.
+        await Launch(fx, chef, Minor1, "launch-minor1");
+        AllianceResearchCommandResult majorWhileResearching = await SelectTarget(fx, chef, Major1, "major-during-research");
+        Assert.That(majorWhileResearching.Succeeded, Is.False);
+        Assert.That(majorWhileResearching.Code, Is.EqualTo("technology_locked"), "a RESEARCHING (not yet COMPLETED) prerequisite must not unlock a dependent Major");
+    }
+
+    [Test]
+    public async Task Officer_CannotSelectMajorFundingTarget()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, _, _, PlayerId officer, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+
+        AllianceResearchCommandResult result = await SelectTarget(fx, officer, Major1, "officer-major");
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("not_authorized"), "Bible section 4: Major target selection is exclusively the Chef's, same as Minor");
+    }
+
+    [Test]
+    public async Task Member_CannotSelectMajorFundingTarget()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, _, _, _, _, PlayerId member, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+
+        AllianceResearchCommandResult result = await SelectTarget(fx, member, Major1, "member-major");
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("not_authorized"));
+    }
+
+    [Test]
+    public async Task Major_FullyFunding_ProducesReady_NotCompleted_AndGrantsNoBonus()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "major-ready");
+
+        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(chef);
+        AllianceTechnologyReadModel tech = snapshot.Technologies.Single(t => t.TechnologyId == Major1);
+        Assert.That(tech.State, Is.EqualTo(AllianceTechnologyState.Ready));
+        Assert.That(tech.CompletedAtUtc, Is.Null);
+
+        // Minor1/Minor2 were seeded directly into Completed as Major1's prerequisites - their own
+        // 100+150=250 ProductionBp is real and expected here; the assertion below isolates that
+        // Major1 itself (still only READY) contributes NOTHING on top of that baseline.
+        AllianceResearchBonus bonus = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(bonus.ProductionBp, Is.EqualTo(250), "a READY Major must grant no gameplay bonus of its own, exactly like a READY Minor");
+    }
+
+    [Test]
+    public async Task Officer_CanLaunchReadyMajor()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, PlayerId officer, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "major-officer-launch");
+
+        AllianceResearchCommandResult result = await Launch(fx, officer, Major1, "officer-launch-major");
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Snapshot!.MajorResearchingTechnologyId, Is.EqualTo(Major1));
+    }
+
+    [Test]
+    public async Task Member_CannotLaunchReadyMajor()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, PlayerId member, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "major-member-launch");
+
+        AllianceResearchCommandResult result = await Launch(fx, member, Major1, "member-launch-major");
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("not_authorized"));
+    }
+
+    [Test]
+    public async Task Major_LaunchSetsServerAuthoritativeStartAndCompletionTimestamps()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "major-timestamps");
+        AllianceResearchCatalog.TryGet(Major1, out AllianceResearchCatalog.TechnologyDefinition def);
+        DateTimeOffset launchedAt = fx.Clock.UtcNow;
+
+        AllianceResearchCommandResult result = await Launch(fx, chef, Major1, "major-launch-ts");
+
+        AllianceTechnologyReadModel tech = result.Snapshot!.Technologies.Single(t => t.TechnologyId == Major1);
+        Assert.That(tech.State, Is.EqualTo(AllianceTechnologyState.Researching));
+        Assert.That(tech.ResearchStartedAtUtc, Is.EqualTo(launchedAt));
+        Assert.That(tech.ResearchCompletesAtUtc, Is.EqualTo(launchedAt + def.ResearchDuration));
+    }
+
+    [Test]
+    public async Task Major_NaturallyResolvesToCompleted_AfterTimerElapses_AndBonusActivatesOnlyThen()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "major-complete");
+        AllianceResearchCatalog.TryGet(Major1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Major1, "major-launch-complete");
+
+        // Baseline 250 = Minor1(100)+Minor2(150), seeded directly as Major1's prerequisites.
+        AllianceResearchBonus whileResearching = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(whileResearching.ProductionBp, Is.EqualTo(250), "a RESEARCHING Major must grant no bonus of its own");
+
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        AllianceResearchReadSnapshot afterElapsed = await fx.Research.GetSnapshotAsync(chef);
+        AllianceTechnologyReadModel completedTech = afterElapsed.Technologies.Single(t => t.TechnologyId == Major1);
+        Assert.That(completedTech.State, Is.EqualTo(AllianceTechnologyState.Completed));
+        Assert.That(completedTech.CompletedAtUtc, Is.Not.Null);
+
+        AllianceResearchBonus afterCompletion = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(afterCompletion.ProductionBp, Is.EqualTo(250 + def.ProductionBp), "a COMPLETED Major must grant its real bonus on top of the already-completed prerequisites");
+    }
+
+    [Test]
+    public async Task Major_CompletedTechnology_PersistsAcrossFreshRepositoryReadInstance()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "major-persist");
+        AllianceResearchCatalog.TryGet(Major1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Major1, "major-launch-persist");
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        await fx.Research.GetSnapshotAsync(chef); // triggers the authoritative write-path resolution
+
+        // "Reload" = a brand-new AllianceResearchService/BonusResolver pair wrapping the SAME
+        // underlying repository instance - simulates a fresh server process reading persisted state,
+        // never a fabricated/duplicated result from the same in-memory service instance.
+        var reloadedResearch = new AllianceResearchService(fx.AllianceRepository, fx.ResearchRepository, fx.HiveStates, Options.Create(new AllianceResearchOptions { Enabled = true }), fx.Clock);
+        var reloadedResolver = new AllianceResearchBonusResolver(fx.AllianceRepository, fx.ResearchRepository, fx.Clock);
+
+        AllianceResearchReadSnapshot reloaded = await reloadedResearch.GetSnapshotAsync(chef);
+        Assert.That(reloaded.Technologies.Single(t => t.TechnologyId == Major1).State, Is.EqualTo(AllianceTechnologyState.Completed));
+        AllianceResearchBonus reloadedBonus = await reloadedResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(reloadedBonus.ProductionBp, Is.EqualTo(250 + def.ProductionBp), "a completed Major's bonus (plus its already-completed prerequisites') must survive a fresh read against the same persisted repository state");
+    }
+
+    // ================================================================================
+    // M053-CL Part 2: Minor+Major simultaneous research + next-funding-while-researching, with an
+    // explicit persistence/reload check. NOTE (documented Alpha catalog limitation, not a code gap):
+    // the Alpha catalog contains exactly ONE Major technology (Major1), so "select a DIFFERENT Major
+    // as the next funding target while a Major researches" cannot be exercised with real catalog
+    // data (SelectFundingTargetAsync only accepts a real AllianceResearchCatalog entry - there is no
+    // second Major to select). The code path itself is proven identical to the Minor case by direct
+    // inspection: every branch in AllianceResearchService (SelectFundingTargetAsync, DonateAsync's
+    // ValidateDonatable, LaunchAsync, ApplySpeedUpAsync, ResolveElapsedResearch, BuildSnapshot/
+    // ResolveTechnologyState) switches on `definition.Category` uniformly, with zero Major-specific
+    // special-casing beyond which field (Minor*/Major*) it reads or writes - so "next Major funding
+    // while Major researches" is architecturally the SAME code as the "next Minor funding while
+    // Minor researches" proven below, just gated by a catalog-content limitation, not a service-logic
+    // one. See the M053 report Part 6/14 for the explicit recommendation to add a second real
+    // Bible-named Major (e.g. "Réseau commercial royal", already named in Bible section 15) in a
+    // future mission so this can be certified with real data.
+    // ================================================================================
+
+    [Test]
+    public async Task FourConcurrentConcepts_MinorActiveMinorNextMajorActive_PersistAcrossReload()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+
+        await FullyFund(fx, chef, chefHiveId, Major1, "four-major");
+        await Launch(fx, chef, Major1, "four-major-launch");
+        await FullyFund(fx, chef, chefHiveId, MinorOther, "four-minor");
+        await Launch(fx, chef, MinorOther, "four-minor-launch");
+        AllianceResearchCommandResult withNextTarget = await SelectTarget(fx, chef, MinorThird, "four-next-minor-target");
+
+        Assert.That(withNextTarget.Succeeded, Is.True);
+        AllianceResearchReadSnapshot live = withNextTarget.Snapshot!;
+        Assert.That(live.MajorResearchingTechnologyId, Is.EqualTo(Major1), "concept 1: Major active research");
+        Assert.That(live.MinorResearchingTechnologyId, Is.EqualTo(MinorOther), "concept 2: Minor active research");
+        Assert.That(live.MinorFundingTargetId, Is.EqualTo(MinorThird), "concept 3: Minor next funding target, distinct from the researching Minor");
+        // MajorFundingTargetId legitimately still reads Major1 here - "last selected target" is
+        // never cleared by launching (see AllianceResearchService's own "Ready state defined
+        // independent of current selection" design note) - selecting MinorThird as the NEXT Minor
+        // target must not have disturbed this unrelated Major-category field at all.
+        Assert.That(live.MajorFundingTargetId, Is.EqualTo(Major1), "selecting the next Minor target must not touch the unrelated Major funding-target field");
+
+        // Persistence: a fresh service instance over the SAME repository must observe all three
+        // concepts identically - no slot overwrote another during any of the four mutations above.
+        var reloaded = new AllianceResearchService(fx.AllianceRepository, fx.ResearchRepository, fx.HiveStates, Options.Create(new AllianceResearchOptions { Enabled = true }), fx.Clock);
+        AllianceResearchReadSnapshot afterReload = await reloaded.GetSnapshotAsync(chef);
+        Assert.That(afterReload.MajorResearchingTechnologyId, Is.EqualTo(Major1));
+        Assert.That(afterReload.MinorResearchingTechnologyId, Is.EqualTo(MinorOther));
+        Assert.That(afterReload.MinorFundingTargetId, Is.EqualTo(MinorThird));
+        Assert.That(afterReload.Technologies.Single(t => t.TechnologyId == Major1).State, Is.EqualTo(AllianceTechnologyState.Researching));
+        Assert.That(afterReload.Technologies.Single(t => t.TechnologyId == MinorOther).State, Is.EqualTo(AllianceTechnologyState.Researching));
+        Assert.That(afterReload.Technologies.Single(t => t.TechnologyId == MinorThird).State, Is.EqualTo(AllianceTechnologyState.Funding));
+    }
+
+    // ================================================================================
+    // M053-CL Part 3: Alliance Research SpeedUp certification gaps not yet covered by the M052
+    // baseline (Locked/Completed rejection, Officer permission, exactly-once completion, retry
+    // inventory safety, wrong-category rejection, cross-category isolation from personal SpeedUps).
+    // ================================================================================
+
+    [Test]
+    public async Task SpeedUp_RejectedWhileLocked()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h");
+
+        // Major1 is LOCKED (prerequisites not completed) - never selected, never funded, never
+        // researching. ApplySpeedUpAsync must reject it exactly like any other non-researching state.
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Major1, "alliance_research_speedup_1h", "su-locked"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("technology_not_researching"));
+    }
+
+    [Test]
+    public async Task SpeedUp_RejectedAfterCompletion()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        AllianceResearchCatalog.TryGet(Minor1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Minor1);
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        await fx.Research.GetSnapshotAsync(chef); // resolves to Completed
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_1h", "su-completed"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("technology_not_researching"), "a COMPLETED technology has no active slot left to accelerate");
+    }
+
+    [Test]
+    public async Task Officer_CanApplyAllianceResearchSpeedUpWhileResearching()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, PlayerId officer, Guid officerHiveId, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, officer.Value, officerHiveId, "alliance_research_speedup_1h");
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(officer, new ApplyAllianceResearchSpeedUpCommand(officerHiveId, Minor1, "alliance_research_speedup_1h", "su-officer"));
+        Assert.That(result.Succeeded, Is.True);
+    }
+
+    [Test]
+    public async Task SpeedUp_TriggeredCompletion_OccursExactlyOnce()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_24h");
+        await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_24h", "su-exactly-once"));
+
+        await fx.Research.GetSnapshotAsync(chef);
+        AllianceResearchState firstRead = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(firstRead.Completed.Count, Is.EqualTo(1));
+
+        // A second, independent read must observe the exact same single completion - no
+        // re-triggering, no duplicate completion record, slot stays cleared.
+        await fx.Research.GetSnapshotAsync(chef);
+        AllianceResearchState secondRead = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(secondRead.Completed.Count, Is.EqualTo(1));
+        Assert.That(secondRead.MinorResearch, Is.Null);
+    }
+
+    [Test]
+    public async Task SpeedUp_RetryWithSameClientRequestId_DoesNotDoubleConsumeInventory()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h", quantity: 3);
+
+        await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_1h", "su-retry-inv"));
+        await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "alliance_research_speedup_1h", "su-retry-inv"));
+
+        PlayerHiveState state = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(state.SpeedUps!.GetValueOrDefault("alliance_research_speedup_1h"), Is.EqualTo(2), "starting with 3 and retrying the SAME request id must consume exactly 1, never 2");
+    }
+
+    [Test]
+    public async Task SpeedUp_UnknownItemId_Rejected()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "not_a_real_item", "su-wrong-item"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("item_not_found"));
+    }
+
+    [Test]
+    public async Task PersonalResearchSpeedUpItemId_CannotAccelerateAllianceResearch()
+    {
+        // "research_3600s" is a REAL item id from BeeKingdom.HiveOperations.SpeedUpOptions' default
+        // catalog (personal Research category) - AllianceResearchSpeedUpCatalog does not recognize
+        // it at all, proving the two categories are genuinely distinct catalogs, not merely
+        // differently-labeled entries in a shared one.
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+        fx.HiveStates.Seed((await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))! with { SpeedUps = new Dictionary<string, int>(StringComparer.Ordinal) { ["research_3600s"] = 5 } });
+
+        AllianceResearchCommandResult result = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Minor1, "research_3600s", "su-cross-category"));
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("item_not_found"));
+    }
+
+    [Test]
+    public void AllianceResearchSpeedUpItemIds_AreNeverPresentInThePersonalSpeedUpCatalog()
+    {
+        // Inverse direction of the previous test, proven by pure catalog inspection (no service call
+        // needed): an Alliance Research SpeedUp item id must never collide with - and therefore can
+        // never be accepted by - BeeKingdom.HiveOperations.SpeedUpOptions' own default personal
+        // catalog (construction/research/training/healing/manufacturing/universal).
+        var personalCatalog = new BeeKingdom.HiveOperations.SpeedUpOptions();
+        HashSet<string> personalItemIds = personalCatalog.Catalog.Select(item => item.ItemId).ToHashSet(StringComparer.Ordinal);
+        foreach (AllianceResearchSpeedUpCatalog.ItemDefinition allianceItem in AllianceResearchSpeedUpCatalog.Items)
+            Assert.That(personalItemIds.Contains(allianceItem.ItemId), Is.False, allianceItem.ItemId + " must not exist in the personal SpeedUp catalog");
+    }
+
+    [Test]
+    public async Task SpeedUp_ReducedTimerAndInventoryConsumption_PersistAcrossFreshRepositoryReadInstance()
+    {
+        // Major1 (2h Alpha duration), not Minor1, per the same reasoning as the M052 SpeedUp tests -
+        // a 1h reduction against Minor1's 15-minute duration would hit the "cannot overshoot below
+        // now" clamp and complete the research on the very next read, leaving ResearchCompletesAtUtc
+        // null (Completed, not Researching) and masking exactly what this test wants to observe.
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SeedCompleted(fx, allianceId, Minor1);
+        await SeedCompleted(fx, allianceId, Minor2);
+        await FullyFund(fx, chef, chefHiveId, Major1, "m-persist-su");
+        await Launch(fx, chef, Major1, "launch-persist-su");
+        GiveSpeedUpItem(fx, chef.Value, chefHiveId, "alliance_research_speedup_1h");
+        AllianceResearchCommandResult applied = await fx.Research.ApplySpeedUpAsync(chef, new ApplyAllianceResearchSpeedUpCommand(chefHiveId, Major1, "alliance_research_speedup_1h", "su-persist"));
+        DateTimeOffset expectedCompletesAt = applied.Snapshot!.Technologies.Single(t => t.TechnologyId == Major1).ResearchCompletesAtUtc!.Value;
+
+        var reloaded = new AllianceResearchService(fx.AllianceRepository, fx.ResearchRepository, fx.HiveStates, Options.Create(new AllianceResearchOptions { Enabled = true }), fx.Clock);
+        AllianceResearchReadSnapshot reloadedSnapshot = await reloaded.GetSnapshotAsync(chef);
+        Assert.That(reloadedSnapshot.Technologies.Single(t => t.TechnologyId == Major1).ResearchCompletesAtUtc, Is.EqualTo(expectedCompletesAt));
+        PlayerHiveState reloadedHive = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(reloadedHive.SpeedUps!.GetValueOrDefault("alliance_research_speedup_1h"), Is.EqualTo(0));
+    }
+
+    // ================================================================================
+    // M053-CL Part 4: bonus freshness - a research timer that has objectively elapsed but not yet
+    // lazily persisted into Completed must still count toward the bonus (AllianceResearchBonusResolver
+    // now checks CompletesAtUtc against "now" as a read-only, additive fact - see its own class
+    // comment for the full rationale and why this is NOT a write/scheduler/polling change).
+    // ================================================================================
+
+    [Test]
+    public async Task Bonus_CountsElapsedButNotYetPersistedResearch_WithoutRequiringAReadFirst()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        AllianceResearchCatalog.TryGet(Minor1, out AllianceResearchCatalog.TechnologyDefinition def);
+        await Launch(fx, chef, Minor1);
+
+        // Advance time past completion WITHOUT calling GetSnapshotAsync (the only place that
+        // actually persists the Completed transition) - the raw repository state still shows
+        // MinorResearch non-null with a past CompletesAtUtc, exactly the scenario this fix targets.
+        fx.Clock.UtcNow = fx.Clock.UtcNow + def.ResearchDuration + TimeSpan.FromSeconds(1);
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(raw.Completed.ContainsKey(Minor1), Is.False, "sanity check: nothing has persisted the completion yet");
+        Assert.That(raw.MinorResearch, Is.Not.Null);
+
+        AllianceResearchBonus bonus = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(bonus.ProductionBp, Is.EqualTo(def.ProductionBp), "an objectively-elapsed timer must grant its bonus even before any read/mutation has persisted the completion");
+    }
+
+    [Test]
+    public async Task Bonus_DoesNotCountResearchThatHasNotYetElapsed()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await FullyFund(fx, chef, chefHiveId, Minor1, "m1");
+        await Launch(fx, chef, Minor1);
+
+        AllianceResearchBonus bonus = await fx.BonusResolver.ResolveForAllianceAsync(allianceId.Value);
+        Assert.That(bonus, Is.EqualTo(AllianceResearchBonus.None), "the freshness fix must never grant a bonus before the timer has genuinely elapsed");
+    }
+
+    // ================================================================================
+    // M053-CL Part 7: Sceaux Royaux (Alliance Currency) certification gaps not yet covered.
+    // ================================================================================
+
+    [Test]
+    public async Task Donate_RejectedDonation_AwardsNoAllianceCurrency()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        // MinorOther was never selected as the funding target - donation must be rejected before
+        // any currency/contribution accounting happens.
+        AllianceResearchCommandResult result = await Donate(fx, chef, chefHiveId, MinorOther, "honey", 100, "rejected-donation");
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Snapshot, Is.Null);
+
+        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(chef);
+        Assert.That(snapshot.MyAllianceCurrencyBalance, Is.EqualTo(0));
+        Assert.That(snapshot.MyContributionPoints, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Donate_RetryWithSameClientRequestId_DoesNotDoubleAwardCurrency()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "currency-retry-key");
+        AllianceResearchCommandResult retry = await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "currency-retry-key");
+
+        Assert.That(retry.Snapshot!.MyAllianceCurrencyBalance, Is.EqualTo(50), "500 points * 0.1 = 50 Sceaux Royaux exactly once, never doubled by the retry");
+    }
+
+    [Test]
+    public async Task ChangingFundingTarget_DoesNotAffectAlreadyEarnedCurrencyOrContribution()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1, "sel-1");
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "fund-currency");
+
+        await SelectTarget(fx, chef, MinorOther, "sel-2");
+        AllianceResearchReadSnapshot afterSwitch = await fx.Research.GetSnapshotAsync(chef);
+        Assert.That(afterSwitch.MyAllianceCurrencyBalance, Is.EqualTo(50), "changing the funding target must not erase or alter previously-earned currency");
+        Assert.That(afterSwitch.MyContributionPoints, Is.EqualTo(500));
+    }
+
+    [Test]
+    public async Task LeavingAlliance_DoesNotDestroyThePlayersStoredAllianceCurrency()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, _, _, _, PlayerId member, Guid memberHiveId) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, member, memberHiveId, Minor1, "honey", 500, "member-donate-before-leave");
+
+        fx.Alliances.Leave(member);
+
+        // The raw record is stored inside AllianceResearchState.Contributions - "leaving" only
+        // removes the membership row (AllianceService's own concern); it does not reach into, or
+        // delete from, the Alliance Research repository at all - so the earned value itself is not
+        // destroyed by leaving, matching the Bible's "personal wallet" framing for section 11's
+        // non-diminishing guarantee.
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(raw.Contributions.TryGetValue(member.Value, out AllianceResearchContribution? contribution), Is.True);
+        Assert.That(contribution!.AllianceCurrencyBalance, Is.EqualTo(50));
+
+        // KNOWN GAP (documented in the M053 report, not fixed in this mission): because this value
+        // lives keyed by AllianceId rather than by a global per-player record, a departed member has
+        // no remaining code path to READ it (GetSnapshotAsync requires an active membership and
+        // throws "not_a_member") - the value survives, but becomes practically unreachable until/
+        // unless the player rejoins the SAME alliance. This is a genuine discrepancy against the
+        // Bible's "conservé dans le portefeuille personnel du joueur" framing (section 11), not
+        // resolved here per M053's explicit "no Alliance Shop / no currency redesign" scope limit.
+        Assert.That(async () => await fx.Research.GetSnapshotAsync(member), Throws.InstanceOf<InvalidOperationException>());
+    }
+
+    // ================================================================================
+    // M053-CL Part 6: canonical catalog sanity checks (Bible alignment, not balancing).
+    // ================================================================================
+
+    [Test]
+    public void Catalog_SupremacyBranchNeverPopulated()
+    {
+        Assert.That(AllianceResearchCatalog.Technologies.Any(t => t.Branch == AllianceResearchCatalog.BranchSupremacy), Is.False, "Bible section 19: Suprématie stays locked/unimplemented until Alliance War exists");
+    }
+
+    [Test]
+    public void Catalog_ExactlyOneMajorTechnologyInAlpha()
+    {
+        // Documents the exact Alpha-catalog limitation explained above
+        // (FourConcurrentConcepts_MinorActiveMinorNextMajorActive_PersistAcrossReload) - this test
+        // will legitimately need updating the day a second real Major is added from the Bible.
+        Assert.That(AllianceResearchCatalog.ForCategory(AllianceResearchCatalog.ResearchCategory.Major).Count(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Catalog_EveryTechnology_HasAtLeastOneFundingResource_ExceptNone()
+    {
+        foreach (AllianceResearchCatalog.TechnologyDefinition tech in AllianceResearchCatalog.Technologies)
+            Assert.That(tech.FundingRequirements.Count, Is.GreaterThan(0), tech.TechnologyId + " must require real resources - Bible section 9");
     }
 
     // Arrange-only shortcut: writes a technology directly into Completed, bypassing the real
