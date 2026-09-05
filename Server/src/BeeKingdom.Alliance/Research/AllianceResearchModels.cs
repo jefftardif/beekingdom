@@ -42,7 +42,18 @@ public sealed record AllianceResearchState(
     // speedup retry are independent concerns and must not collide on the same key namespace.
     HashSet<string> ProcessedDonationIds,
     HashSet<string> ProcessedLaunchIds,
-    HashSet<string> ProcessedSpeedUpIds)
+    HashSet<string> ProcessedSpeedUpIds,
+    // M054A-CL: remembers the authoritative "applied" amount (the real quantity actually accepted
+    // into Funding/ContributionPoints for THIS donation, after concurrent-donation clamping) keyed
+    // by the same donationKey as ProcessedDonationIds - needed so a retried/replayed donation (whose
+    // mutation body otherwise short-circuits before recomputing anything, since `already` has moved
+    // on) can still credit the player's Royal Seals wallet from the exact original applied amount,
+    // never from the raw requested/debited amount. See AllianceResearchService.DonateAsync's own
+    // comment for the full "why a third step" rationale. A separate dictionary rather than changing
+    // ProcessedDonationIds's own type, specifically to avoid a breaking JSON-shape change for
+    // already-deployed production rows (a HashSet<string> serializes as a JSON array; a
+    // Dictionary<string,long> would fail to deserialize an old array in place).
+    Dictionary<string, long> DonationAppliedAmounts)
 {
     public const int CurrentModelVersion = 2;
 
@@ -55,7 +66,8 @@ public sealed record AllianceResearchState(
         new Dictionary<Guid, AllianceResearchContribution>(),
         new HashSet<string>(StringComparer.Ordinal),
         new HashSet<string>(StringComparer.Ordinal),
-        new HashSet<string>(StringComparer.Ordinal));
+        new HashSet<string>(StringComparer.Ordinal),
+        new Dictionary<string, long>(StringComparer.Ordinal));
 }
 
 // ---------------- Commands ----------------

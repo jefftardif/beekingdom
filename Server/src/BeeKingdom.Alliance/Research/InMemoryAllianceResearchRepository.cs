@@ -30,4 +30,7 @@ public sealed class InMemoryAllianceResearchRepository : IAllianceResearchReposi
 
     public Task<AllianceResearchState?> ReadAsync(Guid allianceId, CancellationToken cancellationToken = default)
         => Task.FromResult(states.GetValueOrDefault(allianceId));
+
+    public Task<IReadOnlyList<Guid>> ListAllAllianceIdsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Guid>>(states.Keys.ToList());
 }

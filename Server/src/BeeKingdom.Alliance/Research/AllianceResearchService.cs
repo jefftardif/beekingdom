@@ -70,7 +70,18 @@ public sealed class AllianceResearchService
             await ResolveAndPersistElapsedResearchAsync(membership.AllianceId.Value, now, ct);
         await PublishCompletionsAsync(actorPlayerId, justCompleted, ct);
 
-        return BuildSnapshot(state, actorPlayerId, membership.Role, now);
+        return await BuildSnapshotAsync(state, actorPlayerId, membership.Role, now, ct);
+    }
+
+    // M054-CL: Royal Seals now live on the player's own PlayerHiveState (see RoyalSealsWallet),
+    // never in AllianceResearchState.Contributions - every snapshot fetches the real player-owned
+    // balance fresh, independently of which Alliance (if any) is currently active, exactly like the
+    // Bible's "personal wallet" framing requires. Wraps the pre-existing static BuildSnapshot so the
+    // pure state-projection logic itself stays synchronous and unit-testable in isolation.
+    private async Task<AllianceResearchReadSnapshot> BuildSnapshotAsync(AllianceResearchState state, PlayerId actorPlayerId, AllianceRole role, DateTimeOffset now, CancellationToken ct)
+    {
+        long royalSeals = await RoyalSealsWallet.GetBalanceAsync(hiveStateRepository, actorPlayerId.Value, ct);
+        return BuildSnapshot(state, actorPlayerId, role, now, royalSeals);
     }
 
     // ---------------- Chef: select/change funding target ----------------
@@ -105,12 +116,12 @@ public sealed class AllianceResearchService
                 : state with { Revision = state.Revision + 1, MajorFundingTargetId = definition.TechnologyId };
         }, ct);
 
-        if (code != "funding_target_selected") return new AllianceResearchCommandResult(false, code!, BuildSnapshot(updated, actorPlayerId, membership.Role, now));
+        if (code != "funding_target_selected") return new AllianceResearchCommandResult(false, code!, await BuildSnapshotAsync(updated, actorPlayerId, membership.Role, now, ct));
 
         await PublishAsync(actorPlayerId, AllianceActivityType.AllianceResearchFundingTargetSelected,
             new AllianceActivityPayload { EntityKey = definition.TechnologyId },
             "alliance-research-target:" + definition.Category + ":" + command.ClientRequestId, ct);
-        return new AllianceResearchCommandResult(true, code, BuildSnapshot(updated, actorPlayerId, membership.Role, now));
+        return new AllianceResearchCommandResult(true, code, await BuildSnapshotAsync(updated, actorPlayerId, membership.Role, now, ct));
     }
 
     // ---------------- Donate ----------------
@@ -143,8 +154,27 @@ public sealed class AllianceResearchService
         if (precheckRemaining <= 0) return Fail("technology_completed_funding_for_resource");
         long clampedAmount = Math.Min(command.Amount, precheckRemaining);
 
-        // Step 1/2: debit the player's REAL resources, atomically, idempotent via the same
-        // Receipts mechanism every other paid action in this codebase already uses.
+        // Step 1/3: debit the player's REAL resources, atomically, idempotent via the same Receipts
+        // mechanism every other paid action in this codebase already uses. `clampedAmount` is still
+        // computed from a stale precheck read - see "resource overpayment" below for why this can
+        // debit up to `clampedAmount` even though the Alliance side may only end up accepting less.
+        //
+        // RESOURCE OVERPAYMENT (M054A-CL analysis - deliberately NOT eliminated): making the debit
+        // amount exactly equal the eventual `applied` amount would require knowing `applied` BEFORE
+        // debiting, which means either (a) computing/reserving it on the Alliance aggregate first,
+        // then debiting the player for exactly that reserved amount - but a debit failure
+        // (insufficient resources) AFTER that reservation would leave the Alliance holding funding
+        // progress no player ever actually paid for, an unrecoverable economy bug strictly worse
+        // than the current one, since nothing can ever undo Alliance-side progress once other
+        // players see it; or (b) a distributed transaction spanning both aggregates, explicitly
+        // forbidden by this mission. Both are worse than the status quo. The status quo's actual
+        // exposure is: in the rare case two donations race to fill the LAST bit of room on the exact
+        // same resource of the exact same technology, the loser of that race may have MORE real
+        // resources debited than the Alliance ultimately credits - the excess is not silently
+        // invisible (see the log line at the end of this method, which now reports it explicitly
+        // whenever it occurs) but it is not prevented. This is reported as a known, bounded,
+        // logged limitation rather than a silent one - see the M054A report "resource overpayment"
+        // section for the full analysis and why a STOP was warranted here instead of a workaround.
         string idempotencyKey = "alliance-research-donate:" + command.ClientRequestId;
         string debitCode = "not_run";
         long debitedAmount = 0;
@@ -173,45 +203,84 @@ public sealed class AllianceResearchService
 
         if (debitCode == "insufficient_resources") return Fail("insufficient_resources");
 
-        // Step 2/2: apply the real contribution to the Alliance's shared funding state, atomically,
-        // independently idempotent via ProcessedDonationIds.
+        // Step 2/3: apply the real contribution to the Alliance's shared funding state, atomically,
+        // independently idempotent via ProcessedDonationIds. `applied` (never `debitedAmount`) is the
+        // ONE authoritative amount that governs Alliance funding, ContributionPoints, AND (step 3
+        // below) Royal Seals - the single canonical value the M054A mission requires. It is persisted
+        // into DonationAppliedAmounts[donationKey] specifically so a REPLAY of this same donation
+        // (idempotency hit on ProcessedDonationIds, which short-circuits before any of the funding/
+        // contribution math below runs again) can still recover the exact original applied amount
+        // for step 3, rather than needing to unsafely recompute it against already-mutated state.
         string donationKey = actorPlayerId.Value.ToString("N") + ":" + command.ClientRequestId;
         DateTimeOffset now = clock.UtcNow;
+        long applied = 0;
         AllianceResearchState updated = await researchRepository.ExecuteAtomicallyAsync(membership.AllianceId.Value, state =>
         {
             (state, _) = ResolveElapsedResearch(state, now);
-            if (state.ProcessedDonationIds.Contains(donationKey)) return state;
+            if (state.ProcessedDonationIds.Contains(donationKey))
+            {
+                applied = state.DonationAppliedAmounts.GetValueOrDefault(donationKey);
+                return state;
+            }
 
             Dictionary<string, AllianceTechnologyFunding> funding = new(state.Funding, StringComparer.Ordinal);
             AllianceTechnologyFunding techFunding = funding.TryGetValue(definition.TechnologyId, out AllianceTechnologyFunding? existing) ? existing : AllianceTechnologyFunding.Empty();
             Dictionary<string, long> contributed = new(techFunding.Contributed, StringComparer.Ordinal);
             long already = contributed.GetValueOrDefault(command.ResourceKey);
             long room = Math.Max(0, required - already);
-            long applied = Math.Min(debitedAmount, room);
+            applied = Math.Min(debitedAmount, room);
             contributed[command.ResourceKey] = already + applied;
             funding[definition.TechnologyId] = techFunding with { Contributed = contributed };
 
+            // M054-CL: AllianceCurrencyBalance is no longer written here (or anywhere) - it is a
+            // frozen legacy field, read-only compatibility for RoyalSealsMigrationService's one-time
+            // backfill into the player's real wallet (PlayerHiveState.RoyalSeals, credited in step 3
+            // below, from this SAME `applied` value). ContributionPoints/DonationCount remain exactly
+            // as before M054/M054A: Alliance-scoped historical participation.
             Dictionary<Guid, AllianceResearchContribution> contributions = new(state.Contributions);
             AllianceResearchContribution current = contributions.GetValueOrDefault(actorPlayerId.Value, new AllianceResearchContribution(actorPlayerId.Value, 0, 0, 0));
-            long currencyAwarded = (long)Math.Floor(applied * options.Value.AllianceCurrencyPerContributionPoint);
             contributions[actorPlayerId.Value] = current with
             {
                 TotalPoints = current.TotalPoints + applied,
-                DonationCount = current.DonationCount + 1,
-                AllianceCurrencyBalance = current.AllianceCurrencyBalance + currencyAwarded
+                DonationCount = current.DonationCount + 1
             };
 
             HashSet<string> processed = new(state.ProcessedDonationIds, StringComparer.Ordinal) { donationKey };
-            return state with { Revision = state.Revision + 1, Funding = funding, Contributions = contributions, ProcessedDonationIds = processed };
+            Dictionary<string, long> appliedAmounts = new(state.DonationAppliedAmounts, StringComparer.Ordinal) { [donationKey] = applied };
+            return state with { Revision = state.Revision + 1, Funding = funding, Contributions = contributions, ProcessedDonationIds = processed, DonationAppliedAmounts = appliedAmounts };
         }, ct);
+
+        // Step 3/3: credit the player's Royal Seals wallet from `applied` alone (M054A-CL) - a THIRD
+        // atomic PlayerHiveState mutation, with its own idempotency key (independent from both the
+        // step-1 debit key and RoyalSealsMigrationService's "royal-seals-migration:" prefix), so a
+        // retry of the whole DonateAsync call can never double-credit even though this step runs
+        // after two other already-idempotent steps. This guarantees the mission's canonical
+        // invariant: RoyalSealsAward == floor(applied * ratio), always, regardless of concurrency -
+        // no player can ever earn Royal Seals for resources that did not actually land in Alliance
+        // funding.
+        long currencyAwarded = (long)Math.Floor(applied * options.Value.AllianceCurrencyPerContributionPoint);
+        string sealsIdempotencyKey = "alliance-research-seals:" + command.ClientRequestId;
+        if (currencyAwarded > 0)
+        {
+            await hiveStateRepository.ExecuteAtomicallyAsync(actorPlayerId.Value, command.HiveId, state =>
+            {
+                if (state.Receipts.ContainsKey(sealsIdempotencyKey)) return state;
+                Dictionary<string, IdempotencyReceipt> receipts = new(state.Receipts) { [sealsIdempotencyKey] = new IdempotencyReceipt("alliance-research-seals", true, "credited", null, clock.UtcNow) };
+                PlayerHiveState credited = RoyalSealsWallet.Credit(state, currencyAwarded);
+                return credited with { Revision = state.Revision + 1, Receipts = receipts };
+            }, ct);
+        }
 
         bool nowFullyFunded = FundingComplete(updated, definition);
         if (nowFullyFunded)
             await PublishAsync(actorPlayerId, AllianceActivityType.AllianceTechnologyCompleted, new AllianceActivityPayload { EntityKey = definition.TechnologyId, Result = "funded" },
                 "alliance-research-funded:" + definition.TechnologyId, ct);
 
-        logger?.LogInformation("Alliance Research donation: {PlayerId} donated {Amount} {Resource} to {TechnologyId}.", actorPlayerId.Value, clampedAmount, command.ResourceKey, definition.TechnologyId);
-        return new AllianceResearchCommandResult(true, "donation_applied", BuildSnapshot(updated, actorPlayerId, membership.Role, now));
+        if (applied < debitedAmount)
+            logger?.LogWarning("Alliance Research donation overpayment: {PlayerId} was debited {Debited} {Resource} but only {Applied} was applied to {TechnologyId} (concurrent donation clamp).",
+                actorPlayerId.Value, debitedAmount, command.ResourceKey, applied, definition.TechnologyId);
+        logger?.LogInformation("Alliance Research donation: {PlayerId} donated {Amount} {Resource} to {TechnologyId}.", actorPlayerId.Value, applied, command.ResourceKey, definition.TechnologyId);
+        return new AllianceResearchCommandResult(true, "donation_applied", await BuildSnapshotAsync(updated, actorPlayerId, membership.Role, now, ct));
     }
 
     // Real, authoritative gate for whether a donation to this technology is currently legal -
@@ -284,7 +353,7 @@ public sealed class AllianceResearchService
         if (succeeded)
             await PublishAsync(actorPlayerId, AllianceActivityType.AllianceTechnologyCompleted, new AllianceActivityPayload { EntityKey = definition.TechnologyId, Result = "launched" },
                 "alliance-research-launched:" + definition.TechnologyId + ":" + now.ToUnixTimeSeconds(), ct);
-        return new AllianceResearchCommandResult(succeeded, code!, BuildSnapshot(updated, actorPlayerId, membership.Role, now));
+        return new AllianceResearchCommandResult(succeeded, code!, await BuildSnapshotAsync(updated, actorPlayerId, membership.Role, now, ct));
     }
 
     // ---------------- Chef/Officer: Alliance Research SpeedUp ----------------
@@ -350,7 +419,7 @@ public sealed class AllianceResearchService
         }, ct);
 
         bool succeeded = code == "speedup_applied";
-        return new AllianceResearchCommandResult(succeeded, code ?? "technology_not_researching", BuildSnapshot(updated, actorPlayerId, membership.Role, now));
+        return new AllianceResearchCommandResult(succeeded, code ?? "technology_not_researching", await BuildSnapshotAsync(updated, actorPlayerId, membership.Role, now, ct));
     }
 
     // ---------------- Timer resolution (server-authoritative, lazy, idempotent by construction) ----------------
@@ -421,7 +490,7 @@ public sealed class AllianceResearchService
 
     // ---------------- Snapshot projection ----------------
 
-    private static AllianceResearchReadSnapshot BuildSnapshot(AllianceResearchState state, PlayerId actorPlayerId, AllianceRole role, DateTimeOffset now)
+    private static AllianceResearchReadSnapshot BuildSnapshot(AllianceResearchState state, PlayerId actorPlayerId, AllianceRole role, DateTimeOffset now, long royalSealsBalance)
     {
         HashSet<string> completedIds = state.Completed.Keys.ToHashSet(StringComparer.Ordinal);
         List<AllianceTechnologyReadModel> technologies = new(AllianceResearchCatalog.Technologies.Count);
@@ -450,7 +519,7 @@ public sealed class AllianceResearchService
         return new AllianceResearchReadSnapshot(state.AllianceId, AllianceResearchCatalog.ContractVersion, now, state.Revision,
             technologies, state.MinorFundingTargetId, state.MajorFundingTargetId,
             state.MinorResearch?.TechnologyId, state.MajorResearch?.TechnologyId,
-            myContribution?.TotalPoints ?? 0, myContribution?.DonationCount ?? 0, myContribution?.AllianceCurrencyBalance ?? 0,
+            myContribution?.TotalPoints ?? 0, myContribution?.DonationCount ?? 0, royalSealsBalance,
             CanSelectFundingTarget: isLeader, CanLaunch: isOfficerOrAbove, CanUseSpeedUp: isOfficerOrAbove);
     }
 

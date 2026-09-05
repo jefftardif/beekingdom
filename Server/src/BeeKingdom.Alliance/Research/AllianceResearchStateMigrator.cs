@@ -23,6 +23,7 @@ public static class AllianceResearchStateMigrator
     {
         if (state.Funding != null! && state.Completed != null! && state.Contributions != null! &&
             state.ProcessedDonationIds != null! && state.ProcessedLaunchIds != null! && state.ProcessedSpeedUpIds != null! &&
+            state.DonationAppliedAmounts != null! &&
             state.ModelVersion == AllianceResearchState.CurrentModelVersion)
             return state;
 
@@ -35,6 +36,13 @@ public static class AllianceResearchStateMigrator
             ProcessedDonationIds = state.ProcessedDonationIds ?? new HashSet<string>(StringComparer.Ordinal),
             ProcessedLaunchIds = state.ProcessedLaunchIds ?? new HashSet<string>(StringComparer.Ordinal),
             ProcessedSpeedUpIds = state.ProcessedSpeedUpIds ?? new HashSet<string>(StringComparer.Ordinal),
+            // M054A-CL: a row written before this mission has no per-donation applied-amount
+            // breadcrumbs at all - an empty map is correct (not lossy): those historical donations
+            // already finished crediting Royal Seals under the M054 formula at the time they ran; a
+            // retry of one of those OLD ClientRequestIds is not a realistic scenario this needs to
+            // reconstruct (idempotency for them is still fully honored by ProcessedDonationIds/
+            // PlayerHiveState.Receipts, which are untouched).
+            DonationAppliedAmounts = state.DonationAppliedAmounts ?? new Dictionary<string, long>(StringComparer.Ordinal),
         };
     }
 }

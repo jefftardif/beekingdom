@@ -1089,32 +1089,29 @@ public sealed class AllianceResearchServiceTests
     }
 
     [Test]
-    public async Task LeavingAlliance_DoesNotDestroyThePlayersStoredAllianceCurrency()
+    public async Task LeavingAlliance_DoesNotDestroyThePlayersRoyalSealsWallet()
     {
+        // M054-CL superseded this test's original M053 assertions (which checked the OLD,
+        // Alliance-scoped AllianceCurrencyBalance field) - Royal Seals now live on the player's own
+        // PlayerHiveState (RoyalSealsWallet), genuinely independent of Alliance membership.
         Fixture fx = CreateFixture();
-        (AllianceId allianceId, PlayerId chef, _, _, _, PlayerId member, Guid memberHiveId) = SetUpAlliance(fx);
+        (_, PlayerId chef, _, _, _, PlayerId member, Guid memberHiveId) = SetUpAlliance(fx);
         await SelectTarget(fx, chef, Minor1);
         await Donate(fx, member, memberHiveId, Minor1, "honey", 500, "member-donate-before-leave");
 
+        long balanceBeforeLeaving = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, member.Value);
+        Assert.That(balanceBeforeLeaving, Is.EqualTo(50));
+
         fx.Alliances.Leave(member);
 
-        // The raw record is stored inside AllianceResearchState.Contributions - "leaving" only
-        // removes the membership row (AllianceService's own concern); it does not reach into, or
-        // delete from, the Alliance Research repository at all - so the earned value itself is not
-        // destroyed by leaving, matching the Bible's "personal wallet" framing for section 11's
-        // non-diminishing guarantee.
-        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
-        Assert.That(raw.Contributions.TryGetValue(member.Value, out AllianceResearchContribution? contribution), Is.True);
-        Assert.That(contribution!.AllianceCurrencyBalance, Is.EqualTo(50));
+        long balanceAfterLeaving = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, member.Value);
+        Assert.That(balanceAfterLeaving, Is.EqualTo(50), "leaving must not affect the wallet at all - it never lived in Alliance-owned state to begin with");
 
-        // KNOWN GAP (documented in the M053 report, not fixed in this mission): because this value
-        // lives keyed by AllianceId rather than by a global per-player record, a departed member has
-        // no remaining code path to READ it (GetSnapshotAsync requires an active membership and
-        // throws "not_a_member") - the value survives, but becomes practically unreachable until/
-        // unless the player rejoins the SAME alliance. This is a genuine discrepancy against the
-        // Bible's "conservé dans le portefeuille personnel du joueur" framing (section 11), not
-        // resolved here per M053's explicit "no Alliance Shop / no currency redesign" scope limit.
-        Assert.That(async () => await fx.Research.GetSnapshotAsync(member), Throws.InstanceOf<InvalidOperationException>());
+        // The GAP documented in the M053 report is now resolved: a departed member CAN still read
+        // their own Royal Seals wallet (it is not gated by GetSnapshotAsync's membership
+        // requirement at all) - only the Alliance Research SCREEN (which is legitimately
+        // Alliance-scoped) remains unavailable without membership.
+        Assert.That(async () => await fx.Research.GetSnapshotAsync(member), Throws.InstanceOf<InvalidOperationException>(), "the Alliance Research screen itself still legitimately requires membership - only the wallet does not");
     }
 
     // ================================================================================
@@ -1143,6 +1140,423 @@ public sealed class AllianceResearchServiceTests
             Assert.That(tech.FundingRequirements.Count, Is.GreaterThan(0), tech.TechnologyId + " must require real resources - Bible section 9");
     }
 
+    // ================================================================================
+    // M054-CL: Royal Seals personal wallet certification. Sceaux Royaux move from
+    // AllianceResearchState.Contributions[playerId].AllianceCurrencyBalance (Alliance-scoped, the
+    // architecture discrepancy M053 discovered) to PlayerHiveState.RoyalSeals (player-owned,
+    // read via RoyalSealsWallet.GetBalanceAsync - see that class's own comment for why
+    // PlayerHiveState was chosen over a new table/module). ContributionPoints/DonationCount stay
+    // exactly where and how they were - only currency ownership changes.
+    // ================================================================================
+
+    [Test]
+    public async Task RoyalSeals_StoredOnPlayerHiveState_NotInAllianceResearchState()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "wallet-storage-check");
+
+        PlayerHiveState hiveState = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(hiveState.RoyalSeals, Is.EqualTo(50), "500 pts * 0.1 = 50 Royal Seals, credited directly onto PlayerHiveState");
+    }
+
+    [Test]
+    public async Task RoyalSeals_LegacyAllianceScopedFieldIsNoLongerAuthoritative()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "legacy-not-authoritative");
+
+        // Corrupt the legacy Alliance-scoped field directly in the repository - if the snapshot
+        // still read from it, this bogus value would leak into MyAllianceCurrencyBalance. It must
+        // not: the real wallet (50) is the only value that can ever be observed now.
+        await fx.ResearchRepository.ExecuteAtomicallyAsync(allianceId.Value, state =>
+        {
+            AllianceResearchContribution existing = state.Contributions[chef.Value];
+            return state with { Contributions = new Dictionary<Guid, AllianceResearchContribution>(state.Contributions) { [chef.Value] = existing with { AllianceCurrencyBalance = 999_999 } } };
+        });
+
+        AllianceResearchReadSnapshot snapshot = await fx.Research.GetSnapshotAsync(chef);
+        Assert.That(snapshot.MyAllianceCurrencyBalance, Is.EqualTo(50), "the legacy field must never be read again - only the player wallet is authoritative");
+    }
+
+    [Test]
+    public async Task Donate_CreditsWalletOnce_RetryDoesNotDoubleCredit_FailedDonationCreditsNothing()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+
+        // Failed donation (never selected as funding target) - zero credit.
+        AllianceResearchCommandResult rejected = await Donate(fx, chef, chefHiveId, MinorOther, "honey", 500, "wallet-rejected");
+        Assert.That(rejected.Succeeded, Is.False);
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(0));
+
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "wallet-success");
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(50), "successful donation credits the wallet exactly once");
+
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "wallet-success"); // same ClientRequestId
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(50), "retry with the same ClientRequestId must not double-credit");
+    }
+
+    [Test]
+    public async Task ContributionPointsAndDonationCount_RemainAllianceScoped_UnaffectedByWalletMove()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "contribution-scope-check");
+
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(raw.Contributions[chef.Value].TotalPoints, Is.EqualTo(500), "ContributionPoints remain stored on AllianceResearchState exactly as before M054");
+        Assert.That(raw.Contributions[chef.Value].DonationCount, Is.EqualTo(1), "DonationCount remains stored on AllianceResearchState exactly as before M054");
+    }
+
+    [Test]
+    public async Task LeaveThenJoinDifferentAlliance_WalletPersists_ContributionHistoryStaysIndependentPerAlliance()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceA, PlayerId chef, _, _, _, PlayerId player, Guid playerHiveId) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, player, playerHiveId, Minor1, "honey", 500, "alliance-a-donation");
+        long balanceAfterA = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, player.Value);
+        Assert.That(balanceAfterA, Is.EqualTo(50));
+
+        fx.Alliances.Leave(player);
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, player.Value), Is.EqualTo(50), "leaving must not change the wallet");
+
+        // Join a second, independent Alliance (same direct-membership seeding technique SetUpAlliance
+        // itself already uses for Officer/Member).
+        PlayerId chefB = NewPlayer();
+        AllianceEntity allianceB = fx.Alliances.CreateAlliance(chefB, new CreateAllianceRequest("Silver Hive", "SLV", "desc", "fr-CA", "", AllianceJoinMode.Open, "create-" + chefB.Value)).Alliance;
+        fx.AllianceRepository.SaveMembership(new AllianceMembership { AllianceId = allianceB.AllianceId, PlayerId = player, Role = AllianceRole.Member, JoinedAtUtc = fx.Clock.UtcNow, LastRoleChangedAtUtc = fx.Clock.UtcNow, Revision = 0 });
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, player.Value), Is.EqualTo(50), "joining a new Alliance must not change the wallet either");
+
+        await SelectTarget(fx, chefB, MinorOther);
+        await Donate(fx, player, playerHiveId, MinorOther, "honey", 300, "alliance-b-donation");
+
+        long balanceAfterB = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, player.Value);
+        Assert.That(balanceAfterB, Is.EqualTo(50 + 30), "a donation in the NEW Alliance must ADD to the existing wallet, never reset it (300 pts * 0.1 = 30)");
+
+        AllianceResearchState rawA = (await fx.ResearchRepository.ReadAsync(allianceA.Value))!;
+        AllianceResearchState rawB = (await fx.ResearchRepository.ReadAsync(allianceB.AllianceId.Value))!;
+        Assert.That(rawA.Contributions[player.Value].TotalPoints, Is.EqualTo(500), "Alliance A's historical contribution record must remain exactly as it was - untouched by leaving or by donations made elsewhere");
+        Assert.That(rawB.Contributions[player.Value].TotalPoints, Is.EqualTo(300), "Alliance B's contribution history is independent - it does not inherit Alliance A's 500");
+    }
+
+    [Test]
+    public async Task RoleChanges_DoNotAlterRoyalSealsWallet()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, _, PlayerId officer, Guid officerHiveId, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, officer, officerHiveId, Minor1, "honey", 500, "role-change-wallet");
+        long balanceBefore = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, officer.Value);
+
+        fx.Alliances.Demote(chef, officer);
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, officer.Value), Is.EqualTo(balanceBefore), "Officer -> Member must not touch the wallet");
+
+        fx.Alliances.Promote(chef, officer);
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, officer.Value), Is.EqualTo(balanceBefore), "Member -> Officer must not touch the wallet");
+
+        fx.Alliances.TransferLeadership(chef, officer);
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, officer.Value), Is.EqualTo(balanceBefore), "leadership transfer (Officer -> Chef) must not touch the wallet");
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(0), "the former Chef's own wallet (0, they never donated) must also be untouched by the role swap");
+    }
+
+    [Test]
+    public async Task PlayerWithNoAlliance_StillOwnsRoyalSealsWallet()
+    {
+        Fixture fx = CreateFixture();
+        PlayerId lonePlayer = NewPlayer();
+        Guid loneHiveId = Guid.NewGuid();
+        fx.HiveStates.Seed(SeedState(lonePlayer.Value, loneHiveId) with { RoyalSeals = 777 });
+
+        // No alliance membership at all - GetSnapshotAsync (the Alliance Research SCREEN) legitimately
+        // still requires membership, but the wallet itself is reachable independently, exactly as a
+        // future Alliance Shop would need.
+        Assert.That(fx.AllianceRepository.GetActiveMembershipForPlayer(lonePlayer), Is.Null);
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, lonePlayer.Value), Is.EqualTo(777));
+    }
+
+    [Test]
+    public async Task RoyalSealsWallet_SurvivesAllianceResearchStateRemoval_StructurallyIndependent()
+    {
+        // No Alliance disband/delete operation exists anywhere in this codebase today (confirmed by
+        // inspection - AllianceService has no Disband/Delete method). This test proves the
+        // architectural INDEPENDENCE that would make a future disband safe for the wallet anyway:
+        // simulating the most destructive possible event (the Alliance's entire research row simply
+        // vanishing from the repository) still leaves the wallet completely intact, because it was
+        // never stored inside that row to begin with.
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "disband-simulation");
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(50));
+
+        // Simulate the most destructive event a disband could cause: the Alliance's entire research
+        // row reset to empty (indistinguishable, from every consumer's point of view, from the row
+        // never having existed - see IAllianceResearchRepository.ReadAsync's null-vs-Empty handling
+        // throughout AllianceResearchService).
+        await fx.ResearchRepository.ExecuteAtomicallyAsync(allianceId.Value, _ => AllianceResearchState.Empty(allianceId.Value));
+
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(50), "the wallet survives even total removal of the Alliance's research state");
+    }
+
+    [Test]
+    public void GeleeRoyale_NeverSharesAWalletFieldOrConversionWithRoyalSeals()
+    {
+        // Structural guard: PlayerHiveState.Resources is the ONLY place Gelée Royale (a normal
+        // ResourceBalance-keyed premium resource, distinct from RoyalSeals) could ever live -
+        // RoyalSeals is its own dedicated long field, never a dictionary key, so there is no shared
+        // storage slot and no code path that could "convert" one into the other.
+        PlayerHiveState state = new(Guid.NewGuid(), Guid.NewGuid(), 10, 0,
+            new Dictionary<string, ResourceBalance> { ["royal_jelly"] = new(100, 1000) },
+            new(), new(), new(), RoyalSeals: 50);
+        Assert.That(state.Resources["royal_jelly"].Amount, Is.EqualTo(100));
+        Assert.That(state.RoyalSeals, Is.EqualTo(50), "RoyalSeals is a wholly separate field - never read from or written via the Resources dictionary");
+    }
+
+    [Test]
+    public void AllianceResearchSpeedUpCatalog_UnaffectedByM054()
+    {
+        // Regression guard only - M054 must not have touched the SpeedUp catalog already certified
+        // in M053.
+        Assert.That(AllianceResearchSpeedUpCatalog.Items.Select(i => i.ItemId),
+            Is.EquivalentTo(new[] { "alliance_research_speedup_1h", "alliance_research_speedup_3h", "alliance_research_speedup_8h", "alliance_research_speedup_24h" }));
+    }
+
+    // ================================================================================
+    // M054-CL: legacy balance migration (RoyalSealsMigrationService) - moves pre-M054
+    // AllianceCurrencyBalance values into the real player wallet. NOT applied to production by this
+    // mission - tests only, per the mission's explicit "create and test it, but do not apply it".
+    // ================================================================================
+
+    [Test]
+    public async Task Migration_MovesLegacyBalanceIntoPlayerWallet_WithoutAlteringContributionPointsOrDonationCount()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        SeedLegacyBalance(fx, allianceId, chef.Value, legacyBalance: 600, totalPoints: 6000, donationCount: 12);
+
+        var migration = new RoyalSealsMigrationService(fx.ResearchRepository, fx.HiveStates, fx.Clock);
+        RoyalSealsMigrationService.MigrationOutcome outcome = await migration.MigrateAsync();
+
+        Assert.That(outcome.PlayersCredited, Is.EqualTo(1));
+        Assert.That(outcome.TotalRoyalSealsMigrated, Is.EqualTo(600));
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(600));
+
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(raw.Contributions[chef.Value].TotalPoints, Is.EqualTo(6000), "migration must never alter ContributionPoints");
+        Assert.That(raw.Contributions[chef.Value].DonationCount, Is.EqualTo(12), "migration must never alter DonationCount");
+    }
+
+    [Test]
+    public async Task Migration_RerunIsIdempotent_DoesNotDuplicateExistingBalance()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, _, _, _, _, _) = SetUpAlliance(fx);
+        SeedLegacyBalance(fx, allianceId, chef.Value, legacyBalance: 250, totalPoints: 2500, donationCount: 5);
+
+        var migration = new RoyalSealsMigrationService(fx.ResearchRepository, fx.HiveStates, fx.Clock);
+        RoyalSealsMigrationService.MigrationOutcome first = await migration.MigrateAsync();
+        RoyalSealsMigrationService.MigrationOutcome second = await migration.MigrateAsync();
+
+        Assert.That(first.PlayersCredited, Is.EqualTo(1));
+        Assert.That(second.PlayersCredited, Is.EqualTo(0));
+        Assert.That(second.AlreadyMigratedSkipped, Is.EqualTo(1));
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(250), "re-running the migration must never duplicate the credited balance");
+    }
+
+    [Test]
+    public async Task Migration_SumsIndependentLegacyBalancesAcrossMultipleAlliances_ExactlyOnceEach()
+    {
+        // Direct evidence (see RoyalSealsMigrationService's own class comment): no code path in this
+        // codebase ever copies a Contributions entry from one Alliance's AllianceResearchState into
+        // another's - so two nonzero legacy balances for the SAME player in TWO different alliances
+        // are independently earned amounts, correctly summed by the migration, never a duplicate of
+        // the same underlying value.
+        Fixture fx = CreateFixture();
+        (AllianceId allianceA, PlayerId chef, _, _, _, _, _) = SetUpAlliance(fx);
+        PlayerId chefB = NewPlayer();
+        AllianceEntity allianceB = fx.Alliances.CreateAlliance(chefB, new CreateAllianceRequest("Copper Hive", "CPR", "desc", "fr-CA", "", AllianceJoinMode.Open, "create-" + chefB.Value)).Alliance;
+
+        SeedLegacyBalance(fx, allianceA, chef.Value, legacyBalance: 400, totalPoints: 4000, donationCount: 8);
+        SeedLegacyBalance(fx, allianceB.AllianceId, chef.Value, legacyBalance: 150, totalPoints: 1500, donationCount: 3);
+
+        var migration = new RoyalSealsMigrationService(fx.ResearchRepository, fx.HiveStates, fx.Clock);
+        RoyalSealsMigrationService.MigrationOutcome outcome = await migration.MigrateAsync();
+
+        Assert.That(outcome.PlayersCredited, Is.EqualTo(2), "one credit per (Alliance, Player) pair - the same player is credited once per alliance where they had a legacy balance");
+        Assert.That(outcome.TotalRoyalSealsMigrated, Is.EqualTo(550));
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(550), "both independently-earned legacy balances must be summed exactly once each - never inflated, never dropped");
+    }
+
+    [Test]
+    public async Task Migration_PlayerWithZeroLegacyBalance_IsNotCredited()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        // A real, post-M054 donation never writes to the legacy field at all - it must be
+        // untouched (zero), so the migration must skip this player entirely.
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "post-m054-donation");
+
+        var migration = new RoyalSealsMigrationService(fx.ResearchRepository, fx.HiveStates, fx.Clock);
+        RoyalSealsMigrationService.MigrationOutcome outcome = await migration.MigrateAsync();
+
+        Assert.That(outcome.LegacyBalancesFound, Is.EqualTo(0));
+        Assert.That(outcome.PlayersCredited, Is.EqualTo(0));
+        // The wallet already holds 50 from the real M054 donation path - migration must not add
+        // anything on top of it, since the legacy field for this player was never nonzero.
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(50));
+    }
+
+    // ================================================================================
+    // M054A-CL: exact-award correctness. Royal Seals and ContributionPoints must both be governed
+    // by the SAME authoritative `applied` amount - never the raw requested/debited amount - so no
+    // player can ever earn Royal Seals (a spendable currency) for resources that did not actually
+    // land in Alliance funding.
+    // ================================================================================
+
+    [Test]
+    public async Task PartialFinalDonation_RoyalSealsAndContributionMatchApplied_NotRequested()
+    {
+        // Sequential (non-concurrent) overshoot: the precheck reads FRESH state here (no race), so
+        // it correctly clamps the debit itself to the true 100 remaining - `debitedAmount` and
+        // `applied` are equal in this case, and no resource is burned. Real resource overpayment
+        // (debitedAmount > applied) can only happen under genuine concurrency, where two prechecks
+        // both race against a now-stale room - see ConcurrentFinalDonations... below for that case.
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, MinorOther); // honey:2000, pollen:1500
+        // Fill honey to within 100 of its requirement first (single donor, no race).
+        await Donate(fx, chef, chefHiveId, MinorOther, "honey", 1900, "prefund-honey");
+
+        // Now request far more than the 100 remaining - only 100 can ever be applied.
+        AllianceResearchCommandResult result = await Donate(fx, chef, chefHiveId, MinorOther, "honey", 500, "overshoot-final-donation");
+
+        Assert.That(result.Succeeded, Is.True);
+        AllianceTechnologyReadModel tech = result.Snapshot!.Technologies.Single(t => t.TechnologyId == MinorOther);
+        Assert.That(tech.FundingContributed["honey"], Is.EqualTo(2000), "funding must be capped at exactly the requirement, never overshoot");
+
+        long contributionDelta = result.Snapshot.MyContributionPoints - 1900; // 1900 already earned by the prefund donation
+        Assert.That(contributionDelta, Is.EqualTo(100), "ContributionPoints must reflect the 100 actually applied, not the 500 requested");
+
+        long walletDelta = result.Snapshot.MyAllianceCurrencyBalance - 190; // floor(1900*0.1)=190 already earned by the prefund donation
+        Assert.That(walletDelta, Is.EqualTo(10), "Royal Seals must be floor(100 * 0.1) = 10 for the applied amount, never floor(500 * 0.1) = 50 for the requested amount");
+
+        PlayerHiveState hiveState = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(hiveState.Resources["honey"].Amount, Is.EqualTo(1_000_000 - 1900 - 100), "a fresh (non-concurrent) precheck already clamps the debit itself to the true remaining need - only 100 is ever taken, not 500");
+    }
+
+    [Test]
+    public async Task ConcurrentFinalDonations_TotalAppliedNeverExceedsRequired_RoyalSealsAndContributionMatchActualApplied()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, PlayerId officer, Guid officerHiveId, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, MinorOther); // honey:2000, pollen:1500
+        // Leave exactly 100 honey of room - two concurrent donors will race for it.
+        await Donate(fx, chef, chefHiveId, MinorOther, "honey", 1900, "prefund-honey-for-race");
+        long chefWalletBeforeRace = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value);
+        long chefPointsBeforeRace = (await fx.Research.GetSnapshotAsync(chef)).MyContributionPoints;
+
+        // Force a genuine race at the precheck read (DonateAsync's very first AllianceResearchState
+        // read, which computes clampedAmount from the still-100-unit-open room): both donations'
+        // prechecks must complete BEFORE either proceeds to debit/apply. Without this barrier, the
+        // in-memory repositories complete every operation synchronously, so plain Task.WhenAll(a, b)
+        // would let the first call run to full completion before the second one's precheck even
+        // executes - collapsing the race into ordinary sequential execution and never exercising the
+        // actual concurrency this test exists to certify. Task.Run schedules both onto real
+        // threadpool threads so the barrier can genuinely coordinate them.
+        var barrierRepo = new PrecheckBarrierResearchRepository(fx.ResearchRepository, concurrentReaders: 2);
+        var raceService = new AllianceResearchService(fx.AllianceRepository, barrierRepo, fx.HiveStates,
+            Microsoft.Extensions.Options.Options.Create(new AllianceResearchOptions { Enabled = true, AllianceCurrencyPerContributionPoint = 0.1 }), fx.Clock);
+
+        Task<AllianceResearchCommandResult> a = Task.Run(() => raceService.DonateAsync(chef, new DonateToAllianceResearchCommand(chefHiveId, MinorOther, "honey", 500, "race-a")));
+        Task<AllianceResearchCommandResult> b = Task.Run(() => raceService.DonateAsync(officer, new DonateToAllianceResearchCommand(officerHiveId, MinorOther, "honey", 500, "race-b")));
+        await Task.WhenAll(a, b);
+
+        Assert.That(a.Result.Succeeded, Is.True, "a.Code=" + a.Result.Code);
+        Assert.That(b.Result.Succeeded, Is.True, "b.Code=" + b.Result.Code);
+
+        AllianceResearchState raw = (await fx.ResearchRepository.ReadAsync(allianceId.Value))!;
+        Assert.That(raw.Funding[MinorOther].Contributed["honey"], Is.EqualTo(2000), "total applied must never exceed the technology's real requirement, regardless of race outcome");
+
+        long chefPointsAfter = raw.Contributions.GetValueOrDefault(chef.Value)?.TotalPoints ?? 0;
+        long officerPointsAfter = raw.Contributions.GetValueOrDefault(officer.Value)?.TotalPoints ?? 0;
+        long totalPointsAwardedByRace = (chefPointsAfter - chefPointsBeforeRace) + officerPointsAfter;
+        Assert.That(totalPointsAwardedByRace, Is.EqualTo(100), "the sum of ContributionPoints awarded across BOTH competing donations must equal the total actually applied (100), never 500+500=1000");
+
+        long chefWalletAfter = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value);
+        long officerWalletAfter = await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, officer.Value);
+        long totalSealsAwardedByRace = (chefWalletAfter - chefWalletBeforeRace) + officerWalletAfter;
+        Assert.That(totalSealsAwardedByRace, Is.EqualTo(10), "the sum of Royal Seals minted across BOTH competing donations must equal floor(100 * 0.1) = 10, never floor(1000 * 0.1) = 100 - no seals may be minted from rejected/excess contribution");
+
+        // Cross-check: seals awarded must correspond exactly to points awarded at the configured
+        // ratio, proving both were derived from the SAME authoritative `applied` value, never two
+        // different (and therefore possibly inconsistent) amounts.
+        Assert.That(totalSealsAwardedByRace, Is.EqualTo((long)Math.Floor(totalPointsAwardedByRace * 0.1)));
+    }
+
+    [Test]
+    public async Task Donate_RetryAfterExactAwardSplit_RemainsIdempotent_NoDoubleDebitNoDoubleContributionNoDoubleSeals()
+    {
+        Fixture fx = CreateFixture();
+        (_, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        await SelectTarget(fx, chef, Minor1);
+
+        AllianceResearchCommandResult first = await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "retry-exact-award");
+        AllianceResearchCommandResult retry = await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "retry-exact-award");
+
+        Assert.That(retry.Succeeded, Is.True);
+        Assert.That(retry.Snapshot!.MyContributionPoints, Is.EqualTo(first.Snapshot!.MyContributionPoints), "retry must not double-count ContributionPoints");
+        Assert.That(retry.Snapshot.MyAllianceCurrencyBalance, Is.EqualTo(first.Snapshot.MyAllianceCurrencyBalance), "retry must not double-credit Royal Seals");
+        PlayerHiveState state = (await fx.HiveStates.ReadAsync(chef.Value, chefHiveId))!;
+        Assert.That(state.Resources["honey"].Amount, Is.EqualTo(1_000_000 - 500), "retry must not double-debit resources");
+        Assert.That(state.RoyalSeals, Is.EqualTo(50));
+    }
+
+    [Test]
+    public async Task Migration_StillIndependentFromDonationReceiptKeys_AfterExactAwardChange()
+    {
+        // M054A changed DonateAsync's internal steps but must not have touched
+        // RoyalSealsMigrationService's own idempotency key prefix ("royal-seals-migration:") or its
+        // reliance on the legacy AllianceCurrencyBalance field as migration's own source of truth.
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, Guid chefHiveId, _, _, _, _) = SetUpAlliance(fx);
+        SeedLegacyBalance(fx, allianceId, chef.Value, legacyBalance: 300, totalPoints: 3000, donationCount: 6);
+        await SelectTarget(fx, chef, Minor1);
+        await Donate(fx, chef, chefHiveId, Minor1, "honey", 500, "real-m054a-donation"); // real path, +50 seals
+
+        var migration = new RoyalSealsMigrationService(fx.ResearchRepository, fx.HiveStates, fx.Clock);
+        RoyalSealsMigrationService.MigrationOutcome outcome = await migration.MigrateAsync();
+        RoyalSealsMigrationService.MigrationOutcome rerun = await migration.MigrateAsync();
+
+        Assert.That(outcome.PlayersCredited, Is.EqualTo(1));
+        Assert.That(rerun.PlayersCredited, Is.EqualTo(0), "migration must remain idempotent after the M054A donation-flow change");
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(50 + 300), "the real donation's 50 seals and the migrated legacy 300 must both be present, summed exactly once each");
+    }
+
+    // Arrange-only shortcut (migration tests only): writes a legacy AllianceCurrencyBalance +
+    // matching ContributionPoints/DonationCount directly into AllianceResearchState.Contributions,
+    // simulating a pre-M054 donation history the migration must move onto the player wallet without
+    // going through the (now legacy-currency-blind) real DonateAsync path.
+    private static void SeedLegacyBalance(Fixture fx, AllianceId allianceId, Guid playerId, long legacyBalance, long totalPoints, long donationCount)
+    {
+        fx.ResearchRepository.ExecuteAtomicallyAsync(allianceId.Value, state =>
+        {
+            Dictionary<Guid, AllianceResearchContribution> contributions = new(state.Contributions)
+            {
+                [playerId] = new AllianceResearchContribution(playerId, totalPoints, donationCount, legacyBalance)
+            };
+            return state with { Contributions = contributions };
+        }).GetAwaiter().GetResult();
+    }
+
     // Arrange-only shortcut: writes a technology directly into Completed, bypassing the real
     // funding/launch/timer flow - used only to set up a LATER lifecycle step's own test (e.g. a
     // Major's prerequisites), never to substitute for testing the flow itself (see the other tests
@@ -1167,6 +1581,73 @@ public sealed class AllianceResearchServiceTests
     private sealed class TestClock(DateTimeOffset value) : IServerClock
     {
         public DateTimeOffset UtcNow { get; set; } = value;
+    }
+
+    // M054A-CL: deterministically reproduces a genuine precheck race for
+    // ConcurrentFinalDonations_TotalAppliedNeverExceedsRequired_RoyalSealsAndContributionMatchActualApplied
+    // - see that test's own comment for why plain Task.WhenAll cannot exercise this race against
+    // fully-synchronous in-memory repositories. Delegates every other member unchanged.
+    private sealed class PrecheckBarrierResearchRepository : IAllianceResearchRepository
+    {
+        private readonly IAllianceResearchRepository inner;
+        private readonly Rendezvous readBarrier;
+        private readonly Rendezvous applyBarrier;
+
+        public PrecheckBarrierResearchRepository(IAllianceResearchRepository inner, int concurrentReaders)
+        {
+            this.inner = inner;
+            readBarrier = new Rendezvous(concurrentReaders);
+            applyBarrier = new Rendezvous(concurrentReaders);
+        }
+
+        // Barrier 1/2: both donations' PRECHECK reads must complete before either proceeds - see
+        // Rendezvous's own comment for why a plain semaphore/TCS single-signal is not sufficient.
+        public async Task<AllianceResearchState?> ReadAsync(Guid allianceId, CancellationToken cancellationToken = default)
+        {
+            await readBarrier.ArriveAndWaitAsync();
+            return await inner.ReadAsync(allianceId, cancellationToken);
+        }
+
+        // Barrier 2/2: both donations' Alliance-side atomic mutation ATTEMPT must also be
+        // synchronized - without this, whichever donation wins barrier 1 by even a hair can race
+        // all the way through its own debit AND apply before the other's continuation from barrier 1
+        // is ever scheduled, collapsing the intended race back into accidental sequential execution
+        // (observed directly while building this test: the loser's precheck would then legitimately,
+        // but uselessly, see zero room and get rejected outright, never reaching the split-award path
+        // this test exists to certify). Chaining a second rendezvous immediately before the real
+        // contention point (the per-alliance lock inside ExecuteAtomicallyAsync) forces both callers
+        // to actually contend for that lock together, so the underlying lock - not incidental thread
+        // scheduling - is what decides the split, exactly like production.
+        public async Task<AllianceResearchState> ExecuteAtomicallyAsync(Guid allianceId, Func<AllianceResearchState, AllianceResearchState> mutation, CancellationToken cancellationToken = default)
+        {
+            await applyBarrier.ArriveAndWaitAsync();
+            return await inner.ExecuteAtomicallyAsync(allianceId, mutation, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<Guid>> ListAllAllianceIdsAsync(CancellationToken cancellationToken = default)
+            => inner.ListAllAllianceIdsAsync(cancellationToken);
+    }
+
+    // A true N-party rendezvous: EVERY caller, including whichever one happens to be the LAST to
+    // arrive, is forced through an actual thread-pool hop (Task.Yield, not just an already-completed
+    // await) before proceeding - a bare TaskCompletionSource signal is not sufficient because the
+    // async state machine's "already completed" fast path lets the LAST arriver's own continuation
+    // run synchronously/immediately (a real, observed head-start bug while building this test), while
+    // every OTHER waiter's continuation must genuinely be rescheduled - defeating the whole point of
+    // forcing simultaneous progress. Usable only once per instance (by design - each barrier gates
+    // exactly one specific race point for exactly `parties` callers; a 3rd+ caller, if any, passes
+    // through immediately once the barrier has already opened).
+    private sealed class Rendezvous(int parties)
+    {
+        private readonly TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int remainingArrivals = parties;
+
+        public async Task ArriveAndWaitAsync()
+        {
+            if (Interlocked.Decrement(ref remainingArrivals) == 0) gate.SetResult(true);
+            await gate.Task;
+            await Task.Yield(); // force every caller, including the one that just set the result, through a real reschedule.
+        }
     }
 
     private sealed class MemoryHiveStateRepository : IHiveStateRepository

@@ -46,6 +46,18 @@ public sealed class SqlAllianceResearchRepository : IAllianceResearchRepository
         return json is string value ? AllianceResearchStateMigrator.ToCurrent(JsonSerializer.Deserialize<AllianceResearchState>(value, JsonOptions)!) : null;
     }
 
+    public async Task<IReadOnlyList<Guid>> ListAllAllianceIdsAsync(CancellationToken cancellationToken = default)
+    {
+        await using SqlConnection connection = connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT AllianceId FROM dbo.AllianceResearch";
+        List<Guid> allianceIds = new();
+        await using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) allianceIds.Add(reader.GetGuid(0));
+        return allianceIds;
+    }
+
     private static async Task AcquireLockAsync(SqlConnection connection, SqlTransaction transaction, Guid allianceId, CancellationToken ct)
     {
         await using SqlCommand command = connection.CreateCommand();

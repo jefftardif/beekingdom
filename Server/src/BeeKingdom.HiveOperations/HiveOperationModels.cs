@@ -43,7 +43,18 @@ public sealed record PlayerHiveState(
      BestiaryCodexState? BestiaryCodex = null,
      bool ImplicitBuildingDefaultsApplied = false,
      Dictionary<string, int>? SpeedUps = null,
-     RewardLedgerState? RewardLedger = null);
+     RewardLedgerState? RewardLedger = null,
+     // M054-CL: the player's own persistent "Sceaux Royaux" (Royal Seals) wallet balance - see
+     // BeeKingdom.HiveOperations.RoyalSealsWallet for the canonical read/credit surface. Lives here
+     // (not in any Alliance-owned or Alliance-membership-scoped state) because PlayerHiveState is
+     // this codebase's own established "durable player-owned bucket" convention: VIP progress,
+     // Champion Bee progression, and the SpeedUps inventory already live here despite none of them
+     // being hive-mechanics per se, precisely because every player has exactly one hive row in the
+     // live game today (no hive-creation endpoint exists; ListHiveIdsAsync exists only for ownership
+     // validation - see the M054 report section 3 for the full evidence trail). RoyalSealsWallet
+     // still defensively sums across every owned hive on read, so the balance stays correct even in
+     // the theoretical case a second hive ever appears, without requiring a schema change then.
+     long RoyalSeals = 0);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
 // adjustments, compensation slot grants). Written inside the SAME atomic mutation as the
