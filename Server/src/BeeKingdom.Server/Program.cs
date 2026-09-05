@@ -1810,6 +1810,41 @@ app.MapPost("/ops/migrations/apply", async (HttpContext context, IOptions<OpsSec
     return Results.Ok(new { status = "Applied" });
 });
 
+// M054B-CL: one-time Royal Seals legacy-balance backfill (see RoyalSealsMigrationService's own
+// class comment) - mirrors the /ops/migrations/pending + /ops/migrations/apply Admin Key / Migration
+// Key convention exactly. The GET is a pure read-only preview (dryRun: true internally) so the CEO
+// can see the real inventory (players affected, total amount) before ever authorizing the POST,
+// which is the only call that actually writes. Both report identical counts for the same database
+// state - re-running the POST after it has already fully completed is always a safe no-op (idempotent
+// via the SAME PlayerHiveState.Receipts mechanism every other paid action in this codebase uses).
+app.MapGet("/ops/royal-seals-migration/preview", async (HttpContext context, IOptions<OpsSecurityOptions> ops, BeeKingdom.Alliance.Research.RoyalSealsMigrationService migration, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeOps(context, ops.Value);
+    if (authorization != null)
+    {
+        return authorization;
+    }
+
+    return Results.Ok(await migration.MigrateAsync(dryRun: true, cancellationToken));
+});
+
+app.MapPost("/ops/royal-seals-migration/apply", async (HttpContext context, IOptions<OpsSecurityOptions> ops, BeeKingdom.Alliance.Research.RoyalSealsMigrationService migration, CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeOps(context, ops.Value);
+    if (authorization != null)
+    {
+        return authorization;
+    }
+
+    IResult? migrationAuthorization = AuthorizeMigrationApply(context, ops.Value);
+    if (migrationAuthorization != null)
+    {
+        return migrationAuthorization;
+    }
+
+    return Results.Ok(await migration.MigrateAsync(dryRun: false, cancellationToken));
+});
+
 // M043Q-CL: narrow, read-only support lookup (email -> real onboarded DisplayName only, nothing
 // else) - gated by the same Ops:AdminKey already live in production for /ops/migrations/*, not by
 // AdminSupportOptions (disabled in prod by design; that surface also exposes mutation endpoints,

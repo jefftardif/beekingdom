@@ -1372,6 +1372,33 @@ public sealed class AllianceResearchServiceTests
     }
 
     [Test]
+    public async Task Migration_DryRun_ReportsAccurateCountsWithoutWritingAnything()
+    {
+        Fixture fx = CreateFixture();
+        (AllianceId allianceId, PlayerId chef, _, _, _, _, _) = SetUpAlliance(fx);
+        SeedLegacyBalance(fx, allianceId, chef.Value, legacyBalance: 400, totalPoints: 4000, donationCount: 8);
+
+        var migration = new RoyalSealsMigrationService(fx.ResearchRepository, fx.HiveStates, fx.Clock);
+        RoyalSealsMigrationService.MigrationOutcome preview = await migration.MigrateAsync(dryRun: true);
+
+        Assert.That(preview.LegacyBalancesFound, Is.EqualTo(1));
+        Assert.That(preview.PlayersCredited, Is.EqualTo(1), "dry-run must report what WOULD be credited");
+        Assert.That(preview.TotalRoyalSealsMigrated, Is.EqualTo(400));
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(0), "dry-run must never actually write to the wallet");
+
+        // A real apply after the preview must still see a fresh, uncredited player (the preview left
+        // no receipt behind) and produce the identical outcome for real.
+        RoyalSealsMigrationService.MigrationOutcome applied = await migration.MigrateAsync(dryRun: false);
+        Assert.That(applied.PlayersCredited, Is.EqualTo(1));
+        Assert.That(await RoyalSealsWallet.GetBalanceAsync(fx.HiveStates, chef.Value), Is.EqualTo(400));
+
+        // A dry-run AFTER the real apply must now correctly report "already migrated", not credit again.
+        RoyalSealsMigrationService.MigrationOutcome previewAfterApply = await migration.MigrateAsync(dryRun: true);
+        Assert.That(previewAfterApply.PlayersCredited, Is.EqualTo(0));
+        Assert.That(previewAfterApply.AlreadyMigratedSkipped, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task Migration_SumsIndependentLegacyBalancesAcrossMultipleAlliances_ExactlyOnceEach()
     {
         // Direct evidence (see RoyalSealsMigrationService's own class comment): no code path in this

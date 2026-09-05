@@ -46,7 +46,12 @@ public sealed class RoyalSealsMigrationService
         int PlayersWithNoOwnedHive,
         long TotalRoyalSealsMigrated);
 
-    public async Task<MigrationOutcome> MigrateAsync(CancellationToken cancellationToken = default)
+    // M054B-CL: `dryRun: true` performs the exact same scan and would-be-outcome computation but
+    // never calls ExecuteAtomicallyAsync - a pure read-only preview (via ReadAsync instead) so the
+    // CEO can see the real inventory (players affected, total amount) before authorizing the actual
+    // apply. Both modes report identical counts for a given database state; only `dryRun: false`
+    // actually writes.
+    public async Task<MigrationOutcome> MigrateAsync(bool dryRun = false, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<Guid> allianceIds = await researchRepository.ListAllAllianceIdsAsync(cancellationToken);
         int legacyFound = 0, credited = 0, alreadyMigrated = 0, noOwnedHive = 0;
@@ -71,17 +76,27 @@ public sealed class RoyalSealsMigrationService
                 Guid targetHiveId = ownedHiveIds[0];
 
                 string idempotencyKey = "royal-seals-migration:" + allianceId.ToString("N") + ":" + playerId.ToString("N");
-                bool wasAlreadyMigrated = false;
-                await hiveStateRepository.ExecuteAtomicallyAsync(playerId, targetHiveId, hiveState =>
+                bool wasAlreadyMigrated;
+                if (dryRun)
                 {
-                    if (hiveState.Receipts.ContainsKey(idempotencyKey)) { wasAlreadyMigrated = true; return hiveState; }
-                    Dictionary<string, IdempotencyReceipt> receipts = new(hiveState.Receipts)
+                    PlayerHiveState? current = await hiveStateRepository.ReadAsync(playerId, targetHiveId, cancellationToken);
+                    wasAlreadyMigrated = current?.Receipts.ContainsKey(idempotencyKey) ?? false;
+                }
+                else
+                {
+                    bool wasAlreadyMigratedCapture = false;
+                    await hiveStateRepository.ExecuteAtomicallyAsync(playerId, targetHiveId, hiveState =>
                     {
-                        [idempotencyKey] = new IdempotencyReceipt("royal-seals-migration", true, "migrated", null, clock.UtcNow)
-                    };
-                    PlayerHiveState creditedState = RoyalSealsWallet.Credit(hiveState, contribution.AllianceCurrencyBalance);
-                    return creditedState with { Revision = hiveState.Revision + 1, Receipts = receipts };
-                }, cancellationToken);
+                        if (hiveState.Receipts.ContainsKey(idempotencyKey)) { wasAlreadyMigratedCapture = true; return hiveState; }
+                        Dictionary<string, IdempotencyReceipt> receipts = new(hiveState.Receipts)
+                        {
+                            [idempotencyKey] = new IdempotencyReceipt("royal-seals-migration", true, "migrated", null, clock.UtcNow)
+                        };
+                        PlayerHiveState creditedState = RoyalSealsWallet.Credit(hiveState, contribution.AllianceCurrencyBalance);
+                        return creditedState with { Revision = hiveState.Revision + 1, Receipts = receipts };
+                    }, cancellationToken);
+                    wasAlreadyMigrated = wasAlreadyMigratedCapture;
+                }
 
                 if (wasAlreadyMigrated) alreadyMigrated++;
                 else { credited++; totalMigrated += contribution.AllianceCurrencyBalance; }

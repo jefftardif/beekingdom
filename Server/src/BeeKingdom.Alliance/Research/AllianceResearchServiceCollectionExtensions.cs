@@ -28,6 +28,10 @@ public static class AllianceResearchServiceCollectionExtensions
         services.AddSingleton<AllianceResearchService>();
         services.AddSingleton<AllianceResearchBonusResolver>();
         services.AddSingleton<IAllianceGameplayBonusResolver, AllianceGameplayBonusResolverAdapter>();
+        // M054B-CL: one-time Royal Seals legacy-balance backfill (RoyalSealsMigrationService) -
+        // invoked only via the ops-protected /ops/royal-seals-migration/* endpoints, never on the
+        // hot request path.
+        services.AddSingleton<RoyalSealsMigrationService>();
 
         return services;
     }
