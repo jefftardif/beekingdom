@@ -47,7 +47,10 @@ public sealed class BuildingUpgradeOptions
 
 public sealed record BuildingUpgradeOffer(string BuildingKey, int FromLevel, int ToLevel, TimeSpan Duration, IReadOnlyDictionary<string, long> Costs);
 public sealed record BuildingUpgradeActiveOperation(Guid OperationId, string BuildingKey, int FromLevel, int ToLevel, DateTimeOffset StartedAtUtc, DateTimeOffset CompletesAtUtc, string Status);
-public sealed record BuildingUpgradeReadSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, string CatalogVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyDictionary<string, ResourceBalance> Balances, IReadOnlyDictionary<string, int> BuildingLevels, IReadOnlyList<BuildingUpgradeOffer> Offers, BuildingUpgradeActiveOperation? ActiveOperation);
+// M055-CL : `RoyalPalace` est un ajout ADDITIF en fin de record (parametre optionnel) - les
+// clients anterieurs ignorent simplement le champ, et un serveur sans section de progression
+// configuree renvoie null, donc le contrat living-hive-building-upgrade-v1 reste compatible.
+public sealed record BuildingUpgradeReadSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, string CatalogVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyDictionary<string, ResourceBalance> Balances, IReadOnlyDictionary<string, int> BuildingLevels, IReadOnlyList<BuildingUpgradeOffer> Offers, BuildingUpgradeActiveOperation? ActiveOperation, RoyalPalaceProgressionView? RoyalPalace = null);
 public sealed record StartBuildingUpgradeRequest(long ExpectedRevision, string IdempotencyKey);
 public sealed record CompleteBuildingUpgradeRequest(long ExpectedRevision, string IdempotencyKey);
 public sealed record BuildingUpgradeReceipt(Guid PlayerId, Guid HiveId, string IdempotencyKey, Guid OperationId, string BuildingKey, int FromLevel, int ToLevel, long Revision, DateTimeOffset AcceptedAtUtc, string Code);
@@ -57,10 +60,12 @@ public sealed record BuildingUpgradeCommandResult(bool Succeeded, string Code, B
 // Systeme d'amelioration de batiment generique (miel/cire/pollen, plusieurs
 // paliers par batiment) - le catalogue est fourni en configuration, cle par
 // (BuildingKey, FromLevel), meme convention que HiveOperationService.
-public sealed class BuildingUpgradeService(IHiveStateRepository repository, IServerClock clock, BuildingUpgradeOptions options, bool dailyRoundEnabled = false)
+public sealed class BuildingUpgradeService(IHiveStateRepository repository, IServerClock clock, BuildingUpgradeOptions options, bool dailyRoundEnabled = false, RoyalPalaceProgressionOptions? royalPalaceProgression = null)
 {
     public const string ContractVersion = "living-hive-building-upgrade-v1";
     private readonly BuildingUpgradeOptions o = options ?? throw new ArgumentNullException(nameof(options));
+    // M055-CL : optionnel et fail-open - null/desactive => comportement d'avant M055.
+    private readonly RoyalPalaceProgressionOptions? royal = royalPalaceProgression;
     private Dictionary<(string BuildingKey, int FromLevel), BuildingUpgradeCatalogEntry> CatalogByKey => o.Catalog.ToDictionary(x => (x.BuildingKey, x.FromLevel));
 
     public async Task<BuildingUpgradeReadSnapshot> ReadAsync(Guid playerId, Guid hiveId, CancellationToken ct = default)
@@ -93,6 +98,18 @@ public sealed class BuildingUpgradeService(IHiveStateRepository repository, ISer
             if (!catalogByKey.TryGetValue((buildingKey, currentLevel), out BuildingUpgradeCatalogEntry? entry))
             {
                 result = Fail(state, "game.invalid_building_level", now);
+                return state;
+            }
+            // M055-CL - AUTORITE SERVEUR SUR LES PREREQUIS DU PALAIS ROYAL.
+            // Le client affiche les regles, le serveur les impose : meme si un client
+            // modifie envoie directement POST .../administration_core/start, l'appel est
+            // refuse ici, AVANT tout debit de ressources et avant toute creation
+            // d'operation. Les autres batiments ne sont pas concernes (aucun prerequis
+            // n'est ajoute pour eux par M055 - voir la regle de compatibilite).
+            if (string.Equals(buildingKey, RoyalPalaceProgressionKeys.RoyalPalaceBuildingKey, StringComparison.Ordinal)
+                && !RoyalPalaceProgression.TryValidateUpgrade(royal, state.BuildingLevels, currentLevel, out string prerequisiteFailure, out _, out _))
+            {
+                result = Fail(state, prerequisiteFailure, now);
                 return state;
             }
             // Un seul chantier a la fois pour toute la ruche (pas par batiment) - le modele
@@ -200,7 +217,11 @@ public sealed class BuildingUpgradeService(IHiveStateRepository repository, ISer
         BuildingUpgradeActiveOperation? activeOperation = active is null
             ? null
             : new BuildingUpgradeActiveOperation(active.OperationId, active.BuildingKey, active.FromLevel, active.ToLevel, active.StartedAtUtc, active.CompletesAtUtc, active.CompletesAtUtc <= now ? "awaiting_completion" : "running");
-        return new BuildingUpgradeReadSnapshot(state.PlayerId, state.HiveId, ContractVersion, o.CatalogVersion, state.Revision, now, new Dictionary<string, ResourceBalance>(state.Resources), new Dictionary<string, int>(levels), offers, activeOperation);
+        // Evaluee a partir des MEMES `levels` que ceux renvoyes au client (donc niveau 1
+        // implicite compris) : la fenetre du Palais Royal ne peut pas afficher un etat de
+        // prerequis different de celui que le serveur imposera au moment du Start.
+        RoyalPalaceProgressionView? royalPalace = royal is null || !royal.Enabled ? null : RoyalPalaceProgression.Evaluate(royal, levels);
+        return new BuildingUpgradeReadSnapshot(state.PlayerId, state.HiveId, ContractVersion, o.CatalogVersion, state.Revision, now, new Dictionary<string, ResourceBalance>(state.Resources), new Dictionary<string, int>(levels), offers, activeOperation, royalPalace);
     }
 
     private BuildingUpgradeCommandResult Fail(Guid playerId, Guid hiveId, string code) =>

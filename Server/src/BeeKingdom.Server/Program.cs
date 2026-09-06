@@ -1,4 +1,4 @@
-using BeeKingdom.Accounts;
+﻿using BeeKingdom.Accounts;
 using BeeKingdom.Accounts.DependencyInjection;
 using BeeKingdom.Accounts.Models;
 using BeeKingdom.Alliance;
@@ -162,6 +162,12 @@ builder.Services.AddOptions<HiveOfflineProductionOptions>()
 builder.Services.AddOptions<BuildingUpgradeOptions>()
     .Bind(builder.Configuration.GetSection(BuildingUpgradeOptions.SectionName))
     .Validate(options => { options.Validate(); return true; }, "Invalid building upgrade options")
+    .ValidateOnStart();
+// M055-CL : progression du Palais Royal (prerequis + deblocages). Les couts et durees
+// restent dans BuildingUpgrades ci-dessus - cette section ne les duplique pas.
+builder.Services.AddOptions<RoyalPalaceProgressionOptions>()
+    .Bind(builder.Configuration.GetSection(RoyalPalaceProgressionOptions.SectionName))
+    .Validate(options => { options.Validate(); return true; }, "Invalid royal palace progression options")
     .ValidateOnStart();
 builder.Services.AddOptions<SpeedUpOptions>()
     .Bind(builder.Configuration.GetSection(SpeedUpOptions.SectionName))
@@ -812,32 +818,32 @@ app.MapPost("/dev/hives/{hiveId}/grant-resource", async (HttpContext context, st
     return Results.Ok(new { resourceKey = request.ResourceKey, amount = updated.Resources.GetValueOrDefault(request.ResourceKey, new ResourceBalance(0, 0)).Amount, revision = updated.Revision });
 });
 
-app.MapGet("/game/v1/hives/{hiveId}/building-upgrades", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<BuildingUpgradeOptions> configured, CancellationToken ct) =>
+app.MapGet("/game/v1/hives/{hiveId}/building-upgrades", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<BuildingUpgradeOptions> configured, IOptions<RoyalPalaceProgressionOptions> royalPalace, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
-    try { return Results.Ok(await new BuildingUpgradeService(repository, clock, configured.Value).ReadAsync(auth.PlayerId!.Value, parsed, ct)); }
+    try { return Results.Ok(await new BuildingUpgradeService(repository, clock, configured.Value, false, royalPalace.Value).ReadAsync(auth.PlayerId!.Value, parsed, ct)); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
     catch (InvalidOperationException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
-app.MapPost("/game/v1/hives/{hiveId}/building-upgrades/{buildingKey}/start", async (HttpContext context, string hiveId, string buildingKey, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<BuildingUpgradeOptions> configured, IOptions<HiveDailyRoundOptions> daily, StartBuildingUpgradeRequest request, CancellationToken ct) =>
+app.MapPost("/game/v1/hives/{hiveId}/building-upgrades/{buildingKey}/start", async (HttpContext context, string hiveId, string buildingKey, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<BuildingUpgradeOptions> configured, IOptions<HiveDailyRoundOptions> daily, IOptions<RoyalPalaceProgressionOptions> royalPalace, StartBuildingUpgradeRequest request, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed) || string.IsNullOrWhiteSpace(buildingKey) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
-    try { var result=await new BuildingUpgradeService(repository, clock, configured.Value, daily.Value.Enabled).StartAsync(auth.PlayerId!.Value, parsed, buildingKey, request, ct); return result.Succeeded ? Results.Ok(result.Response) : GameError(result.Code=="game.invalid_request"?400:409,result.Code,"game.error.conflict"); }
+    try { var result=await new BuildingUpgradeService(repository, clock, configured.Value, daily.Value.Enabled, royalPalace.Value).StartAsync(auth.PlayerId!.Value, parsed, buildingKey, request, ct); return result.Succeeded ? Results.Ok(result.Response) : GameError(result.Code=="game.invalid_request"?400:409,result.Code,"game.error.conflict"); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
-app.MapPost("/game/v1/hives/{hiveId}/building-upgrades/{operationId}/complete", async (HttpContext context, string hiveId, string operationId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<BuildingUpgradeOptions> configured, CompleteBuildingUpgradeRequest request, CancellationToken ct) =>
+app.MapPost("/game/v1/hives/{hiveId}/building-upgrades/{operationId}/complete", async (HttpContext context, string hiveId, string operationId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<BuildingUpgradeOptions> configured, IOptions<RoyalPalaceProgressionOptions> royalPalace, CompleteBuildingUpgradeRequest request, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed) || !Guid.TryParse(operationId, out Guid op) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
-    try { var result=await new BuildingUpgradeService(repository, clock, configured.Value).CompleteAsync(auth.PlayerId!.Value, parsed, op, request, ct); return result.Succeeded ? Results.Ok(result.Response) : GameError(result.Code=="game.invalid_request"?400:409,result.Code,"game.error.conflict"); }
+    try { var result=await new BuildingUpgradeService(repository, clock, configured.Value, false, royalPalace.Value).CompleteAsync(auth.PlayerId!.Value, parsed, op, request, ct); return result.Succeeded ? Results.Ok(result.Response) : GameError(result.Code=="game.invalid_request"?400:409,result.Code,"game.error.conflict"); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 
