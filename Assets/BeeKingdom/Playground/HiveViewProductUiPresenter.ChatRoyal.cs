@@ -602,6 +602,13 @@ namespace BeeKingdom.Playground
 
         private static void ChatStartPrivateConversation(ChatPlayerPickerEntry entry)
         {
+            // M065-CL : "Nouvelle discussion" est le seul endroit qui connait deja le nom du joueur
+            // tape (entry.DisplayName) - on le fait entrer ici dans le meme cache/repertoire deja
+            // utilise pour resoudre PlayerId -> DisplayName partout ailleurs (titre, liste, auteurs
+            // des messages), pour que la resolution reste fiable meme si la liste de resultats de la
+            // recherche a deja disparu.
+            (chatPlayerPicker as ChatPlayerPickerController)?.RememberDisplayName(entry.PlayerId, entry.DisplayName);
+
             // M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
             // capture l'etat de connexion exact au moment precis du clic Discuter, pour expliquer
             // pourquoi le meme geste reussit dans une session Play Mode fraiche et echoue dans une

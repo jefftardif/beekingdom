@@ -66,6 +66,15 @@ namespace BeeKingdom.Playground
         public string ResolveDisplayName(Guid playerId) =>
             !disposed && displayNames.TryGetValue(playerId, out string name) ? name : null;
 
+        // M065-CL : le nom d'un joueur trouve via "Nouvelle discussion" (entry.DisplayName) doit
+        // rester resolvable pour ce PlayerId apres coup - la liste de resultats ne survit pas a la
+        // fermeture du selecteur, mais ce cache si.
+        public void RememberDisplayName(Guid playerId, string displayName)
+        {
+            if (disposed || playerId == Guid.Empty || string.IsNullOrWhiteSpace(displayName)) return;
+            displayNames[playerId] = displayName;
+        }
+
         public void Search(string query)
         {
             Task ignored = SearchCoreAsync(query);
