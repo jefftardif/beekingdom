@@ -22,6 +22,9 @@ namespace BeeKingdom.Playground
 
         private BuildingDefinition selectedBuilding;
         private BuildingInteractionController subscribedController;
+        // La fenetre affiche desormais niveau + prochain niveau + conditions + couts +
+        // deblocages : sur un ecran mobile ca deborde, d'ou le defilement.
+        private Vector2 royalPalaceScroll;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -107,15 +110,33 @@ namespace BeeKingdom.Playground
                 Screen.height - HeaderHeight - 36f);
 
             GUILayout.BeginArea(content);
+            royalPalaceScroll = GUILayout.BeginScrollView(royalPalaceScroll);
             GUILayout.Space(8f);
+
+            // --- Niveau actuel = niveau de la colonie (source unique : administration_core) ---
+            int currentLevel = HiveViewProductUiPresenter.RoyalPalaceLevelForExternalHost();
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Niveau " + HiveViewProductUiPresenter.RoyalPalaceLevelForExternalHost().ToString(CultureInfo.InvariantCulture), GUI.skin.label);
+            GUILayout.Label(
+                BeeLocalization.Text("royal_palace.current_level", "Palais Royal") + " - " +
+                BeeLocalization.Text("royal_palace.level_word", "Niveau") + " " +
+                currentLevel.ToString(CultureInfo.InvariantCulture),
+                new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold });
             GUILayout.FlexibleSpace();
             GUILayout.Label(HiveViewProductUiPresenter.RoyalPalaceLevelAuthorityForExternalHost(), GUI.skin.label);
             GUILayout.EndHorizontal();
-            GUILayout.Label("Plafond actuel des autres batiments : niveau du Coeur royal.", new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUILayout.Label(
+                BeeLocalization.Text("royal_palace.colony_level", "Le niveau du Palais Royal est le niveau de la colonie."),
+                new GUIStyle(GUI.skin.label) { wordWrap = true });
+            if (HiveViewProductUiPresenter.RoyalPalaceProgressionIsAlphaForExternalHost())
+                GUILayout.Label(
+                    BeeLocalization.Text("royal_palace.alpha_balance", "Equilibrage Alpha provisoire."),
+                    new GUIStyle(GUI.skin.label) { fontSize = 10, wordWrap = true });
             GUILayout.EndVertical();
+
+            // --- Prochain niveau : conditions, cout, duree, deblocages ---
+            if (HiveViewProductUiPresenter.RoyalPalaceProgressionAvailableForExternalHost())
+                DrawNextLevelSection();
 
             GUILayout.Space(6f);
             GUILayout.Label(building.Role, new GUIStyle(GUI.skin.label) { wordWrap = true });
@@ -124,13 +145,13 @@ namespace BeeKingdom.Playground
 
             GUILayout.Space(8f);
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Amelioration", GUI.skin.label);
+            GUILayout.Label(BeeLocalization.Text("royal_palace.upgrade", "Amelioration"), GUI.skin.label);
             GUILayout.Label(HiveViewProductUiPresenter.RoyalPalaceUpgradeStatusForExternalHost(), new GUIStyle(GUI.skin.label) { wordWrap = true });
             Rect progress = GUILayoutUtility.GetRect(1f, 8f, GUILayout.ExpandWidth(true));
             DrawProgressBar(progress, HiveViewProductUiPresenter.RoyalPalaceUpgradeProgressForExternalHost());
             GUILayout.EndVertical();
 
-            GUILayout.FlexibleSpace();
+            GUILayout.EndScrollView();
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Vue colonie"))
             {
@@ -146,6 +167,111 @@ namespace BeeKingdom.Playground
             GUI.enabled = previousEnabled;
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
+        }
+
+        // M055-CL. Repond, dans l'ordre, aux questions posees par la mission :
+        // quel est le prochain niveau, que faut-il pour l'atteindre (satisfait vs manquant,
+        // visuellement distincts), combien ca coute, combien de temps ca prend, et ce que
+        // ca debloque. Toutes les valeurs viennent du serveur - rien n'est calcule ici.
+        private void DrawNextLevelSection()
+        {
+            GUILayout.Space(8f);
+            GUILayout.BeginVertical(GUI.skin.box);
+
+            if (HiveViewProductUiPresenter.RoyalPalaceAtMaxLevelForExternalHost())
+            {
+                GUILayout.Label(
+                    BeeLocalization.Text("royal_palace.max_level", "Niveau maximum disponible pour l'Alpha atteint."),
+                    new GUIStyle(GUI.skin.label) { wordWrap = true });
+                GUILayout.EndVertical();
+                return;
+            }
+
+            int nextLevel = HiveViewProductUiPresenter.RoyalPalaceNextLevelForExternalHost();
+            GUILayout.Label(
+                BeeLocalization.Text("royal_palace.next_level", "Prochain niveau") + " - " +
+                BeeLocalization.Text("royal_palace.level_word", "Niveau") + " " +
+                nextLevel.ToString(CultureInfo.InvariantCulture),
+                new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold });
+
+            string description = HiveViewProductUiPresenter.RoyalPalaceNextLevelDescriptionForExternalHost();
+            if (!string.IsNullOrEmpty(description))
+                GUILayout.Label(description, new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 11 });
+
+            // Conditions : coche verte quand satisfaite, croix rouge quand manquante.
+            int requirementCount = HiveViewProductUiPresenter.RoyalPalaceRequirementCountForExternalHost();
+            GUILayout.Space(4f);
+            GUILayout.Label(BeeLocalization.Text("royal_palace.requirements", "Conditions"), GUI.skin.label);
+            if (requirementCount == 0)
+                GUILayout.Label(
+                    BeeLocalization.Text("royal_palace.requirements.none", "Aucune condition de batiment."),
+                    new GUIStyle(GUI.skin.label) { fontSize = 11 });
+            for (int index = 0; index < requirementCount; index++)
+            {
+                bool satisfied;
+                string label = HiveViewProductUiPresenter.RoyalPalaceRequirementLabelForExternalHost(index, out satisfied);
+                Color previous = GUI.color;
+                GUI.color = satisfied ? new Color(0.55f, 0.92f, 0.55f, 1f) : new Color(1f, 0.52f, 0.45f, 1f);
+                GUILayout.Label((satisfied ? "✓  " : "✕  ") + label,
+                    new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 12 });
+                GUI.color = previous;
+            }
+
+            // Cout et duree reels du palier (catalogue serveur existant).
+            string cost = HiveViewProductUiPresenter.RoyalPalaceNextCostTextForExternalHost();
+            string duration = HiveViewProductUiPresenter.RoyalPalaceNextDurationTextForExternalHost();
+            if (!string.IsNullOrEmpty(cost) || !string.IsNullOrEmpty(duration))
+            {
+                GUILayout.Space(4f);
+                GUILayout.BeginHorizontal();
+                if (!string.IsNullOrEmpty(cost))
+                    GUILayout.Label(BeeLocalization.Text("royal_palace.cost", "Cout") + " : " + cost, GUI.skin.label);
+                GUILayout.FlexibleSpace();
+                if (!string.IsNullOrEmpty(duration))
+                    GUILayout.Label(BeeLocalization.Text("royal_palace.duration", "Duree") + " : " + duration, GUI.skin.label);
+                GUILayout.EndHorizontal();
+            }
+
+            // Deblocages : on n'annonce comme "debloque" que ce qui est reellement impose
+            // aujourd'hui ; le reste est explicitement presente comme a venir.
+            int unlockCount = HiveViewProductUiPresenter.RoyalPalaceNextUnlockCountForExternalHost();
+            if (unlockCount > 0)
+            {
+                GUILayout.Space(4f);
+                GUILayout.Label(
+                    string.Format(CultureInfo.InvariantCulture,
+                        BeeLocalization.Text("royal_palace.unlocks_at", "Debloque au niveau {0}"),
+                        nextLevel.ToString(CultureInfo.InvariantCulture)),
+                    GUI.skin.label);
+                for (int index = 0; index < unlockCount; index++)
+                {
+                    bool enforced;
+                    string label = HiveViewProductUiPresenter.RoyalPalaceNextUnlockLabelForExternalHost(index, out enforced);
+                    GUILayout.Label(
+                        "•  " + label + (enforced ? string.Empty : "  (" + BeeLocalization.Text("royal_palace.unlock.upcoming", "a venir") + ")"),
+                        new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 11 });
+                }
+            }
+
+            // Blocage : jamais un simple bouton grise - on dit exactement ce qui manque et
+            // on propose d'aller vers le batiment concerne.
+            string blockedReason = HiveViewProductUiPresenter.RoyalPalaceBlockedReasonForExternalHost();
+            if (!string.IsNullOrEmpty(blockedReason))
+            {
+                GUILayout.Space(6f);
+                Color previous = GUI.color;
+                GUI.color = new Color(1f, 0.52f, 0.45f, 1f);
+                GUILayout.Label(blockedReason, new GUIStyle(GUI.skin.label) { wordWrap = true, fontStyle = FontStyle.Bold });
+                GUI.color = previous;
+                if (!string.IsNullOrEmpty(HiveViewProductUiPresenter.RoyalPalaceBlockingBuildingTypeForExternalHost())
+                    && GUILayout.Button(BeeLocalization.Text("royal_palace.goto_building", "Voir le batiment requis")))
+                {
+                    HiveViewProductUiPresenter.TryFocusRoyalPalaceBlockingBuildingForExternalHost();
+                    OverlayOpenForExternalHost = false;
+                }
+            }
+
+            GUILayout.EndVertical();
         }
 
         private static void DrawFullscreenBackground()

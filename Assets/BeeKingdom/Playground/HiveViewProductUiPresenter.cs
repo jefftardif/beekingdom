@@ -3306,6 +3306,19 @@ private static string courierToast = string.Empty;
         // its own uGUI replacement for).
         public static bool HasEnteredHiveForExternalHost => splashAuthGateState == SplashAuthGateState.EnteredHive;
 
+        public static bool PlayerSummaryOverlayOpenForExternalHost => playerMenuOpen;
+
+        public static bool PlayerProfileOverlayOpenForExternalHost => playerProfileOpen;
+
+        public static void OpenPlayerSummaryForExternalHost()
+        {
+            playerMenuOpen = true;
+            playerProfileOpen = false;
+            vipMenuOpen = false;
+            powerMenuOpen = false;
+            localPreviewLoopMessage = "Résumé joueur ouvert";
+        }
+
         // Entering the hive (via the splash's "Jouer en demo locale"/login flow)
         // auto-starts a guided onboarding tutorial (e.g. "DefenseWelcome"), which blocks
         // MiniChatFloatingShouldRender (and presumably other overlays) until completed.
@@ -3393,6 +3406,36 @@ private static string courierToast = string.Empty;
                 else if (chatScreenOpen) DrawChatScreen(compact);
                 else DrawMiniChatFloating(compact, false);
                 if (chatScreenOpen || courierScreenOpen) DrawCommunicationTabBarForExternalHost(compact);
+            }
+            finally
+            {
+                GUI.depth = previousDepth;
+            }
+        }
+
+        public static void DrawPlayerIdentityOverlaysForExternalHost(bool compact)
+        {
+            if (!playerMenuOpen && !playerProfileOpen) return;
+            EnsureStyles();
+
+            int previousDepth = GUI.depth;
+            GUI.depth = HiveMapUiOcclusion.ModalWindowGuiDepth;
+            try
+            {
+                bool portrait = IsPortraitLayout();
+                if (playerMenuOpen)
+                {
+                    Rect panelRect = PlayerSummaryPanelRectForProof(portrait, Screen.width, Screen.height);
+                    panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_menu");
+                    DrawPlayerSummaryPanel(panelRect, portrait);
+                }
+
+                if (playerProfileOpen)
+                {
+                    Rect panelRect = PlayerProfilePanelRectForProof(portrait, Screen.width, Screen.height);
+                    panelRect = UIAnimationLibrary.ApplyWindowAnimation(panelRect, "player_profile");
+                    DrawPlayerProfilePanel(panelRect, portrait);
+                }
             }
             finally
             {
@@ -3933,10 +3976,10 @@ private static string courierToast = string.Empty;
         // M038C-CL: publishes the real on-screen Rect of the Training start button every
         // frame it's drawn (same pattern as the upgrade badge above), so the FTUE arrow
         // targets the actual control instead of a guessed screen fraction.
-        private static bool RegisterFtueTrainingButtonAndDraw(Rect rect, string label, bool enabled)
+        private static bool RegisterFtueTrainingButtonAndDraw(Rect rect, string label, bool enabled, Func<string> officialDisabledReason = null)
         {
             try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetTrainingStartButton, rect); } catch {}
-            return DrawPreviewActionButton(rect, label, enabled);
+            return DrawPreviewActionButton(rect, label, enabled, officialDisabledReason: officialDisabledReason);
         }
 
         private static void DrawOfficialBarrackContent(float margin, float contentTop, float contentWidth)
@@ -3988,7 +4031,11 @@ private static string courierToast = string.Empty;
                 DrawAllianceHelpAction(new Rect(margin, y + 38f, contentWidth, 34f),
                     MobileAccountSessionRuntimeBootstrap.GameplayHiveId, BeeKingdom.Networking.RemoteAllianceHelpCategories.Training, officialSelectedTroopFamily, estimatedOriginalDurationSeconds, false);
             }
-            else if (RegisterFtueTrainingButtonAndDraw(new Rect(margin, y, contentWidth, 44f), OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily)))
+            // M048-CL: same M045G-CL hardening as Construction/Research - a disabled click on
+            // the real Training action must reflect this family's own official status, never
+            // an unrelated shared scratch-state message.
+            else if (RegisterFtueTrainingButtonAndDraw(new Rect(margin, y, contentWidth, 44f), OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily),
+                officialDisabledReason: () => OfficialDoctrineRecruitmentStatusText(officialSelectedTroopFamily)))
             {
                 RunOfficialDoctrineRecruitmentAction(officialSelectedTroopFamily);
             }
@@ -4380,6 +4427,8 @@ private static string courierToast = string.Empty;
             || CommunicationOverlayOpenForExternalHost
             || BarrackOverlayOpenForExternalHost
             || ConstructionOverlayOpenForExternalHost
+            || PlayerSummaryOverlayOpenForExternalHost
+            || PlayerProfileOverlayOpenForExternalHost
             || SettingsOverlayOpenForExternalHost
             || BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen || ResearchOverlayOpenForExternalHost
             || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
@@ -6992,6 +7041,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 if (activeMainMenuId == "Quests") portraitRects.Add(GuidedQuestMenuPanelRect(true, screenWidth, screenHeight));
                 if (activeMainMenuId == "More") portraitRects.Add(PortraitMorePanelRect(screenWidth, screenHeight));
                 if (activeMainMenuId == "Settings") portraitRects.Add(MobileComfortSettingsPanelRect(true, screenWidth, screenHeight));
+                if (playerMenuOpen) portraitRects.Add(PlayerSummaryPanelRectForProof(true, screenWidth, screenHeight));
+                if (playerProfileOpen) portraitRects.Add(PlayerProfilePanelRectForProof(true, screenWidth, screenHeight));
                 if (communicationPanelOpen && MiniChatFloatingShouldRender(false))
                 {
                     Rect floating = MiniChatFloatingRectForProof(true, screenWidth, screenHeight);
@@ -7028,7 +7079,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 new Rect(0f, screenHeight - bottomRail - 10f, screenWidth, bottomRail + 10f)
             };
 
-            if (playerMenuOpen) rects.Add(new Rect(10f, 80f, 300f, PlayerProfilePanelHeight));
+            if (playerMenuOpen) rects.Add(PlayerSummaryPanelRectForProof(false, screenWidth, screenHeight));
+            if (playerProfileOpen) rects.Add(PlayerProfilePanelRectForProof(false, screenWidth, screenHeight));
             if (vipMenuOpen) rects.Add(new Rect(196f, 50f, 300f, 154f));
             if (powerMenuOpen) rects.Add(new Rect(288f, 52f, 336f, 174f));
             if (activeMainMenuId == "Quests") rects.Add(GuidedQuestMenuPanelRect(false, screenWidth, screenHeight));
@@ -10656,6 +10708,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 				|| courierScreenOpen
 				|| friendsScreenOpen
 				|| chatScreenOpen
+                || playerMenuOpen
+                || playerProfileOpen
 				|| activeHiveMenu == HiveMenuMode.Research
 				|| activeHiveMenu == HiveMenuMode.Alliance
 				|| strategicPathPanelOpen
@@ -10685,6 +10739,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 || courierScreenOpen
                 || friendsScreenOpen
                 || chatScreenOpen
+                || playerMenuOpen
+                || playerProfileOpen
                 || activeHiveMenu == HiveMenuMode.Research
                 || activeHiveMenu == HiveMenuMode.Alliance
 || allianceMemberProfileOpen
@@ -10721,6 +10777,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 
         private static bool ClosePremiumScreensInPriorityOrderCore()
         {
+            if (playerProfileOpen) { playerProfileOpen = false; ReleaseGuiInputCapture(); return true; }
+            if (playerMenuOpen) { ClosePlayerSummary(); return true; }
             if (allianceMemberProfileOpen) { CloseAllianceMemberProfile(); return true; }
             if (!string.IsNullOrEmpty(allianceActionPanelOpen)) { allianceActionPanelOpen = string.Empty; return true; }
             if (allianceChatDrawerOpen) { allianceChatDrawerOpen = false; return true; }
@@ -20195,6 +20253,7 @@ private static void SetMiniChatOpen(bool open)
             referenceHotspotSelected = false;
             detailPanelClosed = true;
             playerMenuOpen = false;
+            playerProfileOpen = false;
             vipMenuOpen = false;
             powerMenuOpen = false;
             strategicPathPanelOpen = false;
@@ -20734,9 +20793,32 @@ public static string[] ConnectionTruthForProof()
 
         // Pulsing "ready to validate" badge drawn directly on the building in HiveMap's 3D world,
         // same shape/sizing convention as DrawTrainingReadyBadgeForExternalHost.
+        // M049B-CL: real official upgrade_ready.png asset (was a runtime-generated placeholder -
+        // the icon key used to be "upgrade-ready", which never matched the asset's actual
+        // filename and silently fell back to CreateIconTexture's code-drawn hexagon/chevron).
         public static void DrawBuildingUpgradeReadyBadgeForExternalHost(Rect buildingRect, float time, float glowSize)
         {
             if (string.IsNullOrEmpty(ReadyToCompleteOfficialUpgradeHotspotIdForExternalHost())) return;
+            DrawOperationCompletionBadge(buildingRect, time, glowSize, "upgrade_ready");
+        }
+
+        // M049B-CL: Research analogue - same real "awaiting completion" gate
+        // (ReadyToCompleteOfficialResearchForExternalHost), same reusable badge renderer as
+        // Construction, only the icon differs (research_ready.png - a real dedicated asset,
+        // not a placeholder reuse of Construction's).
+        public static void DrawResearchReadyBadgeForExternalHost(Rect buildingRect, float time, float glowSize)
+        {
+            if (string.IsNullOrEmpty(ReadyToCompleteOfficialResearchForExternalHost())) return;
+            DrawOperationCompletionBadge(buildingRect, time, glowSize, "research_ready");
+        }
+
+        // M049B-CL: extracted from DrawBuildingUpgradeReadyBadgeForExternalHost so Research's new
+        // world completion indicator reuses the exact same rendering architecture instead of a
+        // second copy - only the icon key (a real PremiumBeeIcons asset resolved through the
+        // existing GetIconTexture/Resources.Load pipeline, never generated/recolored here) varies
+        // per caller. Callers are responsible for their own real "is this ready" gate.
+        private static void DrawOperationCompletionBadge(Rect buildingRect, float time, float glowSize, string iconKey)
+        {
             EnsureStyles();
 
             float pulse = 1f + Mathf.Sin(time * 3.4f) * 0.08f;
@@ -20749,7 +20831,7 @@ public static string[] ConnectionTruthForProof()
             Rect glow = new Rect(buildingRect.center.x - pulsedGlowSize * 0.5f, buildingRect.center.y - pulsedGlowSize * 0.5f, pulsedGlowSize, pulsedGlowSize);
             GUI.DrawTexture(glow, GetPremiumTexture("selected-glow"), ScaleMode.ScaleToFit, true);
             GUI.color = Color.white;
-            DrawGameIcon(iconRect, "upgrade-ready", Color.white);
+            DrawGameIcon(iconRect, iconKey, Color.white);
             GUI.color = previous;
         }
 
@@ -20854,6 +20936,165 @@ public static string[] ConnectionTruthForProof()
             }
 
             TryStartUpgradeWithPrerequisiteRedirectForExternalHost(hotspotId);
+        }
+
+        // ---------------------------------------------------------------------------
+        // M055-CL - Surface de progression du Palais Royal exposee a la fenetre HiveMap.
+        // Tout vient du MEME modele serveur que l'amelioration elle-meme : aucune de ces
+        // methodes ne calcule une regle de progression, elles ne font que rendre lisible
+        // ce que le serveur a deja decide. Le niveau affiche reste CoeurRoyalLevel().
+        // ---------------------------------------------------------------------------
+
+        private static HiveRoyalPalaceProgressionModel RoyalPalaceProgressionModel()
+        {
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            return model == null ? null : model.RoyalPalace;
+        }
+
+        // La fenetre n'affiche la section progression que lorsqu'elle a de vraies donnees
+        // serveur - jamais de tableau de prerequis invente en mode preview local.
+        public static bool RoyalPalaceProgressionAvailableForExternalHost()
+        {
+            return RoyalPalaceProgressionModel() != null;
+        }
+
+        public static bool RoyalPalaceProgressionIsAlphaForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            return progression != null && progression.IsAlphaBalance;
+        }
+
+        public static int RoyalPalaceNextLevelForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            return progression != null && progression.NextLevel.HasValue ? progression.NextLevel.Value : 0;
+        }
+
+        public static bool RoyalPalaceAtMaxLevelForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            return progression != null && progression.IsMaxConfiguredLevel;
+        }
+
+        public static string RoyalPalaceNextLevelDescriptionForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            return progression == null ? string.Empty : progression.NextLevelDescription;
+        }
+
+        // Une ligne lisible par prerequis. `satisfied` permet a l'hote de distinguer
+        // visuellement (couleur + marqueur) ce qui est acquis de ce qui manque.
+        public static int RoyalPalaceRequirementCountForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            return progression == null ? 0 : progression.NextLevelRequirements.Count;
+        }
+
+        public static string RoyalPalaceRequirementLabelForExternalHost(int index, out bool satisfied)
+        {
+            satisfied = false;
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            if (progression == null || index < 0 || index >= progression.NextLevelRequirements.Count) return string.Empty;
+            HiveRoyalPalaceRequirementModel requirement = progression.NextLevelRequirements[index];
+            satisfied = requirement.IsSatisfied;
+            return RoyalPalaceBuildingDisplayName(requirement.BuildingKey)
+                + " " + BeeLocalization.Text("royal_palace.requirement.level", "niveau")
+                + " " + requirement.MinimumLevel.ToString(CultureInfo.InvariantCulture)
+                + "  (" + requirement.CurrentLevel.ToString(CultureInfo.InvariantCulture) + ")";
+        }
+
+        // Raison EXACTE du blocage, pas un simple bouton grise (regle M055 section 7).
+        public static string RoyalPalaceBlockedReasonForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            if (progression == null || progression.RequirementsSatisfied) return string.Empty;
+            HiveRoyalPalaceRequirementModel missing = progression.FirstMissingRequirement();
+            if (missing == null) return string.Empty;
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                BeeLocalization.Text("royal_palace.blocked.requirement", "{0} niveau {1} requis"),
+                RoyalPalaceBuildingDisplayName(missing.BuildingKey),
+                missing.MinimumLevel.ToString(CultureInfo.InvariantCulture));
+        }
+
+        // Batiment vers lequel guider le joueur. L'hote peut s'en servir pour fermer la
+        // fenetre et mettre le batiment en valeur, en reutilisant le mecanisme de mise en
+        // avant deja existant (highlightedPrerequisiteBuildingType) - aucune nouvelle
+        // architecture de camera ou de tutoriel n'est introduite ici.
+        public static string RoyalPalaceBlockingBuildingTypeForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            if (progression == null || progression.RequirementsSatisfied) return null;
+            HiveRoyalPalaceRequirementModel missing = progression.FirstMissingRequirement();
+            if (missing == null || string.IsNullOrEmpty(missing.BuildingKey)) return null;
+            BeeKingdom.Buildings.Interaction.LegacyMappingEntry entry;
+            return BeeKingdom.Buildings.Interaction.BuildingMappingTable.TryGetByLegacyKey(missing.BuildingKey, out entry)
+                ? entry.BuildingType
+                : null;
+        }
+
+        public static bool TryFocusRoyalPalaceBlockingBuildingForExternalHost()
+        {
+            string buildingType = RoyalPalaceBlockingBuildingTypeForExternalHost();
+            if (string.IsNullOrEmpty(buildingType)) return false;
+            highlightedPrerequisiteBuildingType = buildingType;
+            return true;
+        }
+
+        // Deblocages du prochain niveau. `enforced` distingue honnetement une regle
+        // reellement appliquee aujourd'hui d'une annonce de progression : on ne promet
+        // jamais un systeme qui n'existe pas (regle M055 section 6).
+        public static int RoyalPalaceNextUnlockCountForExternalHost()
+        {
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            return progression == null ? 0 : progression.NextLevelUnlocks.Count;
+        }
+
+        public static string RoyalPalaceNextUnlockLabelForExternalHost(int index, out bool enforced)
+        {
+            enforced = false;
+            HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
+            if (progression == null || index < 0 || index >= progression.NextLevelUnlocks.Count) return string.Empty;
+            HiveRoyalPalaceUnlockModel unlock = progression.NextLevelUnlocks[index];
+            enforced = unlock.Enforced;
+            return BeeLocalization.Text("royal_palace.unlock." + unlock.Key, unlock.Description);
+        }
+
+        // Cout et duree reels du prochain palier, lus dans l'offre serveur existante -
+        // aucune table de couts parallele n'est introduite par M055.
+        public static string RoyalPalaceNextCostTextForExternalHost()
+        {
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            HiveBuildingUpgradeOfferModel offer = model == null ? null : model.OfferFor("administration_core");
+            if (offer == null) return string.Empty;
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            foreach (KeyValuePair<string, long> cost in offer.Costs)
+            {
+                if (builder.Length > 0) builder.Append("   ");
+                builder.Append(BeeLocalization.Text("resource." + cost.Key, cost.Key));
+                builder.Append(' ');
+                builder.Append(cost.Value.ToString("N0", CultureInfo.InvariantCulture));
+            }
+            return builder.ToString();
+        }
+
+        public static string RoyalPalaceNextDurationTextForExternalHost()
+        {
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            HiveBuildingUpgradeOfferModel offer = model == null ? null : model.OfferFor("administration_core");
+            if (offer == null) return string.Empty;
+            TimeSpan duration = offer.Duration;
+            return duration.TotalHours >= 1d
+                ? string.Format(CultureInfo.InvariantCulture, "{0}h {1:00}m", (int)duration.TotalHours, duration.Minutes)
+                : string.Format(CultureInfo.InvariantCulture, "{0}m {1:00}s", (int)duration.TotalMinutes, duration.Seconds);
+        }
+
+        private static string RoyalPalaceBuildingDisplayName(string legacyKey)
+        {
+            if (string.IsNullOrEmpty(legacyKey)) return string.Empty;
+            ReferenceHiveHotspot hotspot = FindReferenceHotspot(legacyKey);
+            string fallback = string.IsNullOrEmpty(hotspot.HotspotId) ? legacyKey : hotspot.Label;
+            return BeeLocalization.Text("building." + legacyKey + ".name", fallback);
         }
 
         private static HiveBuildingUpgradeScreenModel OfficialBuildingUpgradeModel()
@@ -21291,6 +21532,42 @@ public static string[] ConnectionTruthForProof()
         private static HiveResearchScreenModel OfficialResearchModel()
         {
             return researchController == null ? null : researchController.Model;
+        }
+
+        // M049-CL: mirrors ActiveOfficialUpgradeHotspotIdForExternalHost's exact shape for the
+        // Research building's own activity pulse - true server-authoritative Running state
+        // (never AwaitingCompletion, never "the Research window happens to be open"), so a
+        // HiveMap bootstrap can drive a silhouette pulse purely from operation state.
+        public static bool IsOfficialResearchRunningForExternalHost()
+        {
+            if (!OfficialResearchConfigured()) return false;
+            HiveResearchOperationModel operation = OfficialResearchModel()?.ActiveOperation;
+            return operation != null && string.Equals(operation.Status, HiveResearchClient.RunningStatus, StringComparison.Ordinal);
+        }
+
+        // M049B-CL: Research analogue of ReadyToCompleteOfficialUpgradeHotspotIdForExternalHost.
+        // Research has exactly one physical building regardless of which specific research is
+        // active, so this returns the real awaiting-completion researchId (needed to reuse the
+        // exact same RunOfficialResearchAction path the Research screen's own "Terminer" button
+        // calls), or null when nothing is awaiting completion.
+        public static string ReadyToCompleteOfficialResearchForExternalHost()
+        {
+            if (!OfficialResearchConfigured()) return null;
+            HiveResearchOperationModel operation = OfficialResearchModel()?.ActiveOperation;
+            return operation != null && operation.IsAwaitingCompletion ? operation.ResearchId : null;
+        }
+
+        // Real server-authoritative completion, reusing the exact same path the Research screen's
+        // own "Terminer" button calls (RunOfficialResearchAction -> researchController.Complete())
+        // - no local unlock, no fake success. RunOfficialResearchAction's own
+        // OfficialResearchActionEnabled gate (researchController.IsBusy) is the in-flight guard
+        // against duplicate taps from rapid repeated clicks on the building.
+        public static bool TryCompleteReadyResearchOnTapForExternalHost()
+        {
+            string researchId = ReadyToCompleteOfficialResearchForExternalHost();
+            if (string.IsNullOrEmpty(researchId)) return false;
+            RunOfficialResearchAction(researchId);
+            return true;
         }
 
         private static bool OfficialResearchActionEnabled(string researchId)
@@ -23692,6 +23969,7 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             {
                 bool panelOpening = !playerMenuOpen;
                 playerMenuOpen = !playerMenuOpen;
+                playerProfileOpen = false;
                 vipMenuOpen = false;
                 powerMenuOpen = false;
                 if (panelOpening) AudioManager.Instance?.PlayMenuOpen();
@@ -23713,6 +23991,7 @@ private static void DrawResourceInventoryOverlay(bool portrait)
                 bool panelOpening = !vipMenuOpen;
                 vipMenuOpen = !vipMenuOpen;
                 playerMenuOpen = false;
+                playerProfileOpen = false;
                 powerMenuOpen = false;
                 if (panelOpening) AudioManager.Instance?.PlayMenuOpen();
                 else AudioManager.Instance?.PlayMenuClose();
@@ -23729,6 +24008,7 @@ private static void DrawResourceInventoryOverlay(bool portrait)
                 bool panelOpening = !powerMenuOpen;
                 powerMenuOpen = !powerMenuOpen;
                 playerMenuOpen = false;
+                playerProfileOpen = false;
                 vipMenuOpen = false;
                 if (panelOpening) AudioManager.Instance?.PlayMenuOpen();
                 else AudioManager.Instance?.PlayMenuClose();
@@ -23745,6 +24025,7 @@ private static void DrawResourceInventoryOverlay(bool portrait)
                 championBeesPanelAnimationStartedAt = NowForUi();
                 AudioManager.Instance?.PlayMenuOpen();
                 playerMenuOpen = false;
+                playerProfileOpen = false;
                 vipMenuOpen = false;
                 powerMenuOpen = false;
                 localPreviewLoopMessage = "Abeilles championnes ouvert";
@@ -23863,6 +24144,7 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             {
                 bool panelOpening = !playerMenuOpen;
                 playerMenuOpen = !playerMenuOpen;
+                playerProfileOpen = false;
                 vipMenuOpen = false;
                 powerMenuOpen = false;
                 if (panelOpening) AudioManager.Instance?.PlayMenuOpen();
@@ -24031,6 +24313,63 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             }
         }
 
+        private static void ClosePlayerSummary()
+        {
+            playerMenuOpen = false;
+            localPreviewLoopMessage = "Profil joueur ferme";
+            ReleaseGuiInputCapture();
+        }
+
+        private static string CurrentPlayerDisplayName()
+        {
+            GameAccountSession session;
+            if (mobileAccountSessionClient != null &&
+                mobileAccountSessionClient.TryGetSession(out session) &&
+                session != null &&
+                !string.IsNullOrWhiteSpace(session.DisplayName))
+                return session.DisplayName.Trim();
+
+            if (!string.IsNullOrWhiteSpace(splashAuthUserName)) return splashAuthUserName.Trim();
+            return BeeLocalization.Text("splash.create.demo_player_default", "Apiculteur");
+        }
+
+        private static string CurrentPlayerSessionLabel()
+        {
+            if (mobileAccountSessionClient != null &&
+                mobileAccountSessionClient.State == MobileAccountSessionState.Authenticated &&
+                mobileAccountSessionClient.ServerGameplayAuthorityGranted)
+                return "Compte officiel";
+
+            if (mobileAccountSessionClient != null && mobileAccountSessionClient.State == MobileAccountSessionState.Offline)
+                return "Session hors ligne";
+
+            return "Profil local";
+        }
+
+        private static void OpenPlayerProfileFromSummary()
+        {
+            playerMenuOpen = false;
+            playerProfileOpen = true;
+            vipMenuOpen = false;
+            powerMenuOpen = false;
+            AudioManager.Instance?.PlayMenuOpen();
+            localPreviewLoopMessage = "Profil joueur ouvert";
+        }
+
+        private static string PlayerIdentitySubtitle()
+        {
+            return "Niv. " + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture) +
+                " · " + FormatRealPowerNumber(ComputeRealTotalPower()) +
+                " puissance";
+        }
+
+        private static string TrimForUi(string value, int maxCharacters)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            if (maxCharacters <= 1) return value.Substring(0, 1);
+            return value.Length <= maxCharacters ? value : value.Substring(0, maxCharacters - 1) + "…";
+        }
+
         public static Rect PlayerSummaryPanelRectForProof(bool portrait, float screenWidth, float screenHeight)
         {
             if (portrait)
@@ -24047,13 +24386,13 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             if (portrait)
             {
                 float margin = 8f;
-                float height = Mathf.Min(PlayerProfilePanelHeight, screenHeight - 136f);
-                return new Rect(margin, 118f, screenWidth - margin * 2f, height);
+                float portraitHeight = Mathf.Min(PlayerProfilePanelHeight, screenHeight - 136f);
+                return new Rect(margin, 118f, screenWidth - margin * 2f, portraitHeight);
             }
 
             float x = Mathf.Min(348f, Mathf.Max(10f, screenWidth - 396f));
-            float height = Mathf.Min(PlayerProfilePanelHeight, screenHeight - 96f);
-            return new Rect(x, 80f, 386f, height);
+            float landscapeHeight = Mathf.Min(PlayerProfilePanelHeight, screenHeight - 96f);
+            return new Rect(x, 80f, 386f, landscapeHeight);
         }
 
         private static void DrawPlayerSummaryPanel(Rect rect, bool portrait)
@@ -30979,8 +31318,14 @@ if (leftNavigationTexture == null)
                         action.width, action.height);
                     try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetResearchStartButton, actionOnScreen); } catch {}
                 }
+                // M048-CL: same M045G-CL hardening as Construction's own action button - a
+                // disabled click here (e.g. a legitimate momentary busy/prerequisite-missing
+                // state) must surface THIS research's own real official status text, never
+                // whatever unrelated local-preview screen last wrote the shared
+                // localPreviewDisabledReason scratch field that frame.
                 if (DrawPreviewActionButton(action, OfficialResearchActionLabel(researchId),
-                    OfficialResearchActionEnabled(researchId)))
+                    OfficialResearchActionEnabled(researchId),
+                    officialDisabledReason: () => OfficialResearchStatusText(researchId)))
                     RunOfficialResearchAction(researchId);
 
                 bool activeHere = running && model?.ActiveOperation != null && !model.ActiveOperation.IsAwaitingCompletion;
@@ -39608,6 +39953,7 @@ public static void ResetMissionsStateForProof()
             communicationPanelOpen = false;
             activeMainMenuId = string.Empty;
             playerMenuOpen = false;
+            playerProfileOpen = false;
             vipMenuOpen = false;
             powerMenuOpen = false;
             if (activeHiveMenu != HiveMenuMode.Hive) activeHiveMenu = HiveMenuMode.Hive;
@@ -40183,6 +40529,60 @@ public static void ResetMissionsStateForProof()
         public static bool ChampionBeesPanelOpenForProof => championBeesPanelOpen;
         public static void SetChampionBeesPanelOpenForProof(bool open) => championBeesPanelOpen = open;
         public static bool AllianceMemberProfileOpenForProof => allianceMemberProfileOpen;
+        public static bool PlayerSummaryOpenForProof => playerMenuOpen;
+        public static bool PlayerProfileOpenForProof => playerProfileOpen;
+        public static void OpenPlayerSummaryForProof()
+        {
+            OpenPlayerSummaryForExternalHost();
+        }
+        public static void OpenPlayerProfileFromSummaryForProof() => OpenPlayerProfileFromSummary();
+        public static string[] PlayerSummaryForProof()
+        {
+            return new[]
+            {
+                "player_summary_open:" + playerMenuOpen.ToString().ToLowerInvariant(),
+                "player_profile_open:" + playerProfileOpen.ToString().ToLowerInvariant(),
+                "player_summary_renderer:compact_imgui",
+                "player_profile_renderer:detailed_imgui",
+                "player_summary_legacy_queen_profile:false",
+                "player_summary_display_name:" + CurrentPlayerDisplayName(),
+                "player_summary_identity_source:" + (mobileAccountSessionClient != null && mobileAccountSessionClient.State == MobileAccountSessionState.Authenticated ? "session" : "local"),
+                "player_summary_profile_action:true",
+                "player_summary_livinghive_scene_dependency:false"
+            };
+        }
+        public static bool PlayerSummaryLayoutContainedForProof(bool portrait, float screenWidth, float screenHeight)
+        {
+            Rect rect = PlayerSummaryPanelRectForProof(portrait, screenWidth, screenHeight);
+            Rect header = new Rect(rect.x + 10f, rect.y + 8f, rect.width - 20f, 38f);
+            Rect close = new Rect(rect.x + 4f, rect.y + 4f, 44f, 44f);
+            Rect avatar = new Rect(rect.x + 18f, rect.y + 62f, 66f, 66f);
+            float contentX = avatar.xMax + 12f;
+            float rowW = rect.xMax - contentX - 14f;
+            Rect[] content =
+            {
+                header,
+                close,
+                new Rect(rect.x + 58f, rect.y + 10f, rect.width - 112f, 22f),
+                new Rect(rect.x + 58f, rect.y + 32f, rect.width - 112f, 14f),
+                avatar,
+                new Rect(contentX, avatar.y, rowW, 28f),
+                new Rect(contentX, avatar.y + 34f, rowW, 28f),
+                new Rect(rect.x + 14f, avatar.yMax + 14f, rect.width - 28f, 30f),
+                new Rect(rect.x + 14f, avatar.yMax + 52f, rect.width - 28f, 30f),
+                new Rect(rect.x + 14f, rect.yMax - 52f, rect.width - 28f, 38f)
+            };
+
+            for (int i = 0; i < content.Length; i++)
+            {
+                if (content[i].xMin < rect.xMin || content[i].yMin < rect.yMin ||
+                    content[i].xMax > rect.xMax || content[i].yMax > rect.yMax)
+                    return false;
+            }
+
+            return true;
+        }
+        public static string TrimPlayerSummaryTextForProof(string value, int maxCharacters) => TrimForUi(value, maxCharacters);
         public static void OpenArmyMenuForProof()
         {
             activeMainMenuId = "Army";

@@ -48,6 +48,14 @@ namespace BeeKingdom.Playground
             HiveMapBarrackBootstrap.InitializeForScene(scene);
             HiveMapBuildingUpgradeClickBootstrap.InitializeForScene(scene);
             HiveMapBuildingUpgradeVisualStateBootstrap.InitializeForScene(scene);
+            // M049C-CL: same exact M038B-CL failure mode - HiveMapResearchVisualStateBootstrap's
+            // own [RuntimeInitializeOnLoadMethod(AfterSceneLoad)] AutoStart() only fires once, on
+            // whatever scene is active the instant Play Mode starts (the splash/login scene,
+            // never "Environment2D5D"-prefixed), so it never actually ran once the player
+            // transitioned into the real HiveMap scene - confirmed live: CEO had a real Research
+            // operation Running with zero visible pulse. Wired into the same production
+            // installer Construction's own visual-state bootstrap already uses above.
+            HiveMapResearchVisualStateBootstrap.InitializeForScene(scene);
             HiveMapChampionHallBootstrap.InitializeForScene(scene);
             HiveMapConstructionBootstrap.InitializeForScene(scene);
             HiveMapNurseryBootstrap.InitializeForScene(scene);

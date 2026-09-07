@@ -32,6 +32,43 @@ namespace BeeKingdom.Networking
         public string Status { get; set; }
     }
 
+    // M055-CL : progression du Palais Royal (administration_core). Champs ADDITIFS -
+    // un serveur sans section RoyalPalaceProgression renvoie null et tout le reste du
+    // contrat living-hive-building-upgrade-v1 continue de fonctionner a l'identique.
+    public sealed class RemoteRoyalPalaceRequirement
+    {
+        public string BuildingKey { get; set; }
+        public int MinimumLevel { get; set; }
+        public int CurrentLevel { get; set; }
+        public bool IsSatisfied { get; set; }
+    }
+
+    public sealed class RemoteRoyalPalaceUnlock
+    {
+        public string Key { get; set; }
+        public string Description { get; set; }
+        public bool Enforced { get; set; }
+    }
+
+    public sealed class RemoteRoyalPalaceProgression
+    {
+        public string BuildingKey { get; set; }
+        public string DefinitionVersion { get; set; }
+        public bool IsAlphaBalance { get; set; }
+        public int CurrentLevel { get; set; }
+        public int? NextLevel { get; set; }
+        public int MaxConfiguredLevel { get; set; }
+        public bool IsMaxConfiguredLevel { get; set; }
+        public bool RequirementsSatisfied { get; set; }
+        public string BlockedReasonCode { get; set; }
+        public string BlockingBuildingKey { get; set; }
+        public int BlockingBuildingMinimumLevel { get; set; }
+        public string NextLevelDescription { get; set; }
+        public List<RemoteRoyalPalaceRequirement> NextLevelRequirements { get; set; }
+        public List<RemoteRoyalPalaceUnlock> NextLevelUnlocks { get; set; }
+        public List<RemoteRoyalPalaceUnlock> UnlockedSoFar { get; set; }
+    }
+
     public sealed class RemoteBuildingUpgradeSnapshot
     {
         public Guid PlayerId { get; set; }
@@ -44,6 +81,7 @@ namespace BeeKingdom.Networking
         public Dictionary<string, int> BuildingLevels { get; set; }
         public List<RemoteBuildingUpgradeOffer> Offers { get; set; }
         public RemoteBuildingUpgradeOperation ActiveOperation { get; set; }
+        public RemoteRoyalPalaceProgression RoyalPalace { get; set; }
     }
 
     public sealed class BuildingUpgradeMutationRequest
@@ -98,6 +136,11 @@ namespace BeeKingdom.Networking
         public const string ContractVersion = "living-hive-building-upgrade-v1";
         public const string RunningStatus = "running";
         public const string AwaitingCompletionStatus = "awaiting_completion";
+        // M055-CL : identifiant interne reel du Palais Royal (Coeur royal). Cote Unity il est
+        // expose sous BuildingTypes.RoyalPalace ("ROYAL_PALACE") et traduit vers cette cle par
+        // BuildingMappingTable - c'est CETTE cle qui existe cote serveur et en persistance.
+        public const string RoyalPalaceBuildingKey = "administration_core";
+        public const string PrerequisitesNotMetCode = "game.royal_palace_prerequisites";
         public const string StartedCode = "game.building_upgrade_started";
         public const string CompletedCode = "game.building_upgrade_completed";
         public static readonly TimeSpan MaximumDuration = TimeSpan.FromDays(7);
@@ -472,6 +515,8 @@ namespace BeeKingdom.Networking
                 }
             }
 
+            ValidateRoyalPalace(snapshot);
+
             RemoteBuildingUpgradeOperation operation = snapshot.ActiveOperation;
             if (operation == null) return;
             int current;
@@ -485,6 +530,67 @@ namespace BeeKingdom.Networking
                 (operation.Status == RunningStatus && operation.CompletesAtUtc <= snapshot.ServerTimeUtc) ||
                 (operation.Status == AwaitingCompletionStatus && operation.CompletesAtUtc > snapshot.ServerTimeUtc))
                 throw InvalidResponse("The active building upgrade operation is inconsistent.");
+        }
+
+        // M055-CL. Deux principes :
+        //  1. ABSENCE TOLEREE - `RoyalPalace` null est un etat valide (serveur sans section
+        //     de progression configuree, ou snapshot mis en cache avant M055). On ne casse
+        //     jamais une lecture par ailleurs valide juste parce que le bloc manque.
+        //  2. PRESENCE BORNEE - s'il est la, il doit etre coherent et borne, comme le reste
+        //     du snapshot : rien d'illimite, rien de contradictoire avec BuildingLevels.
+        private static void ValidateRoyalPalace(RemoteBuildingUpgradeSnapshot snapshot)
+        {
+            RemoteRoyalPalaceProgression royal = snapshot.RoyalPalace;
+            if (royal == null) return;
+
+            if (!string.Equals(royal.BuildingKey, RoyalPalaceBuildingKey, StringComparison.Ordinal) ||
+                !IsSafeToken(royal.DefinitionVersion) ||
+                royal.CurrentLevel < 1 || royal.CurrentLevel > 1000 ||
+                royal.MaxConfiguredLevel < 0 || royal.MaxConfiguredLevel > 1000 ||
+                (royal.NextLevel.HasValue && royal.NextLevel.Value != royal.CurrentLevel + 1) ||
+                (royal.IsMaxConfiguredLevel && royal.NextLevel.HasValue) ||
+                royal.BlockingBuildingMinimumLevel < 0 || royal.BlockingBuildingMinimumLevel > 1000)
+                throw InvalidResponse("The royal palace progression is inconsistent.");
+
+            // Le niveau annonce doit etre le MEME que celui du batiment dans le snapshot :
+            // c'est la garantie qu'il n'existe pas un second compteur cote serveur.
+            int level;
+            if (snapshot.BuildingLevels.TryGetValue(RoyalPalaceBuildingKey, out level) && level != royal.CurrentLevel)
+                throw new HivePerimeterClientException(
+                    HivePerimeterClientError.InvalidResponse,
+                    "The royal palace level disagrees with the building level.");
+
+            ValidateRoyalPalaceRequirements(royal.NextLevelRequirements);
+            ValidateRoyalPalaceUnlocks(royal.NextLevelUnlocks);
+            ValidateRoyalPalaceUnlocks(royal.UnlockedSoFar);
+        }
+
+        private static void ValidateRoyalPalaceRequirements(List<RemoteRoyalPalaceRequirement> requirements)
+        {
+            if (requirements == null) return;
+            if (requirements.Count > 16) throw InvalidResponse("The royal palace requirements are unbounded.");
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (RemoteRoyalPalaceRequirement requirement in requirements)
+            {
+                if (requirement == null || !IsSafeToken(requirement.BuildingKey) ||
+                    requirement.MinimumLevel < 1 || requirement.MinimumLevel > 1000 ||
+                    requirement.CurrentLevel < 0 || requirement.CurrentLevel > 1000 ||
+                    requirement.IsSatisfied != requirement.CurrentLevel >= requirement.MinimumLevel ||
+                    !seen.Add(requirement.BuildingKey))
+                    throw InvalidResponse("A royal palace requirement is invalid.");
+            }
+        }
+
+        private static void ValidateRoyalPalaceUnlocks(List<RemoteRoyalPalaceUnlock> unlocks)
+        {
+            if (unlocks == null) return;
+            if (unlocks.Count > 64) throw InvalidResponse("The royal palace unlocks are unbounded.");
+            foreach (RemoteRoyalPalaceUnlock unlock in unlocks)
+            {
+                if (unlock == null || !IsSafeToken(unlock.Key) ||
+                    string.IsNullOrWhiteSpace(unlock.Description) || unlock.Description.Length > 200)
+                    throw InvalidResponse("A royal palace unlock is invalid.");
+            }
         }
 
         private static SessionContext RequireUsableSession(GameAccountSession session)

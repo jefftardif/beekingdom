@@ -63,6 +63,93 @@ namespace BeeKingdom.Playground
             string.Equals(Status, HiveBuildingUpgradeClient.AwaitingCompletionStatus, StringComparison.Ordinal);
     }
 
+    // M055-CL - Progression du Palais Royal, projetee telle quelle depuis le serveur.
+    // Ces modeles ne CALCULENT rien : ils rendent lisible ce que le serveur a deja decide,
+    // pour que la fenetre du Palais Royal ne puisse jamais afficher une regle differente
+    // de celle qui sera reellement imposee au moment du Demarrer.
+    public sealed class HiveRoyalPalaceRequirementModel
+    {
+        internal HiveRoyalPalaceRequirementModel(RemoteRoyalPalaceRequirement source)
+        {
+            BuildingKey = source.BuildingKey ?? string.Empty;
+            MinimumLevel = source.MinimumLevel;
+            CurrentLevel = source.CurrentLevel;
+            IsSatisfied = source.IsSatisfied;
+        }
+
+        public string BuildingKey { get; }
+        public int MinimumLevel { get; }
+        public int CurrentLevel { get; }
+        public bool IsSatisfied { get; }
+    }
+
+    public sealed class HiveRoyalPalaceUnlockModel
+    {
+        internal HiveRoyalPalaceUnlockModel(RemoteRoyalPalaceUnlock source)
+        {
+            Key = source.Key ?? string.Empty;
+            Description = source.Description ?? string.Empty;
+            Enforced = source.Enforced;
+        }
+
+        public string Key { get; }
+        public string Description { get; }
+        // false = deblocage declaratif (vitrine de progression), pas encore impose par le
+        // jeu. L'UI doit rester honnete la-dessus et ne pas promettre un verrou inexistant.
+        public bool Enforced { get; }
+    }
+
+    public sealed class HiveRoyalPalaceProgressionModel
+    {
+        internal HiveRoyalPalaceProgressionModel(RemoteRoyalPalaceProgression source)
+        {
+            DefinitionVersion = source.DefinitionVersion ?? string.Empty;
+            IsAlphaBalance = source.IsAlphaBalance;
+            CurrentLevel = source.CurrentLevel;
+            NextLevel = source.NextLevel;
+            MaxConfiguredLevel = source.MaxConfiguredLevel;
+            IsMaxConfiguredLevel = source.IsMaxConfiguredLevel;
+            RequirementsSatisfied = source.RequirementsSatisfied;
+            BlockedReasonCode = source.BlockedReasonCode ?? string.Empty;
+            BlockingBuildingKey = source.BlockingBuildingKey ?? string.Empty;
+            BlockingBuildingMinimumLevel = source.BlockingBuildingMinimumLevel;
+            NextLevelDescription = source.NextLevelDescription ?? string.Empty;
+            NextLevelRequirements = source.NextLevelRequirements == null
+                ? Array.Empty<HiveRoyalPalaceRequirementModel>()
+                : source.NextLevelRequirements.Select(x => new HiveRoyalPalaceRequirementModel(x)).ToArray();
+            NextLevelUnlocks = source.NextLevelUnlocks == null
+                ? Array.Empty<HiveRoyalPalaceUnlockModel>()
+                : source.NextLevelUnlocks.Select(x => new HiveRoyalPalaceUnlockModel(x)).ToArray();
+            UnlockedSoFar = source.UnlockedSoFar == null
+                ? Array.Empty<HiveRoyalPalaceUnlockModel>()
+                : source.UnlockedSoFar.Select(x => new HiveRoyalPalaceUnlockModel(x)).ToArray();
+        }
+
+        public string DefinitionVersion { get; }
+        public bool IsAlphaBalance { get; }
+        public int CurrentLevel { get; }
+        public int? NextLevel { get; }
+        public int MaxConfiguredLevel { get; }
+        public bool IsMaxConfiguredLevel { get; }
+        public bool RequirementsSatisfied { get; }
+        public string BlockedReasonCode { get; }
+        public string BlockingBuildingKey { get; }
+        public int BlockingBuildingMinimumLevel { get; }
+        public string NextLevelDescription { get; }
+        public IReadOnlyList<HiveRoyalPalaceRequirementModel> NextLevelRequirements { get; }
+        public IReadOnlyList<HiveRoyalPalaceUnlockModel> NextLevelUnlocks { get; }
+        public IReadOnlyList<HiveRoyalPalaceUnlockModel> UnlockedSoFar { get; }
+
+        // Le premier prerequis manquant : la raison a montrer au joueur, et le batiment
+        // vers lequel le guider. Null quand tout est satisfait.
+        public HiveRoyalPalaceRequirementModel FirstMissingRequirement()
+        {
+            for (int index = 0; index < NextLevelRequirements.Count; index++)
+                if (!NextLevelRequirements[index].IsSatisfied) return NextLevelRequirements[index];
+            return null;
+        }
+    }
+
     public sealed class HiveBuildingUpgradeScreenModel
     {
         internal HiveBuildingUpgradeScreenModel(
@@ -77,8 +164,10 @@ namespace BeeKingdom.Playground
             IReadOnlyDictionary<string, int> buildingLevels,
             IReadOnlyList<HiveBuildingUpgradeOfferModel> offers,
             HiveBuildingUpgradeOperationModel activeOperation,
-            DateTimeOffset cachedAtUtc)
+            DateTimeOffset cachedAtUtc,
+            HiveRoyalPalaceProgressionModel royalPalace = null)
         {
+            RoyalPalace = royalPalace;
             State = state;
             ErrorCode = errorCode ?? string.Empty;
             RetrySignature = retrySignature ?? string.Empty;
@@ -109,6 +198,24 @@ namespace BeeKingdom.Playground
         public HiveBuildingUpgradeOperationModel ActiveOperation { get; }
         public DateTimeOffset CachedAtUtc { get; }
         public bool IsReadOnly => State == HiveBuildingUpgradeScreenState.OfflineReadOnly;
+        // Null quand le serveur n'expose pas (encore) de progression - l'ecran doit alors
+        // se comporter exactement comme avant M055.
+        public HiveRoyalPalaceProgressionModel RoyalPalace { get; }
+
+        // Le niveau du Palais Royal EST le niveau de la colonie. Une seule source de verite :
+        // le niveau du batiment administration_core renvoye par le serveur.
+        public int RoyalPalaceLevel()
+        {
+            return RoyalPalace != null ? RoyalPalace.CurrentLevel : LevelFor(HiveBuildingUpgradeClient.RoyalPalaceBuildingKey);
+        }
+
+        // Prerequis satisfaits ? (toujours vrai pour les autres batiments : M055 n'ajoute
+        // aucun prerequis ailleurs que sur le Palais Royal.)
+        public bool PrerequisitesSatisfied(string buildingKey)
+        {
+            if (!string.Equals(buildingKey, HiveBuildingUpgradeClient.RoyalPalaceBuildingKey, StringComparison.Ordinal)) return true;
+            return RoyalPalace == null || RoyalPalace.RequirementsSatisfied;
+        }
 
         public int LevelFor(string buildingKey)
         {
@@ -128,6 +235,10 @@ namespace BeeKingdom.Playground
                 string.Equals(ErrorCode, "network_unavailable", StringComparison.Ordinal) &&
                 RetrySignature.StartsWith("start|" + (buildingKey ?? string.Empty) + "|", StringComparison.Ordinal);
             if ((State != HiveBuildingUpgradeScreenState.Ready && !retry) || ActiveOperation != null) return false;
+            // M055-CL : le client refuse d'ENVOYER une demande que le serveur rejetterait de
+            // toute facon. C'est du confort d'affichage, PAS la securite : l'autorite reste
+            // BuildingUpgradeService cote serveur (voir RoyalPalaceProgression.TryValidateUpgrade).
+            if (!PrerequisitesSatisfied(buildingKey)) return false;
             HiveBuildingUpgradeOfferModel offer = OfferFor(buildingKey);
             if (offer == null) return false;
             foreach (KeyValuePair<string, long> cost in offer.Costs)
@@ -246,8 +357,11 @@ namespace BeeKingdom.Playground
             HiveBuildingUpgradeOperationModel operation = snapshot.ActiveOperation == null
                 ? null
                 : new HiveBuildingUpgradeOperationModel(snapshot.ActiveOperation);
+            HiveRoyalPalaceProgressionModel royalPalace = snapshot.RoyalPalace == null
+                ? null
+                : new HiveRoyalPalaceProgressionModel(snapshot.RoyalPalace);
             return new HiveBuildingUpgradeScreenModel(state, errorCode, retrySignature, mutatingBuildingKey, snapshot.Revision,
-                snapshot.ServerTimeUtc, projectedAt, balances, levels, offers, operation, cachedAtUtc);
+                snapshot.ServerTimeUtc, projectedAt, balances, levels, offers, operation, cachedAtUtc, royalPalace);
         }
 
         private static HiveBuildingUpgradeScreenModel Empty(HiveBuildingUpgradeScreenState state, string errorCode)
@@ -255,7 +369,7 @@ namespace BeeKingdom.Playground
             return new HiveBuildingUpgradeScreenModel(state, errorCode, string.Empty, string.Empty, 0L,
                 default(DateTimeOffset), TimeSpan.Zero,
                 new Dictionary<string, RemoteBuildingUpgradeBalance>(), new Dictionary<string, int>(),
-                Array.Empty<HiveBuildingUpgradeOfferModel>(), null, default(DateTimeOffset));
+                Array.Empty<HiveBuildingUpgradeOfferModel>(), null, default(DateTimeOffset), null);
         }
     }
 
@@ -524,6 +638,7 @@ namespace BeeKingdom.Playground
                     case "game.revision_conflict": return "revision_conflict";
                     case "game.construction_busy": return "construction_busy";
                     case "game.insufficient_resources": return "insufficient_resources";
+                    case HiveBuildingUpgradeClient.PrerequisitesNotMetCode: return "royal_palace_prerequisites";
                     case "game.level_conflict": return "level_conflict";
                     case "game.not_ready": return "not_ready";
                     case "game.operation_not_found": return "operation_not_found";

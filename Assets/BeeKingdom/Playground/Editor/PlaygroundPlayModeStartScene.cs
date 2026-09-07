@@ -10,6 +10,16 @@ namespace BeeKingdom.Playground.Editor
     public static class PlaygroundPlayModeStartScene
     {
         private const string MainDemoScenePath = "Assets/Scenes/SandboxPlayground.unity";
+        // LivingHive is permanently retired (CEO decision, 2026-09-03): never a Play Mode
+        // target, never a test reference. This constant and UseLivingHiveOnPlay()/
+        // OpenLivingHiveScene() below are kept ONLY because ~26 legacy one-off
+        // Sandbox*Capture.cs screenshot tools still call UseLivingHiveOnPlay() by name -
+        // removing it breaks the whole project's compilation. What WAS removed (see the
+        // M055 routing-regression report, Docs/AI/Missions) is the automatic re-lock in
+        // ConfigurePlayModeStartScene() that silently forced EVERY Play Mode press onto
+        // LivingHive whenever it merely happened to be the active/open scene - that ran on
+        // every domain reload via [InitializeOnLoad], with no explicit developer action.
+        // These two methods remain explicit, deliberate, developer-invoked calls only.
         private const string LivingHiveScenePath = "Assets/Scenes/LivingHive.unity";
         private const string Environment2D5DScenesFolder = "Assets/Experiments/Environment2D5D/";
         private const string HiveMapScenePath = "Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_HiveMap_Test.unity";
@@ -324,14 +334,6 @@ namespace BeeKingdom.Playground.Editor
             }
 
             string currentStartScenePath = AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene);
-            bool activeSceneIsLivingHive = activeScenePath == LivingHiveScenePath;
-            bool currentStartSceneIsLivingHive = currentStartScenePath == LivingHiveScenePath;
-            if (activeSceneIsLivingHive || currentStartSceneIsLivingHive)
-            {
-                SplashDevelopmentSceneConfig.DisableWave5PremiumMapMode();
-                ConfigurePlayModeStartScene(LivingHiveScenePath);
-                return;
-            }
 
             bool activeSceneIsExactCrop = IsExactCropWave6Scene(activeScenePath);
             bool currentStartSceneIsExactCrop = IsExactCropWave6Scene(currentStartScenePath);
