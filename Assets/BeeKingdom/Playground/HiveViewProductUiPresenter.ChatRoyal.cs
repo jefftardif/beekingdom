@@ -557,8 +557,14 @@ namespace BeeKingdom.Playground
                 return;
             }
 
+            // M059C-CL : ChatSelectChannel("private") seul ne fait que basculer d'onglet et
+            // choisir la PREMIERE conversation privee existante - sans lien avec le joueur tape.
+            // La vraie ouverture (creation OU retrouve, idempotent cote serveur) passe par
+            // CreatePrivateConversationAsync, qui selectionne ensuite la conversation reelle des
+            // qu'elle revient - voir LivingHiveChatController.CreatePrivateConversationAsync.
             CloseChatRoyalOverlays();
             ChatSelectChannel("private");
+            LivingHiveChatRuntime.CreatePrivateConversationAsync(entry.PlayerId.ToString("N"));
             ShowChatToast("Discussion avec " + entry.DisplayName + " demandee.");
             LivingHiveChatRuntime.RefreshInvitationsAsync();
         }

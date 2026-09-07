@@ -444,11 +444,23 @@ namespace BeeKingdom.Gameplay.Communication
             joinedRealtimeConversationIds.Clear();
         }
 
+        // M059C-CL : quand la negociation de capacites est invalidee par une expiration de bail
+        // (EnsureRemoteOperationReady, ligne ~583), ConnectionState restait a Realtime/Polling -
+        // le seul etat que OpenAsync() lit pour decider de sauter ConnectAsync() ("alreadyConnected").
+        // Consequence reelle, prouvee en Play Mode (session CEO > 5 min, la duree par defaut du
+        // bail) : plus AUCUN appel ulterieur ne renegociait jamais, donc plus rien ne
+        // reconnectait - "Discuter" (et toute autre action chat) restait bloque sur
+        // "Chat serveur indisponible" pour le reste de la session, sans auto-guerison possible.
+        // Remettre ConnectionState a Offline ici rend la prochaine invalidation visible a
+        // OpenAsync(), qui refera alors reellement ConnectAsync() -> NegotiateCapabilitiesAsync()
+        // et recuperera une capacite fraiche - c'est le chemin qui marchait deja en debut de
+        // session, simplement rendu a nouveau atteignable. Aucune logique Chat Royal reecrite.
         public void InvalidateCapabilities()
         {
             NegotiatedCapabilities = null;
             capabilitiesNegotiatedAtUtc = null;
             effectiveReplayMaxAge = replayPolicy.MaxAge;
+            ConnectionState = RemoteChatConnectionState.Offline;
         }
 
         private async Task HandleRealtimeAsync(RemoteChatEvent evt)

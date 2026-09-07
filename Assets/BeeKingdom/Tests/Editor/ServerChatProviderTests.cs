@@ -682,6 +682,75 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(disconnected.ServerCode, Is.EqualTo("capability_negotiation_required"));
         }
 
+        // M059C-CL - regression prouvee en Play Mode reel (CEO, session > 5 min, la duree par
+        // defaut du bail) : Chat Royal restait bloque sur "Chat serveur indisponible" pour le
+        // reste de la session apres l'expiration du bail de capacites, sans jamais se
+        // reconnecter tout seul. Cause : ConnectionState restait a Polling/Realtime apres
+        // l'invalidation, alors que c'est le SEUL signal que LivingHiveChatController.OpenAsync
+        // lit pour decider de sauter ConnectAsync() ("deja connecte"). Ce test reproduit le
+        // chemin exact d'OpenAsync (ConnectAsync une premiere fois, puis une operation distante
+        // apres expiration du bail) et prouve que ConnectionState ne ment plus : il redevient
+        // Offline des l'expiration, donc un futur OpenAsync() saura qu'il doit reellement se
+        // reconnecter - et le prouve en le faisant.
+        [Test]
+        public async Task ConnectionStateResetsAfterLeaseExpiryAllowingRealReconnect()
+        {
+            var clock = new FakeClock(new DateTimeOffset(2026, 9, 7, 12, 0, 0, TimeSpan.Zero));
+            var rest = new FakeRest();
+            var sessions = new CountingSession();
+            var provider = new ServerChatProvider(rest, sessions, clock: clock, requireCapabilityNegotiation: true, capabilityLeasePolicy: new ChatCapabilityLeasePolicy(TimeSpan.FromMinutes(5)));
+
+            await provider.ConnectAsync(CancellationToken.None);
+            Assert.That(provider.ConnectionState, Is.EqualTo(RemoteChatConnectionState.Polling),
+                "Fixture setup: no realtime transport, so a healthy connect lands on Polling.");
+
+            clock.UtcNow = clock.UtcNow.AddMinutes(5).AddTicks(1);
+            RemoteChatTransportException expired = Assert.ThrowsAsync<RemoteChatTransportException>(
+                async () => await provider.ListConversationsAsync(10, CancellationToken.None));
+            Assert.That(expired.ServerCode, Is.EqualTo("capability_lease_expired"));
+
+            Assert.That(provider.ConnectionState, Is.Not.EqualTo(RemoteChatConnectionState.Polling),
+                "The bug: ConnectionState used to stay Polling after the lease expired, so " +
+                "LivingHiveChatController.OpenAsync's 'alreadyConnected' check kept skipping " +
+                "ConnectAsync() forever - chat never recovered for the rest of the session.");
+            Assert.That(provider.ConnectionState, Is.EqualTo(RemoteChatConnectionState.Offline));
+
+            // Simulates exactly what OpenAsync() now does on its next call: alreadyConnected is
+            // false, so it calls ConnectAsync() for real, which must succeed and restore chat.
+            await provider.ConnectAsync(CancellationToken.None);
+            Assert.That(provider.ConnectionState, Is.EqualTo(RemoteChatConnectionState.Polling));
+            await provider.ListConversationsAsync(10, CancellationToken.None);
+        }
+
+        // M059C-CL - "Discuter" in the player picker (player search -> Nouvelle discussion) never
+        // called any endpoint: ChatStartPrivateConversation just switched the UI to the "Private"
+        // tab and picked whichever private conversation happened to already be selected, with no
+        // relation to the player actually tapped. This proves LivingHiveChatController.
+        // CreatePrivateConversationAsync (the fix) really calls the same POST /chat/v1/conversations
+        // endpoint Alliance/Server/Leaders/Group already use, with the tapped player as the sole
+        // participant, and that the returned conversation becomes the one actually selected -
+        // matching what the CEO now expects to see open.
+        [Test]
+        public async Task CreatePrivateConversationAsyncCreatesAndSelectsTheRealConversationForTheTappedPlayer()
+        {
+            var rest = new FakeRest();
+            var controller = new LivingHiveChatController(new ServerChatProvider(rest, new FakeSession()));
+
+            string conversationId = await controller.CreatePrivateConversationAsync("target-player-id", CancellationToken.None);
+
+            Assert.That(conversationId, Is.EqualTo("c-created"));
+            Assert.That(rest.LastCreateRequest.ChannelType, Is.EqualTo("Private"));
+            Assert.That(rest.LastCreateRequest.ParticipantIds, Is.EqualTo(new List<string> { "target-player-id" }));
+            Assert.That(controller.Snapshot().SelectedConversationId, Is.EqualTo("c-created"));
+        }
+
+        [Test]
+        public void CreatePrivateConversationAsyncRejectsAMissingParticipant()
+        {
+            var controller = new LivingHiveChatController(new ServerChatProvider(new FakeRest(), new FakeSession()));
+            Assert.ThrowsAsync<ArgumentException>(async () => await controller.CreatePrivateConversationAsync(" ", CancellationToken.None));
+        }
+
         [Test]
         public void CapabilityLeasePolicyRejectsStaleOrExcessiveDurations()
         {

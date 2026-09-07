@@ -217,6 +217,41 @@ namespace BeeKingdom.Gameplay.Communication
             await RefreshSelectedAsync(ct);
         }
 
+        // M059C-CL - le "Discuter" du selecteur de joueur (player search -> Nouvelle discussion)
+        // n'a JAMAIS appele aucun endpoint : il se contentait de basculer sur l'onglet "Private"
+        // et de choisir la PREMIERE conversation privee existante, sans rapport avec le joueur
+        // reellement tape. Cette methode complete le cablage manquant en reutilisant exactement
+        // le meme point d'entree serveur que /chat/v1/conversations sert deja pour Alliance/
+        // Server/Leaders/Group (provider.CreateConversationAsync) - aucun nouvel endpoint, aucune
+        // nouvelle regle serveur. Cote serveur (ChatService.CreateConversation), la cle
+        // d'audience "Private" est deja purement derivee des participants tries - c'est un
+        // "creer OU retrouver" idempotent par construction : rappeler cette methode pour la MEME
+        // paire de joueurs retombe toujours sur la MEME conversation, jamais un doublon.
+        public async Task<string> CreatePrivateConversationAsync(string participantPlayerId, CancellationToken ct)
+        {
+            string trimmed = participantPlayerId?.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) throw new ArgumentException("A participant player id is required.", nameof(participantPlayerId));
+
+            try
+            {
+                RemoteCreateConversationResult result = await provider.CreateConversationAsync(new RemoteCreateConversationRequest
+                {
+                    ChannelType = "Private",
+                    ParticipantIds = new List<string> { trimmed },
+                    ClientRequestId = Guid.NewGuid().ToString("N")
+                }, ct);
+                if (result?.Conversation == null || string.IsNullOrWhiteSpace(result.Conversation.ConversationId)) return null;
+
+                await SelectKnownConversationAsync(result.Conversation.ConversationId, result.Conversation.Title, "Private", ct);
+                return result.Conversation.ConversationId;
+            }
+            catch (RemoteChatTransportException exception)
+            {
+                SetStatus(MapStatus(exception.Error), exception.ServerCode ?? exception.Error.ToString());
+                return null;
+            }
+        }
+
         public async Task RefreshSelectedAsync(CancellationToken ct)
         {
             string conversationId;
@@ -472,6 +507,10 @@ namespace BeeKingdom.Gameplay.Communication
         public static Task OpenAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.OpenAsync(lifetime.Token); }
         public static Task SelectAsync(string id) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SelectConversationAsync(id, lifetime.Token); }
         public static Task SelectKnownAsync(string id, string title, string channelType) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SelectKnownConversationAsync(id, title, channelType, lifetime.Token); }
+        // M059C-CL - meme facade "jamais d'exception au site d'appel IMGUI" que les autres
+        // methodes ci-dessous : un controller absent repond simplement null plutot que de faire
+        // planter l'ecran Chat Royal, qui se dessine a chaque frame.
+        public static Task<string> CreatePrivateConversationAsync(string participantPlayerId) { lock (Gate) return controller == null ? Task.FromResult<string>(null) : controller.CreatePrivateConversationAsync(participantPlayerId, lifetime.Token); }
         public static Task SendAsync(string body) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SendAsync(body, lifetime.Token); }
         public static Task ResumeAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.ResumeAsync(lifetime.Token); }
         public static Task TranslateAsync(string messageId, string locale, string modelVersion) { lock (Gate) return controller == null ? Task.CompletedTask : controller.TranslateAsync(messageId, locale, modelVersion, lifetime.Token); }
