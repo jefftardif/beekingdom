@@ -87,5 +87,6 @@ public sealed class SpeedUpInventoryServiceTests
         public Task<PlayerHiveState?> ReadAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default) => Task.FromResult<PlayerHiveState?>(State);
         public Task<IReadOnlyList<Guid>> ListHiveIdsAsync(Guid playerId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Guid>>(new[] { State.HiveId });
         public Task<IReadOnlyList<PlayerHiveState>> ListRecentlyActiveAsync(int limit, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PlayerHiveState>>(new[] { State });
+        public Task<bool> DeleteAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 }

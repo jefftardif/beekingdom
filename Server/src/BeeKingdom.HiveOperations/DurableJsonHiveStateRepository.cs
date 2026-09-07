@@ -62,6 +62,20 @@ public sealed class DurableJsonHiveStateRepository(string rootDirectory, Func<Gu
         return states;
     }
 
+    public async Task<bool> DeleteAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default)
+    {
+        string path = PathFor(playerId, hiveId);
+        SemaphoreSlim gate = _locks.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!File.Exists(path)) return false;
+            File.Delete(path);
+            return true;
+        }
+        finally { gate.Release(); }
+    }
+
     private static async Task<PlayerHiveState?> ReadCoreAsync(string path, CancellationToken ct)
     {
         if (!File.Exists(path)) return null;

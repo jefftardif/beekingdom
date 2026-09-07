@@ -106,6 +106,10 @@ builder.Services.AddSingleton<BeeKingdom.HiveOperations.IServerClock, BeeKingdom
 builder.Services.AddSingleton<HivePerimeterSortieService>(sp => new HivePerimeterSortieService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
 builder.Services.AddSingleton<CombatPatrolService>(sp => new CombatPatrolService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IAllianceGameplayBonusResolver>()));
 builder.Services.AddSingleton<AdminSupportService>(sp => new AdminSupportService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>()));
+// M056-CL: cascade behind the Admin-gated account lookup/deletion endpoints. Registered here
+// because BeeKingdom.Server is the only assembly that can see Authentication, HiveOperations,
+// Chat and Alliance at once.
+builder.Services.AddSingleton<AccountDeletionService>();
 builder.Services.AddSingleton<RewardLedgerService>(sp => new RewardLedgerService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IOptions<RewardLedgerOptions>>().Value));
 builder.Services.AddBeeKingdomAllianceHelp(builder.Configuration);
 builder.Services.AddBeeKingdomAllianceResearch(builder.Configuration);
@@ -2387,6 +2391,46 @@ app.MapPost("/accounts/v1/role/assign", (HttpContext context, AuthenticationMana
     return Results.Ok(new AccountRoleLookupResult(target.AccountId, target.DisplayName, target.Email, request.Role));
 });
 
+// M056-CL: Admin-gated account support tooling backing /bk-admin/accounts on the companion
+// website. Same session-based gate as /accounts/v1/role/lookup above (AuthenticateGameRequest +
+// caller.Role == AccountRole.Admin re-derived server-side from the account record) - deliberately
+// NOT a shared ops key, so no admin secret ever has to reach a browser.
+app.MapGet("/accounts/v1/admin/lookup", async (HttpContext context, string email, AuthenticationManager authentication, IAccountCredentialStore credentials, AccountDeletionService deletion, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!credentials.TryGetByAccountId(auth.AccountId, out AuthenticationAccount caller) || caller.Role != AccountRole.Admin) return GameError(403, "game.forbidden", "game.error.forbidden");
+    if (string.IsNullOrWhiteSpace(email) || email.Length > 320) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    AccountDeletionService.Detail? detail = await deletion.LookupByEmailAsync(email, cancellationToken);
+    return detail is null ? GameError(404, "game.not_found", "game.error.not_found") : Results.Ok(detail);
+});
+
+// Irreversible. The typed-email confirmation the admin UI collects is forwarded here and
+// re-checked against the account id at execution time (see AccountDeletionService.DeleteAsync) so
+// a stale search result can never delete a different account than the one on screen.
+app.MapDelete("/accounts/v1/admin/accounts/{accountId:guid}", async (HttpContext context, Guid accountId, AuthenticationManager authentication, IAccountCredentialStore credentials, AccountDeletionService deletion, [Microsoft.AspNetCore.Mvc.FromBody] AdminAccountDeleteHttpRequest? request, CancellationToken cancellationToken) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!credentials.TryGetByAccountId(auth.AccountId, out AuthenticationAccount caller) || caller.Role != AccountRole.Admin) return GameError(403, "game.forbidden", "game.error.forbidden");
+    if (request is null || string.IsNullOrWhiteSpace(request.ConfirmEmail)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        AccountDeletionService.Summary summary = await deletion.DeleteAsync(accountId, request.ConfirmEmail, cancellationToken);
+        return Results.Ok(summary);
+    }
+    catch (AccountDeletionService.BlockedException ex)
+    {
+        int status = ex.Code switch
+        {
+            "account.not_found" => 404,
+            "account.email_mismatch" => 400,
+            _ => 409
+        };
+        return GameError(status, ex.Code, ex.Message);
+    }
+});
+
 app.MapPost("/gateway/connections", (GatewayManager gateway, GatewayConnectionRequest request) =>
 {
     return Results.Ok(gateway.AcceptConnection(request));
@@ -3497,6 +3541,10 @@ public sealed record AdminAdjustRecallTokensHttpRequest(long Delta, string Reaso
 public sealed record AdminSetBuildingLevelHttpRequest(string BuildingKey, int Level, string Reason, long ExpectedRevision);
 public sealed record AdminSetRoleHttpRequest(AccountRole Role, string Reason);
 public sealed record AccountRoleAssignHttpRequest(Guid TargetAccountId, AccountRole Role);
+
+// M056-CL: ConfirmEmail is the admin's typed confirmation, re-verified against the target account
+// id server-side before anything is deleted.
+public sealed record AdminAccountDeleteHttpRequest(string ConfirmEmail);
 public sealed record AccountRoleLookupResult(Guid AccountId, string? DisplayName, string Email, AccountRole Role);
 public sealed record AdminGrantRewardHttpRequest(string RewardKey, string Source, string ResourceKey, long Amount, string Reason, long ExpectedRevision, string IdempotencyKey, string? NotificationKey = null);
 public sealed record CombatPatrolPreviewHttpRequest(long Guardians, long Wingrunners, long Darters);

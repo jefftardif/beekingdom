@@ -17,4 +17,13 @@ public interface IAccountCredentialStore
     bool IsDisplayNameTaken(Guid worldId, string displayName, Guid excludingAccountId);
     IReadOnlyList<AuthenticationAccount> SearchByDisplayName(string displayNameContains);
     void Save(AuthenticationAccount account);
+
+    // M056-CL: HARD delete of the credential row - the only way the email address becomes free to
+    // register again (Email carries a UNIQUE index, see DatabaseCatalog 030_authentication_sessions).
+    // Deliberately NOT the same thing as AccountService.DeleteAccount /
+    // AccountStatus.Deleted, which is a status flag on the dormant BeeKingdom.Accounts
+    // AccountManager/AccountProfile subsystem and has no effect whatsoever on login: this store is
+    // what Google/email authentication actually reads. Returns false when no such account exists.
+    // Only ever reached from the Admin-gated account-deletion endpoint.
+    bool DeleteAccount(Guid accountId);
 }

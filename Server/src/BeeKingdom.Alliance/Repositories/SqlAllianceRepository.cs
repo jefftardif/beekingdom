@@ -219,6 +219,27 @@ public sealed class SqlAllianceRepository : IAllianceRepository
         return results;
     }
 
+    public IReadOnlyList<AllianceApplication> ListPendingApplicationsForPlayer(PlayerId playerId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT * FROM dbo.AllianceApplications
+            WHERE PlayerId = @PlayerId AND Status = @Status
+            ORDER BY SubmittedAtUtc ASC;
+            """;
+        Add(command, "@PlayerId", playerId.Value);
+        Add(command, "@Status", AllianceApplicationStatus.Pending.ToString());
+        using IDataReader reader = command.ExecuteReader();
+        List<AllianceApplication> results = new();
+        while (reader.Read())
+        {
+            results.Add(ReadApplication(reader));
+        }
+        return results;
+    }
+
     public Guid? GetApplicationReceipt(PlayerId playerId, string clientRequestId)
         => QueryReceipt("dbo.AllianceApplicationReceipts", "ApplicationId", playerId, clientRequestId);
 

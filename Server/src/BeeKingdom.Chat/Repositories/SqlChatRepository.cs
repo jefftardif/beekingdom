@@ -459,6 +459,32 @@ public sealed class SqlChatRepository : IChatRepository
     public int PurgeExpiredReceipts(DateTimeOffset cutoffUtc)
     {using IDbConnection c=connectionFactory.CreateConnection();c.Open();using IDbTransaction tx=c.BeginTransaction();int removed=0;foreach(string sql in new[]{"DELETE FROM dbo.ChatOutboxReceipts WHERE AcceptedAtUtc IS NOT NULL AND AcceptedAtUtc < @CutoffUtc","DELETE FROM dbo.ChatConversationCreationReceipts WHERE CreatedAtUtc < @CutoffUtc","DELETE FROM dbo.ChatModerationReportReceipts WHERE CreatedAtUtc < @CutoffUtc"}){using IDbCommand cmd=c.CreateCommand();cmd.Transaction=tx;cmd.CommandText=sql;Add(cmd,"@CutoffUtc",cutoffUtc.UtcDateTime);removed+=cmd.ExecuteNonQuery();}tx.Commit();return removed;}
 
+    // M056-CL: see IChatRepository.DeletePlayerChatFootprint - dbo.ChatMessages is intentionally
+    // absent from this list so another player's readable history is never damaged.
+    public int DeletePlayerChatFootprint(PlayerId playerId)
+    {
+        using IDbConnection c = connectionFactory.CreateConnection();
+        c.Open();
+        using IDbTransaction tx = c.BeginTransaction();
+        int removed = 0;
+        foreach (string sql in new[]
+        {
+            "DELETE FROM dbo.ChatInbox WHERE PlayerId = @PlayerId",
+            "DELETE FROM dbo.ChatOutboxReceipts WHERE PlayerId = @PlayerId",
+            "DELETE FROM dbo.ChatConversationCreationReceipts WHERE PlayerId = @PlayerId",
+            "DELETE FROM dbo.ChatModerationReportReceipts WHERE ReporterPlayerId = @PlayerId"
+        })
+        {
+            using IDbCommand cmd = c.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = sql;
+            Add(cmd, "@PlayerId", playerId.Value);
+            removed += cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
+        return removed;
+    }
+
     private ChatConversation? QuerySingleConversation(string whereClause, Action<IDbCommand> configure)
     {
         using IDbConnection connection = connectionFactory.CreateConnection();

@@ -64,6 +64,33 @@ public sealed class SqlHiveStateRepository(string connectionString, Func<Guid, G
         return states;
     }
 
+    // M056-CL: hard delete of the hive row plus the two side tables keyed by the same
+    // (PlayerId, HiveId) pair - HiveCommandReceipts and HiveOperationQueue have no FK back to
+    // HivePlayerStates, so neither cascades on its own and a leftover receipt would otherwise make
+    // a replayed idempotency key resolve against a deleted player. Runs under the same app lock and
+    // serializable transaction as a normal mutation.
+    public async Task<bool> DeleteAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default)
+    {
+        await using SqlConnection connection = new(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using SqlTransaction transaction = (SqlTransaction)await connection.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await AcquireLockAsync(connection, transaction, playerId, hiveId, cancellationToken);
+        await using SqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandTimeout = commandTimeoutSeconds;
+        command.CommandText = """
+            DELETE FROM dbo.HiveCommandReceipts WHERE PlayerId=@playerId AND HiveId=@hiveId;
+            DELETE FROM dbo.HiveOperationQueue WHERE PlayerId=@playerId AND HiveId=@hiveId;
+            DELETE FROM dbo.HivePlayerStates WHERE PlayerId=@playerId AND HiveId=@hiveId;
+            SELECT @@ROWCOUNT;
+            """;
+        command.Parameters.Add(new SqlParameter("@playerId", SqlDbType.UniqueIdentifier) { Value = playerId });
+        command.Parameters.Add(new SqlParameter("@hiveId", SqlDbType.UniqueIdentifier) { Value = hiveId });
+        object? affected = await command.ExecuteScalarAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return affected is not null and not DBNull && Convert.ToInt32(affected) > 0;
+    }
+
     private async Task AcquireLockAsync(SqlConnection connection, SqlTransaction transaction, Guid playerId, Guid hiveId, CancellationToken ct)
     {
         await using SqlCommand command = connection.CreateCommand();

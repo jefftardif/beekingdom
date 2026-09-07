@@ -1683,6 +1683,7 @@ public sealed class AllianceResearchServiceTests
         private readonly Dictionary<(Guid PlayerId, Guid HiveId), PlayerHiveState> states = new();
 
         public void Seed(PlayerHiveState state) { lock (gate) states[(state.PlayerId, state.HiveId)] = state; }
+        public Task<bool> DeleteAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default) { lock (gate) return Task.FromResult(states.Remove((playerId, hiveId))); }
 
         public Task<PlayerHiveState> ExecuteAtomicallyAsync(Guid playerId, Guid hiveId, Func<PlayerHiveState, PlayerHiveState> mutation, CancellationToken cancellationToken = default)
         {

@@ -130,6 +130,7 @@ public sealed class DurableJsonAllianceRepository : IAllianceRepository
     public AllianceApplication? GetApplication(Guid applicationId) => inner.GetApplication(applicationId);
     public AllianceApplication? GetPendingApplication(AllianceId allianceId, PlayerId playerId) => inner.GetPendingApplication(allianceId, playerId);
     public IReadOnlyList<AllianceApplication> ListPendingApplications(AllianceId allianceId) => inner.ListPendingApplications(allianceId);
+    public IReadOnlyList<AllianceApplication> ListPendingApplicationsForPlayer(PlayerId playerId) => inner.ListPendingApplicationsForPlayer(playerId);
     public Guid? GetApplicationReceipt(PlayerId playerId, string clientRequestId) => inner.GetApplicationReceipt(playerId, clientRequestId);
 
     public void SaveApplicationReceipt(PlayerId playerId, string clientRequestId, Guid applicationId)

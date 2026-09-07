@@ -117,6 +117,14 @@ public sealed record AllianceInvitation
     public DateTimeOffset? RespondedAtUtc { get; init; }
 }
 
+// M056-CL: what the Admin-gated account deletion actually removed on the Alliance side, surfaced
+// back to the admin UI so the confirmation screen can state it in plain words.
+public sealed record AllianceAccountDeletionResult(
+    Guid? AllianceId,
+    string? AllianceName,
+    int CancelledApplications,
+    int RevokedInvitations);
+
 // A single, centralized permission surface - AllianceService checks capabilities through this
 // instead of scattering `if (role == AllianceRole.Leader || role == AllianceRole.Officer)` across
 // every mutation method. Fields left in even for not-yet-active subsystems (diplomacy/war) so the

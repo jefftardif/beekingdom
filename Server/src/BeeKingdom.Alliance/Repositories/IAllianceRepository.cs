@@ -30,6 +30,11 @@ public interface IAllianceRepository
     AllianceApplication? GetApplication(Guid applicationId);
     AllianceApplication? GetPendingApplication(AllianceId allianceId, PlayerId playerId);
     IReadOnlyList<AllianceApplication> ListPendingApplications(AllianceId allianceId);
+    // M056-CL: by-PLAYER counterpart of ListPendingApplications, needed by the Admin-gated account
+    // deletion cascade - without it a deleted account's pending application would keep sitting in
+    // some other alliance's applications list forever, pointing at a player id that no longer
+    // resolves. Read-only helper; the cascade cancels what it finds through SaveApplication.
+    IReadOnlyList<AllianceApplication> ListPendingApplicationsForPlayer(PlayerId playerId);
     Guid? GetApplicationReceipt(PlayerId playerId, string clientRequestId);
     void SaveApplicationReceipt(PlayerId playerId, string clientRequestId, Guid applicationId);
 

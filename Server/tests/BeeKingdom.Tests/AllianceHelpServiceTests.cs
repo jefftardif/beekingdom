@@ -501,6 +501,7 @@ public sealed class AllianceHelpServiceTests
         public void Seed(PlayerHiveState state) { lock (gate) states[(state.PlayerId, state.HiveId)] = state; }
         public PlayerHiveState? Get(Guid playerId, Guid hiveId) { lock (gate) return states.TryGetValue((playerId, hiveId), out PlayerHiveState? value) ? value : null; }
         public void Mutate(Guid playerId, Guid hiveId, Func<PlayerHiveState, PlayerHiveState> mutation) { lock (gate) states[(playerId, hiveId)] = mutation(states[(playerId, hiveId)]); }
+        public Task<bool> DeleteAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default) { lock (gate) return Task.FromResult(states.Remove((playerId, hiveId))); }
 
         public Task<PlayerHiveState> ExecuteAtomicallyAsync(Guid playerId, Guid hiveId, Func<PlayerHiveState, PlayerHiveState> mutation, CancellationToken cancellationToken = default)
         {

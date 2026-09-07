@@ -321,6 +321,12 @@ public sealed class RoyalPalaceProgressionTests
         }
         public Task<IReadOnlyList<Guid>> ListHiveIdsAsync(Guid p, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Guid>>(State != null && State.PlayerId == p ? new List<Guid> { State.HiveId } : new List<Guid>());
+        public Task<bool> DeleteAsync(Guid p, Guid h, CancellationToken ct = default)
+        {
+            bool had = State != null && State.PlayerId == p && State.HiveId == h;
+            if (had) State = null;
+            return Task.FromResult(had);
+        }
         public Task<IReadOnlyList<PlayerHiveState>> ListRecentlyActiveAsync(int limit, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<PlayerHiveState>>(State != null ? new List<PlayerHiveState> { State } : new List<PlayerHiveState>());
     }

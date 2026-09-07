@@ -523,6 +523,47 @@ public sealed class AllianceService
         RemoveMember(target, AllianceActivityType.MemberKicked, actorPlayerId, targetPlayerId);
     }
 
+    // M056-CL: alliance-side half of the Admin-gated account deletion cascade. Deliberately routes
+    // through the SAME RemoveMember path as Kick/Leave, so member count, chat participant removal
+    // and help-request cancellation all stay consistent instead of being re-implemented.
+    //
+    // A Leader is REFUSED rather than removed: dissolving (or silently decapitating) an alliance
+    // that other, real players belong to is far too large a side effect for "delete one test
+    // account". The admin is told to transfer leadership or dissolve first, exactly like the
+    // ordinary Leave path already demands.
+    //
+    // Returns null when the player has no active membership. Also cancels the player's own pending
+    // applications and invitations so nothing dangling survives in other alliances' queues.
+    public AllianceAccountDeletionResult? RemoveForAccountDeletion(PlayerId playerId)
+    {
+        AllianceMembership? membership = repository.GetActiveMembershipForPlayer(playerId);
+        if (membership is not null && membership.Role == AllianceRole.Leader)
+            throw new InvalidOperationException("leader_must_transfer_or_dissolve");
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        int cancelledApplications = 0;
+        foreach (AllianceApplication application in repository.ListPendingApplicationsForPlayer(playerId))
+        {
+            repository.SaveApplication(application with { Status = AllianceApplicationStatus.Cancelled, RespondedAtUtc = now, RespondedByPlayerId = playerId });
+            cancelledApplications++;
+        }
+
+        int revokedInvitations = 0;
+        foreach (AllianceInvitation invitation in repository.ListPendingInvitationsForPlayer(playerId))
+        {
+            repository.SaveInvitation(invitation with { Status = AllianceInvitationStatus.Revoked, RespondedAtUtc = now });
+            revokedInvitations++;
+        }
+
+        if (membership is null) return cancelledApplications == 0 && revokedInvitations == 0
+            ? null
+            : new AllianceAccountDeletionResult(null, null, cancelledApplications, revokedInvitations);
+
+        AllianceEntity? alliance = repository.Get(membership.AllianceId);
+        RemoveMember(membership, AllianceActivityType.MemberLeft, playerId, playerId);
+        return new AllianceAccountDeletionResult(membership.AllianceId.Value, alliance?.Name, cancelledApplications, revokedInvitations);
+    }
+
     private void RemoveMember(AllianceMembership membership, AllianceActivityType activityType, PlayerId actorPlayerId, PlayerId targetPlayerId)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -676,6 +717,11 @@ public sealed class AllianceService
     }
 
     public AllianceEntity? GetBySlug(string slug) => repository.GetBySlug(slug);
+
+    // M056-CL: read-only helpers so the Admin account-lookup screen can show which alliance the
+    // account belongs to (and what would therefore be affected) before anything is deleted.
+    public AllianceMembership? FindActiveMembership(PlayerId playerId) => repository.GetActiveMembershipForPlayer(playerId);
+    public AllianceEntity? FindAlliance(AllianceId allianceId) => repository.Get(allianceId);
 
     // M043-CL: NO_ALLIANCE vs IN_ALLIANCE detection for the Unity client - see MyAllianceOverview.
     public MyAllianceOverview? GetMyAlliance(PlayerId actorPlayerId)

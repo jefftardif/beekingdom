@@ -83,6 +83,24 @@ public sealed class SqlAccountCredentialStore : IAccountCredentialStore
         return true;
     }
 
+    // M056-CL: hard row delete. Sessions go first so a live bearer token can never outlive the
+    // credential row it was minted from (AuthenticationSessions has no FK to AuthenticationAccounts,
+    // so nothing cascades on its own). Both statements run in one batch against one connection.
+    public bool DeleteAccount(Guid accountId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = """
+            DELETE FROM dbo.AuthenticationSessions WHERE AccountId = @AccountId;
+            DELETE FROM dbo.AuthenticationAccounts WHERE AccountId = @AccountId;
+            SELECT @@ROWCOUNT;
+            """;
+        Add(command, "@AccountId", accountId);
+        object? affected = command.ExecuteScalar();
+        return affected is not null && affected is not DBNull && Convert.ToInt32(affected) > 0;
+    }
+
     public bool TryGetByGoogleSubjectId(string googleSubjectId, out AuthenticationAccount account)
     {
         using IDbConnection connection = connectionFactory.CreateConnection();

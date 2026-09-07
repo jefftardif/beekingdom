@@ -262,6 +262,19 @@ public sealed class InMemoryChatRepository : IChatRepository
     public int PurgeExpiredReceipts(DateTimeOffset cutoffUtc)
     {lock(sync){int removed=0;foreach(string key in creationReceipts.Where(x=>x.Value.CreatedAtUtc<cutoffUtc).Select(x=>x.Key).ToArray()){creationReceipts.Remove(key);removed++;}foreach(string key in outbox.Where(x=>x.Value.AcceptedAtUtc.HasValue&&x.Value.AcceptedAtUtc<cutoffUtc).Select(x=>x.Key).ToArray()){outbox.Remove(key);removed++;}foreach(string key in reportReceipts.Where(x=>x.Value.CreatedAtUtc<cutoffUtc).Select(x=>x.Key).ToArray()){reportReceipts.Remove(key);removed++;}return removed;}}
 
+    public int DeletePlayerChatFootprint(PlayerId playerId)
+    {
+        lock (sync)
+        {
+            int removed = 0;
+            foreach (string key in inbox.Where(x => x.Value.PlayerId == playerId).Select(x => x.Key).ToArray()) { inbox.Remove(key); removed++; }
+            foreach (string key in outbox.Where(x => x.Value.PlayerId == playerId).Select(x => x.Key).ToArray()) { outbox.Remove(key); removed++; }
+            foreach (string key in creationReceipts.Where(x => x.Value.PlayerId == playerId).Select(x => x.Key).ToArray()) { creationReceipts.Remove(key); removed++; }
+            foreach (string key in reportReceipts.Where(x => x.Value.ReporterPlayerId == playerId).Select(x => x.Key).ToArray()) { reportReceipts.Remove(key); removed++; }
+            return removed;
+        }
+    }
+
     private static string AudienceKey(Guid gameServerId, Guid worldId, ChatChannelType channelType, string audienceKey)
         => $"{gameServerId:N}:{worldId:N}:{channelType}:{audienceKey}";
 

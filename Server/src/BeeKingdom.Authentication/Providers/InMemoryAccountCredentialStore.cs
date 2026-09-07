@@ -119,4 +119,16 @@ public sealed class InMemoryAccountCredentialStore : IAccountCredentialStore
             if (!string.IsNullOrEmpty(account.GoogleSubjectId)) accountsByGoogleSubjectId[account.GoogleSubjectId] = account;
         }
     }
+
+    public bool DeleteAccount(Guid accountId)
+    {
+        lock (sync)
+        {
+            AuthenticationAccount? account = accountsByEmail.Values.FirstOrDefault(a => a.AccountId == accountId);
+            if (account is null) return false;
+            accountsByEmail.Remove(account.Email);
+            if (!string.IsNullOrEmpty(account.GoogleSubjectId)) accountsByGoogleSubjectId.Remove(account.GoogleSubjectId);
+            return true;
+        }
+    }
 }

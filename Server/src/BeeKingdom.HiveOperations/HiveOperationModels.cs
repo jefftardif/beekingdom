@@ -185,4 +185,12 @@ public interface IHiveStateRepository
     // sans introduire un registre/index dedie. Uniquement lecture, jamais utilise pour muter
     // l'etat d'un autre joueur.
     Task<IReadOnlyList<PlayerHiveState>> ListRecentlyActiveAsync(int limit, CancellationToken cancellationToken = default);
+
+    // M056-CL: HARD delete of one player's hive row, for the Admin-gated account-deletion cascade
+    // only. Because PlayerHiveState is this codebase's durable player-owned bucket, this single
+    // delete is what actually removes the player's Royal Seals wallet, reward ledger, VIP/Champion
+    // Bee progression, SpeedUps inventory, tutorial progress, Bestiary codex and every stored
+    // idempotency receipt - there is no separate table for any of them. Never called from any
+    // player-reachable path. Returns false when no row existed.
+    Task<bool> DeleteAsync(Guid playerId, Guid hiveId, CancellationToken cancellationToken = default);
 }

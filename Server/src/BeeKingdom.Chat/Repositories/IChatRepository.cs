@@ -36,4 +36,18 @@ public interface IChatRepository
     ChatModerationReportReceipt SaveModerationReportReceipt(ChatModerationReportReceipt receipt);
     ChatModerationReport SaveModerationReportIdempotent(ChatModerationReport report,ChatModerationReportReceipt receipt);
     int PurgeExpiredReceipts(DateTimeOffset cutoffUtc);
+
+    // M056-CL: erases one player's PERSONAL chat footprint for the Admin-gated account-deletion
+    // cascade - their inbox entries plus their own outbox/creation/moderation-report receipts, all
+    // of which are keyed by PlayerId and are meaningless once the account is gone.
+    //
+    // Deliberately does NOT touch dbo.ChatMessages. A deleted account's authored messages sit
+    // inside conversations that belong to OTHER, real players; hard-deleting them would silently
+    // punch holes in a third party's readable history (and break sequence continuity) because an
+    // unrelated test account was removed. Removing them as a PARTICIPANT is the correct, already-
+    // established convention here - AllianceService.RemoveMember does exactly that via
+    // RemoveParticipant on kick/leave - so the deletion cascade reuses it rather than inventing a
+    // destructive second behaviour. Participant removal is done by the caller, not here, so it
+    // stays visible in the cascade summary returned to the admin.
+    int DeletePlayerChatFootprint(PlayerId playerId);
 }

@@ -161,6 +161,15 @@ public sealed class InMemoryAllianceRepository : IAllianceRepository
         }
     }
 
+    public IReadOnlyList<AllianceApplication> ListPendingApplicationsForPlayer(PlayerId playerId)
+    {
+        lock (sync)
+        {
+            return applications.Values.Where(a => a.PlayerId == playerId && a.Status == AllianceApplicationStatus.Pending)
+                .OrderBy(a => a.SubmittedAtUtc).ToArray();
+        }
+    }
+
     public Guid? GetApplicationReceipt(PlayerId playerId, string clientRequestId)
     {
         lock (sync) return applicationReceipts.TryGetValue(ReceiptKey(playerId, clientRequestId), out Guid id) ? id : null;
