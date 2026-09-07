@@ -1,0 +1,4 @@
+- Cause : nom du sélecteur perdu à la synchronisation ; messages confirmés classés sans comparer l’identité de l’expéditeur.
+- Fichier : `Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.ChatRoyal.cs` ; réutilisation de `Peer` et des noms reçus, alignement par identifiant du joueur connecté.
+- Compilation : `Assembly-CSharp.csproj` réussie, 0 erreur, 355 avertissements ; aucun test exécuté. Backend et connexion/envoi inchangés.
+- Limite : sans titre serveur, nom choisi ni message reçu disponible, le libellé de secours demeure. Retest CEO : nom « bob », envois à droite, réceptions à gauche.

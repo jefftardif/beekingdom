@@ -143,6 +143,7 @@ namespace BeeKingdom.Playground
 
             // Les canaux "system"/"events" n'ont pas d'equivalent serveur : ils restent locaux et
             // en lecture seule, tout le reste vient du serveur.
+            ChatConversationData[] previousConversations = chatConversations.ToArray();
             chatConversations.RemoveAll(item => !string.Equals(item.Channel, "system", StringComparison.Ordinal)
                 && !string.Equals(item.Channel, "events", StringComparison.Ordinal));
 
@@ -150,11 +151,20 @@ namespace BeeKingdom.Playground
             {
                 if (conversation == null || string.IsNullOrWhiteSpace(conversation.ConversationId)) continue;
                 string channelId = ChatChannelIdFor(conversation.ChannelType);
+                string peer = previousConversations.FirstOrDefault(item => item.Id == conversation.ConversationId)?.Peer;
+                if (channelId == "private")
+                    peer = snapshot.Messages.FirstOrDefault(message => message != null
+                        && message.ConversationId == conversation.ConversationId
+                        && Guid.TryParse(message.SenderPlayerId, out Guid senderId)
+                        && senderId != MobileAccountSessionRuntimeBootstrap.GameplayPlayerId
+                        && !string.IsNullOrWhiteSpace(message.SenderDisplayName))?.SenderDisplayName ?? peer;
                 chatConversations.Add(new ChatConversationData
                 {
                     Id = conversation.ConversationId,
                     Channel = channelId,
-                    Title = string.IsNullOrWhiteSpace(conversation.Title) ? "Discussion" : conversation.Title,
+                    Title = !string.IsNullOrWhiteSpace(conversation.Title) ? conversation.Title
+                        : channelId == "private" && !string.IsNullOrWhiteSpace(peer) ? peer : "Discussion",
+                    Peer = peer,
                     Icon = string.Equals(channelId, ChatGroupsChannelId, StringComparison.Ordinal) ? "members"
                         : string.Equals(channelId, "private", StringComparison.Ordinal) ? "bee"
                         : string.Equals(channelId, "world", StringComparison.Ordinal) ? "world" : "alliance",
@@ -186,8 +196,9 @@ namespace BeeKingdom.Playground
             foreach (LivingHiveChatMessage message in snapshot.Messages)
             {
                 if (message == null || !string.Equals(message.ConversationId, conversationId, StringComparison.Ordinal)) continue;
-                bool fromSelf = message.Delivery != LivingHiveChatDelivery.Confirmed
-                    || string.IsNullOrWhiteSpace(message.SenderDisplayName);
+                bool fromSelf = Guid.TryParse(message.SenderPlayerId, out Guid senderId)
+                    ? senderId != Guid.Empty && senderId == MobileAccountSessionRuntimeBootstrap.GameplayPlayerId
+                    : message.Delivery != LivingHiveChatDelivery.Confirmed;
                 mapped.Add(new ChatMessageData
                 {
                     Id = string.IsNullOrWhiteSpace(message.MessageId) ? "pending-" + index : message.MessageId,
@@ -605,19 +616,28 @@ namespace BeeKingdom.Playground
             // rattaches, sous le vrai identifiant retourne ici.
             CloseChatRoyalOverlays();
             ChatSelectChannel("private");
-            ChatStartPrivateConversationAndSyncSelection(entry.PlayerId.ToString("N"));
+            ChatStartPrivateConversationAndSyncSelection(entry.PlayerId.ToString("N"), entry.DisplayName);
             ShowChatToast("Discussion avec " + entry.DisplayName + " demandee.");
             LivingHiveChatRuntime.RefreshInvitationsAsync();
         }
 
         // Meme patron fire-and-forget "async void" que ChatSendCurrentToServer / SendAllianceChatMessage :
         // jamais d'exception non observee, capturee par type seulement.
-        private static async void ChatStartPrivateConversationAndSyncSelection(string participantPlayerId)
+        private static async void ChatStartPrivateConversationAndSyncSelection(string participantPlayerId, string displayName)
         {
             try
             {
                 string conversationId = await LivingHiveChatRuntime.CreatePrivateConversationAsync(participantPlayerId);
                 if (string.IsNullOrWhiteSpace(conversationId)) return;
+                ChatRoyalSyncFromServer();
+                ChatConversationData conversation = ChatConversationById(conversationId);
+                if (conversation != null)
+                {
+                    conversation.Peer = displayName;
+                    if (string.IsNullOrWhiteSpace(ChatServerSnapshot()?.Conversations
+                        .FirstOrDefault(item => item.ConversationId == conversationId)?.Title))
+                        conversation.Title = displayName;
+                }
                 chatSelectedConversation = conversationId;
                 chatMessagesScroll = Vector2.zero;
                 chatActionMessageIndex = -1;
