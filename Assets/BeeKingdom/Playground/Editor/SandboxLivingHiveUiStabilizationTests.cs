@@ -53,6 +53,12 @@ namespace BeeKingdom.Playground.Editor
 
             HiveViewProductUiPresenter.OpenAllianceMemberProfileForProof("Testeur");
             AssertFullScreenBlocks("alliance profile");
+            // M058-CL / M043O-CL : la pile de retour de l'Alliance est volontairement en deux
+            // temps - 1er retour ferme le profil et revient au Centre d'Alliance (qui reste
+            // affiche, donc le monde reste legitimement bloque), 2e retour quitte l'ecran.
+            // Voir AllianceScreenOverlayLeakTests.AllianceBackStackStillClosesProfileFirstThen-
+            // TheScreen, qui prouve ce comportement via le vrai chemin d'ouverture.
+            HiveViewProductUiPresenter.ClosePremiumScreensForProof();
             HiveViewProductUiPresenter.ClosePremiumScreensForProof();
 
             HiveViewProductUiPresenter.OpenChatScreenForProof();
@@ -105,6 +111,42 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
+        public void PlayerSummaryOpensProfileAndBlocksUnderlyingHiveInput()
+        {
+            HiveViewProductUiPresenter.OpenPlayerSummaryForProof();
+
+            Assert.That(HiveViewProductUiPresenter.PlayerSummaryOpenForProof, Is.True);
+            Assert.That(HiveViewProductUiPresenter.PlayerSummaryOverlayOpenForExternalHost, Is.True);
+            Assert.That(HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof, Is.True);
+            Assert.That(HasProofRow(HiveViewProductUiPresenter.PlayerSummaryForProof(), "player_summary_profile_action:true"), Is.True);
+
+            HiveViewProductUiPresenter.OpenPlayerProfileFromSummaryForProof();
+
+            Assert.That(HiveViewProductUiPresenter.PlayerSummaryOpenForProof, Is.False);
+            Assert.That(HiveViewProductUiPresenter.PlayerProfileOpenForProof, Is.True);
+            Assert.That(HiveViewProductUiPresenter.PlayerProfileOverlayOpenForExternalHost, Is.True);
+            Assert.That(HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof, Is.True);
+            Assert.That(HiveViewProductUiPresenter.ClosePremiumScreensForProof(), Is.True);
+            Assert.That(HiveViewProductUiPresenter.PlayerProfileOpenForProof, Is.False);
+        }
+
+        [Test]
+        public void PlayerSummaryAndProfileRectsStayInsideScreenAndDoNotDependOnLivingHive()
+        {
+            Rect summary = HiveViewProductUiPresenter.PlayerSummaryPanelRectForProof(false, 1280f, 720f);
+            Rect profile = HiveViewProductUiPresenter.PlayerProfilePanelRectForProof(false, 1280f, 720f);
+            Rect portraitSummary = HiveViewProductUiPresenter.PlayerSummaryPanelRectForProof(true, 390f, 844f);
+            Rect portraitProfile = HiveViewProductUiPresenter.PlayerProfilePanelRectForProof(true, 390f, 844f);
+
+            AssertRectInside(summary, 1280f, 720f);
+            AssertRectInside(profile, 1280f, 720f);
+            AssertRectInside(portraitSummary, 390f, 844f);
+            AssertRectInside(portraitProfile, 390f, 844f);
+            Assert.That(HiveViewProductUiPresenter.TrimPlayerSummaryTextForProof("Nom de reine tres long pour verifier la coupe", 18).Length, Is.LessThanOrEqualTo(18));
+            Assert.That(HasProofRow(HiveViewProductUiPresenter.PlayerSummaryForProof(), "player_summary_livinghive_scene_dependency:false"), Is.True);
+        }
+
+        [Test]
         public void EscapeClosesScreensInPriorityOrder()
         {
             HiveViewProductUiPresenter.SetMissionsCenterOpenForProof(true);
@@ -119,6 +161,21 @@ namespace BeeKingdom.Playground.Editor
             Assert.That(HiveViewProductUiPresenter.FriendsScreenOpenForProof, Is.False);
             Assert.That(HiveViewProductUiPresenter.ClosePremiumScreensForProof(), Is.False,
                 "Echap sans ecran ouvert ne doit rien fermer.");
+        }
+
+        private static bool HasProofRow(string[] rows, string expected)
+        {
+            return Array.Exists(rows, row => string.Equals(row, expected, StringComparison.Ordinal));
+        }
+
+        private static void AssertRectInside(Rect rect, float width, float height)
+        {
+            Assert.That(rect.width, Is.GreaterThanOrEqualTo(44f));
+            Assert.That(rect.height, Is.GreaterThanOrEqualTo(44f));
+            Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(rect.yMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(rect.xMax, Is.LessThanOrEqualTo(width));
+            Assert.That(rect.yMax, Is.LessThanOrEqualTo(height));
         }
 
         [Test]
@@ -148,6 +205,12 @@ namespace BeeKingdom.Playground.Editor
             Assert.That(HiveViewProductUiPresenter.ClosePremiumScreensForProof(), Is.True);
             Assert.That(GUIUtility.hotControl, Is.EqualTo(0));
             Assert.That(GUIUtility.keyboardControl, Is.EqualTo(0));
+            // M058-CL / M043O-CL : le 1er retour ne referme que le profil - le Centre d'Alliance
+            // reste affiche, donc le monde reste legitimement bloque. Voir
+            // AllianceScreenOverlayLeakTests.AllianceBackStackStillClosesProfileFirstThenTheScreen.
+            Assert.That(HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof, Is.True);
+
+            Assert.That(HiveViewProductUiPresenter.ClosePremiumScreensForProof(), Is.True);
             Assert.That(HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof, Is.False);
         }
 

@@ -10796,13 +10796,9 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
         {
             if (playerProfileOpen) { playerProfileOpen = false; ReleaseGuiInputCapture(); return true; }
             if (playerMenuOpen) { ClosePlayerSummary(); return true; }
-            if (allianceMemberProfileOpen || !string.IsNullOrEmpty(allianceActionPanelOpen) || allianceChatDrawerOpen)
-            {
-                ReleaseAllianceScreenOverlays();
-                activeMainMenuId = string.Empty;
-                activeHiveMenu = HiveMenuMode.Hive;
-                return true;
-            }
+            if (allianceMemberProfileOpen) { CloseAllianceMemberProfile(); return true; }
+            if (!string.IsNullOrEmpty(allianceActionPanelOpen)) { allianceActionPanelOpen = string.Empty; return true; }
+            if (allianceChatDrawerOpen) { allianceChatDrawerOpen = false; return true; }
             if (missionsCenterOpen) { CloseMissionsCenter(); return true; }
             if (colonyOverviewOpen) { colonyOverviewOpen = false; return true; }
             if (championBeesPanelOpen) { championBeesPanelOpen = false; return true; }
