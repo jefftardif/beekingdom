@@ -3,11 +3,18 @@
 Date : 2026-09-07
 Agent : Claude Code
 Scène de test : `Environment2D5D_HiveMap_Test` (jamais `LivingHive.unity`)
-Statut : **trois régressions distinctes diagnostiquées et corrigées** (bail de
-capacités, création de conversation privée jamais câblée, et — la cause réelle
-rencontrée par le CEO au retest, voir section 10 — normalisation `null`/chaîne vide
-du curseur de pagination côté client). Preuve directe capturée en Console pendant un
-Play Mode réel du CEO. 9 tests EditMode ciblés verts. Rien n'a été poussé.
+Statut : **Correctif appliqué et testé, en attente du retest CEO.** L'ouverture
+d'une conversation privée fonctionne (confirmé CEO). L'envoi échouait car
+`ChatSendCurrent()` (le composeur de "Nouvelle discussion") n'avait jamais été câblé
+sur le backend, dans aucun commit de l'historique (confirmé par `git log -S`) -
+**mais l'envoi backend réel existe et fonctionne depuis des semaines** via un autre
+écran du même fichier (`SendAllianceChatMessage`, tiroir Alliance, M043Q-T), déjà
+validé bout en bout par le CEO. Vérification architecturale confirmée :
+`LivingHiveChatRuntime` est le runtime Chat générique déjà utilisé par HiveMap (nom
+historique, aucune dépendance à la scène LivingHive - voir section 14.1). Correctif :
+`ChatSendCurrent()` câblé sur ce même point d'entrée déjà prouvé, aucun nouveau
+provider, aucun doublon (section 14). 6/6 tests ciblés verts. Instrumentation
+temporaire entièrement retirée. Commit local uniquement, aucun push.
 
 ---
 
@@ -414,3 +421,355 @@ les tests ci-dessus ont été exécutés individuellement.
 Un nouveau clic **Discuter** du CEO en Play Mode reste la seule preuve d'acceptation
 valable — voir section 6. L'attente cette fois est que la conversation s'ouvre
 réellement, sans toast d'erreur.
+
+---
+
+## 11. RETEST CEO APRÈS `6febaa9` — ÉCHEC, cause différente probable (course, pas régression du correctif du curseur)
+
+Reproduction identique : session Play Mode fraîche, `Nouvelle discussion → recherche
+"bob" → bob trouvé → Discuter → "Chat serveur indisponible..."`.
+
+**Le correctif du curseur vide (`6febaa9`) n'est PAS remis en cause** — aucune preuve
+ne le contredit, et il reste couvert par 9 tests EditMode verts (section 10.4). Une
+sonde en **lecture seule** (aucun nouvel appel réseau, juste la lecture du snapshot
+déjà en mémoire — donc sans risque de geler l'Éditeur, contrairement à l'incident de
+la section 9.2) faite juste après l'échec rapporté a montré :
+
+```
+IsConfigured=True  Status=Online  ErrorCode=<vide>  Conversations=6
+```
+
+**Chat est bien "Online" au moment de la sonde** — ce qui confirme que le correctif
+du curseur fonctionne (sans lui, `LoadAllConversationsAsync` n'aurait jamais pu
+atteindre `Online`, il resterait bloqué en `Error` comme avant `6febaa9`). Ceci
+pointe vers une **cause différente**, très probablement une **course** entre
+l'ouverture de Chat Royal (`OpenAsync`, qui passe par `Connecting` avant `Online`) et
+le clic Discuter, plutôt qu'un défaut permanent : si le joueur clique Discuter avant
+que la connexion initiale n'ait fini de s'établir, `ChatServerConnected()` renvoie
+correctement `false` à cet instant précis (`Status` n'est alors ni `Online` ni
+`Polling`), déclenche le toast, puis la connexion termine son établissement
+juste après — exactement ce que la sonde a capturé.
+
+**Hypothèse, pas certitude** : rien ne prouve encore que c'est bien une course plutôt
+qu'un autre défaut transitoire. Aucun correctif spéculatif n'a été appliqué sur cette
+base seule, conformément à la consigne.
+
+### 11.1 Instrumentation ajoutée pour la preuve définitive (aucun nouveau correctif de comportement)
+
+Deux points de capture temporaires, tous deux en `Debug.Log` (jamais `LogError`, même
+raison qu'en section 9.4 - ne jamais faire échouer un test existant), sans jeton ni
+donnée sensible :
+
+1. **`HiveViewProductUiPresenter.ChatRoyal.cs` - `ChatStartPrivateConversation`**, au
+   moment exact où le portail `ChatServerConnected()` bloque le clic : capture
+   `IsConfigured`, `Status`, `ErrorCode`, `Conversations.Count` **au moment précis du
+   clic** (pas quelques secondes après comme la sonde de cette section). C'est la
+   preuve manquante pour confirmer ou infirmer l'hypothèse de course.
+2. **`LivingHiveChatController.cs` - `CreatePrivateConversationAsync`** : capture le
+   succès (conversation sélectionnée) ou l'échec exact (`Error`, `ServerCode`,
+   `StatusCode` HTTP) si jamais le portail est franchi mais que la création
+   elle-même échoue plus loin dans le pipeline.
+
+Compilé et vérifié propre. Tests ciblés rejoués après l'ajout - tous verts :
+`CreatePrivateConversationAsyncCreatesAndSelectsTheRealConversationForTheTappedPlayer`,
+`CreatePrivateConversationAsyncRejectsAMissingParticipant`,
+`CodecNormalizesAnEmptyNextCursorToNullMatchingNoNextPage`,
+`EmptyNextCursorFromTransportIsTreatedAsNoNextPageNotAnInvalidCursor`.
+
+**Aucune sonde réseau synchrone déclenchée** pour cette investigation - uniquement
+lecture du snapshot déjà en mémoire, conformément à la consigne et à l'incident déjà
+documenté (section 9.2 / mémoire `feedback_unity_mcp_script_execute_hangs.md`).
+
+### 11.2 Prochaine étape
+
+Un nouveau clic **Discuter** du CEO fera apparaître en Console soit :
+- `[M059D-CL DIAGNOSTIC] Discuter blocked at ChatServerConnected() gate | Status=Connecting|Error|...` -
+  confirmerait l'hypothèse de course (ou révélerait un état different de `Online`,
+  auquel cas ce `Status`/`ErrorCode` exact sera la nouvelle preuve à traiter ;
+- ou, si le portail est franchi cette fois, `[M059D-CL DIAGNOSTIC] CreatePrivateConversationAsync FAILED | Error=... | ServerCode=... | HttpStatus=...` -
+  révélerait un défaut plus loin dans le pipeline de création (serveur, endpoint, ou
+  identité du joueur).
+
+Selon ce qui apparaît, soit un correctif de timing/UX (ex. désactiver Discuter ou
+afficher un état "connexion en cours" tant que `Status` n'est pas encore
+Online/Polling au lieu du toast d'échec), soit un correctif ciblé sur le pipeline de
+création, sera appliqué - avec preuve, pas par supposition.
+
+---
+
+## 12. RETEST CEO — l'ouverture fonctionne, l'ENVOI échoue (nouveau symptôme, nouvelle instrumentation)
+
+Progrès confirmé : `Nouvelle discussion → recherche "bob" → bob trouvé → Discuter`
+ouvre maintenant réellement une conversation privée, qui apparaît dans la liste.
+**Mais envoyer un message dans cette conversation ne fonctionne pas.**
+
+### 12.1 Cause trouvée par lecture de code — ⚠️ CONCLUSION CORRIGÉE, voir section 13
+
+Le bouton **"Envoyer"** et la touche **Entrée** du compositeur de Chat Royal
+(`DrawChatComposer`, le vrai écran que le CEO utilise pour "Nouvelle discussion")
+appellent tous deux `ChatSendCurrent()` (`HiveViewProductUiPresenter.cs`). Lecture
+complète de cette méthode : **elle n'appelle jamais `LivingHiveChatRuntime.SendAsync`
+ni aucun transport réseau.** Elle se contente d'ajouter un `ChatMessageData` local à
+une liste en mémoire (`ChatMessagesFor(chatSelectedConversation)`).
+
+Ceci explique pourquoi le message "semble" s'afficher (il est bien ajouté localement,
+visuellement) mais n'est jamais réellement livré : rien n'est envoyé au serveur, donc
+rien n'est persisté, rien n'est reçu par le destinataire, et le message disparaîtra à
+la prochaine reconstruction de la liste depuis le snapshot serveur réel.
+
+~~vestige de l'ancien simulateur de démonstration jamais retiré~~ — **cette partie de
+la formulation était trompeuse et a été explicitement corrigée en section 13** : le
+diagnostic du CODE (que `ChatSendCurrent()` est local-only) reste exact et confirmé,
+mais l'implication "l'envoi backend n'a jamais existé pour Chat Royal" était fausse.
+Un envoi réel, fonctionnel, backend, visible sur le site web, existe et a été validé
+par le CEO — via un AUTRE écran (`SendAllianceChatMessage`, le tiroir de chat
+Alliance), pas via ce composeur-ci. Voir section 13 pour l'analyse complète.
+
+**Ce n'est pas encore un correctif appliqué** — conformément à la consigne, seule une
+instrumentation a été ajoutée pour confirmer ce diagnostic en runtime avant toute
+correction.
+
+### 12.2 Piste secondaire confirmée — pourquoi le titre affiche "Discussion" au lieu de "bob"
+
+`CreatePrivateConversationAsync` (le correctif de la section 5.2) n'envoie jamais de
+`Title` dans sa requête de création (`RemoteCreateConversationRequest.Title` reste
+`null`) — cohérent avec une conversation privée 1:1, qui n'a normalement pas de titre
+propre côté serveur. `HiveViewProductUiPresenter.ChatRoyal.cs` ligne 157 retombe
+alors sur le texte générique `"Discussion"` dès que `conversation.Title` est vide :
+`Title = string.IsNullOrWhiteSpace(conversation.Title) ? "Discussion" : conversation.Title`.
+
+**Confirmé par lecture de code, cause distincte du bug d'envoi** : la conversation
+n'est pas mal hydratée ni le mauvais objet sélectionné - c'est un affichage qui
+n'a simplement jamais été conçu pour dériver le nom de l'AUTRE participant (ex.
+"bob") pour une conversation privée sans titre. Hors du périmètre demandé cette
+fois (l'envoi) - à traiter séparément si le CEO le souhaite.
+
+### 12.3 Instrumentation ajoutée (aucun correctif de comportement, non commitée)
+
+Trois points de capture temporaires, tous en `Debug.Log` (jamais `LogError`, jamais
+de contenu de message ni de jeton - seulement la longueur du texte et l'identité de
+conversation) :
+
+1. **`HiveViewProductUiPresenter.cs` - `ChatSendCurrent()`** : capture explicitement
+   que ce chemin est LOCAL-ONLY (n'atteint jamais le provider), avec
+   `conversationId`, `textLength`, `ChatServerConnected()`, `Status`, `ErrorCode` au
+   moment du clic. Capture aussi le cas de validation locale (texte vide).
+2. **`LivingHiveChatController.cs` - `SendAsync`** : capture l'entrée réelle dans le
+   pipeline provider/transport (`conversationId`, `textLength`), le succès, et
+   l'échec exact (`Error`, `ServerCode`, `StatusCode` HTTP) - pour prouver
+   définitivement si CE chemin est atteint par un autre déclencheur que le
+   compositeur de Chat Royal (ex. l'écran Alliance, qui utilise déjà le vrai
+   `SendAsync` via `SendAllianceChatMessage`).
+
+Compilé et vérifié propre. Tests ciblés rejoués : `SendRetryAndRealtimeRestDuplicateAreIdempotent`,
+`CreatePrivateConversationAsyncCreatesAndSelectsTheRealConversationForTheTappedPlayer`
+restent verts.
+
+**Découverte annexe, sans rapport avec M059D** : le test préexistant
+`LivingHiveControllerKeepsOptimisticMessageQueuedWhenServerIsOffline` échoue dans cet
+environnement avec `System.ArgumentException : Property Count was not found` sur
+`Assert.That(snapshot.Messages, Has.Count.EqualTo(1))` — `LivingHiveChatSnapshot.
+Messages` est construit via `.ToArray()` (ligne 139 de `LivingHiveChatController.cs`),
+et `Has.Count` échoue par réflexion sur les tableaux dans cette version de NUnit/Unity
+Test Framework (`Count` y est une implémentation explicite de `ICollection`, invisible
+à la réflexion simple), alors qu'il fonctionne sur les `List<T>` (confirmé : le même
+test framework accepte `Has.Count.EqualTo` sur un autre `IReadOnlyList` non-tableau
+plus tôt dans le même fichier, ligne 29). Les deux assertions précédentes de ce même
+test (`Status`, `PendingCount`) passent sans problème, donc le pipeline `SendAsync`
+lui-même se comporte comme attendu (message mis en file, statut `Offline`) - seule
+l'assertion `Has.Count` sur ce tableau spécifique échoue. **Ni introduit ni corrigé
+par cette mission** - signalé pour référence, hors périmètre de M059D.
+
+### 12.4 Prochaine étape
+
+Un nouveau clic **Envoyer**/Entrée du CEO dans Chat Royal fera apparaître en Console
+`[M059D-CL DIAGNOSTIC] ChatSendCurrent: LOCAL-ONLY SIMULATOR PATH...` — la confirmation
+runtime attendue. Si (comme prévu) `LivingHiveChatController.SendAsync` n'affiche
+strictement AUCUNE ligne pour cette action, la cause de la section 12.1 sera
+définitivement confirmée, et le correctif consistera à câbler `ChatSendCurrent()` sur
+`LivingHiveChatRuntime.SendAsync` (le même point d'entrée déjà utilisé par
+`SendAllianceChatMessage`), sans créer de second provider ni de repli local.
+
+---
+
+## 13. CORRECTION EXPLICITE DU DIAGNOSTIC — l'envoi backend a bien existé et fonctionné
+
+Le CEO a personnellement validé un échange réel entre les comptes Jeff et Stara
+depuis Chat Royal plein écran, visible aussi sur le site web — donc nécessairement
+arrivé jusqu'au backend partagé. La formulation de la section 12.1 ("vestige de
+l'ancien simulateur... jamais retiré") laissait entendre que l'envoi n'avait JAMAIS
+été câblé pour Chat Royal, ce qui est **faux et corrigé ici**.
+
+### 13.1 Méthode — recherche Git exhaustive, pas de supposition
+
+```
+git log --all -S "ChatSendCurrent" --oneline -- Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs
+→ 4e88f68c BASELINE: recover latest LivingHive production state   (SEUL résultat)
+
+git log --all -S "SendAllianceChatMessage" --oneline -- Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs
+→ ca8fcab8 M043Q-T: Alliance Center real chat/search/invite UI...  (SEUL résultat)
+```
+
+`-S` (pickaxe) retrouve TOUS les commits où une chaîne apparaît ou disparaît, sur
+TOUTE l'historique (`--all`), pas seulement la branche courante - la méthode la plus
+fiable pour prouver qu'une fonction n'a jamais changé, plutôt que de se fier à un
+`git log` limité à HEAD.
+
+**Résultat, sans ambiguïté :**
+- `ChatSendCurrent()` (le composeur de "Nouvelle discussion"/groupes de Chat Royal)
+  n'a été touché par **aucun** commit depuis le tout premier commit de ce dépôt
+  (`4e88f68c`, un import de baseline). Son corps est **identique** depuis le début de
+  l'historique disponible.
+- `SendAllianceChatMessage()` (le tiroir de chat Alliance, un écran DIFFÉRENT) a été
+  introduit dans `ca8fcab8` (M043Q-T, "Alliance Center real chat...") - **des
+  semaines avant** les missions de chat d'aujourd'hui - et reste, lui, câblé sur
+  `LivingHiveChatRuntime.SendAsync` depuis son introduction, inchangé depuis.
+- Vérifié aussi que M057 (`b9f4ff16`), le correctif SQL (`fb7aa9c9`), M058
+  (contenu dans `fb7aa9c9`), M059 (`e0e2f88d`, `cff44b0c`) et RAP-OPTIONNEL-
+  COMMUNICATIONS_01 (`9b246629`, la mission qui a branché Chat Royal sur le vrai
+  backend EN LECTURE) ne touchent, dans aucun de leurs diffs, ni `ChatSendCurrent`
+  ni `SendAsync`. Le diff complet de `9b246629` ne contient AUCUNE ligne supprimée
+  autour du composeur ou de l'envoi - rien n'a été retiré, la fonction a toujours
+  été telle quelle.
+
+### 13.2 Conclusion corrigée
+
+**L'envoi backend réel n'a jamais été perdu ni régressé pour `ChatSendCurrent()`,
+car il n'y a jamais été câblé du tout dans cette fonction précise - mais l'envoi
+backend réel EXISTE et FONCTIONNE dans ce même fichier, depuis des semaines, via un
+AUTRE écran : le tiroir de chat Alliance (`SendAllianceChatMessage` →
+`LivingHiveChatRuntime.SendAsync`).** L'échange Jeff/Stara que le CEO a validé, visible
+sur le site web, est passé par ce chemin-là - cohérent avec le fait qu'Alliance chat
+est une fonctionnalité bien plus ancienne (M043Q-T) que "Nouvelle discussion"/groupes
+privés (RAP-OPTIONNEL-COMMUNICATIONS_01, livré aujourd'hui même). Les deux écrans
+partagent le même habillage visuel "Chat Royal", ce qui explique la confusion.
+
+Il ne s'agit donc **pas d'une régression à retrouver et restaurer dans l'historique**
+(il n'y a rien à restaurer : aucune version antérieure de `ChatSendCurrent()`
+n'a jamais appelé le backend) - il s'agit d'un **écran qui n'a jamais fini d'être
+câblé**, avec, à côté, dans le MÊME fichier, la preuve vivante de la bonne façon de
+le faire (`SendAllianceChatMessage`, 4 lignes, aucune nouvelle abstraction).
+
+### 13.3 Direction du correctif (confirmée par l'historique, pas spéculative)
+
+Réutiliser **exactement** le point d'entrée déjà prouvé fonctionnel -
+`LivingHiveChatRuntime.SendAsync` - depuis `ChatSendCurrent()`, sur le modèle direct
+de `SendAllianceChatMessage` :
+
+```csharp
+private static async void SendAllianceChatMessage(string body)
+{
+    try { await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body); }
+    catch (Exception exception) { Debug.LogWarning("[AllianceChat] Send failed: " + exception.GetType().Name); }
+}
+```
+
+Aucun nouveau provider, aucun repli local, aucune invention - le même chemin que le
+CEO a déjà vu fonctionner de bout en bout. Correctif **non encore appliqué** dans
+cette mise à jour du rapport, conformément à la consigne de cette session (git
+d'abord, correctif ensuite, sur confirmation).
+
+---
+
+## 14. CORRECTIF APPLIQUÉ — vérification architecturale + câblage sur le point d'entrée existant
+
+### 14.1 Vérification architecturale préalable (GO explicite requis avant tout code)
+
+Avant tout changement, confirmation exhaustive que `LivingHiveChatRuntime` est un
+wrapper générique déjà utilisé par HiveMap, sans dépendance de scène LivingHive :
+
+- `LivingHiveChatRuntime`/`LivingHiveChatController`/`ServerChatProvider`/
+  `LivingHiveChatBootstrap` sont des classes C# pures
+  (`Assets/BeeKingdom/Gameplay/Communication/`) - aucune référence à une scène, un
+  GameObject ou un MonoBehaviour nulle part dans toute la chaîne
+  (`LivingHiveChatBootstrap.ActivateAsync` → `RemoteChatClientFactory.Create` →
+  `LivingHiveChatRuntime.ReconfigureAsync`).
+- Le seul composant qui pilote ce runtime, `LivingHiveChatBridgeBootstrap`
+  (`Assets/BeeKingdom/Playground/`), s'auto-attache **uniquement** aux scènes
+  `Environment2D5D*` et est câblé dans `HiveMapRuntimeBootstrapInitializer` - la
+  liste officielle des bootstraps HiveMap. Son propre commentaire d'en-tête se
+  définit explicitement **en opposition** à "the real LivingHive flow".
+- **Deux autres surfaces HiveMap déjà fonctionnelles** pointent vers exactement ce
+  même `LivingHiveChatRuntime.SendAsync` : `SendAllianceChatMessage` (tiroir
+  Alliance) et `LivingHiveChatBridge.SetSendHandler` (mini-chat du Canvas uGUI
+  `LivingHiveMenu`, également listé par CLAUDE.md comme composant actuel de HiveMap).
+- **Conclusion** : "LivingHive" dans ce nom est purement historique (même famille
+  que `LivingHiveMenuCanvas`/`LivingHiveMenu`) - pas une dépendance à la scène
+  retirée. Aucun découplage nécessaire, aucun second provider à créer.
+
+### 14.2 Correctif
+
+`ChatSendCurrent()` (`HiveViewProductUiPresenter.cs`) branche maintenant sur
+`chatUsingServerData` :
+- **Conversation réelle** (`chatUsingServerData == true`) → nouvelle méthode
+  `ChatSendCurrentToServer(text)`, qui appelle `LivingHiveChatRuntime.SendAsync`
+  exactement sur le modèle de `SendAllianceChatMessage` (fire-and-forget
+  `async void`, capture uniquement le type d'exception, jamais le contenu). Aucun
+  message local n'est ajouté en plus : l'optimiste/succès/échec est déjà entièrement
+  géré par `LivingHiveChatController.SendAsync` lui-même (le message passe par
+  `Queued` puis `Confirmed`/`Failed`), et `ChatRoyalSyncFromServer` relit déjà ce
+  même snapshot dans `chatMessagesByConversation` - ajouter un doublon local aurait
+  été une régression, pas un correctif.
+- **Mode démo/hors-ligne** (`chatUsingServerData == false`) → comportement local
+  strictement inchangé, aucune régression du mode démo explicite déjà voulu par ce
+  fichier.
+
+Aucun nouveau provider, aucun runtime Chat parallèle, aucune dépendance de scène
+LivingHive réintroduite, aucun doublon.
+
+**Libellé "Discussion"** (section 12.2) : non touché, conformément à la consigne -
+hors du périmètre nécessaire au fonctionnement de l'envoi.
+
+**Instrumentation temporaire retirée** : les 3 points de capture de la section 12.3
+(`ChatSendCurrent`, `LivingHiveChatController.SendAsync`) et les 2 de la section 11.1
+(`ChatStartPrivateConversation`, `CreatePrivateConversationAsync` - l'ouverture est
+maintenant confirmée fonctionnelle par le CEO, ces diagnostics n'ont plus d'utilité)
+ont tous été retirés. `git diff` confirme qu'aucun résidu de diagnostic ne reste dans
+`LivingHiveChatController.cs` ni `HiveViewProductUiPresenter.ChatRoyal.cs` (ces deux
+fichiers sont redevenus identiques au dernier commit, `using UnityEngine;` temporaire
+retiré de `LivingHiveChatController.cs`).
+
+### 14.3 Tests de régression ciblés (nouveaux + non-régression)
+
+Nouveau fichier `Assets/BeeKingdom/Playground/Editor/ChatRoyalSendWiringTests.cs` -
+seul endroit qui peut prouver le **branchement au niveau de l'écran**
+(`ServerChatProviderTests` teste `ServerChatProvider`/`LivingHiveChatController` en
+isolation, jamais le point d'entrée UI réel) :
+
+| Test | Preuve |
+|---|---|
+| `SendingFromARealConversationReachesTheServerProviderNotTheLocalSimulator` | une conversation réelle atteint bien le transport (`rest.LastSendRequest` non nul, corps exact) et ne duplique jamais dans la liste locale |
+| `SendingFromADemoConversationKeepsTheOldLocalBehaviorAndNeverTouchesTheTransport` | le mode démo garde son comportement local exact, ne touche jamais le transport |
+| `EmptyComposerTextSendsNothingAndDoesNotThrow` | la validation locale (texte vide) reste inchangée, aucune exception |
+
+Trois crochets `...ForProof` ajoutés (même convention que les dizaines déjà
+présentes dans ce fichier) : `SetChatSendTestStateForProof`,
+`ChatSendCurrentForProof`, `ChatLocalMessageCountForProof`.
+
+**6/6 tests ciblés verts** : les 3 nouveaux ci-dessus +
+`CreatePrivateConversationAsyncCreatesAndSelectsTheRealConversationForTheTappedPlayer`,
+`SendRetryAndRealtimeRestDuplicateAreIdempotent` (non-régression provider),
+`SandboxLivingHiveUiStabilizationTests` (classe complète, 22/22, non-régression
+écran). Compilation vérifiée propre à chaque étape.
+
+### 14.4 Commit
+
+Commit local uniquement (voir hash dans le message de fin de mission), aucun push.
+Fichiers : `HiveViewProductUiPresenter.cs` (correctif + crochets de preuve),
+`ChatRoyalSendWiringTests.cs` (+`.meta`), ce rapport.
+
+### 14.5 Limite connue, hors périmètre de ce correctif
+
+Cliquer une conversation **existante** dans la liste (`ChatSelectConversation`) met à
+jour `chatSelectedConversation` côté UI mais n'appelle jamais
+`LivingHiveChatRuntime.SelectAsync`/`SelectKnownAsync` pour synchroniser la sélection
+réelle du contrôleur - un écart pré-existant, distinct du bug corrigé ici. Pour le
+scénario testé par le CEO (Discuter → nouvelle conversation créée ET sélectionnée par
+`CreatePrivateConversationAsync` → envoi immédiat), ce n'est pas un problème : la
+sélection du contrôleur est déjà correcte. Signalé pour référence, pas corrigé -
+hors du périmètre demandé.
+
+### 14.6 Prochaine étape
+
+**READY FOR CEO SEND RUNTIME RETEST.** Rouvrir la conversation avec "bob" (ou en
+créer une nouvelle via Discuter) et envoyer un message réel.

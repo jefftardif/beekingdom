@@ -36642,6 +36642,25 @@ if (leftNavigationTexture == null)
 		{
 			string text = chatComposerText.Trim();
 			if (string.IsNullOrEmpty(text)) return;
+
+			// M059D-CL : pour une conversation reelle, cable sur le meme point d'entree deja
+			// prouve fonctionnel par SendAllianceChatMessage et par le gestionnaire d'envoi du
+			// pont uGUI (LivingHiveChatBridge.SetSendHandler, dans LivingHiveChatBridgeBootstrap) -
+			// LivingHiveChatRuntime.SendAsync. L'optimiste/succes/echec est deja gere entierement
+			// par LivingHiveChatController.SendAsync lui-meme (le message est ajoute en Queued
+			// immediatement puis passe a Confirmed ou Failed) ; ChatRoyalSyncFromServer relit deja
+			// ce meme snapshot dans chatMessagesByConversation, donc rien de plus a faire ici cote
+			// local pour une conversation serveur - ajouter un message local en plus creerait un
+			// doublon. Le mode demo/hors-ligne (chatUsingServerData == false, chat non configure
+			// ou non connecte) garde exactement son ancien comportement local.
+			if (chatUsingServerData)
+			{
+				ChatSendCurrentToServer(text);
+				chatComposerText = string.Empty;
+				chatMessagesScroll.y = float.MaxValue;
+				return;
+			}
+
 			List<ChatMessageData> list = ChatMessagesFor(chatSelectedConversation);
 			ChatMessageData msg = new ChatMessageData
 			{
@@ -36662,6 +36681,33 @@ if (leftNavigationTexture == null)
 			chatComposerText = string.Empty;
 			chatMessagesScroll.y = float.MaxValue;
 		}
+
+		// Meme patron que SendAllianceChatMessage : fire-and-forget async void depuis un
+		// gestionnaire de clic IMGUI, jamais d'exception non observee (capturee et journalisee
+		// par type seulement, jamais le contenu du message).
+		private static async void ChatSendCurrentToServer(string body)
+		{
+			try { await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body); }
+			catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Send failed: " + exception.GetType().Name); }
+		}
+
+		// M059D-CL - crochets de preuve EditMode pour ChatSendCurrent(), sur le meme modele que
+		// les nombreux "...ForProof" deja presents dans ce fichier : exposent juste assez d'etat
+		// prive pour qu'un test puisse reproduire exactement le branchement reel
+		// serveur/demo sans dupliquer sa logique.
+		public static void SetChatSendTestStateForProof(bool usingServerData, string selectedConversationId)
+		{
+			chatUsingServerData = usingServerData;
+			chatSelectedConversation = selectedConversationId;
+		}
+
+		public static void ChatSendCurrentForProof(string text)
+		{
+			chatComposerText = text;
+			ChatSendCurrent();
+		}
+
+		public static int ChatLocalMessageCountForProof(string conversationId) => ChatMessagesFor(conversationId).Count;
 
 		private static void ChatSimulationTick(bool allowWhileChatClosed = false)
 		{
