@@ -207,6 +207,189 @@ public sealed class SqlChatRepository : IChatRepository
         return affected > 0 ? GetParticipant(conversationId, playerId) : null;
     }
 
+    public ChatConversationParticipant? UpdateParticipantRole(Guid conversationId, PlayerId playerId, ChatPermissionRole role)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = "UPDATE dbo.ChatConversationParticipants SET Role = @Role WHERE ConversationId = @ConversationId AND PlayerId = @PlayerId;";
+        Add(command, "@ConversationId", conversationId);
+        Add(command, "@PlayerId", playerId.Value);
+        Add(command, "@Role", role.ToString());
+        return command.ExecuteNonQuery() > 0 ? GetParticipant(conversationId, playerId) : null;
+    }
+
+    private const string SelectGroupInviteColumns = "SELECT InviteId, ConversationId, InviterPlayerId, InviteePlayerId, Status, CreatedAtUtc, RespondedAtUtc, InviterAcknowledged FROM dbo.ChatGroupInvites ";
+
+    private static ChatGroupInvite ReadGroupInvite(IDataReader reader) => new(
+        reader.GetGuid(0),
+        reader.GetGuid(1),
+        new PlayerId(reader.GetGuid(2)),
+        new PlayerId(reader.GetGuid(3)),
+        reader.GetString(4),
+        AsUtc(reader.GetDateTime(5)),
+        reader.IsDBNull(6) ? null : AsUtc(reader.GetDateTime(6)),
+        reader.GetBoolean(7));
+
+    public ChatGroupInvite SaveGroupInvite(ChatGroupInvite invite)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = """
+            MERGE dbo.ChatGroupInvites AS target
+            USING (SELECT @InviteId AS InviteId) AS source
+            ON target.InviteId = source.InviteId
+            WHEN MATCHED THEN
+                UPDATE SET Status = @Status, RespondedAtUtc = @RespondedAtUtc, InviterAcknowledged = @InviterAcknowledged
+            WHEN NOT MATCHED THEN
+                INSERT (InviteId, ConversationId, InviterPlayerId, InviteePlayerId, Status, CreatedAtUtc, RespondedAtUtc, InviterAcknowledged)
+                VALUES (@InviteId, @ConversationId, @InviterPlayerId, @InviteePlayerId, @Status, @CreatedAtUtc, @RespondedAtUtc, @InviterAcknowledged);
+            """;
+        Add(command, "@InviteId", invite.InviteId);
+        Add(command, "@ConversationId", invite.ConversationId);
+        Add(command, "@InviterPlayerId", invite.InviterPlayerId.Value);
+        Add(command, "@InviteePlayerId", invite.InviteePlayerId.Value);
+        Add(command, "@Status", invite.Status);
+        Add(command, "@CreatedAtUtc", invite.CreatedAtUtc.UtcDateTime);
+        Add(command, "@RespondedAtUtc", invite.RespondedAtUtc.HasValue ? invite.RespondedAtUtc.Value.UtcDateTime : DBNull.Value);
+        Add(command, "@InviterAcknowledged", invite.InviterAcknowledged);
+        command.ExecuteNonQuery();
+        return invite;
+    }
+
+    public ChatGroupInvite? GetGroupInvite(Guid inviteId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = SelectGroupInviteColumns + "WHERE InviteId = @InviteId;";
+        Add(command, "@InviteId", inviteId);
+        using IDataReader reader = command.ExecuteReader();
+        return reader.Read() ? ReadGroupInvite(reader) : null;
+    }
+
+    public ChatGroupInvite? GetPendingInvite(Guid conversationId, PlayerId inviteePlayerId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = SelectGroupInviteColumns + "WHERE ConversationId = @ConversationId AND InviteePlayerId = @InviteePlayerId AND Status = @Status;";
+        Add(command, "@ConversationId", conversationId);
+        Add(command, "@InviteePlayerId", inviteePlayerId.Value);
+        Add(command, "@Status", ChatGroupInviteStatus.Pending);
+        using IDataReader reader = command.ExecuteReader();
+        return reader.Read() ? ReadGroupInvite(reader) : null;
+    }
+
+    public IReadOnlyList<ChatGroupInvite> ListPendingInvitesForPlayer(PlayerId playerId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = SelectGroupInviteColumns + "WHERE InviteePlayerId = @PlayerId AND Status = @Status ORDER BY CreatedAtUtc;";
+        Add(command, "@PlayerId", playerId.Value);
+        Add(command, "@Status", ChatGroupInviteStatus.Pending);
+        using IDataReader reader = command.ExecuteReader();
+        List<ChatGroupInvite> items = [];
+        while (reader.Read()) items.Add(ReadGroupInvite(reader));
+        return items;
+    }
+
+    public IReadOnlyList<ChatGroupInvite> ListInvitesSentByPlayer(PlayerId playerId, bool onlyUnacknowledgedResponses)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = SelectGroupInviteColumns
+            + (onlyUnacknowledgedResponses
+                ? "WHERE InviterPlayerId = @PlayerId AND InviterAcknowledged = 0 AND Status <> @Pending ORDER BY RespondedAtUtc;"
+                : "WHERE InviterPlayerId = @PlayerId ORDER BY CreatedAtUtc;");
+        Add(command, "@PlayerId", playerId.Value);
+        if (onlyUnacknowledgedResponses) Add(command, "@Pending", ChatGroupInviteStatus.Pending);
+        using IDataReader reader = command.ExecuteReader();
+        List<ChatGroupInvite> items = [];
+        while (reader.Read()) items.Add(ReadGroupInvite(reader));
+        return items;
+    }
+
+    public IReadOnlyList<ChatGroupInvite> ListPendingInvitesForConversation(Guid conversationId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = SelectGroupInviteColumns + "WHERE ConversationId = @ConversationId AND Status = @Status ORDER BY CreatedAtUtc;";
+        Add(command, "@ConversationId", conversationId);
+        Add(command, "@Status", ChatGroupInviteStatus.Pending);
+        using IDataReader reader = command.ExecuteReader();
+        List<ChatGroupInvite> items = [];
+        while (reader.Read()) items.Add(ReadGroupInvite(reader));
+        return items;
+    }
+
+    public ChatGroupInvite? UpdateGroupInviteStatus(Guid inviteId, string status, DateTimeOffset respondedAtUtc)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = "UPDATE dbo.ChatGroupInvites SET Status = @Status, RespondedAtUtc = @RespondedAtUtc WHERE InviteId = @InviteId;";
+        Add(command, "@InviteId", inviteId);
+        Add(command, "@Status", status);
+        Add(command, "@RespondedAtUtc", respondedAtUtc.UtcDateTime);
+        return command.ExecuteNonQuery() > 0 ? GetGroupInvite(inviteId) : null;
+    }
+
+    public int AcknowledgeInviteResponses(PlayerId inviterPlayerId, IReadOnlyList<Guid> inviteIds)
+    {
+        if (inviteIds.Count == 0) return 0;
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        int changed = 0;
+        foreach (Guid inviteId in inviteIds)
+        {
+            using IDbCommand command = connection.CreateCommand();
+            command.CommandText = "UPDATE dbo.ChatGroupInvites SET InviterAcknowledged = 1 WHERE InviteId = @InviteId AND InviterPlayerId = @InviterPlayerId AND InviterAcknowledged = 0;";
+            Add(command, "@InviteId", inviteId);
+            Add(command, "@InviterPlayerId", inviterPlayerId.Value);
+            changed += command.ExecuteNonQuery();
+        }
+
+        return changed;
+    }
+
+    public ChatPreferences? GetChatPreferences(PlayerId playerId)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT AutoInviteResponse, UpdatedAtUtc FROM dbo.ChatPreferences WHERE PlayerId = @PlayerId;";
+        Add(command, "@PlayerId", playerId.Value);
+        using IDataReader reader = command.ExecuteReader();
+        return reader.Read() ? new ChatPreferences(playerId, reader.GetString(0), AsUtc(reader.GetDateTime(1))) : null;
+    }
+
+    public ChatPreferences SaveChatPreferences(ChatPreferences value)
+    {
+        using IDbConnection connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        command.CommandText = """
+            MERGE dbo.ChatPreferences AS target
+            USING (SELECT @PlayerId AS PlayerId) AS source
+            ON target.PlayerId = source.PlayerId
+            WHEN MATCHED THEN
+                UPDATE SET AutoInviteResponse = @AutoInviteResponse, UpdatedAtUtc = @UpdatedAtUtc
+            WHEN NOT MATCHED THEN
+                INSERT (PlayerId, AutoInviteResponse, UpdatedAtUtc)
+                VALUES (@PlayerId, @AutoInviteResponse, @UpdatedAtUtc);
+            """;
+        Add(command, "@PlayerId", value.PlayerId.Value);
+        Add(command, "@AutoInviteResponse", value.AutoInviteResponse);
+        Add(command, "@UpdatedAtUtc", value.UpdatedAtUtc.UtcDateTime);
+        command.ExecuteNonQuery();
+        return value;
+    }
+
     public long NextSequence(Guid conversationId)
     {
         using IDbConnection connection = connectionFactory.CreateConnection();
@@ -472,7 +655,11 @@ public sealed class SqlChatRepository : IChatRepository
             "DELETE FROM dbo.ChatInbox WHERE PlayerId = @PlayerId",
             "DELETE FROM dbo.ChatOutboxReceipts WHERE PlayerId = @PlayerId",
             "DELETE FROM dbo.ChatConversationCreationReceipts WHERE PlayerId = @PlayerId",
-            "DELETE FROM dbo.ChatModerationReportReceipts WHERE ReporterPlayerId = @PlayerId"
+            "DELETE FROM dbo.ChatModerationReportReceipts WHERE ReporterPlayerId = @PlayerId",
+            // RAP-OPTIONNEL-COMMUNICATIONS_01: both are personal, per-player rows with no third-party
+            // history value - an orphan invitation would otherwise point at a deleted account.
+            "DELETE FROM dbo.ChatPreferences WHERE PlayerId = @PlayerId",
+            "DELETE FROM dbo.ChatGroupInvites WHERE InviteePlayerId = @PlayerId OR InviterPlayerId = @PlayerId"
         })
         {
             using IDbCommand cmd = c.CreateCommand();

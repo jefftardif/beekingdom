@@ -38,7 +38,9 @@ namespace BeeKingdom.EditorTools
     // Resources et d'adapter les trois points de lecture. Voir le rapport M056.
     public static class WindowsInternalBuildTool
     {
-        public const string Version = "0.1.0-alpha-internal";
+        // 0.1.1 = correctif M056B-CL (grille jaune de debug declenchee en tapant un "x"
+        // dans Chat Royal). La 0.1.0 est INVALIDE et ne doit plus etre distribuee.
+        public const string Version = "0.1.1-alpha-internal-gridfix";
 
         private const string OutputDirectory = "Builds/Windows/BeeKingdom-Alpha-Internal";
         private const string ExecutableName = "BeeKingdom.exe";

@@ -93,6 +93,11 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             HiveViewProductUiPresenter.DrawCommunicationOverlayForExternalHost(Screen.width < 900);
+            // RAP-OPTIONNEL-COMMUNICATIONS_01 : l'alerte d'invitation de groupe est dessinee ICI,
+            // apres l'overlay Communication et hors de sa condition d'ouverture, parce que le CEO
+            // exige qu'elle soit visible MEME quand le joueur n'est pas dans l'ecran Communication.
+            // C'est le seul OnGUI de la scene qui tourne a chaque frame quel que soit l'ecran actif.
+            HiveViewProductUiPresenter.DrawChatInvitationAlert();
         }
 
         private static void PublishCurrentSnapshot()

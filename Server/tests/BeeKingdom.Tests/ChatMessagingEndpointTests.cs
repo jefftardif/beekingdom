@@ -59,7 +59,8 @@ public sealed class ChatMessagingEndpointTests
             Assert.That(readiness.RootElement.GetProperty("liveDeploymentAllowed").GetBoolean(), Is.False);
             Assert.That(capabilities.RootElement.GetProperty("server").GetBoolean(), Is.False);
             Assert.That(capabilities.RootElement.GetProperty("officialGain").GetBoolean(), Is.False);
-            Assert.That(capabilities.RootElement.GetProperty("channels").GetArrayLength(), Is.EqualTo(4));
+            // 5 since RAP-OPTIONNEL-COMMUNICATIONS_01 added the player-created "group" channel.
+            Assert.That(capabilities.RootElement.GetProperty("channels").GetArrayLength(), Is.EqualTo(5));
             Assert.That(capabilities.RootElement.GetProperty("idempotencyReceiptRetentionDays").GetInt32(), Is.EqualTo(30));
             Assert.That(capabilities.RootElement.GetProperty("translationAvailable").GetBoolean(), Is.False);
             Assert.That(capabilities.RootElement.GetProperty("translationModelVersion").GetString(), Is.EqualTo("translation-disabled-v1"));

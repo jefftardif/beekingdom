@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BeeKingdom.Audio;
 using UnityEngine;
@@ -83,6 +84,13 @@ namespace BeeKingdom.Tutorial
             IsAnyDialogueVisible = true;
             PlayVoiceIfAvailable(_championId, stepId);
         }
+
+        // M056A-CL : invoque quand le joueur ferme la bulle SANS completer l'etape. Cable par
+        // FtueTutorialBootstrap.Awake vers DismissPresentation() pour retirer aussi la fleche
+        // jaune et le bloqueur d'input plein ecran. Volontairement un Action et non une
+        // reference directe au bootstrap : les deux presenters sont des composants freres
+        // ajoutes dynamiquement, sans couplage entre eux.
+        public Action DismissRequested;
 
         public void Hide()
         {
@@ -214,7 +222,14 @@ namespace BeeKingdom.Tutorial
             {
                 var cb = _onContinue;
                 Hide();
-                cb?.Invoke();
+                // M056A-CL : sur une etape Require*, le dialogue est affiche SANS callback de
+                // continuation. Fermer la bulle ne completait donc jamais l'etape, et plus rien
+                // n'appelait _arrow.Hide()/_blocker.SetActive(false) : la fleche jaune et le
+                // bloqueur d'input invisible restaient orphelins a l'ecran. On traite ce cas
+                // comme une FERMETURE DE PRESENTATION (progression preservee, voir
+                // FtueTutorialBootstrap.DismissPresentation).
+                if (cb != null) cb.Invoke();
+                else DismissRequested?.Invoke();
             }
             GUI.color = prev;
 
@@ -223,8 +238,14 @@ namespace BeeKingdom.Tutorial
             Rect skip = new Rect(panel.xMax - 170f, panel.yMax - 36f, 78f, 28f);
             if (GUI.Button(skip, "Passer"))
             {
+                // M056A-CL : defaut d'ordonnancement - Hide() met _onContinue a null, donc
+                // l'appel qui suivait etait TOUJOURS un no-op et l'etape ne se completait
+                // jamais (fleche + bloqueur orphelins, meme sur les etapes Highlight*).
+                // On capture le callback AVANT Hide(), comme le fait deja le bouton "Suite".
+                var cb = _onContinue;
                 Hide();
-                _onContinue?.Invoke();
+                if (cb != null) cb.Invoke();
+                else DismissRequested?.Invoke();
             }
 #endif
             GUI.depth = previousDepth;

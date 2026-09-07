@@ -61,6 +61,13 @@ namespace BeeKingdom.Experiments.Environment2D5D
             // Play-only: with [ExecuteAlways], Update() also runs in Edit Mode, and
             // reading keyboard there would fight with normal Editor typing/shortcuts.
             if (!Application.isPlaying) return;
+
+            // M056B-CL : cette lecture clavier declenchait la grille jaune de diagnostic
+            // des qu'un testeur tapait un "x" dans le compositeur de CHAT ROYAL (un
+            // GUI.TextField IMGUI), parce que Keyboard.current lit le peripherique BRUT et
+            // ignore le focus de saisie. Voir DebugHotkeyGuard pour le detail des 4 gardes.
+            if (DebugHotkeyGuard.Blocked) return;
+
             Keyboard kb = Keyboard.current;
             if (kb != null && kb.xKey.wasPressedThisFrame) showGrid = !showGrid;
         }
@@ -122,6 +129,11 @@ namespace BeeKingdom.Experiments.Environment2D5D
         private void OnGUI()
         {
             if (!showGrid) return;
+
+            // M056B-CL : ceinture ET bretelles. Meme si showGrid se retrouvait a true par une
+            // autre voie (valeur serialisee dans une scene, script tiers), la grille de
+            // diagnostic ne peut JAMAIS etre dessinee dans une build livree au testeur.
+            if (Application.isPlaying && !Application.isEditor && !Debug.isDebugBuild) return;
 
             Rect r = ImageScreenRect();
             GUI.color = gridColor;

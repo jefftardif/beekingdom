@@ -57,6 +57,13 @@ namespace BeeKingdom.Experiments.Environment2D5D
 
         private void Update()
         {
+            // M056A-CL : meme famille de bug que la grille jaune de FrontalBackdrop (M056B).
+            // Ce raccourci d'auteur Q/E lisait le clavier BRUT via Keyboard.current, qui ignore
+            // totalement le focus de saisie : taper un mot contenant "q" ou "e" (par exemple
+            // "Que", "Merci") dans le compositeur de CHAT ROYAL deformait silencieusement la
+            // hauteur du batiment selectionne. Voir DebugHotkeyGuard.
+            if (DebugHotkeyGuard.Blocked) return;
+
             Keyboard kb = Keyboard.current;
             if (kb == null || !buildingAnchor || !buildingAnchor.IsSelected) return;
 

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BeeKingdom.Gameplay.Communication
 {
-    public sealed class ServerChatProvider
+    public sealed partial class ServerChatProvider
     {
         private const int MaxConversationCursorCharacters = 1024;
         private readonly IChatRestTransport rest;
@@ -72,7 +72,10 @@ namespace BeeKingdom.Gameplay.Communication
         private static bool ValidChannels(IReadOnlyList<string> channels)
         {
             if (channels == null || channels.Count == 0) return false;
-            var known = new HashSet<string>(new[] { "Alliance", "Server", "Private", "Leaders" }, StringComparer.OrdinalIgnoreCase);
+            // "Group" (RAP-OPTIONNEL-COMMUNICATIONS_01) is advertised by the server since player-created
+            // group rooms exist; omitting it here would fail the whole capability negotiation, not just
+            // the group feature.
+            var known = new HashSet<string>(new[] { "Alliance", "Server", "Private", "Leaders", "Group" }, StringComparer.OrdinalIgnoreCase);
             var unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             return channels.All(channel => !string.IsNullOrWhiteSpace(channel) && known.Contains(channel) && unique.Add(channel));
         }

@@ -40,6 +40,304 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — RAP-OPTIONNEL-COMMUNICATIONS_01 : CHAT ROYAL branche au backend reel (2026-09-07)
+
+Le module Communication est degele (autorisation explicite du CEO) et l'ecran CHAT ROYAL n'est
+plus une maquette. Il lit desormais `LivingHiveChatRuntime.Snapshot` des que le chat serveur est
+connecte, et une fonctionnalite de **groupes de joueurs** — qui n'existait nulle part, ni serveur
+ni client — est livree de bout en bout : creation, invitations accepter/refuser, leadership
+transferable, exclusion, depart, preferences.
+
+Reprise d'une mission interrompue : la couche SERVEUR (groupes, invitations, preference
+d'auto-reponse serveur, migration `094_chat_groups.sql`) etait deja ecrite par l'agent precedent.
+Je l'ai relue, recompilee et retestee avant de batir dessus. **Correction a son rapport : elle
+n'etait PAS entierement verte.** L'echec `CatalogSqlMatchesCheckedInScriptFiles` sur
+`091_alliance_help.sql` est reproductible, mais **preexistant et sans lien avec le chat** (le diff
+du catalogue est purement additif, +36/-0) — il vient de M045, ou le fichier `.sql` a ete commente
+sans mettre a jour la copie inline du catalogue. C'est un vrai defaut (le runner execute l'inline,
+donc la base et le fichier versionne ont diverge) : signale, non corrige, hors perimetre.
+
+**Un correctif serveur reellement bloquant a du etre ajoute** : creer un groupe exige un scope
+`(gameServerId, worldId)` qu'AUCUN client de chat ne pouvait obtenir — toute la surface `/chat/v1`
+n'adressait que des identifiants de conversation qu'on lui donnait. Sans ca, la seule issue etait
+de fabriquer des GUID cote client, donc de creer des salons dans le mauvais monde de facon
+invisible. `/chat/v1/capabilities` publie maintenant le scope (deux proprietes `init`
+optionnelles, additif, rien d'existant ne change). Cela vaut aussi pour le futur client web, qui
+aurait bute sur le meme mur.
+
+Cote client : transport complet des groupes, invitations sondees sur le tick de sondage EXISTANT
+(pas un second minuteur — le backend est limite en debit par joueur), et surtout `ValidChannels`
+accepte `"Group"`. **Ce dernier point etait une regression latente serieuse** : le serveur annonce
+`Group` dans ses capacites et le client rejette toute la negociation sur un canal inconnu — un
+client non mis a jour n'aurait pas « perdu les groupes », il aurait mis TOUT le chat hors ligne.
+Cote interface : bug visuel de « Nouvelle discussion »/« Recherche » corrige (`searchH` etait
+calcule AVANT `DrawChatActionBar`, qui bascule lui-meme `chatSearchActive` dans le meme appel —
+non corrige par M056A, verifie), selecteur de joueur reel, ecran de groupe avec couronne du
+createur, alerte d'invitation GLOBALE (dessinee hors de la condition d'ouverture de Communication,
+donc visible partout), ecran Parametres (couleur d'accent locale + regle d'auto-reponse serveur).
+Regle CLAUDE.md du 2026-09-03 appliquee : tout le contenu principal passe par
+`DrawUnderOwnOverlayGate`. Le simulateur de faux messages se tait des que des donnees reelles sont
+affichees.
+
+**Decision de conception a retenir** : la maquette locale n'est PAS supprimee, elle devient un
+mode demo. Le chat est desactive en PRODUCTION, donc l'effacer aurait vide l'ecran du CEO sans
+rien livrer — c'est l'argument deja retenu par M056A. QoL du sprint : un bandeau permanent dit si
+l'ecran affiche du SERVEUR ou de la DEMO, pour qu'un testeur ne puisse plus confondre « le chat
+marche » et « je regarde des donnees inventees » (le piege qui a coute la mission M056A entiere).
+
+Preuves: `dotnet build` serveur vert ; `BeeKingdom.HiveOperations.Tests` 181/181 ;
+`BeeKingdom.Tests` 645 reussis / 1 echec preexistant decrit ci-dessus. Unity : `assets-refresh`
+vert, 0 erreur. Nouveaux tests EditMode
+`Assets/BeeKingdom/Tests/Editor/ChatGroupTransportTests.cs` **13/13** et
+`Assets/BeeKingdom/Tests/Editor/LivingHiveChatGroupControllerTests.cs` **7/7**. Rapport complet :
+`Docs/AI/Missions/RAP-OPTIONNEL-COMMUNICATIONS_01.md`.
+
+**Limites, a lire avant de tester** : AUCUN test en Play Mode n'a ete joue et AUCUNE capture
+d'ecran produite — les preuves sont statiques. La suite EditMode complete (1573 tests) n'a pas pu
+aller au bout (depassement du delai MCP de 300 s, exactement comme M056A) : la non-regression
+globale n'est pas prouvee, a rejouer en batchmode CLI. Ouvrir une discussion privee depuis le
+selecteur signale l'intention mais ne cree pas encore la conversation en un geste
+(`CreateConversationAsync` existe et est pret, il reste a le relier au bouton). Rien n'a ete
+commite, pousse ni deploye.
+
+Prochain test utilisateur: voir la section 7 du rapport — en resume, dans
+`Environment2D5D_HiveMap_Test` avec un serveur de dev ou `Chat__Enabled=true`, verifier D'ABORD
+que le bandeau dit « ● SERVEUR » (s'il dit « ○ DEMO », le reste ne prouve rien), puis creer un
+groupe et valider l'alerte accepter/refuser depuis un second compte, hors ecran Communication.
+
+Ouvert / a faire ensuite: rejouer la suite EditMode complete en batchmode ; parcours Play Mode
+complet + captures ; relier le bouton du selecteur a `CreateConversationAsync` ; corriger la
+derive `091_alliance_help.sql` (mission separee).
+
+---
+
+## Jalon precedent — M056A-CL : recuperation de regressions runtime (2026-09-06)
+
+Triage des 7 defauts remontes par le testeur externe (Alex) et confirmes par le
+CEO en Play Mode. **Resultat principal, contre-intuitif : les bugs Chat ne sont
+PAS des regressions.** L'ecran CHAT ROYAL de `HiveViewProductUiPresenter.cs` est
+une maquette IMGUI 100 % locale — conversations codees en dur
+(`BuildChatConversations`, dont `pv-alex`/`pv-marie`), messages en dur
+(`BuildChatMessages`) et un simulateur (`chatSimulationRng`, seed 20260806) qui
+injecte de faux messages toutes les ~16 s. Le vrai backend
+(`ServerChatProvider`/`SignalRChatRealtimeTransport`/`LivingHiveChatController` +
+`Server/src/BeeKingdom.Chat/`) existe et fonctionne, mais n'est branche que sur
+le tiroir de chat du QG d'alliance (`DrawAllianceChatRealBody`, M043B) et sur le
+pont Canvas `LivingHiveChatBridgeBootstrap`. Le Chat Royal n'a jamais ete
+connecte : `git log -S "BuildChatConversations"` ne retourne que le commit
+BASELINE racine. **Les bugs 2, 3, 4 et 5 sont donc quatre symptomes d'une seule
+cause : une fonctionnalite absente, pas une fonctionnalite perdue.** L'hypothese
+CEO d'un « renderer Chat legacy reactive » est infirmee : il n'y a qu'une seule
+implementation.
+
+Corriges et verifies : **bug 1** (la garde M056B est reelle et bien placee, mais
+`BuildingPremiumController` lisait encore Q/E en brut — taper « Que »/« Merci »
+en chat deformait un batiment ; garde appliquee, plus aucune lecture
+`Keyboard.current` non gardee dans le runtime) ; **bug 6** (camera morte apres
+HiveMap→WorldMap→HiveMap : `HiveViewProductUiPresenter` est une classe STATIQUE
+dont les booleens d'overlay survivent au changement de scene ; ils sont lus par
+`PremiumUiBlocksWorldInput()` qui garde UNIQUEMENT la camera, pas les batiments
+ni les menus — d'ou l'asymetrie exacte du rapport ; `ResetPremiumScreensForProof()`
+existait deja mais n'etait appele que par les tests, il est maintenant branche sur
+`HiveMapRuntimeBootstrapInitializer.OnSceneLoaded`, avec remise a zero de
+`GUIUtility.keyboardControl` qui est le second verrou) ; **bug 7** (la fleche
+jaune, l'anneau ET le bloqueur d'input plein ecran `FtueBlocker` — invisible,
+`DontDestroyOnLoad`, il avalait l'input — restaient orphelins car
+`TutorialDialoguePresenter.Hide()` ne nettoyait que son propre etat ; point
+d'entree unique `FtueTutorialBootstrap.DismissPresentation()` ajoute, progression
+FTUE volontairement preservee ; defaut d'ordonnancement du bouton « Passer »
+corrige au passage). **Bug 4 partiellement** : le bouton « Effacer » faisait 46 px,
+IMGUI le tronquait en « Efface… » — largeur portee a 64 px.
+
+Preuves: `Assets/BeeKingdom/Playground/Editor/HiveMapSceneReentryInputTests.cs`
+6/6 (le test prouve d'abord que le drapeau bloque la camera, puis que le reset la
+libere) et `Assets/BeeKingdom/Playground/Editor/FtuePresentationCleanupTests.cs`
+4/4. Rapport complet :
+`Docs/AI/Missions/M056A-CL-Unity-Runtime-Regression-Recovery-Windows-Rebuild.md`.
+**Limite : la suite EditMode complete (1553 tests) n'a PAS pu aller au bout — deux
+depassements du delai MCP de 300 s, et a la seconde tentative l'editeur Unity s'est
+arrete. La non-regression globale n'est pas prouvee ; a refaire en batchmode CLI.**
+
+Prochain test utilisateur: dans `Environment2D5D_HiveMap_Test`, faire
+HiveMap → ouvrir un overlay sur la WorldMap (bouton ATTAQUER) → revenir a la ruche
+→ verifier que le pan et le zoom repondent encore (c'etait le cas mort). Puis
+ouvrir le tutoriel, le fermer, et verifier qu'aucune fleche jaune ne subsiste.
+
+Ouvert / a faire ensuite: **decision CEO requise sur le Chat Royal** (bugs 2, 3, 5)
+— brancher l'ecran sur le backend reel est une construction de fonctionnalite
+(annuaire de joueurs, conversation privee, creation de groupe), pas une
+recuperation ; les conversations en dur n'ont volontairement PAS ete supprimees
+car cela viderait l'ecran sans rien livrer en echange. Aucune build Windows
+produite volontairement (3 defauts sur 7 restent ouverts, la checklist Phase D ne
+peut pas passer) : le paquet M056B `0.1.1-alpha-internal-gridfix` reste le dernier
+valide. Rejouer la suite complete en batchmode avant toute livraison.
+
+---
+
+## Jalon precedent — M056-CL : premiere build Windows autonome et transportable (2026-09-06)
+
+Premiere build Windows standalone de Bee Kingdom, destinee a etre testee sur un
+deuxieme PC sans Unity ni environnement de developpement. La mission a fait sortir
+**deux defauts bloquants totalement invisibles en Play Mode**, tous deux corriges.
+
+**Defaut 1 — HiveMap vide hors editeur.** Les 14 batiments de HiveMap ne sont pas
+poses dans la scene : ils sont crees au runtime depuis un JSON de placement et des
+PNG d'artwork lus via `Application.dataPath` + un chemin relatif en `Assets/...`.
+Dans l'editeur `Application.dataPath` vaut `<repo>/Assets`, donc tout marche ; en
+build il vaut `<build>/BeeKingdom_Data` et ces fichiers n'y sont pas copies (ni
+`Resources` ni `StreamingAssets`). La build demarrait donc sur une HiveMap **vide,
+sans batiment ni zone cliquable**. Corrige par un post-traitement de build qui
+recopie ces fichiers en respectant la meme arborescence relative — **aucun code
+runtime modifie**, donc zero risque de regression sur ce que le CEO teste chaque
+jour. ATTENTION : cette approche est **Windows uniquement**; sur Android
+`Application.dataPath` pointe dans l'APK et n'est pas lisible en `System.IO`. La
+migration de ces assets vers `StreamingAssets` reste a faire avant le portage mobile.
+
+**Defaut 2 — shaders custom retires de la build.** `BeeKingdom/Experiments/ArtworkUnlit`
+n'est reference par aucune scene ni materiau (resolu par `Shader.Find`), donc Unity
+l'excluait de la build : 14 erreurs « Shader introuvable », batiments invisibles.
+Corrige en ajoutant les 4 shaders custom (`ArtworkUnlit`, `ArtworkOutline`,
+`PremiumBuilding`, `SoftShadow`) a « Always Included Shaders ».
+
+Ajouts : outil de build editeur (`WindowsInternalBuildTool.cs`, avec garde-fous durs
+excluant LivingHive et forcant HiveMap en index 0, plus une garde anti-rejeu car le
+transport MCP rejoue une requete de build trop longue et enchaine des builds qui se
+suppriment mutuellement le dossier de sortie) et une empreinte de build
+(`BuildStampOverlay.cs`) ecrite dans le `Player.log` au demarrage.
+`bundleVersion` : `1.0` -> `0.1.0-alpha-internal`.
+
+Preuves: build `Succeeded` 0 erreur ; vrai `BeeKingdom.exe` lance plusieurs fois,
+`Player.log` a 0 exception (hors `chat session activation failed` attendu, module
+Communication gele), 0 erreur shader, 0 erreur artwork, scene de demarrage
+`Environment2D5D_HiveMap_Test` confirmee ; captures d'ecran du jeu en cours
+d'execution montrant HiveMap complete (Palais Royal, batiments, HUD, files) ;
+endpoint `api-ops.beekingdomgame.com` present dans les donnees livrees et **aucun**
+`localhost:58080` ; session DPAPI restauree sur 3 lancements successifs ; **ZIP
+extrait dans `C:\BKPortableTest\` et lance depuis la avec succes**, prouvant
+l'independance au chemin du repo. Rapport complet :
+`Docs/AI/Missions/M056-CL-Windows-External-Test-Build.md`.
+
+Livrables: `Builds/Windows/BeeKingdom-Alpha-Internal/` (~4,2 Go) et
+`Builds/Windows/BeeKingdom-Windows-Internal-0.1.0-alpha-internal.zip`
+(1 945 439 203 octets, 1,81 Gio). Non commite : aucune autorisation CEO donnee.
+
+Prochain test utilisateur: transferer le ZIP sur le 2e PC, extraire, lancer
+`BeeKingdom.exe`, se connecter avec Google, verifier HiveMap / Palais Royal /
+WorldMap / relance. Checklist detaillee en section 12 du rapport.
+
+Ouvert / a faire ensuite:
+1. **Google Sign-In interactif non prouve** — risque principal du test 2e PC. Le flux
+   est un vrai flux desktop natif (navigateur systeme + `HttpListener` loopback
+   `127.0.0.1:53682` + PKCE), donc rien d'editeur-seulement, mais le parcours complet
+   n'a pas ete joue. Le fichier DPAPI etant lie machine+compte Windows, le 2e PC
+   exigera une vraie connexion.
+2. Label de version invisible sur HiveMap (masque par le Canvas uGUI plein ecran) :
+   a cabler dans `LivingHiveMenuCanvas` lors d'un prochain sprint UI. L'identification
+   passe pour l'instant par le `Player.log`.
+3. Traductions fr-CA manquantes du Palais Royal (`royal_palace.unlocks_at`,
+   `royal_palace.upgrade`, etc.) — visibles a l'etape « ouvrir Palais Royal ».
+4. Migration `StreamingAssets` avant tout portage mobile (voir defaut 1).
+
+---
+
+## Jalon precedent — M052B a M054B : deploiement Alliance Research + portefeuille Sceaux Royaux joueur (2026-09-04 / 2026-09-05)
+
+Arc de missions enchainees deployant M052 en production puis corrigeant deux
+problemes d'architecture reels decouverts en cours de route (fraicheur du
+bonus, puis proprietaire de la monnaie Sceaux Royaux). Toutes deployees et
+certifiees en production, avec preservation stricte du travail non lie en
+cours (BuildingInteractionController, bootstraps HiveMap, LivingHiveMenuCanvas,
+police Cinzel, EditorBuildSettings, rapports de mission anterieurs non
+commites - jamais touches, verifie par `git status` a chaque etape).
+
+**M052B/M053/M053B** — deploiement de M052 (`2e673d78`), puis certification
+CEO reelle du cycle de vie Mineur complet en production (Alliance Test [BKT],
+Stara=Chef, Jeff=Officier) : financement -> Ready -> lancement -> minuteur
+serveur -> completion naturelle -> bonus actif -> financement de la
+technologie suivante pendant qu'une recherche est active. M053 a ensuite
+ferme les lacunes de certification restantes (piste Majeure, concurrence
+Minor+Major, SpeedUps d'Alliance) via 29 nouveaux tests, et decouvert +
+corrige un vrai compromis de fraicheur : `AllianceResearchBonusResolver`
+comptait desormais un minuteur objectivement expire mais pas encore
+persiste (lecture seule, additive, aucun polling/worker). Deploye par M053B
+(`ec94b9af`).
+
+**M054/M054A/M054B — portefeuille Sceaux Royaux joueur** — M053 avait
+decouvert que les Sceaux Royaux vivaient dans
+`AllianceResearchState.Contributions[playerId]` (scope Alliance), contraire
+au cadrage "portefeuille personnel du joueur" de la Bible. M054 les deplace
+vers `PlayerHiveState.RoyalSeals` (nouveau champ, lu/credite via
+`RoyalSealsWallet` dans `BeeKingdom.HiveOperations`) - choisi apres
+inspection plutot que `BeeKingdom.Accounts` (qui n'a aucune infrastructure
+d'idempotence). `ContributionPoints`/`DonationCount` restent scopes par
+Alliance, inchanges ; le contrat DTO/UI est identique (aucun changement
+Unity necessaire). M054A a ensuite corrige une divergence reelle :
+`DonateAsync` creditait les Sceaux depuis le montant debite (`clampedAmount`)
+plutot que le montant reellement accepte par le financement Alliance
+(`applied`) - sous course de dons concurrents pres du plafond, un joueur
+pouvait etre credite pour plus que sa contribution reelle. Corrige en
+restructurant `DonateAsync` en 3 etapes idempotentes (debit -> financement
+Alliance -> credit Sceaux depuis `applied` uniquement), prouve par un test
+de concurrence deterministe (barriere a deux points de rendez-vous, stable
+sur 8 executions consecutives). Le surpaiement de ressources residuel
+(rare, borne) n'a **pas** ete elimine - decision documentee de ne pas le
+faire (eliminer exigerait soit une reservation cote Alliance avant debit -
+pire bug potentiel: financement non paye - soit une transaction distribuee,
+interdite) ; desormais journalise explicitement, jamais invisible.
+
+Migration des soldes legacy : `RoyalSealsMigrationService` (idempotent via
+`PlayerHiveState.Receipts`, clef `royal-seals-migration:<allianceId>:<playerId>`),
+cable par M054B derriere deux nouveaux endpoints ops miroir de la convention
+`/ops/migrations/*` (`GET /ops/royal-seals-migration/preview` en lecture
+seule, `POST /ops/royal-seals-migration/apply` avec Admin Key + Migration
+Key). Executee en production sous supervision explicite du CEO : apercu
+montrant exactement 2 joueurs / 650 Sceaux Royaux au total (correspond
+exactement aux valeurs certifiees en M053B : Stara=50, Jeff=600),
+autorisation CEO obtenue, application reelle produisant le meme resultat,
+puis idempotence reverifiee en direct (second appel : 0 credite, 2 deja
+migres).
+
+Preuves : `AllianceResearchServiceTests` 29 -> 58 (M053) -> 72 (M054) -> 76
+(M054A) -> 77 (M054B, test dry-run), tous verts a chaque etape.
+`BeeKingdom.HiveOperations.Tests` 181/181 stable, aucune regression.
+Suite complete : seul echec constant pre-existant
+`CatalogSqlMatchesCheckedInScriptFiles` (documente depuis M051, sans lien).
+Unity `AllianceResearchClientTests` 8/8 stable (aucun changement Unity dans
+tout cet arc - contrat DTO jamais modifie). Deploiements verifies via
+`gh run watch --exit-status` (runs `33919421032`, `33934025840`,
+`33970565878`, tous succes, zero mention de migration SQL dans les
+journaux). `/health` verifie `200 Healthy` a chaque etape ; Alliance Test
+[BKT] verifiee intacte (2 membres, Stara=Chef, `InviteOnly`) via l'endpoint
+public `/alliance/v1/alliances/search` avant/apres chaque deploiement et
+apres la migration.
+
+Rapports complets : `Docs/AI/Missions/M052B-CL-Alliance-Research-Deployment.md`,
+`M053-CL-Alliance-Research-Major-SpeedUp-Certification.md`,
+`M053B-CL-Alliance-Research-Bonus-Freshness-Deployment.md`,
+`M054-CL-Royal-Seals-Personal-Wallet.md`,
+`M054A-CL-Royal-Seals-Exact-Award-Correctness.md`,
+`M054B-CL-Royal-Seals-Migration-Deployment.md`.
+
+Prochain test utilisateur : se reconnecter en Jeff et Stara dans Alliance
+Test, ouvrir Recherches, confirmer que "Ma contribution : X pts · Y dons ·
+Z Sceaux Royaux" affiche toujours les memes valeurs qu'avant la migration
+(aucune perte, aucun doublement) ; quitter puis rejoindre une autre Alliance
+pour confirmer visuellement que Z (Sceaux Royaux) persiste alors que X/Y
+(historique de contribution) restent lies a l'ancienne Alliance.
+
+Ouvert / a faire ensuite : catalogue Alpha limite a une seule technologie
+Majeure - empeche de certifier par donnees reelles "prochaine cible Majeure
+pendant qu'une Majeure recherche" (architecture identique au cas Minor deja
+prouve, juste une lacune de contenu) ; ajouter une 2e Majeure reelle
+("Reseau commercial royal", deja nommee Bible section 15) dans une mission
+dediee au catalogue. Sceaux Royaux restent scopes par (Alliance, Joueur)
+dans leur mecanisme de gain/migration meme si le solde final est
+correctement agrege au niveau joueur - lacune mineure documentee, pas un
+bug. Acquisition des SpeedUps de recherche d'Alliance et depense des Sceaux
+Royaux (future Boutique d'Alliance) restent hors scope, non concues.
+
+---
+
 ## Jalon courant — M052-CL : Alliance Research Bible Alignment (2026-09-04)
 
 Migration evolutive (pas une reecriture) du prototype M051/M051C vers le

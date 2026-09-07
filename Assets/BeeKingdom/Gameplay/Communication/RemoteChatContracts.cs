@@ -128,6 +128,11 @@ namespace BeeKingdom.Gameplay.Communication
         public int IdempotencyReceiptRetentionDays { get; set; }
         public bool TranslationAvailable { get; set; }
         public string TranslationModelVersion { get; set; }
+        // RAP-OPTIONNEL-COMMUNICATIONS_01 : scope monde publie par le serveur, requis pour CREER une
+        // conversation ou un groupe. Facultatif : un serveur plus ancien ne le renvoie pas, et le
+        // client refuse alors la creation de groupe au lieu d'inventer des identifiants.
+        public string GameServerId { get; set; }
+        public string DefaultWorldId { get; set; }
     }
     public sealed class RemoteCapabilityDecision { public bool IsAvailable { get; set; } public bool UseRealtime { get; set; } public string ReasonCode { get; set; } public RemoteCapabilities Capabilities { get; set; } public int EffectiveReplayMaxAgeDays { get; set; } }
     public sealed class RemoteConversationPage { public List<RemoteConversation> Items { get; set; } = new List<RemoteConversation>(); public string NextCursor { get; set; } }

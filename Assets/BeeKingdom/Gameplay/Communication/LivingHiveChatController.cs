@@ -36,6 +36,36 @@ namespace BeeKingdom.Gameplay.Communication
         public bool IsTranslated { get; set; }
     }
 
+    // RAP-OPTIONNEL-COMMUNICATIONS_01
+    public sealed class LivingHiveChatGroupMember
+    {
+        public string PlayerId { get; set; }
+        public string DisplayName { get; set; }
+        public bool IsLeader { get; set; }
+    }
+
+    public sealed class LivingHiveChatInvitation
+    {
+        public string InviteId { get; set; }
+        public string ConversationId { get; set; }
+        public string GroupTitle { get; set; }
+        public string InviterPlayerId { get; set; }
+        public string InviterDisplayName { get; set; }
+        public string InviteePlayerId { get; set; }
+        public string InviteeDisplayName { get; set; }
+        public string Status { get; set; }
+    }
+
+    public sealed class LivingHiveChatGroupDetail
+    {
+        public string ConversationId { get; set; }
+        public string Title { get; set; }
+        public string OwnerPlayerId { get; set; }
+        public bool ViewerIsLeader { get; set; }
+        public IReadOnlyList<LivingHiveChatGroupMember> Members { get; set; } = Array.Empty<LivingHiveChatGroupMember>();
+        public IReadOnlyList<LivingHiveChatInvitation> PendingInvites { get; set; } = Array.Empty<LivingHiveChatInvitation>();
+    }
+
     public sealed class LivingHiveChatSnapshot
     {
         public LivingHiveChatStatus Status { get; set; }
@@ -46,11 +76,21 @@ namespace BeeKingdom.Gameplay.Communication
         public int PendingCount { get; set; }
         public bool TranslationAvailable { get; set; }
         public string TranslationModelVersion { get; set; }
+        // RAP-OPTIONNEL-COMMUNICATIONS_01 - invitations the viewer has received and not answered yet.
+        // Surfaced in the snapshot (rather than through an event) so the global alert can be drawn by
+        // the IMGUI root loop, which only ever reads a snapshot.
+        public IReadOnlyList<LivingHiveChatInvitation> PendingInvitations { get; set; } = Array.Empty<LivingHiveChatInvitation>();
+        // Answers to invitations the viewer SENT, not yet acknowledged: the "X a refuse de rejoindre Y"
+        // toast source. Acknowledged after display so the toast is shown once.
+        public IReadOnlyList<LivingHiveChatInvitation> SentInvitationResponses { get; set; } = Array.Empty<LivingHiveChatInvitation>();
+        public LivingHiveChatGroupDetail SelectedGroup { get; set; }
+        public string AutoInviteResponse { get; set; } = RemoteChatAutoInviteResponse.Ask;
+        public bool GroupScopeConfigured { get; set; }
         public int TotalUnread => Conversations.Sum(value => Math.Max(0, value.UnreadCount));
         public LivingHiveChatMessage LastMessage => Messages.LastOrDefault();
     }
 
-    public sealed class LivingHiveChatController
+    public sealed partial class LivingHiveChatController
     {
         public const int DefaultRecentMessageLimit = 100;
         private readonly ServerChatProvider provider;
@@ -97,7 +137,12 @@ namespace BeeKingdom.Gameplay.Communication
                     Conversations = conversations.Select(Clone).ToArray(),
                     Messages = messages.Select(Clone).ToArray(),
                     TranslationAvailable = capabilities != null && capabilities.TranslationAvailable,
-                    TranslationModelVersion = capabilities?.TranslationModelVersion
+                    TranslationModelVersion = capabilities?.TranslationModelVersion,
+                    PendingInvitations = pendingInvitations.Select(Clone).ToArray(),
+                    SentInvitationResponses = sentInvitationResponses.Select(Clone).ToArray(),
+                    SelectedGroup = CloneSelectedGroupDetail(),
+                    AutoInviteResponse = autoInviteResponse,
+                    GroupScopeConfigured = HasGroupScope
                 };
             }
         }
@@ -121,6 +166,16 @@ namespace BeeKingdom.Gameplay.Communication
                         selectedConversationId = conversations.FirstOrDefault()?.ConversationId;
                 }
                 await provider.EnsureRealtimeSubscriptionsAsync(accessible.Select(value => value.ConversationId), ct);
+                // RAP-OPTIONNEL-COMMUNICATIONS_01 : le scope monde vient des capacites negociees,
+                // jamais d'une valeur inventee cote client. S'il manque (serveur plus ancien), la
+                // creation de groupe reste refusee et l'interface le dit.
+                RemoteCapabilities negotiated = provider.NegotiatedCapabilities;
+                if (negotiated != null) ConfigureGroupScope(negotiated.GameServerId, negotiated.DefaultWorldId);
+                // Volontairement PAS de sondage des invitations/preferences ici : OpenAsync est le
+                // chemin critique d'ouverture, teste par une longue suite existante dont les faux
+                // transports comptent les appels. Les invitations arrivent de toute facon au premier
+                // tick de sondage, et les preferences sont relues a l'ouverture de l'ecran
+                // Parametres - deux appels reseau de moins a l'ouverture, aucun comportement perdu.
                 await RefreshSelectedAsync(ct);
                 SetStatus(provider.ConnectionState == RemoteChatConnectionState.Realtime ? LivingHiveChatStatus.Online : LivingHiveChatStatus.Polling, null);
                 EnsureLiveUpdates(ct, provider.ConnectionState == RemoteChatConnectionState.Polling);
@@ -275,7 +330,7 @@ namespace BeeKingdom.Gameplay.Communication
             liveUpdates = null;
             pollingTask = Task.CompletedTask;
             await provider.DisconnectAsync(ct);
-            lock (gate) { messages.Clear(); conversations.Clear(); selectedConversationId = null; pendingCount = 0; status = LivingHiveChatStatus.Offline; errorCode = null; }
+            lock (gate) { messages.Clear(); conversations.Clear(); selectedConversationId = null; pendingCount = 0; status = LivingHiveChatStatus.Offline; errorCode = null; ClearGroupState(); }
         }
 
         private void SetStatus(LivingHiveChatStatus value, string code) { lock (gate) { status = value; errorCode = code; } }
@@ -298,6 +353,10 @@ namespace BeeKingdom.Gameplay.Communication
                     await delay.WaitAsync(pollInterval, ct);
                     await RefreshConversationListAsync(ct);
                     await RefreshSelectedAsync(ct);
+                    // RAP-OPTIONNEL-COMMUNICATIONS_01: invitations ride the EXISTING poll tick on
+                    // purpose - a second timer would double the request rate against a chat backend
+                    // that is rate limited per player.
+                    await RefreshInvitationsAsync(ct);
                 }
             }
             catch (OperationCanceledException) { }
@@ -417,6 +476,22 @@ namespace BeeKingdom.Gameplay.Communication
         public static Task ResumeAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.ResumeAsync(lifetime.Token); }
         public static Task TranslateAsync(string messageId, string locale, string modelVersion) { lock (Gate) return controller == null ? Task.CompletedTask : controller.TranslateAsync(messageId, locale, modelVersion, lifetime.Token); }
         public static void ShowOriginal(string messageId) { lock (Gate) controller?.ShowOriginal(messageId); }
+
+        // RAP-OPTIONNEL-COMMUNICATIONS_01 - group facade. Same shape as the calls above: never throws
+        // at the IMGUI call site (a null controller answers a completed task), because the Chat Royal
+        // screen is drawn every frame and must not depend on the chat being configured to render.
+        public static void ConfigureGroupScope(string gameServerId, string worldId) { lock (Gate) controller?.ConfigureGroupScope(gameServerId, worldId); }
+        public static Task<string> CreateGroupAsync(string title, IReadOnlyList<string> inviteePlayerIds) { lock (Gate) return controller == null ? Task.FromResult<string>(null) : controller.CreateGroupAsync(title, inviteePlayerIds, lifetime.Token); }
+        public static Task InviteToGroupAsync(string conversationId, string inviteePlayerId) { lock (Gate) return controller == null ? Task.CompletedTask : controller.InviteToGroupAsync(conversationId, inviteePlayerId, lifetime.Token); }
+        public static Task<string> RespondToInvitationAsync(string inviteId, bool accept) { lock (Gate) return controller == null ? Task.FromResult<string>(null) : controller.RespondToInvitationAsync(inviteId, accept, lifetime.Token); }
+        public static Task RemoveGroupMemberAsync(string conversationId, string playerId) { lock (Gate) return controller == null ? Task.CompletedTask : controller.RemoveGroupMemberAsync(conversationId, playerId, lifetime.Token); }
+        public static Task TransferLeadershipAsync(string conversationId, string newLeaderPlayerId) { lock (Gate) return controller == null ? Task.CompletedTask : controller.TransferLeadershipAsync(conversationId, newLeaderPlayerId, lifetime.Token); }
+        public static Task LeaveGroupAsync(string conversationId) { lock (Gate) return controller == null ? Task.CompletedTask : controller.LeaveGroupAsync(conversationId, lifetime.Token); }
+        public static Task RefreshInvitationsAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.RefreshInvitationsAsync(lifetime.Token); }
+        public static Task RefreshGroupDetailAsync(string conversationId) { lock (Gate) return controller == null ? Task.CompletedTask : controller.RefreshGroupDetailAsync(conversationId, lifetime.Token); }
+        public static Task AcknowledgeSentInvitationResponsesAsync(IReadOnlyList<string> inviteIds) { lock (Gate) return controller == null ? Task.CompletedTask : controller.AcknowledgeSentInvitationResponsesAsync(inviteIds, lifetime.Token); }
+        public static Task RefreshPreferencesAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.RefreshPreferencesAsync(lifetime.Token); }
+        public static Task UpdateAutoInviteResponseAsync(string rule) { lock (Gate) return controller == null ? Task.CompletedTask : controller.UpdateAutoInviteResponseAsync(rule, lifetime.Token); }
         public static async Task CloseAsync() { LivingHiveChatController value; CancellationToken token; lock (Gate) { value = controller; token = lifetime?.Token ?? CancellationToken.None; } if (value != null) await value.CloseAsync(token); }
         public static async Task ResetAsync()
         {

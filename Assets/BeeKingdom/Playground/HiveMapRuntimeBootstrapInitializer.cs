@@ -21,7 +21,42 @@ namespace BeeKingdom.Playground
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (!IsEnvironmentScene(scene)) return;
+            ResetPresenterOverlayStateForSceneEntry();
             InitializeAllBootstraps(scene);
+        }
+
+        // M056A-CL : correction du defaut "HiveMap -> WorldMap -> HiveMap : plus de pan ni de
+        // zoom, mais les batiments et les menus restent cliquables".
+        //
+        // CAUSE EXACTE : HiveViewProductUiPresenter est une classe STATIQUE dont la vingtaine de
+        // booleens "ecran ouvert" survivent aux changements de scene (les statics ne se vident
+        // qu'au domain reload). Or ces drapeaux sont lus par TROIS predicats differents, et un
+        // seul d'entre eux garde la camera :
+        //
+        //   PremiumUiBlocksWorldInput()                 -> garde la CAMERA (pan + zoom)
+        //   HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking() -> garde batiments + menus
+        //
+        // Plusieurs drapeaux (combatPatrolOverlayOpen, ouvert par le bouton ATTAQUER de la
+        // WorldMap, mais aussi communicationPanelOpen, missionsCenterOpen, etc.) figurent dans
+        // le PREMIER predicat et pas dans le second. S'ils restent a true en quittant la
+        // WorldMap, on obtient exactement le symptome rapporte : camera morte, UI vivante.
+        // Pire : aucun ecran de la HiveMap ne redessine ces overlays, donc rien ne pouvait plus
+        // jamais les refermer - l'etat etait irrecuperable sans redemarrer le processus.
+        //
+        // ResetPremiumScreensForProof() remettait deja TOUS ces drapeaux a zero, mais n'etait
+        // appele que depuis les tests. On le branche ici, sur le seam de re-initialisation
+        // par chargement de scene deja prevu par le projet. Entrer dans la ruche ne doit
+        // jamais heriter d'un overlay laisse ouvert dans une autre scene.
+        private static void ResetPresenterOverlayStateForSceneEntry()
+        {
+            HiveViewProductUiPresenter.ResetPremiumScreensForProof();
+
+            // Second verrou de la camera : BuildingPerspectiveCamera consulte aussi
+            // DebugHotkeyGuard.TextInputHasFocus, qui teste GUIUtility.keyboardControl. Cet etat
+            // IMGUI est GLOBAL et survit lui aussi a LoadScene : un champ de saisie encore
+            // "focus" dans la scene precedente (auth, recherche WorldMap) laisserait la camera
+            // bloquee de la meme maniere. On repart d'un focus clavier propre a chaque entree.
+            GUIUtility.keyboardControl = 0;
         }
 
         private static bool IsEnvironmentScene(Scene scene)

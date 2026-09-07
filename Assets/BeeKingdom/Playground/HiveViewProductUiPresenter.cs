@@ -35753,6 +35753,9 @@ if (leftNavigationTexture == null)
 				Event.current.Use();
 				return;
 			}
+			// RAP-OPTIONNEL-COMMUNICATIONS_01 : recopie le snapshot du vrai backend AVANT tout dessin,
+			// pour que chaque pane lise des donnees serveur au lieu de la maquette locale.
+			ChatRoyalSyncFromServer();
 			ChatSimulationTick();
 
 			float anim = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NowForUi() - chatScreenOpenedAt) / 0.18f));
@@ -35774,11 +35777,28 @@ if (leftNavigationTexture == null)
 
 			float quickY = bannerHeight + 6f;
 			float quickH = compact ? 56f : 60f;
-			float searchH = chatSearchActive ? (compact ? 40f : 42f) : 0f;
-			DrawChatActionBar(new Rect(10f, quickY, Screen.width - 20f, quickH), compact);
-			float mainTop = quickY + quickH + 6f + searchH;
-			Rect main = new Rect(0f, mainTop, Screen.width, Mathf.Max(1f, Screen.height - mainTop));
-			DrawChatMainLayout(main, compact);
+			// RAP-OPTIONNEL-COMMUNICATIONS_01 : searchH etait calcule AVANT DrawChatActionBar, qui
+			// bascule lui-meme chatSearchActive dans le meme appel. Le mainTop de cette frame restait
+			// donc base sur l'ancien etat : au clic sur "Recherche" (ou "Nouvelle discussion", qui
+			// active aussi la recherche) le champ apparaissait par-dessus la liste au lieu de la
+			// pousser vers le bas - c'est le "bris visuel" rapporte. La hauteur est desormais relue
+			// APRES la barre d'action, donc dans le meme etat que ce qui vient d'etre dessine.
+			// RAP-OPTIONNEL-COMMUNICATIONS_01 : REGLE CLAUDE.md (2026-09-03). L'ecran dessine ses
+			// propres sous-modaux (nouvelle discussion, nouveau groupe, membres, parametres) par
+			// dessus son propre contenu ; sans cette porte, IMGUI resout un clic destine au modal sur
+			// le premier controle qui matche dans l'ordre de dessin, c'est-a-dire un controle
+			// invisible de la barre d'action ou de la liste des conversations juste en dessous.
+			bool ownOverlayOpen = ChatRoyalOwnOverlayOpen;
+			float searchH = 0f;
+			DrawUnderOwnOverlayGate(ownOverlayOpen, () =>
+			{
+				DrawChatActionBar(new Rect(10f, quickY, Screen.width - 20f, quickH), compact);
+				searchH = chatSearchActive ? (compact ? 40f : 42f) : 0f;
+				float innerTop = quickY + quickH + 6f + searchH;
+				DrawChatMainLayout(new Rect(0f, innerTop, Screen.width, Mathf.Max(1f, Screen.height - innerTop)), compact);
+			});
+			DrawChatServerSourceBadge(quickY + quickH + 6f + searchH, compact);
+			DrawChatRoyalOverlays(compact);
 			DrawChatToast();
 			GUI.matrix = Matrix4x4.identity;
 		}
@@ -35835,21 +35855,20 @@ if (leftNavigationTexture == null)
 					AudioManager.Instance?.PlayUIClick();
 					if (string.Equals(ids[i], "new", StringComparison.Ordinal))
 					{
-						chatSelectedChannel = "private";
+						// RAP-OPTIONNEL-COMMUNICATIONS_01 : ouvrait juste le champ de recherche des
+						// conversations avec un toast "placeholder". Ouvre desormais un vrai
+						// selecteur de joueur (annuaire serveur) comme demande par le CEO.
 						chatFavoritesOnly = false;
-						chatSearchActive = true;
-						chatSearchQuery = string.Empty;
-						if (compact) chatMobilePane = "conversations";
-						ShowChatToast("Nouvelle discussion : utilisez la recherche pour trouver un joueur (placeholder).");
+						OpenChatNewDiscussion();
 					}
-					else if (string.Equals(ids[i], "group", StringComparison.Ordinal)) ShowChatToast("La création de groupes arrive à un prochain sprint.");
+					else if (string.Equals(ids[i], "group", StringComparison.Ordinal)) OpenChatNewGroup();
 					else if (string.Equals(ids[i], "search", StringComparison.Ordinal))
 					{
 						chatSearchActive = !chatSearchActive;
 						if (!chatSearchActive) chatSearchQuery = string.Empty;
 					}
 					else if (string.Equals(ids[i], "favorites", StringComparison.Ordinal)) chatFavoritesOnly = !chatFavoritesOnly;
-					else ShowChatToast("Les paramètres du chat arrivent à un prochain sprint.");
+					else OpenChatSettings();
 				}
 			}
 			GUI.EndScrollView();
@@ -35858,8 +35877,11 @@ if (leftNavigationTexture == null)
 				Rect searchRect = new Rect(rect.x + 4f, rect.y + rect.height + 4f, rect.width - 8f, compact ? 34f : 36f);
 				DrawPremiumPanel(searchRect, new Color(0.04f, 0.032f, 0.022f, 0.96f), new Color(0.70f, 0.46f, 0.14f, 0.70f));
 				GUI.SetNextControlName("chatSearch");
-				chatSearchQuery = GUI.TextField(new Rect(searchRect.x + 10f, searchRect.y + 5f, searchRect.width - 66f, searchRect.height - 10f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = compact ? 10 : 12, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } });
-				if (GUI.Button(new Rect(searchRect.xMax - 54f, searchRect.y + 4f, 46f, searchRect.height - 8f), "Effacer"))
+				// M056A-CL : le bouton faisait 46px de large, trop etroit pour le mot "Effacer" :
+				// IMGUI le tronquait a l'ecran en "Efface..." (defaut rapporte par le testeur
+				// externe). Largeur portee a 64px et champ de saisie raccourci d'autant.
+				chatSearchQuery = GUI.TextField(new Rect(searchRect.x + 10f, searchRect.y + 5f, searchRect.width - 84f, searchRect.height - 10f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = compact ? 10 : 12, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } });
+				if (GUI.Button(new Rect(searchRect.xMax - 72f, searchRect.y + 4f, 64f, searchRect.height - 8f), "Effacer"))
 				{
 					chatSearchQuery = string.Empty;
 				}
@@ -36282,6 +36304,10 @@ if (leftNavigationTexture == null)
 		private static void ChatSimulationTick(bool allowWhileChatClosed = false)
 		{
 			if (!chatScreenOpen && !allowWhileChatClosed) return;
+			// RAP-OPTIONNEL-COMMUNICATIONS_01 : le simulateur injectait de faux messages toutes les
+			// ~16 s. Des que l'ecran affiche de VRAIES conversations serveur il doit se taire, sinon
+			// des messages inventes se melent a l'historique reel.
+			if (chatUsingServerData) return;
 			float now = NowForUi();
 			if (now < chatSimulationNextAt) return;
 			chatSimulationNextAt = now + 16f + (float)(now % 11f);

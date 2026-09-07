@@ -10,6 +10,10 @@ namespace BeeKingdom.Tutorial
         private float _anim;
         private bool _visible;
 
+        // M056A-CL : expose l'etat de presentation pour la couverture de regression
+        // (la fleche jaune orpheline apres fermeture du tutoriel). Lecture seule.
+        public bool IsVisible => _visible;
+
         private static Texture2D _arrowTex;
         private static Texture2D ArrowTexture
         {

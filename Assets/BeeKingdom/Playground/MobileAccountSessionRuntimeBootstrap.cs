@@ -20,6 +20,7 @@ namespace BeeKingdom.Playground
         private static HiveBuildingUpgradePanelController buildingUpgradeController;
         private static HiveResearchPanelController researchController;
         private static AllianceCenterPanelController allianceCenterController;
+        private static ChatPlayerPickerController chatPlayerPickerController;
         private static HiveStockPanelController stockController;
         private static HiveDailyRoundPanelController dailyRoundController;
         private static HiveBroodVitalityPanelController broodVitalityController;
@@ -363,6 +364,10 @@ namespace BeeKingdom.Playground
             // flow can search real players without AllianceClient ever duplicating search logic.
             var playerDirectoryClient = new PlayerDirectoryClient(client.Gate, client, gameTransport);
             allianceCenterController = new AllianceCenterPanelController(allianceClient, playerDirectoryClient);
+            // RAP-OPTIONNEL-COMMUNICATIONS_01: the Chat Royal "Nouvelle discussion" / "Nouveau groupe"
+            // pickers sit on the SAME generic directory client - one search service, two callers,
+            // separate result lists so a chat search never overwrites what Alliance is showing.
+            chatPlayerPickerController = new ChatPlayerPickerController(playerDirectoryClient);
             gameplayHiveId = hiveId;
             championBeeClient = new HiveChampionBeeClient(client.Gate, client, gameTransport);
             troopTierClient = new HiveTroopTierClient(client.Gate, client, gameTransport);
@@ -434,6 +439,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ConfigureBuildingUpgradeControllerForRuntime(buildingUpgradeController);
             HiveViewProductUiPresenter.ConfigureResearchControllerForRuntime(researchController);
             HiveViewProductUiPresenter.ConfigureAllianceCenterControllerForRuntime(allianceCenterController);
+            HiveViewProductUiPresenter.ConfigureChatPlayerPickerForRuntime(chatPlayerPickerController);
             // M043T-CL: nothing previously fetched Alliance state until the player manually opened
             // Alliance Center - a pending invitation (or an existing membership) sat invisible
             // until then. One real, already-existing fetch at hive load; HiveViewProductUiPresenter
@@ -645,6 +651,12 @@ namespace BeeKingdom.Playground
             buildingUpgradeController = null;
             researchController = null;
             allianceCenterController = null;
+            if (chatPlayerPickerController != null)
+            {
+                chatPlayerPickerController.Dispose();
+                chatPlayerPickerController = null;
+                HiveViewProductUiPresenter.ResetChatPlayerPickerForRuntime();
+            }
             stockController = null;
             dailyRoundController = null;
             broodVitalityController = null;

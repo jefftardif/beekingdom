@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace BeeKingdom.Chat;
 
-public interface IChatService
+public partial interface IChatService
 {
     ChatCapabilities GetCapabilities();
     ChatReadiness GetReadiness();
@@ -29,7 +29,7 @@ public interface IChatService
     long GetLastSequence(Guid conversationId);
 }
 
-public sealed class ChatService : IChatService
+public sealed partial class ChatService : IChatService
 {
     public long GetLastSequence(Guid conversationId) => repository.GetLastSequence(conversationId);
     public void EnsureCanRead(PlayerId playerId, Guid conversationId) => RequireRead(conversationId, playerId);
@@ -62,7 +62,7 @@ public sealed class ChatService : IChatService
             Server: options.Enabled,
             OfficialGain: false,
             options.ProtocolVersion,
-            [ChatChannelType.Alliance, ChatChannelType.Server, ChatChannelType.Private, ChatChannelType.Leaders],
+            [ChatChannelType.Alliance, ChatChannelType.Server, ChatChannelType.Private, ChatChannelType.Leaders, ChatChannelType.Group],
             Emojis: true,
             Mentions: true,
             OfflineDelivery: true,
@@ -508,6 +508,7 @@ public sealed class ChatService : IChatService
             ChatChannelType.Server => "server_standard",
             ChatChannelType.Private => "private_standard",
             ChatChannelType.Leaders => "leaders_restricted",
+            ChatChannelType.Group => "group_standard",
             _ => "chat_standard"
         };
     }

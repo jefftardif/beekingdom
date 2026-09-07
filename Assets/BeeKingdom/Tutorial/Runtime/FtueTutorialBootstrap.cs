@@ -59,7 +59,33 @@ namespace BeeKingdom.Tutorial
             img.color = new Color(0,0,0,0.01f);
             img.raycastTarget = true;
             _blocker.SetActive(false);
+            // M056A-CL : fermer la PRESENTATION du tutoriel doit retirer TOUS les artefacts
+            // visibles, pas seulement la bulle de dialogue. Voir DismissPresentation.
+            _dialogue.DismissRequested = DismissPresentation;
             // client will be resolved in Start when authenticated session is available
+        }
+
+        // M056A-CL : point d'entree UNIQUE de fermeture de la presentation du tutoriel.
+        //
+        // Bug reel rapporte par le testeur externe : la fleche jaune restait affichee
+        // indefiniment apres la fermeture du tutoriel. Cause exacte : TutorialDialoguePresenter
+        // .Hide() ne remet a zero que SON propre etat (_visible/_onContinue) ; il n'a aucune
+        // reference vers la fleche ni vers le bloqueur d'input. Resultat : sur toute etape
+        // Require* (dialogue affiche SANS callback de continuation), fermer la bulle laissait
+        // TutorialArrowPresenter._visible a true - donc la fleche, l'anneau de pulsation ET le
+        // bloqueur plein ecran (alpha 0.01, raycastTarget, sortingOrder 9000, porte par un
+        // objet DontDestroyOnLoad donc SURVIVANT AUX CHANGEMENTS DE SCENE) restaient actifs.
+        // Le bloqueur invisible est le pire des trois : il avale silencieusement l'input.
+        //
+        // IMPORTANT : cette methode ne touche VOLONTAIREMENT a aucun etat de PROGRESSION
+        // (FtueProgress.ChapterId / CurrentStepId / CompletedSteps / Revision). Fermer la
+        // presentation n'est pas annuler le tutoriel : la progression reste reprenable et
+        // sera reconstruite par UpdateVisuals a la prochaine etape.
+        public void DismissPresentation()
+        {
+            if (_arrow != null) _arrow.Hide();
+            if (_dialogue != null) _dialogue.Hide();
+            if (_blocker != null) _blocker.SetActive(false);
         }
 
         private async void Start()

@@ -1344,13 +1344,24 @@ app.MapPost("/game/v1/hives/{hiveId}/workshop/batch-qualification", async (
     };
 });
 
-app.MapGet("/chat/v1/capabilities", (HttpContext context, ChatManager chat) =>
+app.MapGet("/chat/v1/capabilities", (HttpContext context, ChatManager chat, IOptions<ServerIdentityOptions> serverIdentity) =>
 {
     context.Response.Headers.CacheControl = "no-store, no-cache, max-age=0, must-revalidate";
     context.Response.Headers.Pragma = "no-cache";
     context.Response.Headers.Expires = "0";
     context.Response.Headers.Vary = "Accept-Encoding";
-    return Results.Ok(chat.GetCapabilities());
+    // RAP-OPTIONNEL-COMMUNICATIONS_01: creating a group requires a (gameServerId, worldId) scope, and
+    // until now NO chat client could obtain one - the whole chat surface only ever addressed
+    // conversation ids handed to it, so the scope was never exposed anywhere under /chat/v1. A client
+    // had to fabricate GUIDs, which would silently create rooms in the wrong world. Publishing the
+    // scope alongside the capabilities makes the chat API self-sufficient for the Unity client and
+    // for the future web client alike. Purely additive: existing consumers deserialize
+    // ChatCapabilities and ignore the two extra fields.
+    return Results.Ok(chat.GetCapabilities() with
+    {
+        GameServerId = NormalizeGuidString(serverIdentity.Value.GameServerId),
+        DefaultWorldId = NormalizeGuidString(serverIdentity.Value.DefaultWorldId)
+    });
 });
 
 app.MapGet("/chat/v1/conversations", (HttpContext context, AuthenticationManager authentication, ChatManager chat, int? limit, string? cursor) =>
@@ -1445,6 +1456,100 @@ app.MapPost("/chat/v1/alliances/{allianceId:guid}/announcements", async (HttpCon
     }
 
     return await ExecuteChatAsync(context, async () => Results.Ok(await chat.SendAllianceAnnouncementAsync(auth.PlayerId, allianceId, request, cancellationToken)));
+});
+
+// ==================== Chat groups & invitations (RAP-OPTIONNEL-COMMUNICATIONS_01) ====================
+// Same auth/mapping patrons as the chat endpoints above. Everything is REST + polling on purpose:
+// realtime stays gated behind Chat__RealtimeEnabled, and the rest of the game already polls.
+
+app.MapPost("/chat/v1/groups", (HttpContext context, AuthenticationManager authentication, ChatManager chat, CreateChatGroupRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    return ExecuteChat(context, () => { CreateChatGroupResult value = chat.CreateGroup(auth.PlayerId, request); return Results.Ok(value.Detail); });
+});
+
+app.MapGet("/chat/v1/groups/{groupId}", (HttpContext context, AuthenticationManager authentication, ChatManager chat, string groupId) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    if (!TryParseChatResourceId(groupId, out Guid parsedGroupId)) return ChatError(400, "chat.invalid_request", "chat.error.invalid_request");
+    return ExecuteChat(context, () => Results.Ok(chat.GetGroupDetail(auth.PlayerId, parsedGroupId)));
+});
+
+app.MapPost("/chat/v1/groups/{groupId}/invitations", (HttpContext context, AuthenticationManager authentication, ChatManager chat, string groupId, InviteToChatGroupRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    if (!TryParseChatResourceId(groupId, out Guid parsedGroupId)) return ChatError(400, "chat.invalid_request", "chat.error.invalid_request");
+    return ExecuteChat(context, () => Results.Ok(chat.InviteToGroup(auth.PlayerId, parsedGroupId, request.InviteePlayerId)));
+});
+
+app.MapPost("/chat/v1/groups/{groupId}/members/{playerId}/remove", (HttpContext context, AuthenticationManager authentication, ChatManager chat, string groupId, string playerId) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    if (!TryParseChatResourceId(groupId, out Guid parsedGroupId) || !TryParseChatResourceId(playerId, out Guid parsedPlayerId)) return ChatError(400, "chat.invalid_request", "chat.error.invalid_request");
+    return ExecuteChat(context, () => Results.Ok(chat.RemoveGroupMember(auth.PlayerId, parsedGroupId, parsedPlayerId)));
+});
+
+app.MapPost("/chat/v1/groups/{groupId}/leadership/transfer", (HttpContext context, AuthenticationManager authentication, ChatManager chat, string groupId, TransferChatGroupLeadershipRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    if (!TryParseChatResourceId(groupId, out Guid parsedGroupId)) return ChatError(400, "chat.invalid_request", "chat.error.invalid_request");
+    return ExecuteChat(context, () => Results.Ok(chat.TransferGroupLeadership(auth.PlayerId, parsedGroupId, request.NewLeaderPlayerId)));
+});
+
+app.MapPost("/chat/v1/groups/{groupId}/leave", (HttpContext context, AuthenticationManager authentication, ChatManager chat, string groupId) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    if (!TryParseChatResourceId(groupId, out Guid parsedGroupId)) return ChatError(400, "chat.invalid_request", "chat.error.invalid_request");
+    return ExecuteChat(context, () => { chat.LeaveGroup(auth.PlayerId, parsedGroupId); return Results.Ok(new { left = true }); });
+});
+
+app.MapGet("/chat/v1/invitations", (HttpContext context, AuthenticationManager authentication, ChatManager chat) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    return ExecuteChat(context, () => Results.Ok(chat.ListPendingInvitations(auth.PlayerId)));
+});
+
+app.MapGet("/chat/v1/invitations/sent", (HttpContext context, AuthenticationManager authentication, ChatManager chat) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    return ExecuteChat(context, () => Results.Ok(chat.ListSentInvitationResponses(auth.PlayerId)));
+});
+
+app.MapPost("/chat/v1/invitations/sent/acknowledge", (HttpContext context, AuthenticationManager authentication, ChatManager chat, AcknowledgeChatInvitationsRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    return ExecuteChat(context, () => Results.Ok(new { acknowledged = chat.AcknowledgeInvitationResponses(auth.PlayerId, request.InviteIds ?? []) }));
+});
+
+app.MapPost("/chat/v1/invitations/{inviteId}/respond", (HttpContext context, AuthenticationManager authentication, ChatManager chat, string inviteId, RespondToChatGroupInviteRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    if (!TryParseChatResourceId(inviteId, out Guid parsedInviteId)) return ChatError(400, "chat.invalid_request", "chat.error.invalid_request");
+    return ExecuteChat(context, () => Results.Ok(chat.RespondToInvitation(auth.PlayerId, parsedInviteId, request.Accept)));
+});
+
+app.MapGet("/chat/v1/preferences", (HttpContext context, AuthenticationManager authentication, ChatManager chat) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    return ExecuteChat(context, () => Results.Ok(chat.GetPreferences(auth.PlayerId)));
+});
+
+app.MapPost("/chat/v1/preferences", (HttpContext context, AuthenticationManager authentication, ChatManager chat, UpdateChatPreferencesRequest request) =>
+{
+    TokenValidationResult auth = AuthenticateChatRequest(context, authentication);
+    if (!auth.IsValid) return ChatError(StatusCodes.Status401Unauthorized, "chat.session_required", "chat.error.session_required");
+    return ExecuteChat(context, () => Results.Ok(chat.UpdatePreferences(auth.PlayerId, request)));
 });
 
 // ==================== Player Directory (M043B-CL) ====================
@@ -2650,6 +2755,13 @@ static IResult ExecuteChat(HttpContext context, Func<IResult> action)
     catch (InvalidOperationException exception) when (string.Equals(exception.Message, "chat_rate_limited", StringComparison.Ordinal))
     {
         context.Response.Headers.RetryAfter="60"; return ChatError(429,"chat.rate_limited","chat.error.rate_limited",60);
+    }
+    // RAP-OPTIONNEL-COMMUNICATIONS_01: group state conflicts (a leader trying to leave without
+    // handing over, an invitation already answered...) are a 409, not a 500 - the request is
+    // well-formed and authorised, the group is simply not in a state that allows it.
+    catch (InvalidOperationException exception) when (exception.Message.StartsWith("group_", StringComparison.Ordinal))
+    {
+        return ChatError(409,"chat."+exception.Message,"chat.error."+exception.Message);
     }
 }
 

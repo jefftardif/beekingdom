@@ -18,6 +18,20 @@ public interface IChatRepository
     // accepted/invitation-accepted) drive real chat participation without a second chat system.
     ChatConversationParticipant UpsertParticipant(ChatConversationParticipant participant);
     ChatConversationParticipant? RemoveParticipant(Guid conversationId, PlayerId playerId, DateTimeOffset removedAtUtc);
+    // RAP-OPTIONNEL-COMMUNICATIONS_01: role-only mutation. SaveConversation rewrites the whole
+    // participant set, which is the wrong grain for a leadership transfer (two rows change, nothing
+    // else must move); UpsertParticipant would need the caller to rebuild JoinedAtUtc/permissions.
+    ChatConversationParticipant? UpdateParticipantRole(Guid conversationId, PlayerId playerId, ChatPermissionRole role);
+    ChatGroupInvite SaveGroupInvite(ChatGroupInvite invite);
+    ChatGroupInvite? GetGroupInvite(Guid inviteId);
+    ChatGroupInvite? GetPendingInvite(Guid conversationId, PlayerId inviteePlayerId);
+    IReadOnlyList<ChatGroupInvite> ListPendingInvitesForPlayer(PlayerId playerId);
+    IReadOnlyList<ChatGroupInvite> ListInvitesSentByPlayer(PlayerId playerId, bool onlyUnacknowledgedResponses);
+    IReadOnlyList<ChatGroupInvite> ListPendingInvitesForConversation(Guid conversationId);
+    ChatGroupInvite? UpdateGroupInviteStatus(Guid inviteId, string status, DateTimeOffset respondedAtUtc);
+    int AcknowledgeInviteResponses(PlayerId inviterPlayerId, IReadOnlyList<Guid> inviteIds);
+    ChatPreferences? GetChatPreferences(PlayerId playerId);
+    ChatPreferences SaveChatPreferences(ChatPreferences preferences);
     long NextSequence(Guid conversationId);
     ChatOutboxReceipt? GetOutboxReceipt(PlayerId playerId, Guid conversationId, string clientRequestId);
     ChatOutboxReceipt SaveOutboxReceipt(ChatOutboxReceipt receipt);

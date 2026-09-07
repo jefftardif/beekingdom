@@ -112,6 +112,12 @@ namespace BeeKingdom.Experiments.Environment2D5D
         {
             if (Application.isPlaying && !showInPlay) return;
 
+            // M056B-CL : meme anti-pattern que FrontalBackdrop (lecture clavier brute sans
+            // conscience du focus de saisie). Inerte aujourd'hui car showInPlay est false,
+            // mais le jour ou un developpeur coche showInPlay, taper un "x" ou un "v" dans
+            // un champ ne doit pas piloter cet outil.
+            if (Application.isPlaying && DebugHotkeyGuard.Blocked) return;
+
             Keyboard kb = Keyboard.current;
             if (kb != null && kb.vKey.wasPressedThisFrame && !_running && _initialized)
             {

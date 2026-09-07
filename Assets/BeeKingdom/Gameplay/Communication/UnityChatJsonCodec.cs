@@ -18,7 +18,7 @@ namespace BeeKingdom.Gameplay.Communication
         public T FromJson<T>(string json) => JsonUtility.FromJson<T>(json);
     }
 
-    public sealed class UnityChatJsonCodec : IChatJsonCodec, IChatErrorDecoder
+    public sealed partial class UnityChatJsonCodec : IChatJsonCodec, IChatErrorDecoder
     {
         private readonly IChatJsonBackend backend;
         public UnityChatJsonCodec(IChatJsonBackend backend = null) { this.backend = backend ?? new UnityJsonBackend(); }
@@ -30,6 +30,8 @@ namespace BeeKingdom.Gameplay.Communication
             if (value is RemoteReportMessageRequest report) return backend.ToJson(new WireReport { clientRequestId = report.ClientRequestId, category = report.Category });
             if (value is TranslationRequest translation) return backend.ToJson(new WireTranslationRequest { messageId = translation.MessageId, targetLocale = translation.TargetLocale, modelVersion = translation.ModelVersion });
             if (value is RemoteCreateConversationRequest conversation) return backend.ToJson(new WireCreateConversation { channelType = conversation.ChannelType, gameServerId = conversation.GameServerId, worldId = conversation.WorldId, audienceKey = conversation.AudienceKey, title = conversation.Title, participantIds = conversation.ParticipantIds.ToArray(), clientRequestId = conversation.ClientRequestId });
+            string groupJson;
+            if (TrySerializeGroupRequest(value, out groupJson)) return groupJson;
             throw new NotSupportedException("Unsupported chat JSON request type: " + (value == null ? "null" : value.GetType().FullName));
         }
 
@@ -38,7 +40,7 @@ namespace BeeKingdom.Gameplay.Communication
             object value;
             Type type = typeof(T);
             if (type == typeof(object)) value = json;
-            else if (type == typeof(RemoteCapabilities)) { WireCapabilities wire = backend.FromJson<WireCapabilities>(json); value = new RemoteCapabilities { Provider = wire.provider, Server = wire.server, OfficialGain = wire.officialGain, Realtime = wire.realtime, Emojis = wire.emojis, Mentions = wire.mentions, OfflineDelivery = wire.offlineDelivery, ReadCursors = wire.readCursors, ModerationReports = wire.moderationReports, ProtocolVersion = wire.protocolVersion, IdempotencyReceiptRetentionDays = wire.idempotencyReceiptRetentionDays, Channels = (wire.channels ?? Array.Empty<string>()).ToList(), Limits = wire.limits == null ? null : new RemoteChatLimits { BodyMaxCharacters = wire.limits.bodyMaxCharacters, MessagesPerMinutePerPlayer = wire.limits.messagesPerMinutePerPlayer, MessagesPerTenSecondsPerConversation = wire.limits.messagesPerTenSecondsPerConversation, PrivateConversationCreatesPerHour = wire.limits.privateConversationCreatesPerHour, MaxPrivateRecipients = wire.limits.maxPrivateRecipients }, TranslationAvailable = wire.translationAvailable, TranslationModelVersion = wire.translationModelVersion }; }
+            else if (type == typeof(RemoteCapabilities)) { WireCapabilities wire = backend.FromJson<WireCapabilities>(json); value = new RemoteCapabilities { Provider = wire.provider, Server = wire.server, OfficialGain = wire.officialGain, Realtime = wire.realtime, Emojis = wire.emojis, Mentions = wire.mentions, OfflineDelivery = wire.offlineDelivery, ReadCursors = wire.readCursors, ModerationReports = wire.moderationReports, ProtocolVersion = wire.protocolVersion, IdempotencyReceiptRetentionDays = wire.idempotencyReceiptRetentionDays, Channels = (wire.channels ?? Array.Empty<string>()).ToList(), Limits = wire.limits == null ? null : new RemoteChatLimits { BodyMaxCharacters = wire.limits.bodyMaxCharacters, MessagesPerMinutePerPlayer = wire.limits.messagesPerMinutePerPlayer, MessagesPerTenSecondsPerConversation = wire.limits.messagesPerTenSecondsPerConversation, PrivateConversationCreatesPerHour = wire.limits.privateConversationCreatesPerHour, MaxPrivateRecipients = wire.limits.maxPrivateRecipients }, TranslationAvailable = wire.translationAvailable, TranslationModelVersion = wire.translationModelVersion, GameServerId = wire.gameServerId, DefaultWorldId = wire.defaultWorldId }; }
             else if (type == typeof(RemoteConversationPage)) value = Map(backend.FromJson<WireConversationPage>(json));
             else if (type == typeof(RemoteMessagePage)) value = Map(backend.FromJson<WireMessagePage>(json));
             else if (type == typeof(RemoteSendResult)) { WireSendResult wire = backend.FromJson<WireSendResult>(json); value = new RemoteSendResult { Message = Map(wire.message), Deduplicated = wire.deduplicated, ServerSequence = wire.serverSequence }; }
@@ -46,7 +48,7 @@ namespace BeeKingdom.Gameplay.Communication
             else if (type == typeof(RemoteModerationReport)) { WireModerationReport wire = backend.FromJson<WireModerationReport>(json); value = new RemoteModerationReport { ReportId = wire.reportId, MessageId = wire.messageId, ClientRequestId = wire.clientRequestId, Status = wire.status }; }
             else if (type == typeof(RemoteInboxEntry)) value = Map(backend.FromJson<WireInbox>(json));
             else if (type == typeof(MessageTranslation)) { WireTranslation wire = backend.FromJson<WireTranslation>(json); value = new MessageTranslation { MessageId = wire.messageId, SourceLocale = wire.sourceLocale, TargetLocale = wire.targetLocale, ModelVersion = wire.modelVersion, TranslatedText = wire.translatedText, Status = wire.status }; }
-            else throw new NotSupportedException("Unsupported chat JSON response type: " + type.FullName);
+            else if (!TryDeserializeGroupResponse(type, json, out value)) throw new NotSupportedException("Unsupported chat JSON response type: " + type.FullName);
             return (T)value;
         }
 
@@ -90,7 +92,7 @@ namespace BeeKingdom.Gameplay.Communication
         [Serializable] private sealed class WireReport { public string clientRequestId; public string category; }
         [Serializable] private sealed class WireTranslationRequest { public string messageId; public string targetLocale; public string modelVersion; }
         [Serializable] private sealed class WireCreateConversation { public string channelType; public string gameServerId; public string worldId; public string audienceKey; public string title; public string[] participantIds; public string clientRequestId; }
-        [Serializable] private sealed class WireCapabilities { public string provider; public bool server; public bool officialGain; public string protocolVersion; public string[] channels; public bool emojis; public bool mentions; public bool offlineDelivery; public bool readCursors; public bool moderationReports; public bool realtime; public int idempotencyReceiptRetentionDays; public WireLimits limits; public bool translationAvailable; public string translationModelVersion; }
+        [Serializable] private sealed class WireCapabilities { public string provider; public bool server; public bool officialGain; public string protocolVersion; public string[] channels; public bool emojis; public bool mentions; public bool offlineDelivery; public bool readCursors; public bool moderationReports; public bool realtime; public int idempotencyReceiptRetentionDays; public WireLimits limits; public bool translationAvailable; public string translationModelVersion; public string gameServerId; public string defaultWorldId; }
         [Serializable] private sealed class WireLimits { public int bodyMaxCharacters; public int messagesPerMinutePerPlayer; public int messagesPerTenSecondsPerConversation; public int privateConversationCreatesPerHour; public int maxPrivateRecipients; }
         [Serializable] private sealed class WireConversationPage { public WireConversation[] items; public string nextCursor; }
         [Serializable] private sealed class WireMessagePage { public WireMessage[] items; public long nextAfterSequence; }

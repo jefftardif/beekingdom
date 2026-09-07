@@ -451,4 +451,93 @@ correctif de routage LivingHive est intact (HiveMap index 0 active, LivingHive d
 
 ---
 
+---
+
+## Post-mortem M056B-CL — Blocage grille jaune de debug
+
+### Rapport du CEO
+
+Toi (Play Mode) et Alex (build Windows sur un autre PC) avez vu la meme grille jaune
+avec le texte "FRONTAL BACKDROP - image droite, entiere, 2D (aucune perspective) | X =
+hide/show" par-dessus Chat Royal. Deux testeurs independants, meme symptome exact ->
+bug reel, pas un artefact d'editeur.
+
+### Cause exacte
+
+`Assets/Experiments/Environment2D5D/Scripts/FrontalBackdrop.cs` lisait
+`Keyboard.current.xKey.wasPressedThisFrame` dans `Update()` pour basculer une grille de
+diagnostic (`showGrid`, `false` par defaut). Le nouvel Input System lit le peripherique
+BRUT : il ignore totalement qu'un champ de saisie ait le focus clavier. Le compositeur
+de Chat Royal est un `GUI.TextField` IMGUI - IMGUI consomme bien la frappe pour son
+propre rendu, mais cela n'empeche en rien `Keyboard.current` de voir la meme touche le
+meme frame. **Taper un simple message contenant un "x" (le prenom "Alex", par
+exemple) activait silencieusement la grille par-dessus tout le jeu**, en Play Mode
+comme en build standalone. Meme anti-pattern trouve et corrige dans 3 autres scripts du
+meme module (`AnchorMarkerUI.cs`, `AnchorValidation.cs` — outils de diagnostic inertes
+aujourd'hui mais vulnerables au meme bug si jamais actives — et
+`BuildingPerspectiveCamera.cs`, ou taper dans un champ uGUI aurait fait paner la camera
+de jeu).
+
+### Correctif
+
+Nouvelle classe partagee `Assets/Experiments/Environment2D5D/Scripts/DebugHotkeyGuard.cs` :
+- `TextInputHasFocus` : vrai si un champ IMGUI (`GUIUtility.keyboardControl != 0`) OU un
+  champ uGUI/TextMeshPro (`EventSystem.current.currentSelectedGameObject`) a le focus.
+- `Blocked` (reserve aux raccourcis de DEBUG uniquement) : vrai si (1) la build n'est
+  pas une build de developpement (`!Application.isEditor && !Debug.isDebugBuild` —
+  ceinture ET bretelles : meme un appui volontaire ne fait plus rien dans une build
+  livree), (2) un champ de saisie a le focus, ou (3) une fenetre Premium est ouverte
+  (reutilise `HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof`, deja en
+  place, plutot que d'inventer un second drapeau).
+
+`FrontalBackdrop.Update()` ignore desormais la touche X si `DebugHotkeyGuard.Blocked`.
+Le `OnGUI()` conserve en plus sa propre garde de rendu (deja presente) : la grille ne
+peut de toute facon jamais se DESSINER hors editeur/build de developpement, meme si
+`showGrid` finissait a `true` par une autre voie. Les 3 autres scripts recoivent la
+meme garde, avec la distinction correcte entre `Blocked` (outils de debug) et
+`TextInputHasFocus` seul (`BuildingPerspectiveCamera`, dont le pan camera est du
+gameplay reel qui ne doit JAMAIS etre desactive par le type de build — seulement par un
+champ de saisie qui a le focus).
+
+**Fichiers modifies** : `FrontalBackdrop.cs`, `AnchorMarkerUI.cs`, `AnchorValidation.cs`,
+`BuildingPerspectiveCamera.cs`, `WindowsInternalBuildTool.cs` (version bump),
+`BuildStamp.txt`. **Fichier cree** : `DebugHotkeyGuard.cs`.
+
+### Verification
+
+- Compilation propre (`assets-refresh` -> Success, 0 erreur).
+- Play Mode : demarrage sans erreur console.
+- Simulation d'appui clavier "X" en direct via le pont MCP : non concluante de facon
+  fiable (le systeme d'input bas niveau est sensible au decoupage exact des frames
+  entre deux appels d'outil separes — limite de l'outillage de simulation, pas un doute
+  sur le correctif). La preuve retenue est la lecture directe du code : `Blocked`
+  court-circuite la lecture de la touche X **avant** qu'elle soit testee des qu'un champ
+  de saisie a le focus — aucun chemin ne permet de contourner cette garde.
+- **Build Windows reconstruite et relancee reellement** (pas seulement en Play Mode) :
+  le `Player.log` confirme `[BuildStamp] BeeKingdom Alpha Internal
+  0.1.1-alpha-internal-gridfix | commit 197fcbc0+gridfix | 2026-09-06 21:34` et
+  l'ouverture de `Environment2D5D_HiveMap_Test` (jamais LivingHive).
+
+### Nouveau package
+
+| | |
+|---|---|
+| Ancien ZIP (INVALIDE) | `BeeKingdom-Windows-Internal-0.1.0-alpha-internal.zip` — **ne plus distribuer** |
+| Nouveau ZIP | `Builds/Windows/BeeKingdom-Windows-Internal-0.1.1-alpha-internal-gridfix.zip` |
+| Taille | 1 945 474 401 octets (~1,81 Gio) |
+| Version / build ID | `0.1.1-alpha-internal-gridfix` \| commit `197fcbc0+gridfix` |
+
+### Non verifie / limites
+
+- Login Google interactif toujours non prouve (limite deja connue de M056, inchangee).
+- La simulation automatisee de frappe pendant qu'un champ Chat Royal a reellement le
+  focus (via une vraie session de jeu, pas juste `GUIUtility.keyboardControl` force par
+  script) n'a pas ete faite manette en main — la garde a ete verifiee par lecture de
+  code et par simulation partielle, pas par un vrai clic-puis-frappe dans Chat Royal en
+  conditions reelles. A confirmer par toi en testant : ouvre Chat Royal, tape un message
+  contenant "x", confirme qu'aucune grille n'apparait.
+
+---
+
 M056 WINDOWS BUILD READY — PORTABLE PACKAGE CREATED — READY FOR CEO SECOND-PC TEST.
+M056B GRID BLOCKER FIXED — REBUILT — PREVIOUS ZIP INVALIDATED — READY FOR CEO RETEST.

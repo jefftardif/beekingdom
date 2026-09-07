@@ -53,6 +53,11 @@ namespace BeeKingdom.Experiments.Environment2D5D
         {
             if (Application.isPlaying && !showInPlay) return;
 
+            // M056B-CL : meme anti-pattern que FrontalBackdrop. Inerte aujourd'hui
+            // (showInPlay false), mais M/B/G/chiffres ne doivent jamais repondre pendant
+            // qu'un champ de saisie a le focus.
+            if (Application.isPlaying && DebugHotkeyGuard.Blocked) return;
+
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
 

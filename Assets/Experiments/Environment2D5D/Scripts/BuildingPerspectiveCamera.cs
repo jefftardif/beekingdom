@@ -92,6 +92,13 @@ namespace BeeKingdom.Experiments.Environment2D5D
             // second flag - both live in the same default assembly.
             if (HiveViewProductUiPresenter.PremiumWorldInputBlockedForProof) return;
 
+            // M056B-CL : le gate Premium ci-dessus ne couvre pas les champs de saisie portes
+            // par un Canvas uGUI (LivingHiveMenu), qui n'ouvrent pas forcement un ecran
+            // Premium. Sans ca, taper "was d" dans un tel champ ferait paner la camera.
+            // TextInputHasFocus (et non Blocked) : c'est de l'input de JEU, il ne doit surtout
+            // pas etre desactive par le type de build.
+            if (DebugHotkeyGuard.TextInputHasFocus) return;
+
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
 

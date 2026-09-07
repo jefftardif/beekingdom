@@ -16,6 +16,8 @@ public sealed class InMemoryChatRepository : IChatRepository
     private readonly Dictionary<string, ChatInboxEntry> inbox = new(StringComparer.Ordinal);
     private readonly List<ChatModerationReport> reports = new();
     private readonly Dictionary<string,ChatModerationReportReceipt> reportReceipts=new(StringComparer.Ordinal);
+    private readonly Dictionary<Guid, ChatGroupInvite> groupInvites = new();
+    private readonly Dictionary<Guid, ChatPreferences> preferences = new();
     private readonly object sync = new();
 
     public ChatConversation SaveConversation(ChatConversation conversation, IReadOnlyList<ChatConversationParticipant> participants)
@@ -129,6 +131,120 @@ public sealed class InMemoryChatRepository : IChatRepository
             ChatConversationParticipant removed = participants[index] with { RemovedAtUtc = removedAtUtc, CanRead = false, CanWrite = false };
             participants[index] = removed;
             return removed;
+        }
+    }
+
+    public ChatConversationParticipant? UpdateParticipantRole(Guid conversationId, PlayerId playerId, ChatPermissionRole role)
+    {
+        lock (sync)
+        {
+            if (!participantsByConversation.TryGetValue(conversationId, out List<ChatConversationParticipant>? participants)) return null;
+            int index = participants.FindIndex(item => item.PlayerId == playerId);
+            if (index < 0) return null;
+            ChatConversationParticipant updated = participants[index] with { Role = role };
+            participants[index] = updated;
+            return updated;
+        }
+    }
+
+    public ChatGroupInvite SaveGroupInvite(ChatGroupInvite invite)
+    {
+        lock (sync)
+        {
+            groupInvites[invite.InviteId] = invite;
+            return invite;
+        }
+    }
+
+    public ChatGroupInvite? GetGroupInvite(Guid inviteId)
+    {
+        lock (sync) return groupInvites.GetValueOrDefault(inviteId);
+    }
+
+    public ChatGroupInvite? GetPendingInvite(Guid conversationId, PlayerId inviteePlayerId)
+    {
+        lock (sync)
+        {
+            return groupInvites.Values.FirstOrDefault(invite =>
+                invite.ConversationId == conversationId
+                && invite.InviteePlayerId == inviteePlayerId
+                && invite.Status == ChatGroupInviteStatus.Pending);
+        }
+    }
+
+    public IReadOnlyList<ChatGroupInvite> ListPendingInvitesForPlayer(PlayerId playerId)
+    {
+        lock (sync)
+        {
+            return groupInvites.Values
+                .Where(invite => invite.InviteePlayerId == playerId && invite.Status == ChatGroupInviteStatus.Pending)
+                .OrderBy(invite => invite.CreatedAtUtc)
+                .ToArray();
+        }
+    }
+
+    public IReadOnlyList<ChatGroupInvite> ListInvitesSentByPlayer(PlayerId playerId, bool onlyUnacknowledgedResponses)
+    {
+        lock (sync)
+        {
+            return groupInvites.Values
+                .Where(invite => invite.InviterPlayerId == playerId)
+                .Where(invite => !onlyUnacknowledgedResponses || (!invite.InviterAcknowledged && invite.Status != ChatGroupInviteStatus.Pending))
+                .OrderBy(invite => invite.RespondedAtUtc ?? invite.CreatedAtUtc)
+                .ToArray();
+        }
+    }
+
+    public IReadOnlyList<ChatGroupInvite> ListPendingInvitesForConversation(Guid conversationId)
+    {
+        lock (sync)
+        {
+            return groupInvites.Values
+                .Where(invite => invite.ConversationId == conversationId && invite.Status == ChatGroupInviteStatus.Pending)
+                .OrderBy(invite => invite.CreatedAtUtc)
+                .ToArray();
+        }
+    }
+
+    public ChatGroupInvite? UpdateGroupInviteStatus(Guid inviteId, string status, DateTimeOffset respondedAtUtc)
+    {
+        lock (sync)
+        {
+            if (!groupInvites.TryGetValue(inviteId, out ChatGroupInvite? invite)) return null;
+            ChatGroupInvite updated = invite with { Status = status, RespondedAtUtc = respondedAtUtc };
+            groupInvites[inviteId] = updated;
+            return updated;
+        }
+    }
+
+    public int AcknowledgeInviteResponses(PlayerId inviterPlayerId, IReadOnlyList<Guid> inviteIds)
+    {
+        lock (sync)
+        {
+            int changed = 0;
+            foreach (Guid inviteId in inviteIds)
+            {
+                if (!groupInvites.TryGetValue(inviteId, out ChatGroupInvite? invite)) continue;
+                if (invite.InviterPlayerId != inviterPlayerId || invite.InviterAcknowledged) continue;
+                groupInvites[inviteId] = invite with { InviterAcknowledged = true };
+                changed++;
+            }
+
+            return changed;
+        }
+    }
+
+    public ChatPreferences? GetChatPreferences(PlayerId playerId)
+    {
+        lock (sync) return preferences.GetValueOrDefault(playerId.Value);
+    }
+
+    public ChatPreferences SaveChatPreferences(ChatPreferences value)
+    {
+        lock (sync)
+        {
+            preferences[value.PlayerId.Value] = value;
+            return value;
         }
     }
 
@@ -271,6 +387,8 @@ public sealed class InMemoryChatRepository : IChatRepository
             foreach (string key in outbox.Where(x => x.Value.PlayerId == playerId).Select(x => x.Key).ToArray()) { outbox.Remove(key); removed++; }
             foreach (string key in creationReceipts.Where(x => x.Value.PlayerId == playerId).Select(x => x.Key).ToArray()) { creationReceipts.Remove(key); removed++; }
             foreach (string key in reportReceipts.Where(x => x.Value.ReporterPlayerId == playerId).Select(x => x.Key).ToArray()) { reportReceipts.Remove(key); removed++; }
+            if (preferences.Remove(playerId.Value)) removed++;
+            foreach (Guid key in groupInvites.Where(x => x.Value.InviteePlayerId == playerId || x.Value.InviterPlayerId == playerId).Select(x => x.Key).ToArray()) { groupInvites.Remove(key); removed++; }
             return removed;
         }
     }

@@ -85,3 +85,45 @@ public sealed record ChatModerationReport(
     string Status);
 
 public sealed record ChatModerationReportReceipt(PlayerId ReporterPlayerId,string ClientRequestId,string PayloadHash,Guid ReportId,DateTimeOffset CreatedAtUtc);
+
+// RAP-OPTIONNEL-COMMUNICATIONS_01: a pending/answered invitation to join a Group conversation.
+// Status is one of ChatGroupInviteStatus's constants. Kept as a separate row (not a participant
+// with CanRead=false) so a declined invitation stays auditable and the inviter can be told about
+// the refusal at his next poll.
+public sealed record ChatGroupInvite(
+    Guid InviteId,
+    Guid ConversationId,
+    PlayerId InviterPlayerId,
+    PlayerId InviteePlayerId,
+    string Status,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? RespondedAtUtc,
+    bool InviterAcknowledged = false);
+
+public static class ChatGroupInviteStatus
+{
+    public const string Pending = "Pending";
+    public const string Accepted = "Accepted";
+    public const string Declined = "Declined";
+    public const string Cancelled = "Cancelled";
+
+    public static bool IsKnown(string value)
+        => value is Pending or Accepted or Declined or Cancelled;
+}
+
+// Server-side, cross-device chat preference. Deliberately server-side (not PlayerPrefs) because the
+// auto-response rule must apply even when the invited player is offline or playing from the future
+// web client; purely cosmetic preferences (accent colour) stay client-local.
+public sealed record ChatPreferences(
+    PlayerId PlayerId,
+    string AutoInviteResponse,
+    DateTimeOffset UpdatedAtUtc);
+
+public static class ChatAutoInviteResponse
+{
+    public const string Ask = "Ask";
+    public const string Accept = "Accept";
+    public const string Decline = "Decline";
+
+    public static bool IsKnown(string value) => value is Ask or Accept or Decline;
+}
