@@ -1,0 +1,4 @@
+- Cause : un titre contenant le PlayerId primait sur le DisplayName déjà connu ; un GUID reçu pouvait aussi écraser `Peer`.
+- Fichier : `HiveViewProductUiPresenter.ChatRoyal.cs` ; priorité aux noms directory/Peer/snapshot pour la liste et l’en-tête, GUID uniquement en dernier recours.
+- Compilation : `Assembly-CSharp.csproj`, 0 erreur, 355 avertissements ; aucun test. Backend, envoi et alignement inchangés.
+- Retest CEO : « bob » dans la liste privée et l’en-tête. Sans aucun nom disponible, l’identifiant reste le fallback ultime.

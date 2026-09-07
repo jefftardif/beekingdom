@@ -157,13 +157,15 @@ namespace BeeKingdom.Playground
                         && message.ConversationId == conversation.ConversationId
                         && Guid.TryParse(message.SenderPlayerId, out Guid senderId)
                         && senderId != MobileAccountSessionRuntimeBootstrap.GameplayPlayerId
-                        && !string.IsNullOrWhiteSpace(message.SenderDisplayName))?.SenderDisplayName ?? peer;
+                        && !string.IsNullOrWhiteSpace(message.SenderDisplayName)
+                        && !Guid.TryParse(message.SenderDisplayName, out _))?.SenderDisplayName ?? peer;
+                if (channelId == "private") peer = ChatPrivateDisplayName(conversation.Title, peer);
                 chatConversations.Add(new ChatConversationData
                 {
                     Id = conversation.ConversationId,
                     Channel = channelId,
-                    Title = !string.IsNullOrWhiteSpace(conversation.Title) ? conversation.Title
-                        : channelId == "private" && !string.IsNullOrWhiteSpace(peer) ? peer : "Discussion",
+                    Title = channelId == "private" ? peer
+                        : !string.IsNullOrWhiteSpace(conversation.Title) ? conversation.Title : "Discussion",
                     Peer = peer,
                     Icon = string.Equals(channelId, ChatGroupsChannelId, StringComparison.Ordinal) ? "members"
                         : string.Equals(channelId, "private", StringComparison.Ordinal) ? "bee"
@@ -184,6 +186,21 @@ namespace BeeKingdom.Playground
             }
             else if (firstSwitch || !chatConversations.Any(item => string.Equals(item.Id, chatSelectedConversation, StringComparison.Ordinal)))
                 ChatSelectChannel(chatSelectedChannel ?? "alliance");
+        }
+
+        private static string ChatPrivateDisplayName(string title, string peer)
+        {
+            bool titleIsId = Guid.TryParse(title, out Guid titleId);
+            bool peerIsId = Guid.TryParse(peer, out Guid peerId);
+            string directoryName = chatPlayerPicker.Results.FirstOrDefault(entry =>
+                ((titleIsId && entry.PlayerId == titleId) || (peerIsId && entry.PlayerId == peerId))
+                && !string.IsNullOrWhiteSpace(entry.DisplayName)
+                && !Guid.TryParse(entry.DisplayName, out _))?.DisplayName;
+            if (!string.IsNullOrWhiteSpace(directoryName)) return directoryName;
+            if (!string.IsNullOrWhiteSpace(peer) && !peerIsId && peer != "Discussion") return peer;
+            if (!string.IsNullOrWhiteSpace(title) && !titleIsId) return title;
+            return !string.IsNullOrWhiteSpace(title) ? title
+                : !string.IsNullOrWhiteSpace(peer) ? peer : "Discussion";
         }
 
         private static void ChatRoyalSyncMessages(LivingHiveChatSnapshot snapshot)
@@ -634,9 +651,8 @@ namespace BeeKingdom.Playground
                 if (conversation != null)
                 {
                     conversation.Peer = displayName;
-                    if (string.IsNullOrWhiteSpace(ChatServerSnapshot()?.Conversations
-                        .FirstOrDefault(item => item.ConversationId == conversationId)?.Title))
-                        conversation.Title = displayName;
+                    conversation.Title = ChatPrivateDisplayName(ChatServerSnapshot()?.Conversations
+                        .FirstOrDefault(item => item.ConversationId == conversationId)?.Title, displayName);
                 }
                 chatSelectedConversation = conversationId;
                 chatMessagesScroll = Vector2.zero;
