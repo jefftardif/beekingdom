@@ -280,6 +280,11 @@ namespace BeeKingdom.Gameplay.Communication
                 }, ct);
                 if (result?.Conversation == null || string.IsNullOrWhiteSpace(result.Conversation.ConversationId)) return null;
 
+                lock (gate)
+                {
+                    conversations.RemoveAll(value => string.Equals(value.ConversationId, result.Conversation.ConversationId, StringComparison.Ordinal));
+                    conversations.Add(MapConversation(result.Conversation));
+                }
                 await SelectKnownConversationAsync(result.Conversation.ConversationId, result.Conversation.Title, "Private", ct);
                 return result.Conversation.ConversationId;
             }

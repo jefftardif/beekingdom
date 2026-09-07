@@ -104,7 +104,7 @@ public sealed partial class ChatService : IChatService
         {
             if(!string.Equals(creationReceipt.PayloadHash,creationHash,StringComparison.Ordinal)) throw new InvalidOperationException("idempotency_conflict");
             ChatConversation replay=repository.GetConversation(creationReceipt.ConversationId)??throw new InvalidOperationException("idempotency_record_missing_conversation");
-            return new(replay,repository.GetInbox(playerId,replay.ConversationId)??CreateInbox(playerId,replay.ConversationId,replay.LastMessageId,replay.LastActivityAtUtc));
+            return new(ConversationForViewer(replay, playerId),repository.GetInbox(playerId,replay.ConversationId)??CreateInbox(playerId,replay.ConversationId,replay.LastMessageId,replay.LastActivityAtUtc));
         }
         ChatAudienceDecision audience = audienceResolver.ResolveConversationAccess(playerId, request);
         if (!audience.Allowed)
@@ -125,7 +125,7 @@ public sealed partial class ChatService : IChatService
 
             repository.SaveConversationCreationReceipt(new(playerId,request.ClientRequestId,creationHash,existing.ConversationId,clock.UtcNow));
             ChatInboxEntry existingInbox = repository.GetInbox(playerId, existing.ConversationId) ?? CreateInbox(playerId, existing.ConversationId, null, null);
-            return new CreateChatConversationResult(existing, existingInbox);
+            return new CreateChatConversationResult(ConversationForViewer(existing, playerId), existingInbox);
         }
 
         DateTimeOffset now = clock.UtcNow;
@@ -152,7 +152,18 @@ public sealed partial class ChatService : IChatService
 
         repository.SaveConversationCreationReceipt(new(playerId,request.ClientRequestId,creationHash,conversation.ConversationId,now));
 
-        return new CreateChatConversationResult(conversation, repository.GetInbox(playerId, conversation.ConversationId)!);
+        return new CreateChatConversationResult(ConversationForViewer(conversation, playerId), repository.GetInbox(playerId, conversation.ConversationId)!);
+    }
+
+    private ChatConversation ConversationForViewer(ChatConversation conversation, PlayerId viewer)
+    {
+        if (conversation.ChannelType != ChatChannelType.Private || !string.IsNullOrWhiteSpace(conversation.Title)) return conversation;
+        ChatConversationParticipant[] participants = repository.ListParticipants(conversation.ConversationId)
+            .Where(value => value.RemovedAtUtc == null).ToArray();
+        if (participants.Length != 2) return conversation;
+        ChatConversationParticipant? peer = participants.FirstOrDefault(value => value.PlayerId != viewer);
+        string? displayName = peer == null ? null : senderDisplayNameResolver.ResolveDisplayName(peer.PlayerId.Value);
+        return string.IsNullOrWhiteSpace(displayName) ? conversation : conversation with { Title = displayName };
     }
 
     private static string ComputeConversationPayloadHash(CreateChatConversationRequest request)
@@ -170,7 +181,7 @@ public sealed partial class ChatService : IChatService
         int boundedLimit = Math.Clamp(limit, 1, 100);
         int offset=DecodeConversationCursor(playerId,cursor);
         IReadOnlyList<ChatConversation> fetched=repository.ListConversations(playerId,offset,boundedLimit+1);
-        bool hasMore=fetched.Count>boundedLimit; ChatConversation[] items=fetched.Take(boundedLimit).ToArray();
+        bool hasMore=fetched.Count>boundedLimit; ChatConversation[] items=fetched.Take(boundedLimit).Select(value => ConversationForViewer(value, playerId)).ToArray();
         return new ChatConversationPage(items,hasMore?EncodeConversationCursor(playerId,offset+items.Length):null);
     }
 

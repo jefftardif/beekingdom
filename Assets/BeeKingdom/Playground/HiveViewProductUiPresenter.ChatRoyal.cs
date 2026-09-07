@@ -165,7 +165,14 @@ namespace BeeKingdom.Playground
 
             ChatRoyalSyncMessages(snapshot);
 
-            if (firstSwitch || !chatConversations.Any(item => string.Equals(item.Id, chatSelectedConversation, StringComparison.Ordinal)))
+            LivingHiveChatConversation selected = snapshot.Conversations.FirstOrDefault(item =>
+                string.Equals(item.ConversationId, snapshot.SelectedConversationId, StringComparison.Ordinal));
+            if (selected != null && ChatChannelById(chatSelectedChannel)?.ReadOnly != true)
+            {
+                chatSelectedConversation = selected.ConversationId;
+                chatSelectedChannel = ChatChannelIdFor(selected.ChannelType);
+            }
+            else if (firstSwitch || !chatConversations.Any(item => string.Equals(item.Id, chatSelectedConversation, StringComparison.Ordinal)))
                 ChatSelectChannel(chatSelectedChannel ?? "alliance");
         }
 
@@ -178,7 +185,7 @@ namespace BeeKingdom.Playground
             int index = 0;
             foreach (LivingHiveChatMessage message in snapshot.Messages)
             {
-                if (message == null) continue;
+                if (message == null || !string.Equals(message.ConversationId, conversationId, StringComparison.Ordinal)) continue;
                 bool fromSelf = message.Delivery != LivingHiveChatDelivery.Confirmed
                     || string.IsNullOrWhiteSpace(message.SenderDisplayName);
                 mapped.Add(new ChatMessageData
@@ -199,6 +206,15 @@ namespace BeeKingdom.Playground
                 index++;
             }
             chatMessagesByConversation[conversationId] = mapped;
+        }
+
+        private static async void ChatSelectRuntimeConversation(string conversationId)
+        {
+            if (!chatUsingServerData || string.IsNullOrWhiteSpace(conversationId)
+                || ChatConversationById(conversationId)?.ReadOnly != false
+                || string.Equals(ChatServerSnapshot()?.SelectedConversationId, conversationId, StringComparison.Ordinal)) return;
+            try { await LivingHiveChatRuntime.SelectAsync(conversationId); }
+            catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Selection failed: " + exception.GetType().Name); }
         }
 
         private static void EnsureChatGroupsChannel()

@@ -35977,6 +35977,9 @@ if (leftNavigationTexture == null)
 		{
 			EnsureChatData();
 			if (string.IsNullOrEmpty(conversationId)) return new List<ChatMessageData>();
+			LivingHiveChatSnapshot snapshot = ChatServerSnapshot();
+			if (chatUsingServerData && string.Equals(snapshot?.SelectedConversationId, conversationId, StringComparison.Ordinal))
+				ChatRoyalSyncMessages(snapshot);
 			List<ChatMessageData> list;
 			if (chatMessagesByConversation.TryGetValue(conversationId, out list)) return list;
 			return new List<ChatMessageData>();
@@ -36051,6 +36054,7 @@ if (leftNavigationTexture == null)
 			chatActionMessageIndex = -1;
 			if (!IsPortraitLayout() || chatMobilePane != "conversations") chatMobilePane = "conversations";
 			ChatMarkRead(chatSelectedConversation);
+			ChatSelectRuntimeConversation(chatSelectedConversation);
 		}
 
 		private static void ChatSelectConversation(string conversationId, bool mobile)
@@ -36059,6 +36063,7 @@ if (leftNavigationTexture == null)
 			chatMessagesScroll = Vector2.zero;
 			chatActionMessageIndex = -1;
 			ChatMarkRead(conversationId);
+			ChatSelectRuntimeConversation(conversationId);
 			if (mobile) chatMobilePane = "messages";
 		}
 
