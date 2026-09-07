@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -93,6 +94,42 @@ namespace BeeKingdom.Buildings.Interaction
         // caller, kept here as a Func<BuildingDefinition,bool> so this Buildings-assembly type
         // never needs to reference anything in the default Assembly-CSharp assembly.
         public static Func<BuildingDefinition, bool> InteractionPreemptionHook;
+
+        // M049B-CL: generalizes the single hook above so more than one contextual-completion
+        // concern (Construction's upgrade-ready click, Research's completion click, any future
+        // one) can each register their own small "is THIS building ready, and if so handle it"
+        // check WITHOUT becoming a second, competing click router - there is still exactly one
+        // InteractionPreemptionHook, still evaluated in exactly one place (DispatchClick), still
+        // stops at the first handler that reports it consumed the click. Callers that need a
+        // fully isolated hook for a test scenario can still assign InteractionPreemptionHook
+        // directly, bypassing this list entirely - that stays a supported use (see
+        // BuildingInteractionControllerClickPriorityTests).
+        private static readonly List<Func<BuildingDefinition, bool>> _completionPreemptionHandlers =
+            new List<Func<BuildingDefinition, bool>>();
+
+        public static void RegisterCompletionPreemption(Func<BuildingDefinition, bool> handler)
+        {
+            if (handler == null || _completionPreemptionHandlers.Contains(handler)) return;
+            _completionPreemptionHandlers.Add(handler);
+            InteractionPreemptionHook = EvaluateCompletionPreemptionHandlers;
+        }
+
+        public static void UnregisterCompletionPreemption(Func<BuildingDefinition, bool> handler)
+        {
+            if (handler == null) return;
+            _completionPreemptionHandlers.Remove(handler);
+            if (_completionPreemptionHandlers.Count == 0 && InteractionPreemptionHook == (Func<BuildingDefinition, bool>)EvaluateCompletionPreemptionHandlers)
+                InteractionPreemptionHook = null;
+        }
+
+        private static bool EvaluateCompletionPreemptionHandlers(BuildingDefinition definition)
+        {
+            for (int i = 0; i < _completionPreemptionHandlers.Count; i++)
+            {
+                if (_completionPreemptionHandlers[i](definition)) return true;
+            }
+            return false;
+        }
 
         public void HandlePointer()
         {

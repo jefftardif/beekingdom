@@ -72,6 +72,14 @@ namespace BeeKingdom.Audio
         private const string TroopReadySoundResourcePath = "troop_ready";
         private const string CollectTroopSoundResourcePath = "collect_troop";
 
+        // M057-CL : SFX officiel de fin de chantier choisi et installe par le CEO
+        // (Assets/Audio/SFX/UI/upgrade.mp3, deplace ici pour suivre la meme convention
+        // d'auto-chargement que les clips ci-dessus). Joue une seule fois, exclusivement quand
+        // le serveur valide reellement la fin d'une amelioration de batiment (voir
+        // BuildingUpgradeCompletionSfxBootstrap, qui n'appelle PlayBuildingUpgradeComplete()
+        // qu'en reaction a l'evenement BuildingCompleted publie apres succes serveur).
+        private const string BuildingUpgradeCompleteSoundResourcePath = "upgrade";
+
         // Delai minimal entre deux lectures du MEME son d'interface - absorbe les doubles
         // declenchements (double-clic, plusieurs boutons presses dans la meme frame) sans jamais
         // etre perceptible comme un retard (retour de Jeff, Sprint Audio Polish, 2026-08-05 :
@@ -95,6 +103,7 @@ namespace BeeKingdom.Audio
         [SerializeField] private AudioClip productionIncreaseSound;
         [SerializeField] private AudioClip troopReadySound;
         [SerializeField] private AudioClip collectTroopSound;
+        [SerializeField] private AudioClip buildingUpgradeCompleteSound;
 
         [Header("Music")]
         [SerializeField] private AudioClip backgroundMusic;
@@ -151,6 +160,7 @@ namespace BeeKingdom.Audio
 
             if (troopReadySound == null) troopReadySound = Resources.Load<AudioClip>(TroopReadySoundResourcePath);
             if (collectTroopSound == null) collectTroopSound = Resources.Load<AudioClip>(CollectTroopSoundResourcePath);
+            if (buildingUpgradeCompleteSound == null) buildingUpgradeCompleteSound = Resources.Load<AudioClip>(BuildingUpgradeCompleteSoundResourcePath);
 
             // Toujours router sfxSource vers le groupe SFX du MasterMixer (jamais directement vers le
             // master) - couvre a la fois les futurs sons d'interface et les effets sonores existants
@@ -320,6 +330,17 @@ namespace BeeKingdom.Audio
         public void PlayCollectTroop()
         {
             PlaySound(collectTroopSound);
+        }
+
+        /// <summary>
+        /// Joue le SFX officiel de fin de chantier (M057-CL), exclusivement quand le serveur a
+        /// reellement valide l'amelioration - jamais au clic initial, jamais si le serveur
+        /// rejette la demande. Seul appelant : BuildingUpgradeCompletionSfxBootstrap, en
+        /// reaction a l'evenement BuildingCompleted.
+        /// </summary>
+        public void PlayBuildingUpgradeComplete()
+        {
+            PlaySound(buildingUpgradeCompleteSound);
         }
 
         #endregion

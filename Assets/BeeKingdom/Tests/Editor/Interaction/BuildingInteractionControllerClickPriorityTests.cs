@@ -1,3 +1,4 @@
+using System;
 using BeeKingdom.Buildings.Interaction;
 using NUnit.Framework;
 using UnityEngine;
@@ -32,7 +33,7 @@ namespace BeeKingdom.Tests.Editor.Interaction
         public void TearDown()
         {
             BuildingInteractionController.InteractionPreemptionHook = null;
-            if (_hostGo != null) Object.DestroyImmediate(_hostGo);
+            if (_hostGo != null) UnityEngine.Object.DestroyImmediate(_hostGo);
         }
 
         [Test]
@@ -121,6 +122,100 @@ namespace BeeKingdom.Tests.Editor.Interaction
             stillReady = false;
             _controller.DispatchClick(building);
             Assert.That(_clickedCount, Is.EqualTo(1), "next click after completion must open the building normally");
+        }
+
+        // M049B-CL: RegisterCompletionPreemption/UnregisterCompletionPreemption generalize the
+        // single InteractionPreemptionHook above so Construction's and Research's own completion
+        // handlers can coexist as two independent registrants of the SAME hook, instead of
+        // Research needing a second, competing click router.
+        [Test]
+        public void RegisterCompletionPreemption_TwoIndependentHandlersCoexist_EachOnlyPreemptsOwnBuilding()
+        {
+            BuildingDefinition constructionReady = BuildingCatalog.GetByBuildingType(BuildingTypes.Barrack);
+            BuildingDefinition researchReady = BuildingCatalog.GetByBuildingType(BuildingTypes.Research);
+            Func<BuildingDefinition, bool> constructionHandler = clicked => ReferenceEquals(clicked, constructionReady);
+            Func<BuildingDefinition, bool> researchHandler = clicked => ReferenceEquals(clicked, researchReady);
+
+            try
+            {
+                BuildingInteractionController.RegisterCompletionPreemption(constructionHandler);
+                BuildingInteractionController.RegisterCompletionPreemption(researchHandler);
+
+                _controller.DispatchClick(constructionReady);
+                Assert.That(_clickedCount, Is.EqualTo(0), "Construction's own handler must preempt its ready building");
+
+                _controller.DispatchClick(researchReady);
+                Assert.That(_clickedCount, Is.EqualTo(0), "Research's own handler must preempt its ready building too, via the same single hook");
+
+                BuildingDefinition other = BuildingCatalog.GetByBuildingType(BuildingTypes.Warehouse);
+                _controller.DispatchClick(other);
+                Assert.That(_clickedCount, Is.EqualTo(1), "a building neither handler matches must still open normally");
+            }
+            finally
+            {
+                BuildingInteractionController.UnregisterCompletionPreemption(constructionHandler);
+                BuildingInteractionController.UnregisterCompletionPreemption(researchHandler);
+            }
+        }
+
+        [Test]
+        public void RegisterCompletionPreemption_DuplicateRegistrationIgnored()
+        {
+            int calls = 0;
+            Func<BuildingDefinition, bool> handler = _ => { calls++; return true; };
+            try
+            {
+                BuildingInteractionController.RegisterCompletionPreemption(handler);
+                BuildingInteractionController.RegisterCompletionPreemption(handler);
+
+                _controller.DispatchClick(BuildingCatalog.GetByBuildingType(BuildingTypes.Barrack));
+
+                Assert.That(calls, Is.EqualTo(1), "registering the same handler twice must not evaluate it twice per click");
+            }
+            finally
+            {
+                BuildingInteractionController.UnregisterCompletionPreemption(handler);
+            }
+        }
+
+        [Test]
+        public void UnregisterCompletionPreemption_RemovesOnlyThatHandler_OthersKeepWorking()
+        {
+            BuildingDefinition a = BuildingCatalog.GetByBuildingType(BuildingTypes.Barrack);
+            BuildingDefinition b = BuildingCatalog.GetByBuildingType(BuildingTypes.Research);
+            Func<BuildingDefinition, bool> handlerA = clicked => ReferenceEquals(clicked, a);
+            Func<BuildingDefinition, bool> handlerB = clicked => ReferenceEquals(clicked, b);
+
+            try
+            {
+                BuildingInteractionController.RegisterCompletionPreemption(handlerA);
+                BuildingInteractionController.RegisterCompletionPreemption(handlerB);
+                BuildingInteractionController.UnregisterCompletionPreemption(handlerA);
+
+                _controller.DispatchClick(a);
+                Assert.That(_clickedCount, Is.EqualTo(1), "unregistered handler must no longer preempt its building");
+
+                _controller.DispatchClick(b);
+                Assert.That(_clickedCount, Is.EqualTo(1), "the remaining registered handler must still preempt its own building");
+            }
+            finally
+            {
+                BuildingInteractionController.UnregisterCompletionPreemption(handlerB);
+            }
+        }
+
+        [Test]
+        public void UnregisterCompletionPreemption_LastHandlerRemoved_HookClearsAndClicksOpenNormally()
+        {
+            Func<BuildingDefinition, bool> handler = _ => true;
+            BuildingInteractionController.RegisterCompletionPreemption(handler);
+            BuildingInteractionController.UnregisterCompletionPreemption(handler);
+
+            Assert.That(BuildingInteractionController.InteractionPreemptionHook, Is.Null,
+                "removing the last registered handler must clear the shared hook, not leave an empty-but-installed router");
+
+            _controller.DispatchClick(BuildingCatalog.GetByBuildingType(BuildingTypes.Barrack));
+            Assert.That(_clickedCount, Is.EqualTo(1));
         }
     }
 }

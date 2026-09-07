@@ -10796,9 +10796,13 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
         {
             if (playerProfileOpen) { playerProfileOpen = false; ReleaseGuiInputCapture(); return true; }
             if (playerMenuOpen) { ClosePlayerSummary(); return true; }
-            if (allianceMemberProfileOpen) { CloseAllianceMemberProfile(); return true; }
-            if (!string.IsNullOrEmpty(allianceActionPanelOpen)) { allianceActionPanelOpen = string.Empty; return true; }
-            if (allianceChatDrawerOpen) { allianceChatDrawerOpen = false; return true; }
+            if (allianceMemberProfileOpen || !string.IsNullOrEmpty(allianceActionPanelOpen) || allianceChatDrawerOpen)
+            {
+                ReleaseAllianceScreenOverlays();
+                activeMainMenuId = string.Empty;
+                activeHiveMenu = HiveMenuMode.Hive;
+                return true;
+            }
             if (missionsCenterOpen) { CloseMissionsCenter(); return true; }
             if (colonyOverviewOpen) { colonyOverviewOpen = false; return true; }
             if (championBeesPanelOpen) { championBeesPanelOpen = false; return true; }
@@ -20819,6 +20823,107 @@ public static string[] ConnectionTruthForProof()
             DrawOperationCompletionBadge(buildingRect, time, glowSize, "upgrade_ready");
         }
 
+        // ============================================================================
+        // M059-CL - PART 3 : BARRE DE PROGRESSION EN ESPACE MONDE.
+        // Complement du pulse bleu/cyan existant (BuildingActivityPulse / HiveMapBuilding-
+        // UpgradeVisualStateBootstrap), qui dit "ce batiment est en chantier" sans jamais dire
+        // "ou en est le chantier". Le pulse n'est ni retire ni modifie : les deux signaux se
+        // completent. La valeur affichee vient EXCLUSIVEMENT de l'operation serveur
+        // (Progress01/Remaining, derives de StartedAtUtc/CompletesAtUtc et de l'horloge serveur
+        // projetee) - aucun minuteur client parallele. La barre disparait d'elle-meme des que
+        // l'operation quitte l'etat "running", donc au passage en AwaitingCompletion : c'est
+        // alors l'indicateur d'achevement officiel (upgrade_ready) qui prend la main, seul.
+        public static float OfficialUpgradeProgress01ForExternalHost()
+        {
+            if (string.IsNullOrEmpty(ActiveOfficialUpgradeHotspotIdForExternalHost())) return 0f;
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            if (model == null || buildingUpgradeController == null) return 0f;
+            return Mathf.Clamp01((float)model.Progress01(buildingUpgradeController.Elapsed));
+        }
+
+        public static string OfficialUpgradeRemainingTextForExternalHost()
+        {
+            if (string.IsNullOrEmpty(ActiveOfficialUpgradeHotspotIdForExternalHost())) return string.Empty;
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            if (model == null || buildingUpgradeController == null) return string.Empty;
+            return FormatBuildingUpgradeDuration(model.Remaining(buildingUpgradeController.Elapsed));
+        }
+
+        // Dessinee JUSTE AU-DESSUS de la silhouette du batiment, en pixels ecran deja projetes
+        // par l'appelant, donc elle suit le batiment au pan et au zoom sans calcul propre. La
+        // largeur est bornee par l'appelant pour ne pas devenir geante aux extremes de zoom.
+        // Purement visuelle : IMGUI ne peut pas intercepter le raycast 3D de
+        // BuildingInteractionController, et aucun controle cliquable n'est dessine ici - la
+        // barre ne peut donc pas devenir un bloqueur d'input invisible.
+        public static void DrawBuildingUpgradeProgressBarForExternalHost(Rect buildingRect, float barWidth, bool showRemaining)
+        {
+            if (string.IsNullOrEmpty(ActiveOfficialUpgradeHotspotIdForExternalHost())) return;
+            EnsureStyles();
+
+            float width = Mathf.Clamp(barWidth, 48f, 240f);
+            float height = Mathf.Clamp(width * 0.10f, 6f, 16f);
+            float x = buildingRect.center.x - width * 0.5f;
+            float y = buildingRect.y - height - 10f;
+            if (y < 2f) y = 2f;
+
+            DrawConstructionWorldProgressBar(new Rect(x, y, width, height), OfficialUpgradeProgress01ForExternalHost());
+
+            if (!showRemaining) return;
+            string remaining = OfficialUpgradeRemainingTextForExternalHost();
+            if (string.IsNullOrEmpty(remaining)) return;
+
+            // M057-CL polish : le temps restant devait etre lisible au zoom normal de la ruche,
+            // pas seulement en gros plan. fontSize monte avec la largeur de la barre (donc avec le
+            // zoom camera) au lieu d'un 10px fixe, et le texte est trace en contour epais avant le
+            // remplissage clair pour rester lisible aussi bien sur un decor sombre que sur un
+            // decor clair - voir DrawOutlinedWorldLabel. Position/logique de progression inchangees.
+            float labelFontSize = Mathf.Clamp(width * 0.078f, 13f, 20f);
+            float labelHeight = labelFontSize + 8f;
+            Rect labelRect = new Rect(x, y - labelHeight - 1f, width, labelHeight);
+            DrawOutlinedWorldLabel(labelRect, remaining, Mathf.RoundToInt(labelFontSize));
+        }
+
+        // M057-CL : barre de progression dediee au chantier en espace monde, teintee dans le meme
+        // bleu/cyan que le contour BuildingActivityPulse.Construction qui entoure deja le batiment
+        // - pour que la barre et le contour lisent comme un seul et meme signal "construction".
+        // Volontairement SEPAREE de DrawProgressBar/GetPremiumTexture("progress-fill") : celle-ci
+        // est partagee par la production, la recherche, le recrutement, etc. - la retinter aurait
+        // deteint sur des ecrans sans rapport avec ce polish. Le fond sombre partage
+        // ("progress-bg") est neutre et reste inchange.
+        private static void DrawConstructionWorldProgressBar(Rect rect, float progress01)
+        {
+            GUI.DrawTexture(rect, GetPremiumTexture("progress-bg"), ScaleMode.StretchToFill, true);
+            Rect fill = new Rect(rect.x + 2f, rect.y + 2f, Mathf.Max(0f, rect.width - 4f) * Mathf.Clamp01(progress01), Mathf.Max(1f, rect.height - 4f));
+            GUI.DrawTexture(fill, GetPremiumTexture("progress-fill-construction"), ScaleMode.StretchToFill, true);
+        }
+
+        // M057-CL : IMGUI n'a pas de contour/ombre de texte natif, donc le contour est simule en
+        // dessinant la chaine plusieurs fois decalee d'un pixel dans les 8 directions avec une
+        // teinte tres sombre avant de dessiner le texte clair par-dessus - la meme technique que
+        // les jeux mobiles utilisent pour garder un HUD lisible sur un fond qui change sans arret
+        // (ici : le decor de la ruche, tantot clair, tantot sombre, sous la barre au pan/zoom).
+        private static void DrawOutlinedWorldLabel(Rect rect, string text, int fontSize)
+        {
+            GUIStyle style = new GUIStyle(centeredTinyLabelStyle)
+            {
+                fontSize = fontSize,
+                fontStyle = FontStyle.Bold
+            };
+
+            style.normal.textColor = new Color(0.02f, 0.02f, 0.035f, 0.95f);
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    if (dx == 0 && dy == 0) continue;
+                    GUI.Label(new Rect(rect.x + dx, rect.y + dy, rect.width, rect.height), text, style);
+                }
+            }
+
+            style.normal.textColor = new Color(0.82f, 0.96f, 1f, 1f);
+            GUI.Label(rect, text, style);
+        }
+
         // M049B-CL: Research analogue - same real "awaiting completion" gate
         // (ReadyToCompleteOfficialResearchForExternalHost), same reusable badge renderer as
         // Construction, only the icon differs (research_ready.png - a real dedicated asset,
@@ -20850,6 +20955,175 @@ public static string[] ConnectionTruthForProof()
             GUI.color = Color.white;
             DrawGameIcon(iconRect, iconKey, Color.white);
             GUI.color = previous;
+        }
+
+        // ============================================================================
+        // M059-CL - PART 2 : CLIQUER UN BATIMENT EN COURS D'AMELIORATION.
+        // Retour du premier testeur externe (Alex, joueur de Clash of Clans) : cliquer un
+        // batiment visiblement en travaux devrait renseigner sur les travaux, pas ouvrir la
+        // fenetre ordinaire du batiment. Aucune nouvelle mecanique n'est creee ici : tout ce
+        // qui est affiche vient de l'operation serveur reelle (HiveBuildingUpgradeScreenModel
+        // .ActiveOperation), et la SEULE action proposee est l'Aide d'alliance deja existante
+        // (DrawAllianceHelpAction, exactement l'appel que l'ecran Construction fait deja pour
+        // la meme operation). Pas de bouton "Accelerer" : aucun endpoint serveur ne raccourcit
+        // une operation de BuildingUpgradeService - ce serait un faux bouton (voir le
+        // commentaire deja present dans l'ecran Construction).
+        //
+        // PRECEDENCE DE CLIC, volontairement inchangee ailleurs :
+        //   AwaitingCompletion -> valide l'amelioration (HiveMapBuildingUpgradeVisualState-
+        //                         Bootstrap, comportement deja valide, non touche)
+        //   InProgress         -> cette fenetre
+        //   Idle               -> fenetre ordinaire du batiment
+        // Les deux premiers cas sont mutuellement exclusifs par construction : le serveur ne
+        // porte qu'UNE operation de construction pour toute la ruche, et son statut est soit
+        // "running" soit "awaiting_completion", jamais les deux.
+        private static string upgradeProgressOverlayHotspotId = string.Empty;
+
+        public static bool UpgradeProgressOverlayOpenForExternalHost =>
+            !string.IsNullOrEmpty(upgradeProgressOverlayHotspotId);
+
+        // Vrai seulement si CE batiment porte vraiment une amelioration serveur en cours.
+        // L'appelant (le crochet de preemption de clic) s'en sert pour savoir s'il consomme
+        // le clic ou s'il le laisse ouvrir la fenetre ordinaire du batiment.
+        public static bool TryOpenUpgradeProgressOverlayForExternalHost(string hotspotId)
+        {
+            if (string.IsNullOrEmpty(hotspotId)) return false;
+            if (!string.Equals(ActiveOfficialUpgradeHotspotIdForExternalHost(), hotspotId, StringComparison.Ordinal))
+                return false;
+            AudioManager.Instance?.PlayMenuOpen();
+            upgradeProgressOverlayHotspotId = hotspotId;
+            return true;
+        }
+
+        public static void CloseUpgradeProgressOverlayForExternalHost()
+        {
+            if (string.IsNullOrEmpty(upgradeProgressOverlayHotspotId)) return;
+            AudioManager.Instance?.PlayMenuClose();
+            upgradeProgressOverlayHotspotId = string.Empty;
+        }
+
+        public static void DrawUpgradeProgressOverlayForExternalHost(bool compact)
+        {
+            if (string.IsNullOrEmpty(upgradeProgressOverlayHotspotId)) return;
+
+            // L'operation a change d'etat (terminee, a valider, annulee) : la fenetre se retire
+            // d'elle-meme. C'est ce qui garantit qu'elle n'entre jamais en concurrence avec
+            // l'indicateur d'achevement officiel ni avec le clic de validation.
+            string runningHotspotId = ActiveOfficialUpgradeHotspotIdForExternalHost();
+            if (!string.Equals(runningHotspotId, upgradeProgressOverlayHotspotId, StringComparison.Ordinal))
+            {
+                upgradeProgressOverlayHotspotId = string.Empty;
+                return;
+            }
+
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            HiveBuildingUpgradeOperationModel operation = model?.ActiveOperation;
+            if (operation == null)
+            {
+                upgradeProgressOverlayHotspotId = string.Empty;
+                return;
+            }
+
+            EnsureStyles();
+            ReferenceHiveHotspot hotspot = FindReferenceHotspot(upgradeProgressOverlayHotspotId);
+
+            Color previousColor = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.62f);
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.color = previousColor;
+
+            float width = Mathf.Min(Screen.width - (compact ? 24f : 48f), compact ? 380f : 440f);
+            float height = compact ? 244f : 262f;
+            Rect panel = new Rect(
+                Mathf.Round((Screen.width - width) * 0.5f),
+                Mathf.Round((Screen.height - height) * 0.5f),
+                width,
+                height);
+            DrawPremiumPanel(panel, new Color(0.030f, 0.026f, 0.020f, 0.985f), new Color(0.35f, 0.75f, 1f, 0.88f));
+            DrawPremiumHeaderBand(new Rect(panel.x + 8f, panel.y + 8f, panel.width - 16f, 40f));
+
+            float iconSize = 34f;
+            DrawGameIcon(new Rect(panel.x + 60f, panel.y + 11f, iconSize, iconSize), ZoneIconId(hotspot.IconId), Color.white);
+            GUI.Label(
+                new Rect(panel.x + 102f, panel.y + 12f, panel.width - 118f, 24f),
+                string.IsNullOrEmpty(hotspot.HotspotId) ? upgradeProgressOverlayHotspotId : LocalizedHotspotLabel(hotspot),
+                new GUIStyle(titleStyle) { fontSize = compact ? 16 : 18, fontStyle = FontStyle.Bold });
+
+            Rect closeRect = new Rect(panel.x + 6f, panel.y + 6f, 44f, 44f);
+            if (DrawPremiumBackButton(closeRect))
+            {
+                CloseUpgradeProgressOverlayForExternalHost();
+                return;
+            }
+
+            float y = panel.y + 60f;
+            GUI.Label(
+                new Rect(panel.x + 18f, y, panel.width - 36f, 24f),
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    BeeLocalization.Text("building_upgrade.progress.levels", "Niveau {0} → Niveau {1}"),
+                    operation.FromLevel,
+                    operation.ToLevel),
+                new GUIStyle(titleStyle) { fontSize = compact ? 15 : 17 });
+            y += 26f;
+
+            GUI.Label(
+                new Rect(panel.x + 18f, y, panel.width - 36f, 20f),
+                BeeLocalization.Text("ui.building.upgrade_running", "Amelioration en cours..."),
+                new GUIStyle(tinyLabelStyle) { normal = { textColor = new Color(0.55f, 0.82f, 1f, 1f) } });
+            y += 26f;
+
+            float progress = model == null || buildingUpgradeController == null
+                ? 0f
+                : (float)model.Progress01(buildingUpgradeController.Elapsed);
+            // M057-CL closeout : meme bleu/cyan que la barre en espace monde et le contour
+            // BuildingActivityPulse.Construction - alignement visuel final demande par le CEO.
+            // Fond, position, timing et pourcentage inchanges ; seule la couleur du remplissage
+            // change (DrawProgressBar generique reste jaune/orange partout ailleurs).
+            DrawConstructionWorldProgressBar(new Rect(panel.x + 18f, y, panel.width - 36f, 14f), progress);
+            GUI.Label(
+                new Rect(panel.x + 18f, y + 18f, panel.width - 36f, 20f),
+                Mathf.RoundToInt(progress * 100f).ToString(CultureInfo.InvariantCulture) + " %",
+                new GUIStyle(smallStyle) { fontSize = compact ? 12 : 13 });
+
+            TimeSpan remaining = model == null || buildingUpgradeController == null
+                ? TimeSpan.Zero
+                : model.Remaining(buildingUpgradeController.Elapsed);
+            GUI.Label(
+                new Rect(panel.x + 18f, y + 18f, panel.width - 36f, 20f),
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    BeeLocalization.Text("building_upgrade.progress.remaining", "{0} restantes"),
+                    FormatBuildingUpgradeDuration(remaining)),
+                new GUIStyle(smallStyle) { fontSize = compact ? 12 : 13, alignment = TextAnchor.MiddleRight });
+            y += 46f;
+
+            // Seule action reelle disponible sur une operation de construction serveur.
+            // Le controleur d'alliance est une session SEPAREE de celle de la construction et
+            // peut etre absent (hors ligne, joueur sans alliance, harnais de test) : sans ce
+            // garde-fou, DrawAllianceHelpAction le dereference et leve a chaque image.
+            if (allianceCenterController != null)
+            {
+                double estimatedOriginalDurationSeconds =
+                    (operation.CompletesAtUtc - operation.StartedAtUtc).TotalSeconds;
+                DrawAllianceHelpAction(
+                    new Rect(panel.x + 18f, y, panel.width - 36f, 34f),
+                    MobileAccountSessionRuntimeBootstrap.GameplayHiveId,
+                    BeeKingdom.Networking.RemoteAllianceHelpCategories.Construction,
+                    upgradeProgressOverlayHotspotId,
+                    estimatedOriginalDurationSeconds,
+                    compact);
+            }
+            y += 42f;
+
+            if (DrawPreviewActionButton(
+                    new Rect(panel.x + 18f, y, panel.width - 36f, 34f),
+                    BeeLocalization.Text("common.close", "Fermer"),
+                    true,
+                    true))
+            {
+                CloseUpgradeProgressOverlayForExternalHost();
+            }
         }
 
         public static bool ColonyOverviewOpenForExternalHost => colonyOverviewOpen;
@@ -46629,6 +46903,21 @@ public static void ResetMissionsStateForProof()
                 for (int y = 0; y < size; y++)
                 {
                     Color c = Color.Lerp(new Color(1f, 0.50f, 0.02f, 1f), new Color(1f, 0.92f, 0.18f, 1f), y / (float)size);
+                    for (int x = 0; x < size; x++) texture.SetPixel(x, y, c);
+                }
+            }
+            // M057-CL: meme teinte bleu/cyan que BuildingActivityPulse.Construction (le contour
+            // qui entoure deja le batiment en travaux) - reservee a la barre de progression en
+            // espace monde (DrawBuildingUpgradeProgressBarForExternalHost) pour que la barre et le
+            // contour du batiment lisent comme un seul signal "construction". Ne remplace PAS
+            // "progress-fill", qui reste jaune/orange partout ailleurs (production, recherche,
+            // recrutement, etc.) - un changement generique aurait deteint sur des ecrans sans
+            // rapport avec ce polish.
+            else if (id == "progress-fill-construction")
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Color c = Color.Lerp(new Color(0.16f, 0.55f, 0.92f, 1f), new Color(0.55f, 0.92f, 1f, 1f), y / (float)size);
                     for (int x = 0; x < size; x++) texture.SetPixel(x, y, c);
                 }
             }

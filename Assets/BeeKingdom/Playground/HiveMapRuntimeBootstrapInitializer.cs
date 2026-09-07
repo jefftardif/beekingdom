@@ -83,6 +83,20 @@ namespace BeeKingdom.Playground
             HiveMapBarrackBootstrap.InitializeForScene(scene);
             HiveMapBuildingUpgradeClickBootstrap.InitializeForScene(scene);
             HiveMapBuildingUpgradeVisualStateBootstrap.InitializeForScene(scene);
+            // M059-CL (correctif post-certification CEO) : TROISIEME occurrence exacte du meme
+            // defaut que M038B-CL et M049C-CL ci-dessous. Le bootstrap etait bien ecrit, bien
+            // teste, et n'existait simplement JAMAIS dans la scene reelle : son propre
+            // [RuntimeInitializeOnLoadMethod(AfterSceneLoad)] AutoStart() ne se declenche qu'une
+            // fois, sur la scene active a l'instant ou le Play Mode demarre (splash/login, qui
+            // ne commence jamais par "Environment2D5D"). Sans instance, pas de OnGUI (donc AUCUNE
+            // barre de progression monde) et surtout aucun appel a RegisterCompletionPreemption
+            // (donc le clic sur un batiment en chantier retombait sur sa fenetre ordinaire).
+            // Une seule cause pour les deux symptomes rapportes par le CEO.
+            HiveMapBuildingUpgradeProgressBootstrap.InitializeForScene(scene);
+            // M057-CL : meme piege que le commentaire ci-dessus (AutoStart seul ne se declenche
+            // jamais sur cette scene) - le SFX de fin de chantier doit etre cable ici pour
+            // exister reellement en jeu, pas seulement dans ses tests.
+            BuildingUpgradeCompletionSfxBootstrap.InitializeForScene(scene);
             // M049C-CL: same exact M038B-CL failure mode - HiveMapResearchVisualStateBootstrap's
             // own [RuntimeInitializeOnLoadMethod(AfterSceneLoad)] AutoStart() only fires once, on
             // whatever scene is active the instant Play Mode starts (the splash/login scene,

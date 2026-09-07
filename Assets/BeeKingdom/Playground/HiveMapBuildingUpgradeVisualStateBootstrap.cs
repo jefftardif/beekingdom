@@ -80,7 +80,11 @@ namespace BeeKingdom.Playground
             // exactly one action per click regardless of registration order.
             if (!preemptionHookInstalled)
             {
-                BuildingInteractionController.InteractionPreemptionHook = TryCompleteReadyUpgradeOnClick;
+                // M049B-CL: generalized to a registration so Research's own completion handler
+                // (HiveMapResearchVisualStateBootstrap) can coexist as a second, independent
+                // registrant of the SAME single InteractionPreemptionHook - see
+                // BuildingInteractionController.RegisterCompletionPreemption.
+                BuildingInteractionController.RegisterCompletionPreemption(TryCompleteReadyUpgradeOnClick);
                 preemptionHookInstalled = true;
             }
 
@@ -109,8 +113,8 @@ namespace BeeKingdom.Playground
 
         private void OnDestroy()
         {
-            if (preemptionHookInstalled && BuildingInteractionController.InteractionPreemptionHook == (Func<BuildingDefinition, bool>)TryCompleteReadyUpgradeOnClick)
-                BuildingInteractionController.InteractionPreemptionHook = null;
+            if (preemptionHookInstalled)
+                BuildingInteractionController.UnregisterCompletionPreemption(TryCompleteReadyUpgradeOnClick);
         }
 
         // M045F-CL: restores the "tap the building directly to validate" UX the legacy
