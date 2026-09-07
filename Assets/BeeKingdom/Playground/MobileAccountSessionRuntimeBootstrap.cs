@@ -290,6 +290,11 @@ namespace BeeKingdom.Playground
                 gameplayPlayerId == Guid.Empty)
                 return false;
 
+            // M059-CL : l'apercu local (niveaux/effectifs de secours) etait partitionne par
+            // APPAREIL, jamais par compte - deux comptes sur la meme machine partageaient donc
+            // le meme cache. On le rattache ici au joueur authentifie, avant toute lecture.
+            HiveViewProductUiPresenter.SetLocalPreviewAccountPartitionForRuntime(gameplayPlayerId.ToString("D"));
+
             if (authenticatedAuthority) ActivateChatForActiveSession(configuration);
 
             var codec = new SystemTextGameJsonCodec();
@@ -725,6 +730,9 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ResetRewardLedgerControllerForRuntime();
             tutorialClient = null;
             tutorialHiveId = Guid.Empty;
+            // M059-CL : purge du cache d'apercu local du compte qui se deconnecte - sans quoi
+            // ses niveaux/effectifs restent en memoire et s'affichent au compte suivant.
+            HiveViewProductUiPresenter.SetLocalPreviewAccountPartitionForRuntime(string.Empty);
         }
 
         public static BeeKingdom.Networking.ITutorialClient TutorialClientForRuntime() => tutorialClient;

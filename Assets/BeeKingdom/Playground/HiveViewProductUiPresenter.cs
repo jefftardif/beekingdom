@@ -672,6 +672,11 @@ private const string LeftNavigationAssetPath = "Assets/Art/UI/Navigation/closing
 
 		private static readonly Dictionary<string, int> localPreviewBuildingLevels = new Dictionary<string, int>(StringComparer.Ordinal);
 
+		// M059-CL : compte authentifie courant, propage au magasin d'apercu local pour qu'un
+		// second compte utilise sur la MEME machine ne reprenne jamais le cache du premier.
+		// Vide = aucune session officielle : comportement d'avant M059, inchange.
+		private static string localPreviewAccountPartitionId = string.Empty;
+
 		private static string localPreviewUpgradeHotspotId = string.Empty;
 
 		private static float localPreviewUpgradeStartedAt = -100f;
@@ -4079,6 +4084,53 @@ private static string courierToast = string.Empty;
                 return model == null ? 0 : model.LevelFor(hotspotId);
             }
             return EnsureLocalPreviewLevel(hotspotId);
+        }
+
+        // M059-CL - ISOLATION DE COMPTE POUR TOUT AFFICHAGE DE NIVEAU DE BATIMENT.
+        // EnsureLocalPreviewLevel() n'est PAS une donnee de joueur : c'est le bac a sable de
+        // demonstration historique, qui materialise des niveaux inventes (27/25/24/22) pour
+        // n'importe quel batiment jamais vu. Un ecran destine au joueur ne doit donc JAMAIS
+        // l'appeler directement : il verrait des niveaux qui n'appartiennent a personne (c'est
+        // exactement ce qu'a rapporte le premier testeur externe, qui voyait "Niveau 22/24/25/27"
+        // sur une ruche neuve). La seule autorite est l'instantane serveur, adresse par le
+        // couple (joueur authentifie, ruche) : il suit donc l'identite authentifiee par
+        // construction, et repart de zero a chaque changement de compte puisque le controleur
+        // lui-meme est detruit/recree par la session (CloseGameplayForSignedOutSession).
+        // Retourne false tant que le serveur n'a pas encore livre de niveau exploitable :
+        // l'appelant doit alors afficher une valeur d'attente honnete, jamais un nombre invente.
+        private static bool TryResolveAuthoritativeBuildingLevel(string hotspotId, out int level)
+        {
+            level = 0;
+            if (!IsOfficialUpgradeBuilding(hotspotId) || !OfficialBuildingUpgradeConfigured()) return false;
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            if (model == null || model.State == HiveBuildingUpgradeScreenState.NotConfigured) return false;
+            int resolved = model.LevelFor(hotspotId);
+            if (resolved <= 0) return false;
+            level = resolved;
+            return true;
+        }
+
+        // Vrai des qu'une session de jeu officielle est branchee : l'ecran doit alors se taire
+        // sur le bac a sable local, meme si l'instantane n'est pas encore arrive.
+        private static bool AuthoritativeBuildingLevelsExpected()
+        {
+            if (!OfficialBuildingUpgradeConfigured()) return false;
+            HiveBuildingUpgradeScreenModel model = OfficialBuildingUpgradeModel();
+            return model != null && model.State != HiveBuildingUpgradeScreenState.NotConfigured;
+        }
+
+        // Texte de niveau sur pour un ecran joueur : serveur si disponible, attente explicite si
+        // une session officielle est branchee mais que l'instantane n'est pas encore la, et
+        // seulement en dernier recours (aucune session : mode demo hors ligne) la valeur du bac
+        // a sable local - qui est alors annoncee comme telle par le bandeau de provenance.
+        private static string AuthoritativeBuildingLevelText(string hotspotId)
+        {
+            string levelWord = BeeLocalization.Text("common.level", "Niveau");
+            if (TryResolveAuthoritativeBuildingLevel(hotspotId, out int level))
+                return levelWord + " " + level.ToString(CultureInfo.InvariantCulture);
+            if (AuthoritativeBuildingLevelsExpected())
+                return levelWord + " " + BeeLocalization.Text("ui.colony_overview.level_pending", "—");
+            return levelWord + " " + EnsureLocalPreviewLevel(hotspotId).ToString(CultureInfo.InvariantCulture);
         }
 
         public static bool TryStartUpgradeWithPrerequisiteRedirectForExternalHost(string hotspotId)
@@ -22790,7 +22842,10 @@ public static string[] ConnectionTruthForProof()
             EnsureLocalPreviewStrategicProfileLoaded();
             localPreviewHiveProgressLoaded = true;
             string profileId = localPreviewStrategicProfile?.profileId ?? string.Empty;
-            LocalPreviewHiveProgressReadResult result = LocalPreviewHiveProgressCodec.Read(localPreviewHiveProgressStore, profileId);
+            LocalPreviewHiveProgressReadResult result = LocalPreviewHiveProgressCodec.Read(
+                localPreviewHiveProgressStore,
+                profileId,
+                localPreviewAccountPartitionId);
             localPreviewHiveProgress = result.Progress ?? LocalPreviewHiveProgressCodec.CreateDefault(profileId);
             localPreviewHiveProgressRestoreStatus = result.Status.ToString().ToLowerInvariant();
 
@@ -41842,6 +41897,53 @@ public static void ResetMissionsStateForProof()
             }
         }
 
+        // M059-CL - CYCLE DE VIE DU CACHE D'APERCU LOCAL FACE AU CHANGEMENT DE COMPTE.
+        // Appele par MobileAccountSessionRuntimeBootstrap a chaque fois que la session de jeu
+        // officielle est (re)configuree ou fermee. Deux effets, tous deux necessaires :
+        // 1. la partition du magasin suit le compte authentifie (isolation sur disque) ;
+        // 2. les statiques deja chargees en memoire sont purgees, sinon les niveaux/effectifs
+        //    du compte precedent survivent au changement de compte tant que le processus vit
+        //    (les statiques ne sont jamais rechargees une fois localPreviewHiveProgressLoaded
+        //    passe a vrai). Meme famille de defaut que la fuite de drapeaux de M056A/M058.
+        // Idempotent : ne fait rien si le compte n'a pas change.
+        public static void SetLocalPreviewAccountPartitionForRuntime(string accountId)
+        {
+            string safeAccountId = accountId ?? string.Empty;
+            if (string.Equals(localPreviewAccountPartitionId, safeAccountId, StringComparison.Ordinal)) return;
+            localPreviewAccountPartitionId = safeAccountId;
+            InvalidateLocalPreviewHiveStateForAccountSwitch();
+        }
+
+        private static void InvalidateLocalPreviewHiveStateForAccountSwitch()
+        {
+            localPreviewHiveProgress = LocalPreviewHiveProgressCodec.CreateDefault(string.Empty);
+            localPreviewHiveProgressLoaded = false;
+            localPreviewHiveProgressRestoreStatus = "not_loaded";
+            localPreviewBuildingLevels.Clear();
+            localPreviewChampionBeeLevels.Clear();
+            localPreviewTroopTiers.Clear();
+            localPreviewAssignedChampionBeeIds = new List<string>();
+            localPreviewWorkers = LocalPreviewHiveProgressCodec.DefaultWorkers;
+            localPreviewSoldiers = LocalPreviewHiveProgressCodec.DefaultSoldiers;
+            localPreviewGuardians = LocalPreviewHiveProgressCodec.DefaultGuardians;
+            localPreviewScouts = LocalPreviewHiveProgressCodec.DefaultScouts;
+            localPreviewWingrunners = 0;
+            localPreviewDarters = 0;
+            // Un ecran ouvert sur les chiffres du compte precedent ne doit pas rester a l'ecran.
+            colonyOverviewOpen = false;
+            colonyOverviewDetailHotspotId = string.Empty;
+            colonyOverviewScroll = Vector2.zero;
+        }
+
+        public static string LocalPreviewAccountPartitionForProof => localPreviewAccountPartitionId;
+
+        // M059-CL : exactement le texte que la VUE COLONIE affiche pour un batiment. Expose
+        // pour que la non-regression porte sur le rendu reel, pas sur une reimplementation.
+        public static string ColonyOverviewBuildingLevelTextForProof(string hotspotId)
+            => AuthoritativeBuildingLevelText(hotspotId);
+
+        public static int LocalPreviewBuildingLevelCountForProof => localPreviewBuildingLevels.Count;
+
         public static void UseLocalPreviewHiveProgressStoreForProof(ILocalPreviewHiveProgressStore store)
         {
             localPreviewHiveProgressStore = store ?? new PlayerPrefsLocalPreviewHiveProgressStore();
@@ -42845,6 +42947,20 @@ public static void ResetMissionsStateForProof()
                     new Rect(70f, 42f, Screen.width - 220f, 22f),
                     BeeLocalization.Text("ui.colony_overview.title", "Vue d'ensemble de la colonie"),
                     new GUIStyle(smallStyle) { fontSize = 13 });
+                // M059-CL (QoL du sprint) : dire explicitement d'ou viennent les chiffres. Le
+                // premier testeur externe a cru lire SA ruche alors qu'il regardait le bac a
+                // sable local - meme piege que le chat avant son propre bandeau SERVEUR/DEMO.
+                bool authoritative = AuthoritativeBuildingLevelsExpected();
+                GUI.Label(
+                    new Rect(70f, 62f, Screen.width - 220f, 20f),
+                    authoritative
+                        ? BeeLocalization.Text("ui.colony_overview.source.server", "Données serveur · ta ruche")
+                        : BeeLocalization.Text("ui.colony_overview.source.local", "Aperçu local de démonstration · pas ta ruche"),
+                    new GUIStyle(smallStyle)
+                    {
+                        fontSize = 11,
+                        normal = { textColor = authoritative ? new Color(0.63f, 0.88f, 0.62f, 1f) : new Color(0.98f, 0.76f, 0.35f, 1f) }
+                    });
             }
 
 			if (DrawPremiumBackButton(new Rect(4f, 2f, compact ? 44f : 48f, compact ? 44f : 48f)))
@@ -42931,13 +43047,12 @@ public static void ResetMissionsStateForProof()
             for (int i = 0; i < ReferenceHotspots.Length; i++)
             {
                 ReferenceHiveHotspot hotspot = ReferenceHotspots[i];
-                int level = EnsureLocalPreviewLevel(hotspot.HotspotId);
                 float rowY = y;
                 DrawColonyOverviewStatRow(
                     ref y,
                     width,
                     LocalizedHotspotLabel(hotspot),
-                    BeeLocalization.Text("common.level", "Niveau") + " " + level.ToString(CultureInfo.InvariantCulture));
+                    AuthoritativeBuildingLevelText(hotspot.HotspotId));
                 if (GUI.Button(new Rect(0f, rowY, width, ColonyOverviewRowHeight), string.Empty, GUIStyle.none))
                 {
                     colonyOverviewDetailHotspotId = hotspot.HotspotId;
@@ -42954,11 +43069,16 @@ public static void ResetMissionsStateForProof()
         private static void DrawColonyOverviewDetailContent(float width, ReferenceHiveHotspot hotspot)
         {
             float y = 4f;
-            int level = EnsureLocalPreviewLevel(hotspot.HotspotId);
             bool manualProduction = !string.IsNullOrWhiteSpace(ManualProductionIcon(hotspot.HotspotId));
+            // M059-CL : meme autorite que la liste - jamais EnsureLocalPreviewLevel directement.
+            string levelValue = TryResolveAuthoritativeBuildingLevel(hotspot.HotspotId, out int authoritativeLevel)
+                ? authoritativeLevel.ToString(CultureInfo.InvariantCulture)
+                : AuthoritativeBuildingLevelsExpected()
+                    ? BeeLocalization.Text("ui.colony_overview.level_pending", "—")
+                    : EnsureLocalPreviewLevel(hotspot.HotspotId).ToString(CultureInfo.InvariantCulture);
 
             DrawColonyOverviewSectionHeader(ref y, width, BeeLocalization.Text("ui.colony_overview.section.status", "Etat actuel"));
-            DrawColonyOverviewStatRow(ref y, width, BeeLocalization.Text("common.level", "Niveau"), level.ToString(CultureInfo.InvariantCulture));
+            DrawColonyOverviewStatRow(ref y, width, BeeLocalization.Text("common.level", "Niveau"), levelValue);
             DrawColonyOverviewStatRow(
                 ref y,
                 width,
@@ -42973,7 +43093,12 @@ public static void ResetMissionsStateForProof()
                 ref y,
                 width,
                 BeeLocalization.Text("ui.colony_overview.detail.next_level", "Prochain niveau"),
-                BeeLocalization.Text("ui.colony_overview.detail.next_level_cost", "Cout") + ": " + UpgradeCostText(hotspot));
+                // M059-CL : quand le serveur fait autorite, afficher SON etat reel (offre,
+                // chantier en cours, file occupee) plutot que le cout du bac a sable local, qui
+                // n'a aucun rapport avec ce que le serveur imposera au clic Ameliorer.
+                AuthoritativeBuildingLevelsExpected()
+                    ? OfficialBuildingUpgradeStatusText(hotspot.HotspotId)
+                    : BeeLocalization.Text("ui.colony_overview.detail.next_level_cost", "Cout") + ": " + UpgradeCostText(hotspot));
             y += ColonyOverviewSectionGap;
 
             DrawColonyOverviewSectionHeader(ref y, width, BeeLocalization.Text("ui.colony_overview.section.about", "A propos"));

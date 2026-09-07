@@ -9,6 +9,10 @@ namespace BeeKingdom.Playground
     {
         public int version = LocalPreviewHiveProgressCodec.CurrentVersion;
         public string profileId = string.Empty;
+        // M059-CL : compte authentifie proprietaire de ce cache d'apercu local. Vide = cache
+        // herite d'avant M059 (aucun compte connu), adopte par le premier compte qui le lit.
+        // Champ purement ADDITIF : un blob ecrit avant M059 se deserialise avec accountId="".
+        public string accountId = string.Empty;
         public int revision;
         public List<LocalPreviewBuildingProgress> buildings = new List<LocalPreviewBuildingProgress>();
         public int workers = LocalPreviewHiveProgressCodec.DefaultWorkers;
@@ -50,7 +54,11 @@ namespace BeeKingdom.Playground
         Sanitized,
         Corrupt,
         UnsupportedVersion,
-        ProfileMismatch
+        ProfileMismatch,
+        // M059-CL : le cache appartient a un AUTRE compte authentifie que celui qui lit. Traite
+        // exactement comme ProfileMismatch (etat vide), mais distingue pour que la cause reelle
+        // soit lisible dans les preuves/diagnostics.
+        AccountMismatch
     }
 
     public sealed class LocalPreviewHiveProgressReadResult
@@ -117,11 +125,27 @@ namespace BeeKingdom.Playground
 
         public static LocalPreviewHiveProgressReadResult Read(ILocalPreviewHiveProgressStore store, string expectedProfileId)
         {
+            return Read(store, expectedProfileId, string.Empty);
+        }
+
+        // M059-CL - PARTITION PAR COMPTE AUTHENTIFIE.
+        // Le magasin d'apercu local est un unique emplacement PlayerPrefs, donc lie a
+        // l'APPAREIL, pas au joueur : avant M059, deux comptes utilises sur la meme machine
+        // partageaient le meme cache de niveaux/effectifs. `expectedAccountId` ferme cette
+        // fuite. Vide (aucune session authentifiee) = comportement d'avant M059, inchange.
+        // Un cache herite sans accountId est ADOPTE par le premier compte qui le lit, pour ne
+        // jamais effacer la progression locale deja accumulee par le proprietaire de la machine.
+        public static LocalPreviewHiveProgressReadResult Read(
+            ILocalPreviewHiveProgressStore store,
+            string expectedProfileId,
+            string expectedAccountId)
+        {
             string expected = expectedProfileId ?? string.Empty;
-            if (store == null) return Result(expected, LocalPreviewHiveProgressReadStatus.Empty);
+            string expectedAccount = expectedAccountId ?? string.Empty;
+            if (store == null) return Result(expected, expectedAccount, LocalPreviewHiveProgressReadStatus.Empty);
 
             string json = store.Read();
-            if (string.IsNullOrWhiteSpace(json)) return Result(expected, LocalPreviewHiveProgressReadStatus.Empty);
+            if (string.IsNullOrWhiteSpace(json)) return Result(expected, expectedAccount, LocalPreviewHiveProgressReadStatus.Empty);
 
             LocalPreviewHiveProgress progress;
             try
@@ -130,15 +154,33 @@ namespace BeeKingdom.Playground
             }
             catch
             {
-                return Result(expected, LocalPreviewHiveProgressReadStatus.Corrupt);
+                return Result(expected, expectedAccount, LocalPreviewHiveProgressReadStatus.Corrupt);
             }
 
-            if (progress == null) return Result(expected, LocalPreviewHiveProgressReadStatus.Corrupt);
-            if (progress.version < 1 || progress.version > CurrentVersion) return Result(expected, LocalPreviewHiveProgressReadStatus.UnsupportedVersion);
+            if (progress == null) return Result(expected, expectedAccount, LocalPreviewHiveProgressReadStatus.Corrupt);
+            if (progress.version < 1 || progress.version > CurrentVersion) return Result(expected, expectedAccount, LocalPreviewHiveProgressReadStatus.UnsupportedVersion);
             if (!string.Equals(progress.profileId ?? string.Empty, expected, StringComparison.Ordinal))
-                return Result(expected, LocalPreviewHiveProgressReadStatus.ProfileMismatch);
+                return Result(expected, expectedAccount, LocalPreviewHiveProgressReadStatus.ProfileMismatch);
+
+            string storedAccount = progress.accountId ?? string.Empty;
+            bool adoptedByAccount = false;
+            if (expectedAccount.Length > 0)
+            {
+                if (storedAccount.Length == 0) adoptedByAccount = true;
+                else if (!string.Equals(storedAccount, expectedAccount, StringComparison.Ordinal))
+                {
+                    LocalPreviewHiveProgress fresh = CreateDefault(expected);
+                    fresh.accountId = expectedAccount;
+                    return new LocalPreviewHiveProgressReadResult(fresh, LocalPreviewHiveProgressReadStatus.AccountMismatch);
+                }
+            }
 
             bool sanitized = Normalize(progress, expected);
+            if (adoptedByAccount)
+            {
+                progress.accountId = expectedAccount;
+                sanitized = true;
+            }
             if (sanitized) Write(store, progress);
             return new LocalPreviewHiveProgressReadResult(
                 progress,
@@ -333,7 +375,21 @@ namespace BeeKingdom.Playground
 
         private static LocalPreviewHiveProgressReadResult Result(string profileId, LocalPreviewHiveProgressReadStatus status)
         {
-            return new LocalPreviewHiveProgressReadResult(CreateDefault(profileId), status);
+            return Result(profileId, string.Empty, status);
+        }
+
+        // M059-CL : tout etat de repli (vide, corrompu, mauvais profil, mauvais compte) doit
+        // deja porter le compte courant. Sans ca, le tout premier cache ecrit par un joueur
+        // serait ecrit SANS accountId, donc considere comme herite - et adopte par le compte
+        // suivant qui le lirait : la fuite qu'on ferme ici serait rouverte au premier ecrit.
+        private static LocalPreviewHiveProgressReadResult Result(
+            string profileId,
+            string accountId,
+            LocalPreviewHiveProgressReadStatus status)
+        {
+            LocalPreviewHiveProgress progress = CreateDefault(profileId);
+            progress.accountId = accountId ?? string.Empty;
+            return new LocalPreviewHiveProgressReadResult(progress, status);
         }
 
         private static bool Normalize(LocalPreviewHiveProgress progress, string profileId)

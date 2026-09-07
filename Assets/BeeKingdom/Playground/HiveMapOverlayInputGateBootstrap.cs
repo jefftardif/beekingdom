@@ -91,7 +91,10 @@ namespace BeeKingdom.Playground
                 // capability/status window; M009 extends it to Academy/Defense status.
                 // M013 extends that status window to Bank.
                 || HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost
-                || HiveMapArmyBootstrap.ModalOpenForExternalHost;
+                || HiveMapArmyBootstrap.ModalOpenForExternalHost
+                // M059-CL : fenetre "amelioration en cours" (clic sur un batiment en travaux).
+                // Ajout strictement additif - aucun drapeau existant n'est modifie ici.
+                || HiveViewProductUiPresenter.UpgradeProgressOverlayOpenForExternalHost;
         }
 
         private void Update()
