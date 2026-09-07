@@ -36701,9 +36701,21 @@ if (leftNavigationTexture == null)
 			{
 				await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body);
 				LivingHiveChatSnapshot postSendSnapshot = ChatServerSnapshot();
+				// M059D RUNTIME - compare l'ID reellement selectionne cote controleur (celui a qui
+				// SendAsync a vraiment envoye le message) avec l'ID affiche cote UI
+				// (chatSelectedConversation) : un ecart ici prouve que l'ecran plein regarde une
+				// conversation differente de celle qui vient de recevoir le message.
+				string controllerSelected = postSendSnapshot?.SelectedConversationId;
+				bool selectionMatches = string.Equals(controllerSelected, chatSelectedConversation, StringComparison.Ordinal);
+				int matchingMessageCount = postSendSnapshot == null ? -1 : postSendSnapshot.Messages.Count(message => string.Equals(message.ConversationId, chatSelectedConversation, StringComparison.Ordinal));
 				Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - SendAsync returned OK"
 					+ " | postSendStatus=" + (postSendSnapshot == null ? "<null snapshot>" : postSendSnapshot.Status.ToString())
-					+ " | postSendMessageCount=" + (postSendSnapshot == null ? -1 : postSendSnapshot.Messages.Count));
+					+ " | postSendErrorCode=" + (postSendSnapshot?.ErrorCode ?? "<none>")
+					+ " | postSendMessageCount=" + (postSendSnapshot == null ? -1 : postSendSnapshot.Messages.Count)
+					+ " | controllerSelectedConversation=" + (string.IsNullOrEmpty(controllerSelected) ? "<none>" : controllerSelected)
+					+ " | uiSelectedConversation=" + (string.IsNullOrEmpty(chatSelectedConversation) ? "<none>" : chatSelectedConversation)
+					+ " | selectionMatches=" + selectionMatches
+					+ " | messagesVisibleToUiSelection=" + matchingMessageCount);
 			}
 			catch (Exception exception)
 			{

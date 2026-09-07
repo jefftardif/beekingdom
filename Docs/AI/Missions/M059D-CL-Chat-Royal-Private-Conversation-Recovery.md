@@ -904,3 +904,106 @@ que la course de concurrence est bien résolue, à retirer après confirmation C
 ### 15.9 Prochaine étape
 
 **READY FOR CEO RUNTIME RETEST.**
+
+## 16. Preuve CEO d'envoi réel + double anomalie post-envoi (2026-09-07)
+
+### 16.1 Ce que la trace confirme (acquis, ne plus retravailler)
+
+Trace complète capturée par le CEO au clic Discuter puis Envoyer :
+- `status=Online`, `chatServerConnected=True`, `openInProgress=False`,
+  `conversationsLoaded=6` au clic Discuter → **`6639579` fonctionne sur cette
+  session** (plus de course de connexion).
+- `ChatSendCurrent REAL BACKEND PATH - enter` puis
+  `calling LivingHiveChatRuntime.SendAsync` → **`adde6c7` confirmé en runtime** :
+  le bouton Envoyer réel atteint bien le vrai pipeline backend, prouvé, ne plus
+  retravailler le câblage du bouton.
+
+Ligne décisive : `SendAsync returned OK | postSendStatus=Offline | postSendMessageCount=3`.
+Deux anomalies distinctes à expliquer, aucune corrigée à ce stade (diagnostic
+uniquement, comme demandé).
+
+### 16.2 Anomalie A — le statut bascule à `Offline` juste après un envoi réussi
+
+Cause localisée par lecture de code, précisément à l'endroit indiqué par la trace :
+`LivingHiveChatController.SendAsync` (succès) appelle inconditionnellement
+`PersistRecentCache()` juste après avoir mis à jour le message en mémoire.
+`PersistRecentCache()` a son **propre** bloc try/catch : si la sauvegarde du cache
+récent échoue pour n'importe quelle raison, l'exception est capturée **à
+l'intérieur de cette méthode elle-même** (donc `SendAsync` ne voit jamais
+d'échec - cohérent avec "SendAsync returned OK"), mais le statut est quand même
+basculé à `Offline` (code `local_recent_cache_unavailable`) en effet de bord
+silencieux - et surtout, **avant ce correctif, cette exception n'était jamais
+journalisée nulle part**, donc son type exact reste à confirmer.
+
+Instrumentation ajoutée (ciblée, minimale) : le `catch` de `PersistRecentCache`
+journalise désormais le type et le message exacts de l'exception avant de
+basculer le statut. Un prochain clic Envoyer donnera la cause exacte du
+`Save()` en échec.
+
+### 16.3 Anomalie B — "Aucun message pour le moment" malgré 3 messages réels
+
+Cause identifiée avec un haut niveau de confiance par traçage de code (à
+confirmer par la nouvelle instrumentation, section 16.4) : **désynchronisation
+entre la conversation réellement sélectionnée côté contrôleur et celle
+affichée côté écran**, un écart déjà connu et documenté (section 14.5) pour le
+clic sur une conversation EXISTANTE - la trace montre qu'il existe aussi au
+moment même du clic "Discuter" :
+
+- `ChatStartPrivateConversation` (le gestionnaire de "Discuter") appelle
+  `ChatSelectChannel("private")` **de façon synchrone**, qui choisit la
+  PREMIÈRE conversation privée déjà connue côté UI (`chatConversations`) -
+  donc, au moment de ce clic, **jamais** la nouvelle conversation avec le
+  joueur ciblé, puisqu'elle n'existe pas encore.
+- Juste après, `CreatePrivateConversationAsync` (fire-and-forget) crée
+  réellement la conversation et la sélectionne correctement **côté
+  contrôleur** (`SelectKnownConversationAsync`) - c'est cette conversation-là
+  que `SendAsync` utilise ensuite, donc les 3 messages sont bien réels et bien
+  rattachés à la BONNE conversation côté serveur/contrôleur.
+- Rien ne resynchronise jamais `chatSelectedConversation` (UI) avec
+  `snapshot.SelectedConversationId` (contrôleur) après coup. Pire :
+  `ChatRoyalSyncFromServer` ne redéclenche une resélection automatique que si
+  `chatSelectedConversation` n'existe plus DU TOUT dans la liste des
+  conversations - or l'ancienne conversation privée choisie par erreur EST
+  toujours une conversation valide, donc ce garde-fou ne se déclenche jamais.
+- Résultat : l'écran plein reste bloqué à afficher une conversation privée
+  différente (existante mais non pertinente), avec zéro message local pour
+  elle → "Aucun message pour le moment", alors que les vrais messages
+  existent bel et bien, correctement rattachés, sous un AUTRE ID de
+  conversation dans le même snapshot.
+
+Ceci répond directement à la checklist demandée : les 3 messages appartiennent
+bien à LA conversation réellement sélectionnée côté contrôleur (pas de
+corruption serveur), mais l'écran plein lit sa collection locale
+(`chatMessagesByConversation`) via un ID UI qui n'a jamais été mis à jour pour
+suivre la vraie sélection - ce n'est pas un problème de "collection
+locale/legacy vs snapshot serveur" au sens d'une ancienne architecture
+parallèle, mais un simple oubli de resynchronisation d'ID après une création
+de conversation asynchrone.
+
+### 16.4 Instrumentation ajoutée pour confirmer B en runtime
+
+Le log post-envoi trace désormais, en plus de l'existant : l'ID de conversation
+réellement sélectionné côté contrôleur, l'ID actuellement affiché côté UI, si
+les deux correspondent, et le nombre de messages du snapshot qui appartiennent
+réellement à l'ID affiché côté UI (devrait être 0, expliquant l'écran vide,
+alors que `postSendMessageCount` reste à 3 pour la vraie conversation).
+
+### 16.5 Statut
+
+Diagnostic uniquement, **aucun correctif appliqué** (consigne explicite).
+Compilation vérifiée propre, tests ciblés existants toujours verts
+(`SendingFromARealConversationReachesTheServerProviderNotTheLocalSimulator`,
+`OpenAsyncCancelledByItsOwnTokenLeavesAConherentOfflineStateInsteadOfStuckConnecting`).
+`6639579` et `adde6c7` conservés tels quels.
+
+### 16.6 Prochaine étape
+
+Un nouveau clic Envoyer par le CEO donnera : (1) le type exact de l'exception
+`PersistRecentCache`, (2) la confirmation chiffrée de l'écart de sélection
+UI/contrôleur. Ces deux preuves permettront un correctif ciblé (probablement :
+rendre `PersistRecentCache` réellement tolérant à une conversation absente de
+la liste au lieu de basculer tout le statut Offline, et faire suivre
+`chatSelectedConversation` sur `snapshot.SelectedConversationId` après une
+création de conversation) sans toucher au câblage d'envoi déjà prouvé.
+
+**READY FOR CEO POST-SEND ANOMALY TRACE RETEST.**

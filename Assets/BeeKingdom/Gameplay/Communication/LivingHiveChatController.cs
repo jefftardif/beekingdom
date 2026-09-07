@@ -518,7 +518,18 @@ namespace BeeKingdom.Gameplay.Communication
                 lock (gate) snapshot = new ChatRecentCacheSnapshot { SelectedConversationId = selectedConversationId, Conversations = conversations.Select(Clone).ToArray(), Messages = messages.Where(item => item.Delivery == LivingHiveChatDelivery.Confirmed).Select(Clone).ToArray() };
                 recentCache.Save(snapshot);
             }
-            catch (Exception) { SetStatus(LivingHiveChatStatus.Offline, "local_recent_cache_unavailable"); }
+            // M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
+            // avant cette trace, cette exception etait avalee SANS AUCUNE journalisation - c'est
+            // exactement ce qui rend "SendAsync returned OK | postSendStatus=Offline" possible :
+            // SendAsync() (ligne ~346) appelle PersistRecentCache() APRES avoir mis a jour le
+            // message en memoire ; si la sauvegarde du cache recent echoue, cette methode capture
+            // l'exception ELLE-MEME (SendAsync ne voit donc jamais d'echec), mais bascule quand
+            // meme le statut a Offline en effet de bord silencieux.
+            catch (Exception exception)
+            {
+                UnityEngine.Debug.LogError("[M059D RUNTIME] PersistRecentCache - save failed silently after a successful operation, forcing Offline: " + exception.GetType().FullName + " - " + exception.Message);
+                SetStatus(LivingHiveChatStatus.Offline, "local_recent_cache_unavailable");
+            }
         }
         private static bool IsRetryable(RemoteChatError error) => error == RemoteChatError.Transport || error == RemoteChatError.Offline || error == RemoteChatError.RateLimited || error == RemoteChatError.Cancelled;
         private static LivingHiveChatStatus MapStatus(RemoteChatError error) => error == RemoteChatError.Unauthorized || error == RemoteChatError.LocalAccountMismatch ? LivingHiveChatStatus.AuthenticationRequired : error == RemoteChatError.Disabled || error == RemoteChatError.Incompatible ? LivingHiveChatStatus.Unavailable : error == RemoteChatError.Transport || error == RemoteChatError.Offline || error == RemoteChatError.RateLimited ? LivingHiveChatStatus.Offline : LivingHiveChatStatus.Error;
