@@ -1007,3 +1007,37 @@ la liste au lieu de basculer tout le statut Offline, et faire suivre
 création de conversation) sans toucher au câblage d'envoi déjà prouvé.
 
 **READY FOR CEO POST-SEND ANOMALY TRACE RETEST.**
+
+## 17. Confirmation runtime + correctifs directs (2026-09-07)
+
+Nouvel envoi CEO, trace exacte obtenue :
+- Anomalie A confirmée : `ChatProtectedStoreException - Chat data could not be
+  protected and was not written.` (échec du chiffrement logiciel de secours
+  du cache local, hors Android), levée par `PersistRecentCache` juste après un
+  `SendAsync` réussi.
+- Anomalie B confirmée : `controllerSelectedConversation` ≠
+  `uiSelectedConversation` (`selectionMatches=False`,
+  `messagesVisibleToUiSelection=0` alors que 4 messages existaient réellement).
+
+**Correctifs appliqués** (les deux hypothèses étant confirmées, comme convenu) :
+- `PersistRecentCache` n'affecte plus jamais le statut de connexion en cas
+  d'échec - un raté d'écriture du cache local (best-effort, hors ligne
+  uniquement) n'a aucun rapport avec l'état de la connexion serveur ; il est
+  seulement journalisé, sans dégrader `Online`/`Polling` à `Offline`.
+- `ChatStartPrivateConversation` fait désormais suivre `chatSelectedConversation`
+  (UI) sur l'ID réellement créé/sélectionné par `CreatePrivateConversationAsync`
+  dès qu'il revient, au lieu de garder le choix synchrone prématuré de
+  `ChatSelectChannel("private")`.
+
+**Tests ciblés** (aucune grosse suite) : `SendingFromARealConversationReachesTheServerProviderNotTheLocalSimulator`,
+`SendingFromADemoConversationKeepsTheOldLocalBehaviorAndNeverTouchesTheTransport`,
+`OpenAsyncCancelledByItsOwnTokenLeavesAConherentOfflineStateInsteadOfStuckConnecting`,
+`CreatePrivateConversationAsyncCreatesAndSelectsTheRealConversationForTheTappedPlayer`
+- **4/4 verts**. Compilation propre. (`RecentCacheIsProtectedPartitionedBoundedAndRestorable`
+  échoue mais pour la raison pré-existante déjà documentée ailleurs dans ce
+  dépôt - `Has.Count` NUnit sur une propriété adossée à un tableau - sans
+  rapport avec ce correctif, non touché.)
+
+Commit local uniquement, aucun push. `6639579` et `adde6c7` conservés tels quels.
+
+**READY FOR CEO RUNTIME RETEST.**

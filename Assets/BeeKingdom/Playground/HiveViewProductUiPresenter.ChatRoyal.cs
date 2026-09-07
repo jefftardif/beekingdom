@@ -578,11 +578,35 @@ namespace BeeKingdom.Playground
             // La vraie ouverture (creation OU retrouve, idempotent cote serveur) passe par
             // CreatePrivateConversationAsync, qui selectionne ensuite la conversation reelle des
             // qu'elle revient - voir LivingHiveChatController.CreatePrivateConversationAsync.
+            //
+            // M059D-CL - preuve runtime (session CEO du 2026-09-07) : ChatSelectChannel("private")
+            // ci-dessus choisit cette PREMIERE conversation existante de facon SYNCHRONE, avant meme
+            // que CreatePrivateConversationAsync (asynchrone, fire-and-forget) n'ait cree/selectionne
+            // la VRAIE conversation avec le joueur tape cote controleur. Rien ne resynchronisait
+            // ensuite chatSelectedConversation (UI) sur la selection reelle du controleur - l'ecran
+            // continuait donc d'afficher une autre conversation (existante mais non pertinente,
+            // "Aucun message pour le moment") alors que les messages arrivaient bien, correctement
+            // rattaches, sous le vrai identifiant retourne ici.
             CloseChatRoyalOverlays();
             ChatSelectChannel("private");
-            LivingHiveChatRuntime.CreatePrivateConversationAsync(entry.PlayerId.ToString("N"));
+            ChatStartPrivateConversationAndSyncSelection(entry.PlayerId.ToString("N"));
             ShowChatToast("Discussion avec " + entry.DisplayName + " demandee.");
             LivingHiveChatRuntime.RefreshInvitationsAsync();
+        }
+
+        // Meme patron fire-and-forget "async void" que ChatSendCurrentToServer / SendAllianceChatMessage :
+        // jamais d'exception non observee, capturee par type seulement.
+        private static async void ChatStartPrivateConversationAndSyncSelection(string participantPlayerId)
+        {
+            try
+            {
+                string conversationId = await LivingHiveChatRuntime.CreatePrivateConversationAsync(participantPlayerId);
+                if (string.IsNullOrWhiteSpace(conversationId)) return;
+                chatSelectedConversation = conversationId;
+                chatMessagesScroll = Vector2.zero;
+                chatActionMessageIndex = -1;
+            }
+            catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Failed to open private conversation: " + exception.GetType().Name); }
         }
 
         private static void ChatCreateGroupFromSelection()

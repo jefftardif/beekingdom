@@ -518,17 +518,19 @@ namespace BeeKingdom.Gameplay.Communication
                 lock (gate) snapshot = new ChatRecentCacheSnapshot { SelectedConversationId = selectedConversationId, Conversations = conversations.Select(Clone).ToArray(), Messages = messages.Where(item => item.Delivery == LivingHiveChatDelivery.Confirmed).Select(Clone).ToArray() };
                 recentCache.Save(snapshot);
             }
-            // M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
-            // avant cette trace, cette exception etait avalee SANS AUCUNE journalisation - c'est
-            // exactement ce qui rend "SendAsync returned OK | postSendStatus=Offline" possible :
-            // SendAsync() (ligne ~346) appelle PersistRecentCache() APRES avoir mis a jour le
-            // message en memoire ; si la sauvegarde du cache recent echoue, cette methode capture
-            // l'exception ELLE-MEME (SendAsync ne voit donc jamais d'echec), mais bascule quand
-            // meme le statut a Offline en effet de bord silencieux.
+            // M059D-CL - preuve runtime (session CEO du 2026-09-07) : ce cache est un
+            // best-effort purement LOCAL (relecture au demarrage pour un affichage instantane hors
+            // ligne) - il n'a aucun rapport avec la connexion serveur elle-meme. Avant ce correctif,
+            // un echec ici (confirme en runtime : ChatProtectedStoreException lors du chiffrement
+            // logiciel de secours hors Android) faisait pourtant basculer TOUT le statut de connexion
+            // a Offline juste apres un envoi reussi (SendAsync ne voyait aucune erreur, cette methode
+            // avalait l'exception elle-meme) - un chat parfaitement en ligne se faisait donc marquer
+            // "indisponible" par un probleme d'ecriture disque local sans aucun rapport. Ne plus jamais
+            // degrader l'etat de connexion pour ca ; seulement journaliser, le prochain appel reessaiera
+            // de lui-meme.
             catch (Exception exception)
             {
-                UnityEngine.Debug.LogError("[M059D RUNTIME] PersistRecentCache - save failed silently after a successful operation, forcing Offline: " + exception.GetType().FullName + " - " + exception.Message);
-                SetStatus(LivingHiveChatStatus.Offline, "local_recent_cache_unavailable");
+                UnityEngine.Debug.LogWarning("[ChatRoyal] Recent-cache save failed (local-only, connection unaffected): " + exception.GetType().Name);
             }
         }
         private static bool IsRetryable(RemoteChatError error) => error == RemoteChatError.Transport || error == RemoteChatError.Offline || error == RemoteChatError.RateLimited || error == RemoteChatError.Cancelled;
