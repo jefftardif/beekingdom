@@ -148,6 +148,22 @@ namespace BeeKingdom.Playground
         public static Guid GameplayHiveId => gameplayHiveId;
         public static Guid GameplayPlayerId => gameplayPlayerId;
         private static readonly LivingHiveChatSessionCoordinator chatCoordinator = new LivingHiveChatSessionCoordinator();
+        // M059D-CL - preuve runtime (session CEO du 2026-09-07, stack trace complete) : au moins
+        // trois bootstraps HiveMap independants (LivingHiveChatBridgeBootstrap,
+        // HiveMapActivitiesBootstrap, HiveMapArmyBootstrap) appellent chacun
+        // ActivateChatForActiveSession pour le MEME joueur dans la meme session de jeu.
+        // LivingHiveChatSessionCoordinator.SessionAvailableAsync deduplique deja les appels
+        // redondants, mais UNIQUEMENT si le MEME objet LivingHiveChatSessionBinding lui est
+        // repasse (ReferenceEquals) - un comportement deliberement teste
+        // (SessionCoordinatorReplacesChangedBindingForSamePlayerInsteadOfKeepingStaleTokenSource),
+        // donc a ne pas affaiblir cote coordinateur. Le vrai defaut etait ici : cette methode
+        // construisait un LivingHiveChatSessionBinding tout neuf a CHAQUE appel, meme quand rien
+        // n'avait change, ce qui rendait la deduplication du coordinateur inoperante et faisait
+        // annuler une negociation de capacites deja en vol (TaskCanceledException observe dans
+        // NegotiateCapabilitiesAsync). On met desormais en cache le binding pour le joueur+serveur
+        // courant et on reutilise EXACTEMENT le meme objet tant que rien n'a change.
+        private static LivingHiveChatSessionBinding cachedChatBinding;
+        private static string cachedChatBindingKey;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static async void ConfigureBeforeSceneLoad()
@@ -598,18 +614,26 @@ namespace BeeKingdom.Playground
         private static void ActivateChatForActiveSession(MobileAccountSessionRuntimeConfiguration configuration)
         {
             if (client == null || configuration == null || string.IsNullOrWhiteSpace(configuration.BaseUrl)) return;
-            var options = new RemoteChatClientOptions
+            string storagePartitionId = gameplayPlayerId.ToString("D");
+            string bindingKey = storagePartitionId + "|" + configuration.BaseUrl + "|" + configuration.AllowInsecureLoopbackForDevelopment;
+            LivingHiveChatSessionBinding binding = cachedChatBinding;
+            if (binding == null || !string.Equals(cachedChatBindingKey, bindingKey, StringComparison.Ordinal))
             {
-                BaseUrl = configuration.BaseUrl,
-                AllowInsecureLoopback = configuration.AllowInsecureLoopbackForDevelopment,
-                StoragePartitionId = gameplayPlayerId.ToString("D")
-            };
-            var binding = new LivingHiveChatSessionBinding(
-                options,
-                new MobileAccountChatSessionSource(client),
-                new PlayerPrefsChatStringStore(),
-                new LivingHiveChatDataProtector(),
-                new SignalRChatRealtimeTransport(configuration.BaseUrl));
+                var options = new RemoteChatClientOptions
+                {
+                    BaseUrl = configuration.BaseUrl,
+                    AllowInsecureLoopback = configuration.AllowInsecureLoopbackForDevelopment,
+                    StoragePartitionId = storagePartitionId
+                };
+                binding = new LivingHiveChatSessionBinding(
+                    options,
+                    new MobileAccountChatSessionSource(client),
+                    new PlayerPrefsChatStringStore(),
+                    new LivingHiveChatDataProtector(),
+                    new SignalRChatRealtimeTransport(configuration.BaseUrl));
+                cachedChatBinding = binding;
+                cachedChatBindingKey = bindingKey;
+            }
             var readiness = new DelegateChatAccountSessionReadiness(() =>
                 client.State == MobileAccountSessionState.Authenticated && client.ServerGameplayAuthorityGranted);
             ForgetChatLifecycle(chatCoordinator.SessionAvailableAsync(readiness, binding));
@@ -624,6 +648,8 @@ namespace BeeKingdom.Playground
         public static void CloseGameplayForSignedOutSession()
         {
             ForgetChatLifecycle(chatCoordinator.SessionEndedAsync());
+            cachedChatBinding = null;
+            cachedChatBindingKey = null;
             HivePerimeterSortiePanelController previous = gameplayController;
             HiveOfflineProductionPanelController previousProduction = offlineProductionController;
             HiveBuildingUpgradePanelController previousBuildingUpgrade = buildingUpgradeController;

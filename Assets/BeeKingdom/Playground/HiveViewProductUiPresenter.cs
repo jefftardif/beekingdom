@@ -36641,6 +36641,12 @@ if (leftNavigationTexture == null)
 		private static void ChatSendCurrent()
 		{
 			string text = chatComposerText.Trim();
+			// M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
+			// prouve que CE ChatSendCurrent() (post-adde6c7) est bien celui execute par la fenetre
+			// visible, sans supposer sur la lecture de code seule.
+			Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - enter | textEmpty=" + string.IsNullOrEmpty(text)
+				+ " | chatUsingServerData=" + chatUsingServerData
+				+ " | chatSelectedConversation=" + (string.IsNullOrEmpty(chatSelectedConversation) ? "<none>" : chatSelectedConversation));
 			if (string.IsNullOrEmpty(text)) return;
 
 			// M059D-CL : pour une conversation reelle, cable sur le meme point d'entree deja
@@ -36687,8 +36693,23 @@ if (leftNavigationTexture == null)
 		// par type seulement, jamais le contenu du message).
 		private static async void ChatSendCurrentToServer(string body)
 		{
-			try { await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body); }
-			catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Send failed: " + exception.GetType().Name); }
+			// M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO).
+			Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - calling LivingHiveChatRuntime.SendAsync"
+				+ " | conversation=" + (string.IsNullOrEmpty(chatSelectedConversation) ? "<none>" : chatSelectedConversation)
+				+ " | bodyLength=" + (body == null ? 0 : body.Length));
+			try
+			{
+				await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body);
+				LivingHiveChatSnapshot postSendSnapshot = ChatServerSnapshot();
+				Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - SendAsync returned OK"
+					+ " | postSendStatus=" + (postSendSnapshot == null ? "<null snapshot>" : postSendSnapshot.Status.ToString())
+					+ " | postSendMessageCount=" + (postSendSnapshot == null ? -1 : postSendSnapshot.Messages.Count));
+			}
+			catch (Exception exception)
+			{
+				Debug.LogWarning("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - SendAsync threw " + exception.GetType().Name);
+				Debug.LogWarning("[ChatRoyal] Send failed: " + exception.GetType().Name);
+			}
 		}
 
 		// M059D-CL - crochets de preuve EditMode pour ChatSendCurrent(), sur le meme modele que

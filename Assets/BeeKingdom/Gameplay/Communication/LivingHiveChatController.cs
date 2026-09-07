@@ -109,6 +109,11 @@ namespace BeeKingdom.Gameplay.Communication
         private CancellationTokenSource liveUpdates;
         private Task pollingTask = Task.CompletedTask;
         private Task realtimeReceiptTask = Task.CompletedTask;
+        // M059D RUNTIME - drapeau de diagnostic temporaire (a retirer apres confirmation CEO) :
+        // permet de savoir si OpenAsync est encore en vol au moment d'un clic Discuter, sans rien
+        // changer au comportement d'ouverture lui-meme.
+        private volatile bool openInFlight;
+        public bool OpenInProgressForDiagnostics => openInFlight;
 
         public LivingHiveChatController(ServerChatProvider provider, int recentMessageLimit = DefaultRecentMessageLimit, IChatDelay delay = null, TimeSpan? pollInterval = null, IChatRecentCache recentCache = null)
         {
@@ -151,6 +156,7 @@ namespace BeeKingdom.Gameplay.Communication
         {
             RestoreRecentCache();
             SetStatus(LivingHiveChatStatus.Connecting, null);
+            openInFlight = true;
             try
             {
                 bool alreadyConnected = provider.ConnectionState == RemoteChatConnectionState.Realtime
@@ -183,6 +189,38 @@ namespace BeeKingdom.Gameplay.Communication
             catch (RemoteChatTransportException exception)
             {
                 SetStatus(MapStatus(exception.Error), exception.ServerCode ?? exception.Error.ToString());
+            }
+            // M059D-CL - preuve runtime (session CEO du 2026-09-07, stack trace complete) :
+            // OpenAsync -> ConnectAsync -> NegotiateCapabilitiesAsync -> Send -> le transport HTTP
+            // observe l'annulation du CancellationToken qui lui a ete transmis et leve
+            // TaskCanceledException/OperationCanceledException. Dans cette architecture, AUCUN
+            // timeout reseau ne passe par l'annulation d'un token : un timeout UnityWebRequest
+            // ressort en ConnectionError -> RemoteChatTransportException (catch ci-dessus), jamais
+            // en OperationCanceledException. Donc quand ct.IsCancellationRequested est vrai ici,
+            // c'est TOUJOURS parce que le proprietaire de ce token (ReconfigureAsync/ResetAsync sur
+            // LivingHiveChatRuntime, ou le transition token de LivingHiveChatSessionCoordinator) l'a
+            // annule deliberement pour superseder cette ouverture par une autre - jamais un accident
+            // reseau. On journalise et on rend un etat coherent (Offline, jamais bloque a Connecting
+            // pour le reste de la session) sans relancer : cette ouverture est fire-and-forget
+            // (LivingHiveChatBridgeBootstrap.Update()), personne n'attend cette tache, donc laisser
+            // l'exception se propager ne ferait que produire un fault non observe.
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                UnityEngine.Debug.Log("[M059D RUNTIME] LivingHiveChatController.OpenAsync - cancelled by its own token owner (lifecycle supersede), not a network timeout. Status reset to Offline.");
+                SetStatus(LivingHiveChatStatus.Offline, "local_open_superseded");
+            }
+            // Meme raisonnement que ci-dessus pour tout type d'exception non prevu par les deux
+            // catch precedents : journalise avec le type exact (jamais avale silencieusement dans
+            // la tache fire-and-forget) et rend un etat coherent au lieu de laisser Connecting
+            // bloque indefiniment.
+            catch (Exception exception)
+            {
+                UnityEngine.Debug.LogError("[M059D RUNTIME] LivingHiveChatController.OpenAsync - unexpected exception type: " + exception.GetType().FullName + " - " + exception.Message);
+                SetStatus(LivingHiveChatStatus.Error, "local_open_unexpected_exception");
+            }
+            finally
+            {
+                openInFlight = false;
             }
         }
 
@@ -497,6 +535,8 @@ namespace BeeKingdom.Gameplay.Communication
         private static CancellationTokenSource lifetime;
 
         public static bool IsConfigured { get { lock (Gate) return controller != null; } }
+        // M059D RUNTIME - diagnostic temporaire (a retirer apres confirmation CEO).
+        public static bool OpenInProgressForDiagnostics { get { lock (Gate) return controller != null && controller.OpenInProgressForDiagnostics; } }
         public static LivingHiveChatSnapshot Snapshot { get { lock (Gate) return controller?.Snapshot() ?? new LivingHiveChatSnapshot { Status = LivingHiveChatStatus.NotConfigured }; } }
         public static async Task ReconfigureAsync(LivingHiveChatController value)
         {

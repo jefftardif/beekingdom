@@ -773,3 +773,134 @@ hors du périmètre demandé.
 
 **READY FOR CEO SEND RUNTIME RETEST.** Rouvrir la conversation avec "bob" (ou en
 créer une nouvelle via Discuter) et envoyer un message réel.
+
+## 15. Retest CEO — échec, puis diagnostic runtime de la vraie cause (2026-09-07)
+
+### 15.1 Symptôme rapporté
+
+Retest CEO après `adde6c7` : **aucun changement fonctionnel** dans Chat Royal plein
+écran. Le CEO a explicitement rejeté toute nouvelle hypothèse basée sur la seule
+lecture de code/tests EditMode et a demandé une preuve runtime instrumentée.
+
+### 15.2 Écarté par preuve : `ChatIngamePanel`
+
+Une implémentation de chat uGUI totalement séparée et non liée
+(`Assets/BeeKingdom/Gameplay/Communication/ChatIngamePanel.cs`, son propre bouton
+"Envoyer", son propre `LocalChatProvider` factice, aucun lien avec
+`LivingHiveChatRuntime`) a été envisagée comme cause possible. Écartée par preuve :
+recherche du GUID de son script dans toutes les scènes/prefabs du projet (aucune
+correspondance) et confirmation dans l'historique du projet (`Claude_Continuation.md`)
+que ce fichier est du code mort, jamais posé dans une scène.
+
+### 15.3 Chemin de clic réel confirmé
+
+Un seul point d'entrée Envoyer/Entrée existe dans tout le projet pour Chat Royal,
+partagé par l'écran plein écran et le mini-chat flottant - les deux appellent bien
+`ChatSendCurrent()` (celle corrigée par `adde6c7`). Aucun chemin parallèle trouvé.
+
+### 15.4 Deuxième retest CEO — échec AVANT l'envoi
+
+Après sortie complète et nouvelle entrée en Play Mode (non pausé) : recherche "bob"
+OK, clic "Discuter" → toast "Chat serveur indisponible : impossible d'ouvrir une
+discussion." - donc l'échec se produit avant même d'atteindre `ChatSendCurrent()`.
+**Comportement intermittent confirmé entre deux sessions Play Mode fraîches** (une
+session précédente avait réussi le même geste).
+
+### 15.5 Cause racine identifiée : course de concurrence à la connexion
+
+Stack trace CEO complète : `LivingHiveChatController.OpenAsync` →
+`ServerChatProvider.ConnectAsync` → `NegotiateCapabilitiesAsync` → `Send` →
+`UnityWebRequestChatRestTransport.SendAsync` → `TaskCanceledException`.
+
+Analyse du transport et de la chaîne d'appel :
+- Le transport transforme la requête HTTP en tâche via un
+  `TaskCompletionSource`, et enregistre l'annulation du `CancellationToken` reçu
+  pour interrompre la requête (`Abort()`) et marquer la tâche annulée. **Aucun
+  timeout applicatif n'est en cause** : un vrai timeout réseau ressort par un
+  chemin totalement différent (erreur de connexion → `RemoteChatTransportException`),
+  jamais par annulation de jeton - donc toute occurrence de cette exception est
+  garantie être une annulation délibérée par le propriétaire du jeton, jamais un
+  accident réseau.
+- Ce jeton est le jeton de durée de vie partagé du runtime chat statique
+  (`LivingHiveChatRuntime`), recréé uniquement quand une nouvelle session chat est
+  (re)configurée (`ReconfigureAsync`/`ResetAsync`).
+- **Source exacte de la concurrence** : dans la scène HiveMap, **trois bootstraps
+  indépendants** (`LivingHiveChatBridgeBootstrap`, `HiveMapActivitiesBootstrap`,
+  `HiveMapArmyBootstrap`) appellent chacun séparément
+  `MobileAccountSessionRuntimeBootstrap.ActivateChatForActiveSession` pour le même
+  joueur authentifié au chargement de la scène. Cette méthode construisait un
+  `LivingHiveChatSessionBinding` **flambant neuf à chaque appel**. Le mécanisme
+  anti-doublon de `LivingHiveChatSessionCoordinator.SessionAvailableAsync` ne
+  reconnaît un appel redondant que si on lui repasse **exactement le même objet**
+  binding (`ReferenceEquals`, comportement déjà testé et volontairement conservé -
+  voir 15.6) - donc chaque appel redondant paraissait "nouveau", relançait
+  `BeginTransition`, et annulait la négociation de capacités déjà en vol de l'appel
+  précédent.
+- **Pourquoi ça restait bloqué pour le reste de la session** : le sondage de
+  `LivingHiveChatBridgeBootstrap.Update()` ne tentait `OpenAsync()` qu'**une seule
+  fois par session** (verrou `openRequested`). Si cette unique tentative se faisait
+  annuler par un appel redondant, plus rien ne relançait - chat restait "indisponible"
+  jusqu'au redémarrage de la session. Le résultat était donc une pure course : selon
+  quel appel "gagnait" sans se faire couper, la session fonctionnait ou pas.
+
+### 15.6 Correctif (couche connexion/session uniquement - rien touché côté
+clic Discuter/Envoyer/UI, conformément à la consigne)
+
+1. **`MobileAccountSessionRuntimeBootstrap.ActivateChatForActiveSession`** met
+   désormais en cache le `LivingHiveChatSessionBinding` par joueur+serveur et
+   réutilise le **même objet** tant que rien n'a changé, au lieu d'en fabriquer un
+   nouveau à chaque appel. Le mécanisme anti-doublon du coordinateur (déjà présent
+   et déjà testé, notamment par
+   `SessionCoordinatorReplacesChangedBindingForSamePlayerInsteadOfKeepingStaleTokenSource`
+   qui exige justement qu'un changement réel de source de session déclenche une vraie
+   reconfiguration) n'a **pas été affaibli** : le correctif est côté appelant, pas
+   côté coordinateur - un appel redondant est maintenant reconnu comme tel et
+   n'annule plus jamais rien.
+2. **`LivingHiveChatController.OpenAsync`** distingue désormais une annulation
+   délibérée par son propre jeton (`ct.IsCancellationRequested`) - toujours un
+   supersede de cycle de vie dans cette architecture, jamais un accident réseau -
+   d'une exception réellement inattendue. Dans les deux cas : état remis à `Offline`
+   (jamais bloqué à `Connecting`), et systématiquement journalisé (plus jamais avalé
+   silencieusement dans la tâche fire-and-forget).
+3. **`LivingHiveChatBridgeBootstrap.Update()`** retente désormais automatiquement
+   `OpenAsync()` tant que le chat est configuré mais pas connecté (`Offline`/`Error`/
+   `Unavailable`/`NotConfigured`), au même rythme de sondage qu'avant, au lieu de
+   tenter une seule fois par session. Auto-guérison en quelques secondes si une
+   annulation légitime survient malgré tout.
+
+### 15.7 Tests ajoutés et suite ciblée exécutée
+
+Nouveau fichier `Assets/BeeKingdom/Tests/Editor/LivingHiveChatConnectionCancellationTests.cs` :
+
+| Test | Preuve |
+|---|---|
+| `OpenAsyncCancelledByItsOwnTokenLeavesAConherentOfflineStateInsteadOfStuckConnecting` | une annulation par son propre jeton pendant la négociation de capacités ne fait jamais planter `OpenAsync`, remet l'état à `Offline` (jamais bloqué à `Connecting`) avec le code d'erreur `local_open_superseded` |
+| `OpenAsyncSucceedsOnTheNextAttemptAfterAPriorCancellation` | une tentative saine juste après une tentative annulée réussit normalement (`Polling`) - la retentative est réellement possible |
+
+**9/9 tests ciblés verts** (compilation propre vérifiée à chaque étape, après
+redémarrage de l'Éditeur Unity suite à un lanceur de tests resté bloqué par une
+tentative pendant le Play Mode du CEO) :
+- les 2 nouveaux ci-dessus ;
+- `SessionCoordinatorKeepsOneActivationForLiveTokenSourceOfSamePlayer`,
+  `SessionCoordinatorReplacesChangedBindingForSamePlayerInsteadOfKeepingStaleTokenSource`,
+  `SessionCoordinatorClosesPlayerABeforeActivatingPlayerB`,
+  `SessionCoordinatorLogoutCancelsDelayedActivationBeforeItCanPublish`,
+  `SessionCoordinatorCanRetryCleanlyAfterActivationFailure`,
+  `SessionCoordinatorRejectsPreparationBeforeBootstrapActivation`,
+  `LivingHiveBootstrapCancellationAfterSessionLookupNeverConfiguresRuntime` (non-régression coordinateur/session, 7/7) ;
+- `SendingFromARealConversationReachesTheServerProviderNotTheLocalSimulator` (non-régression envoi, section 14).
+
+Pas de grosse suite Unity complète lancée à ce stade (consigne explicite du CEO).
+
+### 15.8 Commit
+
+Commit local uniquement, aucun push. Fichiers : `LivingHiveChatController.cs`,
+`LivingHiveChatBridgeBootstrap.cs`, `MobileAccountSessionRuntimeBootstrap.cs`,
+`HiveViewProductUiPresenter.cs`, `HiveViewProductUiPresenter.ChatRoyal.cs` (traces
+`[M059D RUNTIME]` temporaires laissées en place - utiles pour confirmer en direct
+que la course de concurrence est bien résolue, à retirer après confirmation CEO),
+`LivingHiveChatConnectionCancellationTests.cs` (+`.meta`), ce rapport.
+
+### 15.9 Prochaine étape
+
+**READY FOR CEO RUNTIME RETEST.**

@@ -23,7 +23,6 @@ namespace BeeKingdom.Playground
         private const string RuntimeRootName = "LivingHive Chat Bridge Runtime";
         private const float PollIntervalSeconds = 1f;
 
-        private bool openRequested;
         private float pollTimer;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -81,10 +80,22 @@ namespace BeeKingdom.Playground
             if (pollTimer < PollIntervalSeconds) return;
             pollTimer = 0f;
 
-            if (LivingHiveChatRuntime.IsConfigured && !openRequested)
+            // M059D-CL - preuve runtime (session CEO du 2026-09-07) : plusieurs bootstraps HiveMap
+            // independants declenchent chacun une activation de session chat pour le meme joueur,
+            // et un appel redondant pouvait annuler une negociation deja en vol
+            // (LivingHiveChatSessionCoordinator, corrige separement). Quand CETTE ouverture-ci est
+            // celle qui se fait annuler, l'ancien "openRequested" ne se relancait plus jamais - le
+            // chat restait bloque a "indisponible" pour le reste de la session sans auto-guerison.
+            // On retente desormais tant que le chat est configure mais pas connecte (et qu'aucune
+            // ouverture n'est deja en vol), au meme rythme de sondage qu'avant.
+            if (LivingHiveChatRuntime.IsConfigured && !LivingHiveChatRuntime.OpenInProgressForDiagnostics)
             {
-                openRequested = true;
-                _ = LivingHiveChatRuntime.OpenAsync();
+                LivingHiveChatStatus status = LivingHiveChatRuntime.Snapshot.Status;
+                bool needsOpen = status == LivingHiveChatStatus.NotConfigured
+                    || status == LivingHiveChatStatus.Offline
+                    || status == LivingHiveChatStatus.Error
+                    || status == LivingHiveChatStatus.Unavailable;
+                if (needsOpen) _ = LivingHiveChatRuntime.OpenAsync();
             }
 
             PublishCurrentSnapshot();
