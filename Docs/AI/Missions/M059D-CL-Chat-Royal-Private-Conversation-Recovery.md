@@ -3,9 +3,11 @@
 Date : 2026-09-07
 Agent : Claude Code
 Scène de test : `Environment2D5D_HiveMap_Test` (jamais `LivingHive.unity`)
-Statut : **deux régressions diagnostiquées et corrigées**, prouvées par instrumentation
-runtime en Play Mode réel (session CEO) + 7 tests EditMode neufs/existants verts.
-Rien n'a été poussé.
+Statut : **trois régressions distinctes diagnostiquées et corrigées** (bail de
+capacités, création de conversation privée jamais câblée, et — la cause réelle
+rencontrée par le CEO au retest, voir section 10 — normalisation `null`/chaîne vide
+du curseur de pagination côté client). Preuve directe capturée en Console pendant un
+Play Mode réel du CEO. 9 tests EditMode ciblés verts. Rien n'a été poussé.
 
 ---
 
@@ -221,3 +223,194 @@ CEO pour `M060` - non remplie tant que ce test manuel n'a pas ete refait.
 
 Aucun autre fichier de Chat Royal modifie. Aucune migration serveur, aucun nouvel
 endpoint, aucune configuration production touchee.
+
+---
+
+## 9. ÉCHEC DU RETEST CEO — la vraie cause n'était pas celle corrigée
+
+Le CEO a refait le test exact (`Nouvelle discussion → recherche "bob" → bob trouvé →
+Discuter`) après le commit `f64380d2`. **Échec identique** : `Chat serveur
+indisponible : impossible d'ouvrir une discussion.`
+
+### 9.1 Preuve runtime directe (sonde en lecture seule sur le snapshot déjà en mémoire)
+
+```
+IsConfigured=True  Status=Error  ErrorCode=invalid_conversation_cursor
+Conversations=6  SelectedConversationId=c2b28689-...  PendingCount=0
+```
+
+**`invalid_conversation_cursor`, pas `capability_lease_expired`.** C'est l'erreur que
+la toute première session de diagnostic avait déjà vue (avant le correctif du bail),
+et elle réapparaît sur une session Play Mode **fraîche** (juste après un redémarrage
+complet de l'Éditeur) — donc ce n'est PAS un bail qui a expiré après 5 minutes,
+c'est un défaut qui se produit **dès le premier chargement de la liste de
+conversations**. Le correctif du bail (section 3.1) reste réel et nécessaire, mais
+**ne corrige pas ce que le CEO rencontre réellement**.
+
+### 9.2 Tentative de capture directe de la cause — a provoqué un gel de l'Éditeur
+
+Une tentative d'appeler directement `provider.NegotiateCapabilitiesAsync(...)` puis
+`provider.ListConversationsAsync(...)` via un script de diagnostic a rendu l'Éditeur
+non-répondant plusieurs minutes, nécessitant un redémarrage manuel par l'utilisateur.
+**Cause identifiée et retenue pour ne plus la reproduire** (voir la mémoire
+`feedback_unity_mcp_script_execute_hangs.md`) : l'outil MCP `script-execute` exécute
+le script de façon SYNCHRONE sur le thread principal Unity (bloque sur `Task.Result`).
+`UnityWebRequestAsyncOperation` a besoin que ce même thread principal continue de
+tourner (sa boucle `Update`) pour déclencher son évènement `completed` — en le
+bloquant depuis un script MCP, on crée un interblocage réel, pas un simple appel
+lent. **Cette technique de diagnostic ne sera plus utilisée.**
+
+### 9.3 Hypothèses écartées par lecture statique du code (sans nouvel appel réseau)
+
+- **Encodage du curseur serveur** (`ChatService.EncodeConversationCursor`) : base64
+  URL-safe sans padding, sans espace, sans caractère de contrôle possible — devrait
+  toujours passer la validation cliente pour n'importe quel entier `offset`.
+- **Politique de nommage JSON** : serveur configuré en `camelCase`
+  (`ConfigureHttpJsonOptions` dans `Program.cs`), cohérent avec les champs `camelCase`
+  attendus côté client (`WireConversationPage.nextCursor`).
+- **Mauvaise interprétation d'une erreur HTTP comme succès** :
+  `UnityWebRequestChatRestTransport` ne désérialise le corps que si le code de statut
+  est 2xx (`ServerChatProvider.cs` ligne ~199) ; `Send<T>` vérifie `!response.IsSuccess`
+  avant d'utiliser `response.Body`. Une erreur HTTP ne peut pas atterrir dans
+  `NextCursor`.
+- **Troncature de réponse** (`BoundedChatDownloadHandler`) produirait un
+  `TransportError` différent (`RemoteChatError.Transport`), pas
+  `invalid_conversation_cursor`.
+- **`ValidateConversationPage` est bien le point d'origine réel** de l'exception dans
+  TOUS les cas (elle est appelée à l'intérieur même de `ListConversationsAsync`,
+  donc avant même que `LoadAllConversationsAsync` n'ait la main) — confirmé par
+  lecture du flot d'appel, pas supposé.
+
+**Reste non écarté, faute de pouvoir observer le curseur réel en toute sécurité** :
+un défaut serveur authentique dans `EncodeConversationCursor`/`DecodeConversationCursor`
+pour CE compte spécifique (utilisé intensivement pendant des mois de QA — beaucoup de
+conversations Alliance/Groupe/Privé accumulées, donc une vraie pagination au-delà de
+la 1ʳᵉ page est plausible), ou un cas limite non couvert par la lecture statique.
+
+### 9.4 Diagnostic temporaire ajouté (à retirer après confirmation)
+
+`ServerChatProvider.cs` : nouvelle méthode privée `LogInvalidCursorDiagnostic`,
+appelée aux deux points d'origine de `invalid_conversation_cursor`
+(`ValidateConversationPage` et le contrôle redondant de `LoadAllConversationsAsync`).
+Utilise `Debug.Log` (pas `LogError`/`LogWarning`, pour ne jamais faire échouer un test
+existant qui déclenche ce chemin sans s'y attendre — vérifié :
+`ConversationCursorIsBoundedEscapedAndInvalidServerCursorIsRejected` reste vert).
+
+Affiche, sans jamais logger de jeton ni de secret : l'origine de l'appel, le nombre
+d'éléments de la page, si le curseur est null, sa longueur, s'il contient des
+caractères de contrôle, s'il est égal à sa propre version `Trim()`, et un aperçu
+tronqué (12 premiers + 12 derniers caractères seulement).
+
+**Compilé et vérifié** (`assets-refresh` propre, 0 erreur) ; test existant
+`ConversationCursorIsBoundedEscapedAndInvalidServerCursorIsRejected` toujours vert ;
+les 4 tests M059D neufs/existants restés verts après l'ajout.
+
+**Non commité intentionnellement** : c'est un diagnostic temporaire, pas le correctif
+final. Il vivra dans l'arbre de travail jusqu'au prochain retest CEO, dont le message
+`[M059D-CL DIAGNOSTIC]` en Console donnera la preuve exacte nécessaire pour le
+correctif définitif (puis sera retiré et remplacé par ce correctif dans le commit
+final).
+
+### 9.5 Prochaine étape
+
+Un nouveau clic **Discuter** du CEO en Play Mode fera apparaître dans la Console
+Unity une ligne `[M059D-CL DIAGNOSTIC] invalid_conversation_cursor at ...` avec les
+caractéristiques exactes du curseur fautif. C'est la preuve manquante pour choisir le
+correctif final avec certitude plutôt que par supposition.
+
+---
+
+## 10. Preuve capturée — cause racine confirmée et corrigée
+
+### 10.1 Preuve Console exacte (Play Mode réel, CEO, session fraîche)
+
+```
+[M059D-CL DIAGNOSTIC] invalid_conversation_cursor at ValidateConversationPage
+| itemCount=6 | cursorIsNull=False | cursorLength=0 | cursorHasControlChars=False
+| cursorTrimEqualsSelf=True | cursorPreview=
+```
+
+**`cursorIsNull=False` et `cursorLength=0`** : le curseur reçu par le client n'est pas
+`null`, c'est une **chaîne vide `""`**. C'est la preuve directe et suffisante.
+
+### 10.2 Cause racine exacte
+
+`ChatService.ListConversations` (serveur) ne renvoie jamais que soit un curseur
+encodé non-vide, soit un littéral C#/JSON `null` — jamais une chaîne vide comme
+concept propre (`ChatService.cs` ligne ~174 :
+`hasMore ? EncodeConversationCursor(...) : null`). Le serveur envoie donc
+correctement `"nextCursor":null` dans le JSON quand il n'y a pas de page suivante
+(le cas normal, quasi systématique).
+
+Côté client, `UnityEngine.JsonUtility` — le backend JSON réellement utilisé en
+production (`UnityJsonBackend`, jamais exercé par les tests EditMode existants, qui
+substituent tous `SystemTextJsonBackend`) — **déserialise ce `null` JSON en chaîne C#
+vide `""`, jamais en `null`**. C'est une limite documentée de `JsonUtility`, pas un
+défaut serveur : `WireConversationPage.nextCursor` (un `string` simple, sans
+enrobage `Nullable`) ne peut pas représenter fidèlement l'absence de valeur avec ce
+parseur.
+
+`UnityChatJsonCodec.Map` recopiait `wire.nextCursor` tel quel dans
+`RemoteConversationPage.NextCursor`, donc `""` arrivait jusqu'à
+`ValidateConversationPage`, dont le garde-fou ne testait que `!= null` — `""` passait
+ce test et atterrissait dans `ValidateCursor("")`, qui la rejette à raison (un
+curseur RÉEL ne peut pas être une chaîne vide) avec le message
+`invalid_conversation_cursor`. Le contrat "`null` et chaîne vide/blanche signifient
+tous deux 'pas de page suivante'" existait déjà et était correctement appliqué par
+`LoadAllConversationsAsync` (`string.IsNullOrWhiteSpace`) — mais ce code n'est jamais
+atteint dans ce cas précis, car `ValidateConversationPage` (appelé plus tôt, à
+l'intérieur même de `ListConversationsAsync`) explose avant.
+
+**Aucun défaut serveur. Aucun changement de contrat serveur nécessaire** — confirmé
+par lecture de `ChatService.ListConversations`/`EncodeConversationCursor` : `""` n'a
+jamais de signification distincte de `null` dans ce contrat.
+
+### 10.3 Correctif appliqué (minimal, purement client)
+
+1. **`UnityChatJsonCodec.Map(WireConversationPage wire)`** — normalise `null` ET
+   chaîne vide/blanche en `null` au point unique où le défaut de `JsonUtility` est
+   introduit, pour que tout consommateur en aval reçoive un contrat propre sans
+   avoir à re-découvrir ce piège.
+2. **`ServerChatProvider.ValidateConversationPage`** — le garde-fou
+   `NextCursor != null` devient `!string.IsNullOrWhiteSpace(NextCursor)`, symétrique
+   avec `LoadAllConversationsAsync`, en défense en profondeur (au cas où une future
+   source de `RemoteConversationPage` ne passerait pas par le codec).
+3. **Diagnostic temporaire retiré** (section 9.4) — plus nécessaire, la cause est
+   prouvée et corrigée à la source.
+
+Aucun autre chemin de pagination du client chat n'utilise un curseur `string`
+nullable de ce type (vérifié par recherche exhaustive) — c'est le seul endroit
+concerné.
+
+### 10.4 Tests de régression (2 nouveaux, reproduisant la cause exacte)
+
+- `CodecNormalizesAnEmptyNextCursorToNullMatchingNoNextPage` — déserialise
+  `{"items":[],"nextCursor":""}` via le codec réel et vérifie
+  `RemoteConversationPage.NextCursor == null`.
+- `EmptyNextCursorFromTransportIsTreatedAsNoNextPageNotAnInvalidCursor` — fait
+  transiter `NextCursor = ""` par le pipeline complet
+  (`ServerChatProvider.LoadAllConversationsAsync`) et vérifie `IsComplete == true`,
+  aucune exception.
+
+**9/9 tests EditMode ciblés verts** : les 2 nouveaux ci-dessus, les 4 tests M059D
+précédents (bail de capacités ×2, création de conversation privée ×2), et 3
+non-régressions voisines (`ConversationCursorIsBoundedEscapedAndInvalidServerCursorIsRejected`
+— le test existant qui exerce exactement ce chemin, `ConversationPaginationDeduplicatesAcrossPages`,
+`ConversationCursorCycleIsRejected` — confirme qu'une vraie pagination multi-pages et
+la détection de cycle de curseur continuent de fonctionner normalement).
+
+La classe complète `ServerChatProviderTests` n'a toujours pas pu tourner en un seul
+appel (limite connue de cette session, voir mémoire `feedback_unity_mcp_script_execute_hangs.md`) ;
+les tests ci-dessus ont été exécutés individuellement.
+
+### 10.5 Fichiers touchés (ce correctif)
+
+- `Assets/BeeKingdom/Gameplay/Communication/UnityChatJsonCodec.cs` (le correctif racine)
+- `Assets/BeeKingdom/Gameplay/Communication/ServerChatProvider.cs` (garde-fou symétrique + retrait du diagnostic)
+- `Assets/BeeKingdom/Tests/Editor/ServerChatProviderTests.cs` (2 tests neufs)
+
+### 10.6 Prochaine étape
+
+Un nouveau clic **Discuter** du CEO en Play Mode reste la seule preuve d'acceptation
+valable — voir section 6. L'attente cette fois est que la conversation s'ouvre
+réellement, sans toast d'erreur.

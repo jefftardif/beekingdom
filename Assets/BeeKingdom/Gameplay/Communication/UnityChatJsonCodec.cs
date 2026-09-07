@@ -66,7 +66,18 @@ namespace BeeKingdom.Gameplay.Communication
 
         private static RemoteConversationPage Map(WireConversationPage wire)
         {
-            var result = new RemoteConversationPage { NextCursor = wire == null ? null : wire.nextCursor };
+            // M059D-CL - CAUSE RACINE PROUVEE en Play Mode reel (CEO) : UnityEngine.JsonUtility
+            // deserialise un "nextCursor":null JSON en chaine vide C# "", jamais en null (limite
+            // documentee de JsonUtility, pas un defaut serveur - ChatService.ListConversations ne
+            // renvoie jamais que soit un curseur encode non-vide, soit un litteral null). Le
+            // contrat null/"" pour "pas de page suivante" est deja celui que
+            // LoadAllConversationsAsync applique correctement (string.IsNullOrWhiteSpace) - seule
+            // la frontiere de deserialisation laissait passer "" comme s'il s'agissait d'un
+            // curseur reel, que ValidateConversationPage rejetait alors comme invalide.
+            // Normaliser ici, au point unique ou le defaut de JsonUtility est introduit, evite
+            // qu'un futur appelant doive re-decouvrir ce piege.
+            string nextCursor = wire == null || string.IsNullOrWhiteSpace(wire.nextCursor) ? null : wire.nextCursor;
+            var result = new RemoteConversationPage { NextCursor = nextCursor };
             if (wire?.items != null) foreach (WireConversation item in wire.items) result.Items.Add(Map(item));
             return result;
         }

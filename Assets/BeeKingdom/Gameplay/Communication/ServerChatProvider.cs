@@ -616,7 +616,12 @@ namespace BeeKingdom.Gameplay.Communication
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (RemoteConversation conversation in page.Items)
                 if (conversation == null || !IsOpaqueIdentifier(conversation.ConversationId) || conversation.LastSequence < 0 || !ids.Add(conversation.ConversationId)) throw InvalidReceipt("conversation_page_invalid");
-            if (page.NextCursor != null) try { ValidateCursor(page.NextCursor, nameof(page.NextCursor)); } catch (ArgumentException exception) { throw new RemoteChatTransportException(RemoteChatError.InvalidResponse, "Chat server returned an invalid conversation cursor.", 0, "invalid_conversation_cursor", innerException: exception); }
+            // M059D-CL : null ET vide/blanc signifient tous deux "pas de page suivante" dans ce
+            // contrat (voir LoadAllConversationsAsync, qui traite deja les deux de la meme facon).
+            // Un garde-fou qui ne testait que "!= null" laissait passer une chaine vide comme si
+            // c'etait un curseur reel a valider - desormais corrige a la source dans
+            // UnityChatJsonCodec.Map, mais ce garde-fou reste symetrique par prudence.
+            if (!string.IsNullOrWhiteSpace(page.NextCursor)) try { ValidateCursor(page.NextCursor, nameof(page.NextCursor)); } catch (ArgumentException exception) { throw new RemoteChatTransportException(RemoteChatError.InvalidResponse, "Chat server returned an invalid conversation cursor.", 0, "invalid_conversation_cursor", innerException: exception); }
         }
         private void ValidateMessagePage(RemoteMessagePage page, string conversationId, long afterSequence, int requestedLimit = 100)
         {

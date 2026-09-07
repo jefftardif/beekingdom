@@ -230,13 +230,65 @@ staged, aucun n'a été touché.
 
 ---
 
+## 13. Addendum — échec du retest CEO, cause réelle différente de celle corrigée
+
+Le CEO a refait le test après `f64380d2` : échec identique (`Chat serveur
+indisponible`). Sonde en lecture seule sur le snapshot déjà en mémoire (aucun nouvel
+appel réseau déclenché) :
+
+```
+IsConfigured=True  Status=Error  ErrorCode=invalid_conversation_cursor
+```
+
+**Ce n'est PAS le bail de capacités déjà corrigé** (`capability_lease_expired`) — le
+correctif de la section 8/`f64380d2` reste réel et nécessaire, mais ne couvre pas ce
+que le CEO rencontre. La vraie cause, `invalid_conversation_cursor`, se produit dès
+le premier chargement de la liste de conversations sur une session fraîche. Détail
+complet, hypothèses écartées par lecture statique du code, et diagnostic temporaire
+ajouté (non commité, `ServerChatProvider.cs`) : voir
+`Docs/AI/Missions/M059D-CL-Chat-Royal-Private-Conversation-Recovery.md`, section 9.
+
+**Incident de session** : une tentative de capturer la cause en appelant directement
+le provider réseau depuis un script de diagnostic a gelé l'Éditeur Unity (nécessitant
+un redémarrage manuel) — cause identifiée et retenue en mémoire durable
+(`feedback_unity_mcp_script_execute_hangs.md`) pour ne plus la reproduire.
+
+**Preuve capturée et cause racine confirmée** au retest suivant. Console, Play Mode
+réel : `cursorIsNull=False | cursorLength=0` — le curseur reçu est une **chaîne vide
+`""`**, pas `null`. Cause exacte : `UnityEngine.JsonUtility` (le backend JSON de
+production, jamais exercé par les tests EditMode existants qui substituent tous
+`SystemTextJsonBackend`) désérialise un `"nextCursor":null` JSON en chaîne C# vide,
+jamais en `null` — limite documentée de ce parseur, pas un défaut serveur
+(`ChatService.ListConversations` ne renvoie jamais que soit un curseur non-vide, soit
+un littéral `null`). Le contrat "`null`/chaîne vide = pas de page suivante" existait
+déjà et était appliqué correctement par `LoadAllConversationsAsync`, mais pas par
+`ValidateConversationPage` (`!= null` au lieu de `IsNullOrWhiteSpace`), atteint plus
+tôt dans l'appel et qui explosait donc en premier.
+
+**Correctif appliqué, purement client, aucun contrat serveur touché** : normalisation
+`null`/vide→`null` au point unique de désérialisation (`UnityChatJsonCodec.Map`) +
+garde-fou symétrique dans `ValidateConversationPage`. Diagnostic temporaire retiré.
+2 tests de régression neufs reproduisant la cause exacte, 9/9 tests EditMode ciblés
+verts. Détail complet : `Docs/AI/Missions/M059D-CL-Chat-Royal-Private-Conversation-
+Recovery.md`, section 10.
+
+**Incident de session** (avant la capture de preuve ci-dessus) : une tentative de
+capturer la cause en appelant directement le provider réseau depuis un script de
+diagnostic a gelé l'Éditeur Unity (nécessitant un redémarrage manuel) — cause
+identifiée et retenue en mémoire durable (`feedback_unity_mcp_script_execute_hangs.md`)
+pour ne plus la reproduire ; le diagnostic final a été obtenu uniquement en lisant le
+snapshot déjà en mémoire et via un vrai clic CEO en Play Mode, jamais par un nouvel
+appel réseau déclenché depuis un script.
+
+---
+
 ## Verdict
 
-**NOT READY FOR M060 — Chat Royal private conversation runtime regression**
+**NOT READY FOR M060 — Chat Royal private conversation runtime regression (correctif appliqué, retest CEO requis)**
 
-Le diagnostic est établi, le correctif est en place et commité, et 7 tests EditMode
-ciblés confirment le mécanisme corrigé (bail de capacités qui se renégocie
-réellement + création de conversation privée qui appelle enfin le vrai endpoint).
-Reste une seule condition de sortie posée explicitement par le CEO, non encore
-remplie : confirmer en Play Mode réel que cliquer **Discuter** sur un vrai joueur
-ouvre effectivement la conversation, pas seulement l'absence du message d'erreur.
+Le correctif du bail de capacités (`f64380d2`) et le correctif du curseur de
+pagination vide (non encore commité au moment de la rédaction de cette section — voir
+M059D-CL section 10.3) sont tous deux en place, compilés et testés. La seule
+condition de sortie reste celle posée explicitement par le CEO, non encore
+remplie : un nouveau clic **Discuter** en Play Mode réel, sur un vrai joueur, doit
+ouvrir effectivement la conversation.

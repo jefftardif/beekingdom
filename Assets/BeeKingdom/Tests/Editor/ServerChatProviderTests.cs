@@ -215,6 +215,42 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(result.Conversation.LastSequence, Is.EqualTo(4));
         }
 
+        // M059D-CL - regression prouvee en Play Mode reel (CEO) : le diagnostic Console a montre
+        // cursorIsNull=False, cursorLength=0 sur le tout premier chargement d'une session fraiche
+        // ("Discuter" -> "Chat serveur indisponible"). Cause racine : UnityEngine.JsonUtility (le
+        // backend de production, voir UnityJsonBackend) deserialise un "nextCursor":null JSON en
+        // chaine C# vide, jamais en null - ChatService.ListConversations, cote serveur, ne renvoie
+        // pourtant jamais que soit un curseur non-vide, soit un litteral null. Ce test reproduit
+        // le symptome exact (une chaine vide arrivant a la frontiere de deserialisation) sans
+        // dependre de JsonUtility lui-meme, pour rester rapide et deterministe en EditMode : il
+        // prouve que UnityChatJsonCodec.Map normalise "" en null, quel que soit le backend JSON.
+        [Test]
+        public void CodecNormalizesAnEmptyNextCursorToNullMatchingNoNextPage()
+        {
+            var codec = new UnityChatJsonCodec(new SystemTextJsonBackend());
+            RemoteConversationPage page = codec.Deserialize<RemoteConversationPage>("{\"items\":[],\"nextCursor\":\"\"}");
+            Assert.That(page.NextCursor, Is.Null,
+                "Une chaine vide doit signifier 'pas de page suivante', exactement comme null.");
+        }
+
+        // Meme cause, prouvee au niveau du pipeline complet ServerChatProvider plutot qu'au
+        // niveau du codec seul : avant ce correctif, ValidateConversationPage ne testait que
+        // "NextCursor != null" (donc "" passait le garde-fou) puis appelait ValidateCursor("")
+        // qui rejetait la chaine vide comme un curseur invalide - exactement l'ErrorCode
+        // invalid_conversation_cursor que le CEO a reproduit.
+        [Test]
+        public async Task EmptyNextCursorFromTransportIsTreatedAsNoNextPageNotAnInvalidCursor()
+        {
+            var transport = new FakeRest();
+            transport.ConversationPages.Enqueue(new RemoteConversationPage { Items = new List<RemoteConversation>(), NextCursor = string.Empty });
+            var provider = NewProvider(transport);
+
+            RemoteConversationLoadResult result = await provider.LoadAllConversationsAsync(new ChatPaginationPolicy(), CancellationToken.None);
+
+            Assert.That(result.IsComplete, Is.True);
+            Assert.That(result.NextCursor, Is.Null);
+        }
+
         [Test]
         public void SynchronizerCancelsAndDisconnectsWhenPanelCloses()
         {
