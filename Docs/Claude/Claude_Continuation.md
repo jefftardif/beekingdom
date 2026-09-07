@@ -40,7 +40,96 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
-## Jalon courant — RAP-OPTIONNEL-COMMUNICATIONS_01 : CHAT ROYAL branche au backend reel (2026-09-07)
+## Jalon courant — M058-CL : fuite de drapeaux d'input du perimetre Alliance (2026-09-07)
+
+La camera HiveMap (pan/zoom) pouvait rester bloquee **definitivement** apres un passage par le
+profil d'alliance, alors que batiments et menus repondaient encore. Cause reelle, prouvee par
+instrumentation runtime dans `Environment2D5D_HiveMap_Test` : les trois overlays propres au Centre
+d'Alliance (profil de membre, panneau d'action rapide, tiroir de chat) sont LUS par la garde qui
+protege la camera, mais ne sont DESSINES que tant qu'on est dans le menu Alliance. Toute sortie de
+ce perimetre autrement que par le bouton retour — fermeture par le pont HiveMap, ou ouverture d'un
+autre ecran par-dessus un profil ouvert — les laissait orphelins : vrais donc bloquants, mais plus
+rien a l'ecran pour les refermer. Etat sans issue, la camera ne revenait qu'au rechargement de
+scene. Meme famille que le bug 6 de M056A-CL, mais sans changement de scene, donc le hook de scene
+de M056A ne pouvait pas aider.
+
+**Correction au diagnostic de la mission precedente** : `RAP-OPTIONNEL-COMMUNICATIONS_01` concluait
+que « fermer le profil ne libere qu'un des trois drapeaux ». C'etait mesure a travers le harnais de
+test, pas le chemin reel, et c'est inexact — le harnais positionne `activeMainMenuId="Alliance"`,
+valeur qu'aucun chemin d'ouverture reel ne met jamais. Le vrai bouton retour est parfaitement
+equilibre (1er retour = referme le profil dans le Centre d'Alliance, qui reste ouvert donc bloque a
+juste titre ; 2e retour = rend la camera). Le vrai defaut etait ailleurs.
+
+Correctif : point d'entree unique `ReleaseAllianceScreenOverlays()` par lequel passent toutes les
+sorties du perimetre Alliance, plus un filet non contournable — les deux predicats de blocage ne
+lisent plus les drapeaux bruts mais un helper qui les conditionne au mode Alliance, ce qui rend
+inoffensives les affectations directes de menu qui subsistent ailleurs dans le fichier. QoL du
+sprint : la position de defilement d'un profil de membre est reinitialisee a l'ouverture (avant,
+apres avoir fait defiler une fiche longue, tous les profils suivants s'ouvraient a mi-page).
+
+Preuves: sonde runtime avant/apres sur les statiques (les deux scenarios de fuite passent de
+« monde bloque, rien de dessine » a libre) ; nouveau test EditMode
+`Assets/BeeKingdom/Playground/Editor/AllianceScreenOverlayLeakTests.cs` **5/5** ;
+`HiveMapSceneReentryInputTests` (bug 6 de M056A) **6/6** ; `SandboxLivingHiveUiStabilizationTests`
+**20/22, identique a avant le correctif** (aucune regression). Compilation Unity verte, 0 erreur.
+Rapport complet : `Docs/AI/Missions/M058-CL-Alliance-Profile-World-Input-Leak-Fix.md`.
+
+**Limites, a lire avant de tester** : AUCUNE preuve en Play Mode — la tentative d'entree en Play
+Mode a coupe le pont MCP et **l'editeur Unity est reste bloque sur la modale « Recovering Scene
+Backups »** (processus vivant, injoignable apres ~5 min de poll). Je n'ai pas force sa fermeture
+pour ne pas risquer le travail non commite des autres sessions presentes dans l'arbre :
+**Unity a probablement besoin d'une intervention manuelle avant la prochaine session.** Les
+fichiers sources sont sur disque, rien n'est perdu. La suite EditMode complete (1578 tests) n'a pas
+ete rejouee. Les 2 echecs preexistants de `SandboxLivingHiveUiStabilizationTests` subsistent : ils
+encodent une attente fausse (« un seul retour depuis un profil doit rendre le monde ») contraire a
+la pile de retour protegee par M043O-CL ; remede d'une ligne par test, non applique car ce fichier
+appartient a une autre session. Rien n'a ete commite, pousse ni deploye.
+
+Prochain test utilisateur: voir la section 8 du rapport — en resume, ouvrir le Centre d'Alliance
+puis un profil de membre, fermer l'ecran SANS repasser par le bouton retour du profil, et verifier
+que le pan/zoom de la camera repond immediatement.
+
+Ouvert / a faire ensuite: (1) revalider le correctif en Play Mode reel une fois l'editeur reparti ;
+(2) rejouer la suite EditMode complete en batchmode CLI ; (3) confier au proprietaire de
+`SandboxLivingHiveUiStabilizationTests` la correction de ses 2 tests.
+
+---
+
+## Jalon precedent — M057-CL : derive du catalogue SQL corrigee, suite serveur entierement verte (2026-09-07)
+
+Le defaut signale mais non corrige par le jalon precedent est ferme. Le test
+`DatabaseMigrationTests.CatalogSqlMatchesCheckedInScriptFiles` echouait sur
+`091_alliance_help.sql` : la copie SQL embarquee dans `DatabaseCatalog.cs` et le fichier `.sql`
+versionne avaient diverge (1717 contre 3092 caracteres).
+
+Diagnostic etabli avant toute correction, par lecture du runner de migration : c'est bien la copie
+INLINE du catalogue qui est executee en production (les fichiers `.sql` sur disque ne sont jamais
+lus a l'execution), et le suivi des migrations appliquees se fait par NOM de script dans
+`dbo.SchemaVersion`, jamais par contenu ni par hash — une migration deja enregistree n'est donc
+jamais rejouee. Comparaison mecanique du DDL, commentaires retires de part et d'autre : **strictement
+identique**. La totalite de l'ecart etait constituee de commentaires ajoutes au fichier disque lors
+de M045 et jamais repercutes. Aucune table, colonne ni index ne manque en production ; aucune
+migration additive n'etait donc necessaire. Correction retenue : reporter les commentaires dans la
+copie inline. Risque production nul (script deja applique, et le DDL reste par ailleurs idempotent).
+
+Preuves : `dotnet test` sur `Server/tests/BeeKingdom.Tests` — 12/12 sur `DatabaseMigrationTests`,
+puis suite complete verte sur trois executions consecutives (647 reussis, 0 echec, 8 ignores).
+Journaux : `Server/tests/BeeKingdom.Tests/TestResults/m057.trx`, `m057_r1.trx`, `m057_r2.trx`.
+Rapport detaille : `Docs/AI/Missions/M057-CL-Alliance-Help-Catalog-Drift-Fix.md`. Reserve : la
+premiere execution complete (non instrumentee) avait montre 1 echec non identifie, non reproduit
+sur les trois executions suivantes — instabilite ponctuelle a surveiller, etrangere au catalogue.
+
+Prochain test utilisateur : aucun test Unity requis, le perimetre est purement serveur. Le CEO
+revoit le working tree (rien n'a ete commite ni pousse) avant tout deploiement.
+
+Ouvert / a faire ensuite : regle a garder en tete — toute modification d'un fichier
+`Server/src/BeeKingdom.Database/Scripts/*.sql`, meme un simple commentaire, doit etre repercutee
+dans la copie inline de `DatabaseCatalog.cs` ; et si le DDL d'un script deja applique change, il
+faut un NOUVEAU script numerote, le runner ne rejouant jamais une migration deja enregistree.
+
+---
+
+## Jalon precedent — RAP-OPTIONNEL-COMMUNICATIONS_01 : CHAT ROYAL branche au backend reel (2026-09-07)
 
 Le module Communication est degele (autorisation explicite du CEO) et l'ecran CHAT ROYAL n'est
 plus une maquette. Il lit desormais `LivingHiveChatRuntime.Snapshot` des que le chat serveur est

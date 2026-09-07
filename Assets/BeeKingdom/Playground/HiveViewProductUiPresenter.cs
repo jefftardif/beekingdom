@@ -3514,6 +3514,11 @@ private static string courierToast = string.Empty;
 
         public static void CloseAllianceOverlayForExternalHost()
         {
+            // M058-CL: cleared the menu but not the Alliance screen's own overlays, so closing the
+            // Alliance Center while a member profile was open left that profile's flag set with
+            // nothing left to draw or close it - camera permanently blocked. See
+            // ReleaseAllianceScreenOverlays().
+            ReleaseAllianceScreenOverlays();
             activeMainMenuId = string.Empty;
             activeHiveMenu = HiveMenuMode.Hive;
             detailPanelClosed = true;
@@ -10699,6 +10704,19 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             finally { GUI.enabled = previous; }
         }
 
+        // M058-CL: the Alliance Center's own overlays (member profile, quick-action panel, chat
+        // drawer) are drawn ONLY from DrawAllianceHeadquartersScreen, which only runs while
+        // activeHiveMenu == HiveMenuMode.Alliance. Reading them without that guard is what let a
+        // stale flag block world input with no visible window to close - the input gates now ask
+        // "is an alliance overlay actually reachable on screen", not just "is a bool still true".
+        private static bool AllianceScreenOverlayOpen()
+        {
+            if (activeHiveMenu != HiveMenuMode.Alliance) return false;
+            return allianceMemberProfileOpen
+                || !string.IsNullOrEmpty(allianceActionPanelOpen)
+                || allianceChatDrawerOpen;
+        }
+
 		private static bool ShouldBlockUnderlyingHiveChromeInput()
 		{
 			return resourceInventoryOpen
@@ -10713,9 +10731,10 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 				|| activeHiveMenu == HiveMenuMode.Research
 				|| activeHiveMenu == HiveMenuMode.Alliance
 				|| strategicPathPanelOpen
-				|| allianceMemberProfileOpen
-				|| !string.IsNullOrEmpty(allianceActionPanelOpen)
-				|| allianceChatDrawerOpen
+				// M058-CL: these three are meaningless outside the Alliance screen - see
+				// AllianceScreenOverlayOpen(). Left ungated they could survive a menu switch and
+				// block input with nothing on screen to release them.
+				|| AllianceScreenOverlayOpen()
 				|| speedUpWindowOpen
 				|| bestiaryCodexOverlayOpen
 				|| milestoneEventOverlayOpen
@@ -10743,9 +10762,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 || playerProfileOpen
                 || activeHiveMenu == HiveMenuMode.Research
                 || activeHiveMenu == HiveMenuMode.Alliance
-|| allianceMemberProfileOpen
-                || !string.IsNullOrEmpty(allianceActionPanelOpen)
-                || allianceChatDrawerOpen
+                || AllianceScreenOverlayOpen()
                 || speedUpWindowOpen
                 || bestiaryCodexOverlayOpen
                 || milestoneEventOverlayOpen
@@ -10789,9 +10806,9 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             if (friendsScreenOpen) { friendsScreenOpen = false; return true; }
             if (activeHiveMenu == HiveMenuMode.Alliance)
             {
+                ReleaseAllianceScreenOverlays();
                 activeMainMenuId = string.Empty;
                 activeHiveMenu = HiveMenuMode.Hive;
-                allianceActionPanelOpen = string.Empty;
                 return true;
             }
             if (activeHiveMenu == HiveMenuMode.Army)
@@ -33511,6 +33528,10 @@ if (leftNavigationTexture == null)
             if (string.IsNullOrWhiteSpace(name)) return;
             allianceMemberProfileName = name;
             allianceMemberProfileOpen = true;
+            // M058-CL QoL: the profile scroll position was static and never reset, so after
+            // scrolling through one long member sheet, every member opened afterwards started
+            // mid-page instead of at their portrait. Each profile now opens at the top.
+            allianceProfilePortraitScroll = Vector2.zero;
             allianceMemberProfileAnimStartedAt = NowForUi();
             allianceProfileToast = string.Empty;
             allianceProfileToastAt = -10f;
@@ -34823,6 +34844,22 @@ if (leftNavigationTexture == null)
         // method actually cleared correctly). Exiting Alliance itself is a separate, deliberate
         // action - see ClosePremiumScreensInPriorityOrderCore's own Alliance-menu-close branch.
         private static void CloseAllianceMemberProfile()
+        {
+            ReleaseAllianceScreenOverlays();
+        }
+
+        // M058-CL SINGLE EXIT POINT for every overlay that only the Alliance Center screen can
+        // ever draw (member profile, quick-action panel, chat drawer). Real bug reproduced in
+        // Environment2D5D_HiveMap_Test: those three flags are read by PremiumUiBlocksWorldInput()
+        // (which gates the HiveMap CAMERA pan/zoom) but they are only ever DRAWN from
+        // DrawAllianceHeadquartersScreen, which itself only runs while activeHiveMenu ==
+        // HiveMenuMode.Alliance. So any path that left the Alliance menu WITHOUT clearing them -
+        // CloseAllianceOverlayForExternalHost(), or ActivateHiveMenu() switching to another menu
+        // over an open member profile - stranded allianceMemberProfileOpen == true with nothing on
+        // screen to close it: the camera stayed dead forever while buildings and menus (gated on
+        // AllianceOverlayOpenForExternalHost instead) kept responding. Every alliance-scope exit
+        // must funnel through here rather than clearing flags of its own.
+        private static void ReleaseAllianceScreenOverlays()
         {
             allianceMemberProfileOpen = false;
             allianceMemberProfileName = string.Empty;
@@ -37665,9 +37702,9 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
                         }
                         else
                         {
+                            ReleaseAllianceScreenOverlays();
                             activeHiveMenu = HiveMenuMode.Hive;
                             detailPanelClosed = true;
-                            allianceActionPanelOpen = string.Empty;
                             AudioManager.Instance?.PlayMenuClose();
                         }
                         continue;
@@ -40754,6 +40791,11 @@ public static void ResetMissionsStateForProof()
         {
             referenceSurfaceMode = ReferenceSurfaceMode.Hive;
             if (menu != HiveMenuMode.Army) ResetFormationReadinessDraft();
+            // M058-CL: switching to any other hive menu (Research building, Army, back to Hive)
+            // used to leave the Alliance screen's own overlays set while the screen that draws
+            // them stopped rendering - stranded flags that keep the camera blocked forever.
+            if (menu != HiveMenuMode.Alliance && activeHiveMenu == HiveMenuMode.Alliance)
+                ReleaseAllianceScreenOverlays();
             activeHiveMenu = menu;
             detailPanelClosed = menu != HiveMenuMode.Hive && menu != HiveMenuMode.Actions;
             if (menu == HiveMenuMode.Alliance)
