@@ -92,10 +92,24 @@ vert, 0 erreur. Nouveaux tests EditMode
 `Assets/BeeKingdom/Tests/Editor/LivingHiveChatGroupControllerTests.cs` **7/7**. Rapport complet :
 `Docs/AI/Missions/RAP-OPTIONNEL-COMMUNICATIONS_01.md`.
 
+Tests EditMode existants rejoues apres redemarrage de l'editeur : `LivingHiveChatLayoutTests`
+14/14 (couvre mon correctif de mise en page) et les 3 methodes de `ServerChatProviderTests` qui
+couvrent precisement ce que j'ai modifie (capacites + codec) — vertes.
+
+**Defaut PREEXISTANT diagnostique au passage, non corrige (hors perimetre)** :
+`SandboxLivingHiveUiStabilizationTests` echoue 2/22, entierement dans le chemin ALLIANCE.
+Instrumentation runtime des statiques : `OpenAllianceMemberProfileForProof` met TROIS statiques a
+vrai (`allianceMemberProfileOpen`, `activeMainMenuId="Alliance"`, `activeHiveMenu=Alliance`) mais
+`ClosePremiumScreensForProof()` n'en libere qu'UNE — `PremiumUiBlocksWorldInput()` teste aussi les
+deux autres, donc **le monde 3D reste bloque a jamais apres fermeture du profil d'alliance**.
+C'est exactement la famille du bug 6 de M056A. Les sequences chat/bestiaire/jalon sont, elles,
+parfaitement equilibrees (verifie). A traiter dans une mission separee.
+
 **Limites, a lire avant de tester** : AUCUN test en Play Mode n'a ete joue et AUCUNE capture
 d'ecran produite — les preuves sont statiques. La suite EditMode complete (1573 tests) n'a pas pu
-aller au bout (depassement du delai MCP de 300 s, exactement comme M056A) : la non-regression
-globale n'est pas prouvee, a rejouer en batchmode CLI. Ouvrir une discussion privee depuis le
+aller au bout (depassement du delai MCP de 300 s, exactement comme M056A ; l'editeur s'est meme
+arrete une fois, puis a redemarre) : la non-regression globale n'est pas prouvee, a rejouer en
+batchmode CLI. Ouvrir une discussion privee depuis le
 selecteur signale l'intention mais ne cree pas encore la conversation en un geste
 (`CreateConversationAsync` existe et est pret, il reste a le relier au bouton). Rien n'a ete
 commite, pousse ni deploye.

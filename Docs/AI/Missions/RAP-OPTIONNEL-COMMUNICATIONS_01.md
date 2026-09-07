@@ -187,6 +187,34 @@ reproductible aux passages suivants — instable, non identifié.
 - `Assets/BeeKingdom/Tests/Editor/ChatGroupTransportTests.cs` — **13/13 verts**
 - `Assets/BeeKingdom/Tests/Editor/LivingHiveChatGroupControllerTests.cs` — **7/7 verts**
 
+**Tests EditMode existants rejoués** (après redémarrage de l'éditeur, avec toutes mes
+modifications en place) :
+- `LivingHiveChatLayoutTests` — **14/14 verts** (couvre la mise en page du chat, donc mon
+  correctif de `searchH`)
+- `ServerChatProviderTests` : la classe entière dépasse toujours le délai, mais les méthodes qui
+  couvrent précisément ce que j'ai modifié passent —
+  `ActiveCapabilitiesRejectUnknownProviderUnsafeBoundsAndChannels`,
+  `CapabilitiesCodecMapsFeatureFlagsAndLimits`, `MissingRealtimeFallsBackToPolling` : **3/3 verts**
+- `SandboxLivingHiveUiStabilizationTests` — **20/22, 2 échecs QUI NE VIENNENT PAS DE CETTE
+  MISSION** (voir ci-dessous)
+
+### Deux échecs UI préexistants, diagnostiqués mais non corrigés (hors périmètre)
+
+`WorldInputIsBlockedWhileAnyFullScreenIsOpen` et
+`ClosingAllianceProfileReleasesCapturedGuiControls` échouent. J'ai instrumenté les statiques du
+présentateur en runtime pour établir la cause exacte plutôt que de supposer :
+
+- `OpenAllianceMemberProfileForProof` met **trois** statiques à vrai :
+  `allianceMemberProfileOpen`, `activeMainMenuId = "Alliance"`, `activeHiveMenu = Alliance`.
+- `ClosePremiumScreensForProof()` n'en libère **qu'une** (`allianceMemberProfileOpen`).
+- `PremiumUiBlocksWorldInput()` teste aussi les deux autres → le monde 3D reste bloqué à jamais
+  après fermeture du profil d'alliance.
+
+C'est un **vrai défaut runtime**, de la même famille que le bug 6 de M056A (drapeaux d'overlay
+statiques périmés qui tuent la caméra), et il est entièrement dans le chemin Alliance — que je
+n'ai pas touché. J'ai vérifié que les séquences chat/bestiaire/jalon sont, elles, parfaitement
+équilibrées (`BLOCKED=False` avant et après). Signalé pour une mission séparée, non corrigé ici.
+
 ---
 
 ## 5. Limites connues — à lire avant de tester
@@ -210,8 +238,12 @@ reproductible aux passages suivants — instable, non identifié.
      les appels. **Je les ai retirés par prudence** : les invitations arrivent de toute façon au
      premier tick de sondage et les préférences sont relues à l'ouverture de l'écran Paramètres,
      donc aucun comportement n'est perdu et `OpenAsync` retrouve exactement sa séquence d'appels
-     d'origine. **Cette dernière modification n'a pas pu être recompilée** (éditeur bloqué) — à
-     valider en premier à la reprise.
+     d'origine.
+   - **Résolution** : l'éditeur a fini par se fermer seul, puis a redémarré sur
+     `Environment2D5D_HiveMap_Test`. Tout a été recompilé et revérifié après coup — la
+     modification ci-dessus est bien compilée, et les tests listés en section 4 ont tous été
+     rejoués dans cet éditeur neuf. La classe `ServerChatProviderTests` en entier reste le seul
+     angle mort (dépassement de délai, pas d'échec constaté).
 5. Le chat étant désactivé en production, tout ce qui précède ne se vérifie qu'avec un serveur
    de dev où `Chat__Enabled=true`.
 6. Le sélecteur de joueurs exige une session de compte officielle ; sans elle il affiche
