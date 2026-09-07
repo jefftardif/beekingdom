@@ -50,6 +50,7 @@ namespace BeeKingdom.Playground
         private readonly IPlayerDirectoryClient directory;
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private List<ChatPlayerPickerEntry> results = new List<ChatPlayerPickerEntry>();
+        private readonly Dictionary<Guid, string> displayNames = new Dictionary<Guid, string>();
         private ChatPlayerPickerStatus status = ChatPlayerPickerStatus.Idle;
         private bool disposed;
 
@@ -61,6 +62,9 @@ namespace BeeKingdom.Playground
         public IReadOnlyList<ChatPlayerPickerEntry> Results => results;
         public ChatPlayerPickerStatus Status => status;
         public bool IsConfigured => !disposed;
+
+        public string ResolveDisplayName(Guid playerId) =>
+            !disposed && displayNames.TryGetValue(playerId, out string name) ? name : null;
 
         public void Search(string query)
         {
@@ -92,6 +96,8 @@ namespace BeeKingdom.Playground
                     .Where(item => item != null && item.PlayerId != Guid.Empty)
                     .Select(item => new ChatPlayerPickerEntry(item.PlayerId, item.DisplayName))
                     .ToList();
+                foreach (ChatPlayerPickerEntry entry in results)
+                    if (!string.IsNullOrWhiteSpace(entry.DisplayName)) displayNames[entry.PlayerId] = entry.DisplayName;
                 status = results.Count == 0 ? ChatPlayerPickerStatus.Empty : ChatPlayerPickerStatus.Results;
             }
             catch (OperationCanceledException) { }
@@ -107,6 +113,7 @@ namespace BeeKingdom.Playground
         {
             if (disposed) return;
             disposed = true;
+            displayNames.Clear();
             try { lifetime.Cancel(); } catch (Exception) { }
             lifetime.Dispose();
         }

@@ -153,12 +153,15 @@ namespace BeeKingdom.Playground
                 string channelId = ChatChannelIdFor(conversation.ChannelType);
                 string peer = previousConversations.FirstOrDefault(item => item.Id == conversation.ConversationId)?.Peer;
                 if (channelId == "private")
-                    peer = snapshot.Messages.FirstOrDefault(message => message != null
+                {
+                    LivingHiveChatMessage received = snapshot.Messages.FirstOrDefault(message => message != null
                         && message.ConversationId == conversation.ConversationId
                         && Guid.TryParse(message.SenderPlayerId, out Guid senderId)
-                        && senderId != MobileAccountSessionRuntimeBootstrap.GameplayPlayerId
-                        && !string.IsNullOrWhiteSpace(message.SenderDisplayName)
-                        && !Guid.TryParse(message.SenderDisplayName, out _))?.SenderDisplayName ?? peer;
+                        && senderId != MobileAccountSessionRuntimeBootstrap.GameplayPlayerId);
+                    if (received != null)
+                        peer = ChatPrivateDisplayName(received.SenderPlayerId,
+                            !string.IsNullOrWhiteSpace(peer) && !ChatTryPlayerId(peer, out _) ? peer : received.SenderDisplayName);
+                }
                 if (channelId == "private") peer = ChatPrivateDisplayName(conversation.Title, peer);
                 chatConversations.Add(new ChatConversationData
                 {
@@ -190,17 +193,26 @@ namespace BeeKingdom.Playground
 
         private static string ChatPrivateDisplayName(string title, string peer)
         {
-            bool titleIsId = Guid.TryParse(title, out Guid titleId);
-            bool peerIsId = Guid.TryParse(peer, out Guid peerId);
-            string directoryName = chatPlayerPicker.Results.FirstOrDefault(entry =>
-                ((titleIsId && entry.PlayerId == titleId) || (peerIsId && entry.PlayerId == peerId))
-                && !string.IsNullOrWhiteSpace(entry.DisplayName)
-                && !Guid.TryParse(entry.DisplayName, out _))?.DisplayName;
+            bool titleIsId = ChatTryPlayerId(title, out Guid titleId);
+            bool peerIsId = ChatTryPlayerId(peer, out Guid peerId);
+            string directoryName = titleIsId ? ChatDirectoryDisplayName(titleId) : null;
+            if (directoryName == null && peerIsId) directoryName = ChatDirectoryDisplayName(peerId);
             if (!string.IsNullOrWhiteSpace(directoryName)) return directoryName;
             if (!string.IsNullOrWhiteSpace(peer) && !peerIsId && peer != "Discussion") return peer;
             if (!string.IsNullOrWhiteSpace(title) && !titleIsId) return title;
             return !string.IsNullOrWhiteSpace(title) ? title
                 : !string.IsNullOrWhiteSpace(peer) ? peer : "Discussion";
+        }
+
+        private static bool ChatTryPlayerId(string value, out Guid playerId) =>
+            Guid.TryParse(value != null && value.StartsWith("player:", StringComparison.OrdinalIgnoreCase)
+                ? value.Substring(7) : value, out playerId);
+
+        private static string ChatDirectoryDisplayName(Guid playerId)
+        {
+            string name = (chatPlayerPicker as ChatPlayerPickerController)?.ResolveDisplayName(playerId)
+                ?? chatPlayerPicker.Results.FirstOrDefault(entry => entry.PlayerId == playerId)?.DisplayName;
+            return !string.IsNullOrWhiteSpace(name) && !ChatTryPlayerId(name, out _) ? name : null;
         }
 
         private static void ChatRoyalSyncMessages(LivingHiveChatSnapshot snapshot)
@@ -221,7 +233,11 @@ namespace BeeKingdom.Playground
                     Id = string.IsNullOrWhiteSpace(message.MessageId) ? "pending-" + index : message.MessageId,
                     ConversationId = conversationId,
                     FromSelf = fromSelf,
-                    Author = fromSelf ? ChatSelfName() : message.SenderDisplayName,
+                    Author = fromSelf ? ChatSelfName()
+                        : ChatConversationById(conversationId)?.Channel == "private"
+                            ? ChatPrivateDisplayName(message.SenderPlayerId,
+                                ChatDirectoryDisplayName(senderId) ?? ChatConversationById(conversationId)?.Peer ?? message.SenderDisplayName)
+                            : message.SenderDisplayName,
                     Presence = "online",
                     AuthorSeed = Math.Abs((message.SenderDisplayName ?? string.Empty).GetHashCode()) % 5,
                     Text = message.VisibleBody ?? message.OriginalBody ?? string.Empty,

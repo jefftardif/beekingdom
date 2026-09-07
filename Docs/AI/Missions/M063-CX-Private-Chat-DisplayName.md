@@ -1,0 +1,4 @@
+- Cause : `player:<GUID>` traité comme un nom ; identités directory perdues à la fermeture du sélecteur.
+- Fichiers : `ChatPlayerPickerController.cs`, `HiveViewProductUiPresenter.ChatRoyal.cs`. Conservation des résultats directory par PlayerId et résolution commune liste/en-tête/auteurs privés, préfixe normalisé.
+- Compilation : 0 erreur, 246 avertissements ; aucun test. Aucun changement serveur, envoi ou alignement.
+- Limite : résolution des identités déjà rencontrées par la recherche ; aucun endpoint public de résolution par ID n’existe (la recherche HTTP filtre uniquement les noms). Un ID inconnu reste non résolu sans évolution serveur.
