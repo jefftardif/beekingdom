@@ -1,0 +1,5 @@
+- Cause : sélection UI distincte du runtime et lecture du cache legacy ; titre privé absent du contrat, sans participants exposés au client.
+- Fichiers : `HiveViewProductUiPresenter.cs`, `HiveViewProductUiPresenter.ChatRoyal.cs`, `LivingHiveChatController.cs`, `Server/src/BeeKingdom.Chat/ChatService.cs`.
+- Correctif : sélection et messages raccordés au snapshot ; nom de l’autre participant résolu avec les données serveur existantes, sans modifier le titre stocké.
+- Vérification : compilation BeeKingdom.Chat réussie, 0 erreur ; diff vérifié ; aucun test Unity. Retest du nom nécessite le serveur corrigé (non déployé).
+- Commit code local : `8138e0a` ; aucun push.
