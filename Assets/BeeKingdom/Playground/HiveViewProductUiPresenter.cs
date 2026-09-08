@@ -36339,12 +36339,8 @@ if (leftNavigationTexture == null)
 				ChatChannelData channel = chatChannels[i];
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), channelRowW, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
-				if (selected) DrawSelectedRowGlow(row);
-				// M078-CL : panneau retreci de 4px sur la carte selectionnee, pour que l'anneau dore
-				// du halo (dessine sur `row` en entier) reste visible tout autour - sans cela le
-				// panneau (quasi opaque) recouvre entierement le halo.
-				Rect channelPanelRect = selected ? new Rect(row.x + 4f, row.y + 4f, row.width - 8f, row.height - 8f) : row;
-				DrawPremiumPanel(channelPanelRect, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
+				if (selected) DrawSelectedRowHighlight(row);
+				else DrawPremiumPanel(row, new Color(0.05f, 0.040f, 0.026f, 0.90f), new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float channelIconSize = Mathf.Min(rowH - 20f, mobile ? 64f : 58f);
 				Rect channelIconRect = new Rect(row.x + 10f, row.y + (rowH - channelIconSize) * 0.5f, channelIconSize, channelIconSize);
 				Texture2D channelIconTexture = ChatChannelIconTexture(channel.Id);
@@ -36420,9 +36416,8 @@ if (leftNavigationTexture == null)
 				ChatConversationData conv = convs[i];
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), convRowW, rowH);
 				bool selected = string.Equals(conv.Id, chatSelectedConversation, StringComparison.Ordinal);
-				if (selected) DrawSelectedRowGlow(row);
-				Rect convPanelRect = selected ? new Rect(row.x + 4f, row.y + 4f, row.width - 8f, row.height - 8f) : row;
-				DrawPremiumPanel(convPanelRect, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
+				if (selected) DrawSelectedRowHighlight(row);
+				else DrawPremiumPanel(row, new Color(0.05f, 0.040f, 0.026f, 0.90f), new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float avatarSize = mobile ? 44f : 42f;
 				Rect avatarRect = new Rect(row.x + 8f, row.y + (rowH - avatarSize) * 0.5f, avatarSize, avatarSize);
 				DrawChatAvatar(avatarRect, conv);
@@ -37020,13 +37015,15 @@ if (leftNavigationTexture == null)
 		// M079-CL : bulles plates et arrondies (reference CEO) - gris/bleu sombre pour les messages
 		// recus, dore/miel pour les miens. Remplace le rendu "panneau premium" (grain + contour or +
 		// coins decores), trop charge pour une bulle de message.
+		// M080-CL : la texture "bubble-rounded" (M079-CL) etirait un rayon fixe en UV sur des
+		// bulles tres larges et peu hautes (message court sur une ligne) - le rayon se deformait en
+		// blob, rapporte par le CEO comme "tres saccade et brouillon". DrawFlatRoundedRect utilise
+		// un rayon en pixels reels (API Unity 6), toujours net quel que soit le rapport
+		// largeur/hauteur de la bulle.
 		private static void DrawChatBubble(Rect rect, bool self)
 		{
 			Color fill = self ? new Color(0.74f, 0.55f, 0.24f, 0.98f) : new Color(0.17f, 0.19f, 0.23f, 0.98f);
-			Color previous = GUI.color;
-			GUI.color = fill;
-			GUI.DrawTexture(rect, GetPremiumTexture("bubble-rounded"), ScaleMode.StretchToFill, true);
-			GUI.color = previous;
+			DrawFlatRoundedRect(rect, fill, 10f);
 		}
 
 		private static GUIStyle ChatBubbleTextStyle(bool compact)
@@ -37113,19 +37110,26 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(rect, GetPremiumTexture("avatar-circle"), ScaleMode.StretchToFill, true);
 		}
 
-		// M078-CL : la 1re version (M077-CL) etendait le halo AU DELA du rectangle de la ligne -
-		// invisible en pratique, car les listes de canaux/discussions sont dessinees dans un
-		// GUI.BeginScrollView dont le clipping ne laisse rien passer hors du rectangle de contenu
-		// exact (confirme par le CEO : "je ne vois pas les halos"). Le halo remplit maintenant
-		// exactement `row`, et le panneau premium est dessine legerement RETRECI par dessus (voir
-		// les appelants) pour laisser deborder un anneau dore visible tout autour, sans jamais
-		// sortir des bornes de `row`.
-		private static void DrawSelectedRowGlow(Rect row)
+		// M080-CL : rectangle arrondi PLAT, rayon en pixels reels (API GUI.DrawTexture avec
+		// borderRadiuses, Unity 6) - immunise contre la distorsion d'un masque texture etire sur un
+		// rect a rapport largeur/hauteur variable (c'est exactement ce qui rendait la version
+		// precedente des bulles de message "saccadee et brouillonne", rapporte par le CEO : un
+		// rayon fixe en UV, une fois etire sur une bulle tres large et peu haute, se deformait en
+		// blob). Aucun mask a cuire, aucun probleme d'aspect ratio.
+		private static void DrawFlatRoundedRect(Rect rect, Color color, float radius)
 		{
-			Color previous = GUI.color;
-			GUI.color = new Color(1f, 0.80f, 0.28f, 1f);
-			GUI.DrawTexture(row, GetPremiumTexture("selection-ring-glow"), ScaleMode.StretchToFill, true);
-			GUI.color = previous;
+			GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, color, Vector4.zero, new Vector4(radius, radius, radius, radius));
+		}
+
+		// M080-CL : remplace le halo/glow (M077/M078-CL, jamais valide par le CEO : "l'indicateur
+		// de selection... ne sont pas comme sur la maquette") par un remplissage plat dore/brun +
+		// bordure vive, exactement la structure visible sur la maquette - plus simple, plus fidele,
+		// et sans les soucis de clipping de scrollview des versions precedentes.
+		private static void DrawSelectedRowHighlight(Rect row)
+		{
+			DrawFlatRoundedRect(row, new Color(1f, 0.82f, 0.32f, 0.95f), 10f);
+			Rect inset = new Rect(row.x + 3f, row.y + 3f, row.width - 6f, row.height - 6f);
+			DrawFlatRoundedRect(inset, new Color(0.40f, 0.28f, 0.10f, 0.97f), 8f);
 		}
 
 		private static void DrawPresenceDot(Rect rect, string presence)
