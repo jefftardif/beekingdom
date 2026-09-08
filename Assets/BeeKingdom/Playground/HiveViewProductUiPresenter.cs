@@ -36293,15 +36293,49 @@ if (leftNavigationTexture == null)
 			GUI.EndScrollView();
 			if (chatSearchActive)
 			{
-				Rect searchRect = new Rect(rect.x + 4f, rect.y + rect.height + 4f, rect.width - 8f, compact ? 34f : 36f);
-				DrawPremiumPanel(searchRect, new Color(0.04f, 0.032f, 0.022f, 0.96f), new Color(0.70f, 0.46f, 0.14f, 0.70f));
+				// M089-CL : refonte - loupe premium a gauche du champ, placeholder "Rechercher...",
+				// contour dore arrondi (meme technique DrawFlatRoundedRect que le reste de Chat
+				// Royal), et un bouton "Rechercher" ajoute devant "Effacer" - le champ ne les
+				// chevauche plus (largeur calculee, plus une largeur fixe empietant sur les boutons).
+				float searchBarH = compact ? 42f : 46f;
+				Rect searchRect = new Rect(rect.x + 4f, rect.y + rect.height + 4f, rect.width - 8f, searchBarH);
+				float actionBtnW = compact ? 84f : 96f;
+				float searchGap = 8f;
+				float fieldW = searchRect.width - actionBtnW * 2f - searchGap * 2f;
+				Rect fieldRect = new Rect(searchRect.x, searchRect.y, fieldW, searchBarH);
+				DrawFlatRoundedRect(fieldRect, new Color(1f, 0.74f, 0.22f, 0.85f), 10f);
+				Rect fieldInner = new Rect(fieldRect.x + 2f, fieldRect.y + 2f, fieldRect.width - 4f, fieldRect.height - 4f);
+				DrawFlatRoundedRect(fieldInner, new Color(0.04f, 0.032f, 0.022f, 0.98f), 8f);
+
+				Texture2D searchGlyph = ChatSearchIconTexture();
+				float searchIconSize = fieldInner.height - 16f;
+				Rect iconRect = new Rect(fieldInner.x + 8f, fieldInner.y + (fieldInner.height - searchIconSize) * 0.5f, searchIconSize, searchIconSize);
+				if (searchGlyph != null) GUI.DrawTexture(iconRect, searchGlyph, ScaleMode.ScaleToFit, true);
+
 				GUI.SetNextControlName("chatSearch");
-				// M056A-CL : le bouton faisait 46px de large, trop etroit pour le mot "Effacer" :
-				// IMGUI le tronquait a l'ecran en "Efface..." (defaut rapporte par le testeur
-				// externe). Largeur portee a 64px et champ de saisie raccourci d'autant.
-				chatSearchQuery = GUI.TextField(new Rect(searchRect.x + 10f, searchRect.y + 5f, searchRect.width - 84f, searchRect.height - 10f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = compact ? 12 : 14, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } });
-				if (GUI.Button(new Rect(searchRect.xMax - 72f, searchRect.y + 4f, 64f, searchRect.height - 8f), "Effacer"))
+				Rect textRect = new Rect(iconRect.xMax + 8f, fieldInner.y, fieldInner.xMax - iconRect.xMax - 16f, fieldInner.height);
+				GUIStyle searchFieldStyle = new GUIStyle(smallStyle) { fontSize = compact ? 12 : 14, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } };
+				chatSearchQuery = GUI.TextField(textRect, chatSearchQuery, searchFieldStyle);
+				if (string.IsNullOrEmpty(chatSearchQuery) && !string.Equals(GUI.GetNameOfFocusedControl(), "chatSearch", StringComparison.Ordinal))
 				{
+					GUI.Label(textRect, "Rechercher...", new GUIStyle(searchFieldStyle) { normal = { textColor = new Color(0.68f, 0.60f, 0.48f, 0.75f) } });
+				}
+
+				Rect searchBtn = new Rect(fieldRect.xMax + searchGap, searchRect.y, actionBtnW, searchBarH);
+				DrawFlatRoundedRect(searchBtn, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
+				GUI.Label(searchBtn, "Rechercher", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 11 : 12 });
+				if (GUI.Button(searchBtn, string.Empty, GUIStyle.none))
+				{
+					AudioManager.Instance?.PlayUIClick();
+					GUI.FocusControl(null);
+				}
+
+				Rect clearBtn = new Rect(searchBtn.xMax + searchGap, searchRect.y, actionBtnW, searchBarH);
+				DrawFlatRoundedRect(clearBtn, new Color(0.14f, 0.11f, 0.08f, 0.95f), 10f);
+				GUI.Label(clearBtn, "Effacer", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 11 : 12 });
+				if (GUI.Button(clearBtn, string.Empty, GUIStyle.none))
+				{
+					AudioManager.Instance?.PlayUIClick();
 					chatSearchQuery = string.Empty;
 				}
 			}
