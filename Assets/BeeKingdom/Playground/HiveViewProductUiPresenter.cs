@@ -36133,7 +36133,7 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 
-			float bannerHeight = compact ? Mathf.Min(132f, Screen.height * 0.18f) : Mathf.Clamp(Screen.height * 0.15f, 124f, 146f);
+			float bannerHeight = compact ? Mathf.Min(112f, Screen.height * 0.18f) : Mathf.Clamp(Screen.height * 0.15f, 80f, 146f);
 			DrawChatBanner(bannerHeight, compact);
 			DrawChatTopBar(bannerHeight, compact);
 			if (!chatScreenOpen)
@@ -36272,14 +36272,14 @@ if (leftNavigationTexture == null)
 			}
 
 			float gap = 8f;
-			float channelW = Mathf.Clamp(main.width * 0.16f, 238f, 270f);
-			float convW = Mathf.Clamp(main.width * 0.22f, 320f, 370f);
+			float channelW = Mathf.Clamp(main.width * 0.16f, 150f, 270f);
+			float convW = Mathf.Clamp(main.width * 0.22f, 210f, 370f);
 			float x = main.x + 10f;
 			float totalW = main.width - 20f - gap * 2f;
 			// M068-CL : sur desktop, le panneau Membres d'un groupe (reference CEO) est un 4e
 			// panneau ancre a droite, pas un modal - il retranche sa largeur a la zone messages.
 			bool membersOpen = ChatGroupMembersPanelVisible();
-			float membersW = membersOpen ? Mathf.Min(294f, totalW * 0.24f) : 0f;
+			float membersW = membersOpen ? Mathf.Clamp(totalW * 0.24f, 190f, 294f) : 0f;
 			float messagesW = totalW - channelW - convW - gap * 2f - (membersOpen ? membersW + gap : 0f);
 			DrawChatChannelsPane(new Rect(x, main.y + 6f, channelW, main.height - 12f), false);
 			DrawChatConversationsPane(new Rect(x + channelW + gap, main.y + 6f, convW, main.height - 12f), false);
@@ -36298,7 +36298,7 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, area.height - headerH - 10f);
-			float rowH = mobile ? 72f : 70f;
+			float rowH = mobile ? 72f : Mathf.Clamp(area.width * 0.28f, 54f, 82f);
 			float contentH = chatChannels.Count * rowH + (chatChannels.Count - 1) * ChatMessageGap;
 			chatChannelScroll = GUI.BeginScrollView(viewport, chatChannelScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < chatChannels.Count; i++)
@@ -36336,15 +36336,24 @@ if (leftNavigationTexture == null)
 			EnsureChatData();
 			DrawPremiumPanel(area, new Color(0.024f, 0.021f, 0.017f, 0.97f), new Color(0.78f, 0.52f, 0.15f, 0.70f));
 			ChatChannelData channel = ChatChannelById(chatSelectedChannel);
-			float headerH = 40f;
-			GUI.Label(new Rect(area.x + 10f, area.y + 6f, area.width - 20f, 22f), mobile ? "Discussions" : "DISCUSSIONS", new GUIStyle(badgeStyle) { fontSize = 14 });
-			GUI.Label(new Rect(area.x + 10f, area.y + 27f, area.width - 20f, 14f), channel != null ? channel.Name : string.Empty, new GUIStyle(tinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+			float headerH = mobile ? 92f : 88f;
+			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 62f, 26f), mobile ? "Discussions" : "DISCUSSIONS", new GUIStyle(titleStyle) { fontSize = mobile ? 18 : 20, alignment = TextAnchor.MiddleLeft });
+			Rect add = new Rect(area.xMax - 44f, area.y + 7f, 32f, 32f);
+			DrawPremiumPanel(add, new Color(0.35f, 0.22f, 0.06f, 0.98f), new Color(1f, 0.70f, 0.18f, 0.95f));
+			GUI.Label(add, "+", new GUIStyle(titleStyle) { fontSize = 25, alignment = TextAnchor.MiddleCenter });
+			if (GUI.Button(add, string.Empty, GUIStyle.none)) OpenChatNewDiscussion();
+			Rect search = new Rect(area.x + 10f, area.y + 44f, area.width - 20f, 34f);
+			DrawPremiumPanel(search, new Color(0.025f, 0.025f, 0.03f, 0.98f), new Color(0.45f, 0.48f, 0.56f, 0.80f));
+			GUI.Label(new Rect(search.x + 10f, search.y + 4f, 20f, 24f), "⌕", new GUIStyle(titleStyle) { fontSize = 21, alignment = TextAnchor.MiddleCenter });
+			GUI.SetNextControlName("chatConversationSearch");
+			chatSearchQuery = GUI.TextField(new Rect(search.x + 34f, search.y + 5f, search.width - 42f, 24f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = mobile ? 11 : 12, normal = { textColor = new Color(0.78f, 0.80f, 0.86f, 1f) } });
 			GUI.color = new Color(1f, 0.60f, 0.14f, 0.80f);
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 			List<ChatConversationData> convs = ChatConversationsFor(chatSelectedChannel);
+			if (!string.IsNullOrWhiteSpace(chatSearchQuery)) convs = convs.Where(item => (item.Title ?? string.Empty).IndexOf(chatSearchQuery, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, area.height - headerH - 10f);
-			float rowH = mobile ? 78f : 82f;
+			float rowH = mobile ? 78f : Mathf.Clamp(area.width * 0.24f, 60f, 88f);
 			float contentH = convs.Count * rowH + (convs.Count - 1) * ChatMessageGap;
 			chatConversationScroll = GUI.BeginScrollView(viewport, chatConversationScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < convs.Count; i++)
@@ -36400,6 +36409,15 @@ if (leftNavigationTexture == null)
 			float membersButtonW = showMembersButton ? (compact ? 100f : 114f) : 0f;
 			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - membersButtonW, compact ? 24f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft });
 			GUI.Label(new Rect(area.x + 12f, area.y + 33f, area.width - 24f - membersButtonW, 16f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+			if (!compact)
+			{
+				Rect bell = new Rect(area.xMax - (showMembersButton ? membersButtonW + 78f : 74f), area.y + 12f, 30f, 30f);
+				DrawPremiumPanel(bell, new Color(0.06f, 0.045f, 0.025f, 0.96f), new Color(0.56f, 0.40f, 0.15f, 0.70f));
+				GUI.Label(bell, "♢", new GUIStyle(centeredTinyLabelStyle) { fontSize = 17 });
+				Rect more = new Rect(bell.xMax + 8f, bell.y, 30f, 30f);
+				DrawPremiumPanel(more, new Color(0.06f, 0.045f, 0.025f, 0.96f), new Color(0.56f, 0.40f, 0.15f, 0.70f));
+				GUI.Label(more, "⋮", new GUIStyle(centeredTinyLabelStyle) { fontSize = 20 });
+			}
 			if (showMembersButton)
 			{
 				Rect membersButton = new Rect(area.xMax - membersButtonW - 10f, area.y + 10f, membersButtonW, headerH - 20f);

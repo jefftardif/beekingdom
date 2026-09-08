@@ -3,3 +3,4 @@
 - Fonctionnel inchangé : contrôleurs, sélection, messages, groupes et actions membres réutilisés.
 - Compilation `Assembly-CSharp.csproj` : 0 erreur, 355 avertissements. Commit local, aucun push.
 - Complément visuel : sous-titres des canaux, badges non lus et cartes sélectionnées renforcés ; avatars remplacés par initiales dorées ; bouton d’envoi avec icône enveloppe ; onglets Chat/Mail positionnés dans le header.
+- Refonte complémentaire : colonne Discussions reconstruite avec recherche et bouton + intégrés ; header de conversation doté d’actions dédiées ; proportions responsives corrigées pour les fenêtres 960×540 et desktop.
