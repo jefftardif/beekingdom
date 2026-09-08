@@ -36320,7 +36320,10 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, area.height - headerH - 10f);
-			float rowH = mobile ? 72f : Mathf.Clamp(area.width * 0.28f, 54f, 82f);
+			// M072-CL : cartes agrandies pour laisser respirer les icones premium officielles
+			// (Assets/BeeKingdom/Playground/Resources/RoyalChatIcons) - remplace le socle rond
+			// procedural (le cadre premium fait deja partie de ces assets).
+			float rowH = mobile ? 84f : Mathf.Clamp(area.width * 0.34f, 74f, 100f);
 			float contentH = chatChannels.Count * rowH + (chatChannels.Count - 1) * ChatMessageGap;
 			chatChannelScroll = GUI.BeginScrollView(viewport, chatChannelScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < chatChannels.Count; i++)
@@ -36329,19 +36332,26 @@ if (leftNavigationTexture == null)
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), viewport.width, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
 				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
-				// M070-CL : icone dans un socle rond (reference CEO), pas juste posee sur le fond.
-				float channelIconSize = mobile ? 46f : 40f;
-				Rect channelIconSocket = new Rect(row.x + 8f, row.y + (rowH - channelIconSize) * 0.5f, channelIconSize, channelIconSize);
-				DrawRoundAvatarBase(channelIconSocket);
-				DrawGameIcon(new Rect(channelIconSocket.x + channelIconSize * 0.18f, channelIconSocket.y + channelIconSize * 0.18f, channelIconSize * 0.64f, channelIconSize * 0.64f), channel.Icon, Color.white);
-				float channelTextX = channelIconSocket.xMax + 12f;
-				GUI.Label(new Rect(channelTextX, row.y + 8f, row.width - (channelTextX - row.x) - 60f, 24f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
+				float channelIconSize = Mathf.Min(rowH - 20f, mobile ? 64f : 58f);
+				Rect channelIconRect = new Rect(row.x + 10f, row.y + (rowH - channelIconSize) * 0.5f, channelIconSize, channelIconSize);
+				Texture2D channelIconTexture = ChatChannelIconTexture(channel.Id);
+				if (channelIconTexture != null)
+					GUI.DrawTexture(channelIconRect, channelIconTexture, ScaleMode.ScaleToFit, true);
+				else
+				{
+					// Filet de securite si un asset venait a manquer - ne bloque pas l'ecran.
+					DrawRoundAvatarBase(channelIconRect);
+					DrawGameIcon(new Rect(channelIconRect.x + channelIconSize * 0.18f, channelIconRect.y + channelIconSize * 0.18f, channelIconSize * 0.64f, channelIconSize * 0.64f), channel.Icon, Color.white);
+				}
+				float channelTextX = channelIconRect.xMax + 14f;
+				float channelTextW = row.width - (channelTextX - row.x) - 60f;
+				GUI.Label(new Rect(channelTextX, row.y + rowH * 0.5f - 22f, channelTextW, 24f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
 				string channelSubtitle = string.Equals(channel.Id, "alliance", StringComparison.Ordinal) ? "Discussions d'alliance"
 					: string.Equals(channel.Id, "world", StringComparison.Ordinal) ? "Discussion globale"
 					: string.Equals(channel.Id, "private", StringComparison.Ordinal) ? "Messages privés"
 					: string.Equals(channel.Id, ChatGroupsChannelId, StringComparison.Ordinal) ? "Vos groupes"
 					: string.Equals(channel.Id, "events", StringComparison.Ordinal) ? "Annonces spéciales" : "Notifications";
-				GUI.Label(new Rect(channelTextX, row.y + 34f, row.width - (channelTextX - row.x) - 60f, 16f), channelSubtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.72f, 0.72f, 0.76f, 1f) } });
+				GUI.Label(new Rect(channelTextX, row.y + rowH * 0.5f + 2f, channelTextW, 16f), channelSubtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.72f, 0.72f, 0.76f, 1f) } });
 				int chUnread = ChatChannelUnread(channel.Id);
 				if (chUnread > 0)
 				{
@@ -48003,6 +48013,22 @@ public static void ResetMissionsStateForProof()
             texture.hideFlags = HideFlags.HideAndDontSave;
             texture.SetPixel(0, 0, color);
             texture.Apply();
+            return texture;
+        }
+
+        // M072-CL : assets Chat Royal officiels (Assets/BeeKingdom/Playground/Resources/RoyalChatIcons)
+        // - le cadre premium fait deja partie de chaque PNG, donc aucun socle procedural ne doit
+        // etre redessine par dessus (voir DrawChatChannelsPane). Cache prive distinct de
+        // IconTextures/GetIconTexture pour ne pas se meler aux cles d'icones generiques.
+        private static readonly Dictionary<string, Texture2D> ChatChannelIconTextures = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+
+        private static Texture2D ChatChannelIconTexture(string channelId)
+        {
+            string key = string.Equals(channelId, ChatGroupsChannelId, StringComparison.Ordinal) ? "groups" : (channelId ?? string.Empty);
+            if (ChatChannelIconTextures.TryGetValue(key, out Texture2D cached)) return cached;
+            Texture2D texture = Resources.Load<Texture2D>("RoyalChatIcons/chat_channel_" + key);
+            if (texture != null) ConfigureUiTexture(texture);
+            ChatChannelIconTextures[key] = texture;
             return texture;
         }
 
