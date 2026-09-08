@@ -37017,11 +37017,16 @@ if (leftNavigationTexture == null)
 			}
 		}
 
+		// M079-CL : bulles plates et arrondies (reference CEO) - gris/bleu sombre pour les messages
+		// recus, dore/miel pour les miens. Remplace le rendu "panneau premium" (grain + contour or +
+		// coins decores), trop charge pour une bulle de message.
 		private static void DrawChatBubble(Rect rect, bool self)
 		{
-			Color fill = self ? new Color(0.16f, 0.11f, 0.05f, 0.98f) : new Color(0.045f, 0.038f, 0.026f, 0.98f);
-			Color border = self ? new Color(1f, 0.70f, 0.18f, 0.85f) : new Color(0.70f, 0.50f, 0.18f, 0.60f);
-			DrawPremiumPanel(rect, fill, border);
+			Color fill = self ? new Color(0.74f, 0.55f, 0.24f, 0.98f) : new Color(0.17f, 0.19f, 0.23f, 0.98f);
+			Color previous = GUI.color;
+			GUI.color = fill;
+			GUI.DrawTexture(rect, GetPremiumTexture("bubble-rounded"), ScaleMode.StretchToFill, true);
+			GUI.color = previous;
 		}
 
 		private static GUIStyle ChatBubbleTextStyle(bool compact)
@@ -47336,6 +47341,34 @@ public static void ResetMissionsStateForProof()
             // est legerement retreci par dessus, pour laisser deborder un anneau dore visible tout
             // autour sans jamais sortir du rectangle de la carte (le clipping du
             // GUI.BeginScrollView parent ne laisse rien passer au dela).
+            // M079-CL : bulle de message plate et arrondie (reference CEO) - le rendu "panneau
+            // premium" ouvrage (grain, contour or, coins decores) etait trop charge pour de vrais
+            // messages de discussion. Masque de rectangle arrondi generique (distance au rectangle
+            // interieur retreci du rayon), reutilise pour les deux couleurs (recu/envoye) via
+            // GUI.color au dessin - voir DrawChatBubble.
+            else if (id == "bubble-rounded")
+            {
+                float radius = size * 0.20f;
+                float left = radius;
+                float right = size - radius;
+                float top = radius;
+                float bottom = size - radius;
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float px = x + 0.5f;
+                        float py = y + 0.5f;
+                        float cx = Mathf.Clamp(px, left, right);
+                        float cy = Mathf.Clamp(py, top, bottom);
+                        float dist = Mathf.Sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
+                        float alpha = 1f - Mathf.Clamp01(dist - radius + 1.5f);
+                        texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                    }
+                }
+                texture.wrapMode = TextureWrapMode.Clamp;
+                texture.filterMode = FilterMode.Bilinear;
+            }
             else if (id == "selection-ring-glow")
             {
                 for (int y = 0; y < size; y++)
