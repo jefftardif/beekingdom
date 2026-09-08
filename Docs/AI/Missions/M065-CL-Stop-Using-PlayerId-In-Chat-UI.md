@@ -1,21 +1,31 @@
 # M065-CL — Stop Using PlayerId In Chat UI
 
-Cause du résidu : la liste de résultats de "Nouvelle discussion" (où vit
-`entry.DisplayName`) ne survit pas à la fermeture du sélecteur - le cache de
-noms déjà ajouté (`ChatPlayerPickerController.displayNames`) n'était alimenté
-que par une recherche, jamais par le clic "Discuter" lui-même.
+## Retest CEO : toujours KO malgré le correctif précédent
 
-Correctif : au clic "Discuter", le nom déjà connu (`entry.DisplayName`) est
-maintenant enregistré dans ce même répertoire (`RememberDisplayName`), donc
-`ChatDirectoryDisplayName` - déjà utilisé par les 3 emplacements - le résout
-de façon fiable.
+Cause réelle, différente de ce qui était supposé : `chatPlayerPicker` (et
+son cache de noms) est **recréé à zéro** par
+`MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession()`
+- une méthode appelée par plusieurs bootstraps HiveMap sans rapport avec le
+chat, potentiellement plusieurs fois par session. Chaque appel efface le nom
+qu'on venait d'apprendre via "Nouvelle discussion", que ce soit juste après
+la recherche ou plus tard en rouvrant la conversation.
 
-Vérifié dans le code (pas de test lancé) : titre de conversation, liste
-DISCUSSIONS et auteur des messages reçus lisent tous `conv.Title` /
-`ChatDirectoryDisplayName(...)`, jamais le PlayerId brut.
+## Correctif
 
-- Fichiers : `ChatPlayerPickerController.cs`, `HiveViewProductUiPresenter.ChatRoyal.cs`.
-- Backend, envoi, connexion, layout : non touchés.
+Le nom appris (`entry.DisplayName`) est maintenant stocké dans un
+dictionnaire stable au niveau de l'écran Chat Royal
+(`chatKnownDisplayNames`), jamais recréé par ce mécanisme sans rapport.
+`ChatDirectoryDisplayName` - déjà utilisé par les 3 emplacements demandés -
+le consulte en premier.
+
+## Vérifié dans le code (pas de test lancé)
+
+Titre de conversation, liste DISCUSSIONS et auteur des messages reçus lisent
+tous `conv.Title` / `ChatDirectoryDisplayName(...)`, jamais le PlayerId brut.
+
+- Fichiers : `HiveViewProductUiPresenter.ChatRoyal.cs`.
+- Backend, envoi, connexion (`MobileAccountSessionRuntimeBootstrap.cs` non
+  touché), layout : non touchés.
 - Compilation vérifiée propre. Aucun test, aucun audit, aucun refactor.
 
 Commit local uniquement, aucun push.

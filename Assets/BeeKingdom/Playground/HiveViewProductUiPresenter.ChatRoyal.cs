@@ -48,6 +48,15 @@ namespace BeeKingdom.Playground
 
         private static IChatPlayerPickerController chatPlayerPicker = new UnavailableChatPlayerPickerController();
 
+        // M065-CL : chatPlayerPicker (et son propre cache de noms) est recree a zero chaque fois
+        // que MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession() tourne -
+        // et plusieurs bootstraps HiveMap sans rapport avec le chat l'appellent chacun,
+        // potentiellement plusieurs fois par session, effacant a chaque fois le nom qu'on venait
+        // d'apprendre via "Nouvelle discussion". Ce dictionnaire vit au niveau de l'ecran, jamais
+        // touche par cette recreation, donc un nom appris une fois reste connu pour le reste de la
+        // session - meme source de donnees (entry.DisplayName), juste un endroit stable.
+        private static readonly Dictionary<Guid, string> chatKnownDisplayNames = new Dictionary<Guid, string>();
+
         private static readonly string[] ChatAccentNames = { "Ambre royal", "Miel clair", "Azur", "Emeraude", "Pourpre" };
 
         private static readonly Color[] ChatAccentColors =
@@ -210,7 +219,8 @@ namespace BeeKingdom.Playground
 
         private static string ChatDirectoryDisplayName(Guid playerId)
         {
-            string name = (chatPlayerPicker as ChatPlayerPickerController)?.ResolveDisplayName(playerId)
+            string name = chatKnownDisplayNames.TryGetValue(playerId, out string known) ? known : null;
+            name ??= (chatPlayerPicker as ChatPlayerPickerController)?.ResolveDisplayName(playerId)
                 ?? chatPlayerPicker.Results.FirstOrDefault(entry => entry.PlayerId == playerId)?.DisplayName;
             return !string.IsNullOrWhiteSpace(name) && !ChatTryPlayerId(name, out _) ? name : null;
         }
@@ -603,11 +613,11 @@ namespace BeeKingdom.Playground
         private static void ChatStartPrivateConversation(ChatPlayerPickerEntry entry)
         {
             // M065-CL : "Nouvelle discussion" est le seul endroit qui connait deja le nom du joueur
-            // tape (entry.DisplayName) - on le fait entrer ici dans le meme cache/repertoire deja
-            // utilise pour resoudre PlayerId -> DisplayName partout ailleurs (titre, liste, auteurs
-            // des messages), pour que la resolution reste fiable meme si la liste de resultats de la
-            // recherche a deja disparu.
-            (chatPlayerPicker as ChatPlayerPickerController)?.RememberDisplayName(entry.PlayerId, entry.DisplayName);
+            // tape (entry.DisplayName) - on le fait entrer ici dans le repertoire stable
+            // (chatKnownDisplayNames) utilise pour resoudre PlayerId -> DisplayName partout ailleurs
+            // (titre, liste, auteurs des messages). chatPlayerPicker lui-meme est recree a zero par
+            // endroits sans rapport avec le chat, donc son propre cache ne suffit pas seul.
+            if (!string.IsNullOrWhiteSpace(entry.DisplayName)) chatKnownDisplayNames[entry.PlayerId] = entry.DisplayName;
 
             // M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
             // capture l'etat de connexion exact au moment precis du clic Discuter, pour expliquer
