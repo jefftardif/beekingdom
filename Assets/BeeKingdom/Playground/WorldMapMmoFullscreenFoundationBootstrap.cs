@@ -38,6 +38,9 @@ namespace BeeKingdom.Playground
         private const string Wave6RuntimePlacementMaskResource = "WorldMapRuntimePlacement/wave6_wave5method_12288_placement_mask";
         private const string CombatMarchBeeBodyResource = "WorldMapWave6Runtime/CombatMarch/CombatMarchBeeBody";
         private const string CombatMarchBeeWingsResource = "WorldMapWave6Runtime/CombatMarch/CombatMarchBeeWings";
+        private const string WaterOverlayMaterialResource = "WorldMapWaterOverlay/WorldMapWaterOverlay";
+        private static readonly int WaterOverlaySrcRectId = Shader.PropertyToID("_WmWaterSrcRect");
+        private static readonly int WaterOverlayWorldRectId = Shader.PropertyToID("_WmWaterWorldRect");
 
         [SerializeField] private bool useV3DPreviewRuntimePackageForPlayMode;
         [SerializeField] private bool useV3ECandidateRuntimePackageForPlayMode;
@@ -60,6 +63,8 @@ namespace BeeKingdom.Playground
 
         private Wave3RuntimeGutterTileProvider wave3Provider;
         private WorldMapWave6StreamingTileProvider wave6Provider;
+        private Material waterOverlayMaterial;
+        private bool waterOverlayMaterialLoadAttempted;
         private WorldMapBearDenLandmark bearDenLandmark;
         private WorldMapLocalLabRuntime localLab;
         private Texture2D pixel;
@@ -3890,6 +3895,7 @@ namespace BeeKingdom.Playground
         {
             IReadOnlyList<Wave6RuntimeTile> tiles = wave6Provider.VisibleTiles;
             Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            Material waterMaterial = ResolveWaterOverlayMaterial();
             for (int i = 0; i < tiles.Count; i++)
             {
                 Wave6RuntimeTile tile = tiles[i];
@@ -3898,8 +3904,33 @@ namespace BeeKingdom.Playground
                 Rect projected = WorldRectToScreenRect(terrainWorldRect);
                 Rect rect = PixelSnappedTileRect(projected.min, projected.max);
                 if (!rect.Overlaps(screen)) continue;
-                GUI.DrawTextureWithTexCoords(rect, tile.Texture, textureUv, true);
+
+                if (waterMaterial != null && Event.current != null && Event.current.type == EventType.Repaint)
+                {
+                    waterMaterial.SetVector(WaterOverlaySrcRectId, new Vector4(textureUv.xMin, textureUv.yMin, textureUv.width, textureUv.height));
+                    waterMaterial.SetVector(WaterOverlayWorldRectId, new Vector4(terrainWorldRect.xMin, terrainWorldRect.yMin, terrainWorldRect.width, terrainWorldRect.height));
+                    Graphics.DrawTexture(rect, tile.Texture, textureUv, 0, 0, 0, 0, GUI.color, waterMaterial);
+                }
+                else
+                {
+                    GUI.DrawTextureWithTexCoords(rect, tile.Texture, textureUv, true);
+                }
             }
+        }
+
+        // M073-CL: prototype-only animated water overlay. Purely cosmetic - detects
+        // water pixels from the painted terrain's own colors and adds current/foam
+        // motion in the shader. Falls back silently to the untouched terrain draw
+        // path if the material/shader is missing so this can never break the map.
+        private Material ResolveWaterOverlayMaterial()
+        {
+            if (!waterOverlayMaterialLoadAttempted)
+            {
+                waterOverlayMaterialLoadAttempted = true;
+                waterOverlayMaterial = Resources.Load<Material>(WaterOverlayMaterialResource);
+            }
+
+            return waterOverlayMaterial;
         }
 
         private static Rect PixelSnappedTileRect(Vector2 min, Vector2 max)
