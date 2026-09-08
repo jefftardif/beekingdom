@@ -36145,7 +36145,8 @@ if (leftNavigationTexture == null)
 			}
 
 			float quickY = bannerHeight + 6f;
-			float quickH = compact ? 56f : 54f;
+			// M082-CL : barre agrandie pour laisser respirer les icones premium officielles.
+			float quickH = compact ? 74f : 82f;
 			// RAP-OPTIONNEL-COMMUNICATIONS_01 : searchH etait calcule AVANT DrawChatActionBar, qui
 			// bascule lui-meme chatSearchActive dans le meme appel. Le mainTop de cette frame restait
 			// donc base sur l'ancien etat : au clic sur "Recherche" (ou "Nouvelle discussion", qui
@@ -36230,23 +36231,37 @@ if (leftNavigationTexture == null)
 			GUI.Label(badge, unread > 0 ? unread.ToString(CultureInfo.InvariantCulture) + " NON LUS" : "À JOUR", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
 		}
 
+		// M082-CL : refonte complete de la barre d'action - icones officielles (RoyalChatIcons),
+		// police en gras nettement plus grande, et le "simili rectangle" ouvrage (DrawPremiumPanel,
+		// grain + contour) remplace par un vrai bouton plat arrondi (DrawFlatRoundedRect, meme
+		// technique fiable que M080-CL), juge pas assez premium par le CEO.
 		private static void DrawChatActionBar(Rect rect, bool compact)
 		{
 			string[] ids = { "new", "group", "search", "favorites", "settings" };
-			string[] labels = { "➕ Nouvelle discussion", "👥 Nouveau groupe", "🔍 Recherche", "⭐ Favoris", "⚙ Paramètres" };
-			string[] icons = { "messages", "members", "search", "star", "locked" };
-			float gap = 6f;
-			float itemWidth = compact ? 122f : Mathf.Max(122f, (rect.width - gap * 4f) / 5f);
-			DrawPremiumPanel(rect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
-			chatActionBarScroll = GUI.BeginScrollView(rect, chatActionBarScroll, new Rect(0f, 0f, itemWidth * 5f + gap * 4f + 8f, rect.height - 2f), false, false);
+			string[] labels = { "Nouvelle discussion", "Nouveau groupe", "Recherche", "Favoris", "Paramètres" };
+			float gap = 8f;
+			float itemWidth = compact ? 168f : Mathf.Max(168f, (rect.width - gap * 4f) / 5f);
+			DrawFlatRoundedRect(rect, new Color(0.05f, 0.043f, 0.032f, 0.97f), 12f);
+			chatActionBarScroll = GUI.BeginScrollView(rect, chatActionBarScroll, new Rect(0f, 0f, itemWidth * 5f + gap * 4f + 10f, rect.height - 2f), false, false);
+			float iconSize = compact ? 40f : 44f;
 			for (int i = 0; i < ids.Length; i++)
 			{
-				Rect button = new Rect(4f + i * (itemWidth + gap), 6f, itemWidth, rect.height - 12f);
+				Rect button = new Rect(5f + i * (itemWidth + gap), 5f, itemWidth, rect.height - 10f);
 				bool on = (string.Equals(ids[i], "search", StringComparison.Ordinal) && chatSearchActive)
 					|| (string.Equals(ids[i], "favorites", StringComparison.Ordinal) && chatFavoritesOnly);
-				DrawPremiumPanel(button, on ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.06f, 0.045f, 0.025f, 0.94f), on ? new Color(1f, 0.70f, 0.18f, 0.92f) : new Color(0.64f, 0.44f, 0.14f, 0.64f));
-				DrawGameIcon(new Rect(button.x + 8f, button.y + 8f, 24f, 24f), icons[i], Color.white);
-				GUI.Label(new Rect(button.x + 38f, button.y + 7f, button.width - 44f, 28f), labels[i], new GUIStyle(smallStyle) { fontSize = compact ? 10 : 11, alignment = TextAnchor.MiddleLeft });
+				DrawFlatRoundedRect(button, on ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
+				if (on)
+				{
+					Rect border = new Rect(button.x - 2f, button.y - 2f, button.width + 4f, button.height + 4f);
+					DrawFlatRoundedRect(border, new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
+					DrawFlatRoundedRect(button, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
+				}
+				Texture2D actionIcon = ChatActionIconTexture(ids[i]);
+				Rect iconRect = new Rect(button.x + 10f, button.y + (button.height - iconSize) * 0.5f, iconSize, iconSize);
+				if (actionIcon != null) GUI.DrawTexture(iconRect, actionIcon, ScaleMode.ScaleToFit, true);
+				else DrawGameIcon(iconRect, "messages", Color.white);
+				GUI.Label(new Rect(iconRect.xMax + 10f, button.y, button.width - iconSize - 30f, button.height),
+					labels[i], new GUIStyle(badgeStyle) { fontSize = compact ? 13 : 15, alignment = TextAnchor.MiddleLeft, wordWrap = true });
 				if (GUI.Button(button, string.Empty, GUIStyle.none))
 				{
 					AudioManager.Instance?.PlayUIClick();
@@ -48140,6 +48155,24 @@ public static void ResetMissionsStateForProof()
             Texture2D texture = Resources.Load<Texture2D>("RoyalChatIcons/chat_channel_" + key);
             if (texture != null) ConfigureUiTexture(texture);
             ChatChannelIconTextures[key] = texture;
+            return texture;
+        }
+
+        // M082-CL : icones premium officielles de la barre d'action (RoyalChatIcons) - remplace les
+        // icones procedurales generiques utilisees jusqu'ici.
+        private static readonly Dictionary<string, Texture2D> ChatActionIconTextures = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+
+        private static Texture2D ChatActionIconTexture(string actionId)
+        {
+            string file = string.Equals(actionId, "new", StringComparison.Ordinal) ? "nouvelle_discussion"
+                : string.Equals(actionId, "group", StringComparison.Ordinal) ? "nouveau_groupe"
+                : string.Equals(actionId, "search", StringComparison.Ordinal) ? "nouvelle_recherche"
+                : string.Equals(actionId, "favorites", StringComparison.Ordinal) ? "favori"
+                : "settings";
+            if (ChatActionIconTextures.TryGetValue(file, out Texture2D cached)) return cached;
+            Texture2D texture = Resources.Load<Texture2D>("RoyalChatIcons/" + file);
+            if (texture != null) ConfigureUiTexture(texture);
+            ChatActionIconTextures[file] = texture;
             return texture;
         }
 
