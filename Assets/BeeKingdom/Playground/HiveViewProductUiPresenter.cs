@@ -36583,6 +36583,8 @@ if (leftNavigationTexture == null)
 			}
 		}
 
+		// M090-CL : champ de saisie aligne sur le style de la barre de recherche (M089-CL) - contour
+		// dore arrondi, enveloppe basique a gauche, placeholder "Ecrire un message...".
 		private static void DrawChatComposer(Rect rect, bool compact)
 		{
 			DrawPremiumPanel(rect, new Color(0.028f, 0.024f, 0.018f, 0.98f), new Color(0.78f, 0.52f, 0.15f, 0.75f));
@@ -36595,9 +36597,18 @@ if (leftNavigationTexture == null)
 			GUIStyle fieldStyle = new GUIStyle(smallStyle) { fontSize = compact ? 13 : 15, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } };
 			float emojiW = compact ? 42f : 40f;
 			float sendW = compact ? 78f : 86f;
-			Rect textRect = new Rect(rect.x + 10f, rect.y + 6f, rect.width - sendW - emojiW - 20f, rect.height - 12f);
+			Rect fieldRect = new Rect(rect.x + 8f, rect.y + 6f, rect.width - sendW - emojiW - 24f, rect.height - 12f);
+			DrawFlatRoundedRect(fieldRect, new Color(1f, 0.74f, 0.22f, 0.85f), 10f);
+			Rect fieldInner = new Rect(fieldRect.x + 2f, fieldRect.y + 2f, fieldRect.width - 4f, fieldRect.height - 4f);
+			DrawFlatRoundedRect(fieldInner, new Color(0.04f, 0.032f, 0.022f, 0.98f), 8f);
+			GUI.Label(new Rect(fieldInner.x + 6f, fieldInner.y, 24f, fieldInner.height), "✉", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 14 : 16, normal = { textColor = new Color(1f, 0.78f, 0.30f, 0.9f) } });
+			Rect textRect = new Rect(fieldInner.x + 30f, fieldInner.y, fieldInner.width - 36f, fieldInner.height);
 			GUI.SetNextControlName("chatComposer");
 			chatComposerText = GUI.TextField(textRect, chatComposerText, fieldStyle);
+			if (string.IsNullOrEmpty(chatComposerText) && !string.Equals(GUI.GetNameOfFocusedControl(), "chatComposer", StringComparison.Ordinal))
+			{
+				GUI.Label(textRect, "Écrire un message...", new GUIStyle(fieldStyle) { normal = { textColor = new Color(0.68f, 0.60f, 0.48f, 0.75f) } });
+			}
 			Rect emojiButton = new Rect(rect.xMax - sendW - emojiW - 16f, rect.y + 6f, emojiW, rect.height - 12f);
 			DrawPremiumPanel(emojiButton, chatEmojiPanelOpen ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.06f, 0.045f, 0.025f, 0.94f), new Color(0.64f, 0.44f, 0.14f, 0.64f));
 			GUI.Label(emojiButton, "😊", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 18 : 17 });
