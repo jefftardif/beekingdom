@@ -286,7 +286,7 @@ namespace BeeKingdom.Playground
             if (chatChannels.Any(item => string.Equals(item.Id, ChatGroupsChannelId, StringComparison.Ordinal))) return;
             // Insere avant "system" pour garder les canaux ecrivables groupes ensemble.
             int insertAt = chatChannels.FindIndex(item => string.Equals(item.Id, "system", StringComparison.Ordinal));
-            ChatChannelData groups = new ChatChannelData { Id = ChatGroupsChannelId, Name = "🐝 Groupes", Icon = "members", ReadOnly = false };
+            ChatChannelData groups = new ChatChannelData { Id = ChatGroupsChannelId, Name = "Groupes", Icon = "members", ReadOnly = false };
             if (insertAt < 0) chatChannels.Add(groups); else chatChannels.Insert(insertAt, groups);
         }
 

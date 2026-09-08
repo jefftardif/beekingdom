@@ -35758,11 +35758,13 @@ if (leftNavigationTexture == null)
 		{
 			return new List<ChatChannelData>(5)
 			{
-				new ChatChannelData { Id = "alliance", Name = "💬 Alliance", Icon = "alliance", ReadOnly = false },
-				new ChatChannelData { Id = "world", Name = "🌍 Monde", Icon = "world", ReadOnly = false },
-				new ChatChannelData { Id = "private", Name = "👥 Privé", Icon = "messages", ReadOnly = false },
-				new ChatChannelData { Id = "system", Name = "📢 Système", Icon = "locked", ReadOnly = true },
-				new ChatChannelData { Id = "events", Name = "📣 Événements", Icon = "star", ReadOnly = true }
+				// M073-CL : plus de prefixe emoji dans le nom - la grande icone ronde officielle
+				// (RoyalChatIcons) le remplace deja, un doublon a cote du texte etait redondant.
+				new ChatChannelData { Id = "alliance", Name = "Alliance", Icon = "alliance", ReadOnly = false },
+				new ChatChannelData { Id = "world", Name = "Monde", Icon = "world", ReadOnly = false },
+				new ChatChannelData { Id = "private", Name = "Privé", Icon = "messages", ReadOnly = false },
+				new ChatChannelData { Id = "system", Name = "Système", Icon = "locked", ReadOnly = true },
+				new ChatChannelData { Id = "events", Name = "Événements", Icon = "star", ReadOnly = true }
 			};
 		}
 
