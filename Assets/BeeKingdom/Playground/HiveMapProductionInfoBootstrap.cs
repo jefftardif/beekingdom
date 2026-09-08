@@ -100,8 +100,12 @@ namespace BeeKingdom.Playground
             for (int i = 0; i < TrackedBuildingTypes.Length; i++)
             {
                 string buildingType = TrackedBuildingTypes[i];
-                GameObject go = subscribedController.Registry.GetGameObjectByBuildingType(buildingType);
-                if (go == null) continue;
+                // M095-CL : la variante throwing spammait une KeyNotFoundException CHAQUE FRAME des
+                // qu'un des 3 batiments suivis n'etait pas (encore) enregistre - observe en build
+                // standalone reel pendant que le vrai bug (BuildingRuntimeViewBootstrap, lecture
+                // disque brute) empechait tout enregistrement. Le registre n'a de toute facon
+                // aucune garantie que ces 3 batiments soient places dans une scene donnee.
+                if (!subscribedController.Registry.TryGetGameObjectByBuildingType(buildingType, out GameObject go) || go == null) continue;
 
                 Rect rect = ScreenRectFor(go, camera);
                 if (rect.width <= 0f) continue;

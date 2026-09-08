@@ -200,20 +200,32 @@ namespace BeeKingdom.Buildings.Interaction
             return MaterializeRuntimeVisualBuildings(registry, activeScene);
         }
 
+        // M095-CL : le sidecar de placement (comme les 14 artworks ci-dessous) etait lu via un
+        // chemin disque brut construit sur Application.dataPath - fonctionne UNIQUEMENT dans
+        // l'editeur (Application.dataPath == le vrai dossier Assets/) et jamais dans un build
+        // standalone (Application.dataPath pointe vers <Build>_Data, sans Assets/ ni aucun de ces
+        // fichiers, qui ne sont copies dans un build que s'ils sont dans un dossier Resources).
+        // C'est la cause racine, prouvee en build reel, du "aucun batiment ne s'affiche du tout"
+        // deja documente comme chantier separe non resolu (Docs/Claude/Claude_Continuation.md).
+        // Copie miroir dans Assets/BeeKingdom/Buildings/Resources/BuildingRuntimeView/ (JSON
+        // inchange, PNG renommes .bytes pour rester du texte brut non compresse par l'import
+        // Texture2D - la logique de decodage/scan d'artwork ci-dessous reste identique, seule la
+        // SOURCE des octets change). Les fichiers originaux dans Assets/BeeKingdom/Art/Buildings
+        // et Assets/Experiments/.../Config ne sont pas touches (potentiellement lus par des
+        // outils editeur comme BuildingArtworkScanner).
         public static int MaterializeRuntimeVisualBuildings(BuildingInteractionRegistry registry, Scene scene)
         {
             if (registry == null) throw new ArgumentNullException("registry");
 
             string relative = GetSidecarPathForScene(scene);
-            string dataPath = Application.dataPath;
-            if (relative.StartsWith("Assets/")) relative = relative.Substring("Assets/".Length);
-            string fullPath = Path.Combine(dataPath, relative.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(fullPath)) return 0;
+            string resourceName = Path.GetFileNameWithoutExtension(relative);
+            TextAsset sidecarAsset = Resources.Load<TextAsset>("BuildingRuntimeView/" + resourceName);
+            if (sidecarAsset == null) return 0;
 
             SidecarViewFile save;
             try
             {
-                save = JsonUtility.FromJson<SidecarViewFile>(File.ReadAllText(fullPath));
+                save = JsonUtility.FromJson<SidecarViewFile>(sidecarAsset.text);
             }
             catch (Exception e)
             {
@@ -244,9 +256,9 @@ namespace BeeKingdom.Buildings.Interaction
             string fileName;
             if (!ArtworkByType.TryGetValue(buildingType, out fileName)) return null;
 
-            string artRelative = (RelativeArtRoot + "/" + fileName);
-            if (artRelative.StartsWith("Assets/")) artRelative = artRelative.Substring("Assets/".Length);
-            string artPath = Path.Combine(Application.dataPath, artRelative.Replace('/', Path.DirectorySeparatorChar));
+            string resourceName = Path.GetFileNameWithoutExtension(fileName);
+            TextAsset artworkAsset = Resources.Load<TextAsset>("BuildingRuntimeView/" + resourceName);
+            byte[] artworkBytes = artworkAsset != null ? artworkAsset.bytes : null;
 
             float scale = entry.Scale > 0f ? entry.Scale : 1f;
 
@@ -255,10 +267,10 @@ namespace BeeKingdom.Buildings.Interaction
             root.transform.position = new Vector3(entry.X, entry.TerrainY, entry.Z);
             root.transform.rotation = Quaternion.Euler(0f, entry.Rotation, 0f);
 
-            ArtworkScan scan = ScanArtwork(artPath);
+            ArtworkScan scan = ScanArtwork(artworkBytes, resourceName);
             if (!scan.Valid)
             {
-                Debug.LogWarning("[BuildingRuntimeViewBootstrap] Artwork illisible : " + artPath);
+                Debug.LogWarning("[BuildingRuntimeViewBootstrap] Artwork illisible : " + resourceName);
                 DestroyQuiet(root);
                 return null;
             }
@@ -280,7 +292,7 @@ namespace BeeKingdom.Buildings.Interaction
             Material material = shader != null
                 ? new Material(shader) { name = "BuildingPlacementMat_" + buildingType }
                 : null;
-            Texture2D artwork = LoadTexture(artPath);
+            Texture2D artwork = LoadTexture(artworkBytes);
             if (material != null && artwork != null)
             {
                 material.SetTexture("_MainTex", artwork);
@@ -291,7 +303,7 @@ namespace BeeKingdom.Buildings.Interaction
             else
             {
                 if (material == null) Debug.LogWarning("[BuildingRuntimeViewBootstrap] Shader introuvable : " + ShaderName);
-                if (artwork == null) Debug.LogWarning("[BuildingRuntimeViewBootstrap] Texture introuvable : " + artPath);
+                if (artwork == null) Debug.LogWarning("[BuildingRuntimeViewBootstrap] Texture introuvable : " + resourceName);
             }
 
             // Zone de clic : boîte couvrant le visuel, ancrée au point de contact au sol.
@@ -370,19 +382,9 @@ namespace BeeKingdom.Buildings.Interaction
             else UnityEngine.Object.DestroyImmediate(obj);
         }
 
-        private static ArtworkScan ScanArtwork(string fullPath)
+        private static ArtworkScan ScanArtwork(byte[] bytes, string resourceName)
         {
-            if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath)) return default(ArtworkScan);
-
-            byte[] bytes;
-            try
-            {
-                bytes = File.ReadAllBytes(fullPath);
-            }
-            catch (Exception)
-            {
-                return default(ArtworkScan);
-            }
+            if (bytes == null || bytes.Length == 0) return default(ArtworkScan);
 
             Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!ImageConversion.LoadImage(tex, bytes) || tex.width <= 0 || tex.height <= 0)
@@ -395,7 +397,7 @@ namespace BeeKingdom.Buildings.Interaction
             int height = tex.height;
             Color32[] pixels = tex.GetPixels32();
 
-            bool isRoyal = fullPath.EndsWith("ROYAL_PALACE.png", StringComparison.OrdinalIgnoreCase);
+            bool isRoyal = string.Equals(resourceName, "ROYAL_PALACE", StringComparison.OrdinalIgnoreCase);
             ArtworkScan scan;
             if (isRoyal)
             {
@@ -461,18 +463,9 @@ namespace BeeKingdom.Buildings.Interaction
             return width > 0 && height > 0 ? (float)width / height : 1f;
         }
 
-        private static Texture2D LoadTexture(string fullPath)
+        private static Texture2D LoadTexture(byte[] bytes)
         {
-            if (!File.Exists(fullPath)) return null;
-            byte[] bytes;
-            try
-            {
-                bytes = File.ReadAllBytes(fullPath);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            if (bytes == null || bytes.Length == 0) return null;
             Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!ImageConversion.LoadImage(tex, bytes) || tex.width <= 0 || tex.height <= 0)
             {

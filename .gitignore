@@ -141,6 +141,11 @@ Docs/Demos/
 Docs/UIA/
 Docs/BuilderC/**/generic_validator/*.png
 
+# M095-CL : copies .bytes de PNG deja exclus ci-dessous (BuildingRuntimeViewBootstrap lit ces
+# artworks via Resources.Load<TextAsset> pour fonctionner en build standalone - meme politique,
+# meme .meta garde pour la stabilite du GUID, meme binaire non commite).
+Assets/BeeKingdom/Buildings/Resources/BuildingRuntimeView/*.bytes
+
 # Image binaries are NOT committed (saved internally); keep their .meta for GUID stability
 *.png
 *.jpg
