@@ -36677,13 +36677,38 @@ if (leftNavigationTexture == null)
 		// d'onglets a selectionner. Les recents restent en tete, separes du reste par une ligne
 		// doree, comme demande. La grille peut deborder la hauteur visible et defile desormais
 		// (avant, chaque categorie tenait separement dans la hauteur fixe du panneau).
+		// M093-CL : chaque case est soit un glyphe unicode, soit une image personnalisee
+		// (Resources/beemojis) - meme grille, meme selection, seul le rendu de la case differe.
+		private struct ChatEmojiEntry
+		{
+			public string InsertText;
+			public string Glyph;
+			public Texture2D Texture;
+		}
+
+		private static ChatEmojiEntry ChatEmojiEntryFor(string insertText)
+		{
+			Texture2D custom = ChatCustomEmojiForToken(insertText);
+			if (custom != null) return new ChatEmojiEntry { InsertText = insertText, Texture = custom };
+			return new ChatEmojiEntry { InsertText = insertText, Glyph = insertText };
+		}
+
 		private static void DrawChatEmojiPanel(Rect panel, bool compact)
 		{
 			DrawPremiumPanel(panel, new Color(0.024f, 0.021f, 0.017f, 0.99f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
 
-			List<string> recents = chatEmojiRecents;
-			List<string> allEmojis = ChatEmojiAllEmojis();
-			if (recents.Count == 0 && allEmojis.Count == 0)
+			List<ChatEmojiEntry> recents = new List<ChatEmojiEntry>(chatEmojiRecents.Count);
+			for (int i = 0; i < chatEmojiRecents.Count; i++) recents.Add(ChatEmojiEntryFor(chatEmojiRecents[i]));
+
+			// Emojis personnalises du CEO en tete de la grille principale (apres les recents), puis
+			// tous les emojis unicode existants - "au meme titre", une seule grille continue.
+			List<ChatEmojiEntry> allEntries = new List<ChatEmojiEntry>();
+			foreach (string name in ChatCustomEmojiCatalog().Keys.OrderBy(k => k, StringComparer.Ordinal))
+				allEntries.Add(new ChatEmojiEntry { InsertText = ":" + name + ":", Texture = ChatCustomEmojiCatalog()[name] });
+			List<string> unicodeEmojis = ChatEmojiAllEmojis();
+			for (int i = 0; i < unicodeEmojis.Count; i++) allEntries.Add(new ChatEmojiEntry { InsertText = unicodeEmojis[i], Glyph = unicodeEmojis[i] });
+
+			if (recents.Count == 0 && allEntries.Count == 0)
 			{
 				GUI.Label(new Rect(panel.x + 12f, panel.y + 14f, panel.width - 24f, 40f),
 					BeeLocalization.Text("chat.emoji.beekingdom.empty", "Les émoticônes exclusives BeeKingdom arrivent bientôt."),
@@ -36697,7 +36722,7 @@ if (leftNavigationTexture == null)
 			float cellW = grid.width / cols;
 			float cellH = cellW;
 			int recentRows = recents.Count > 0 ? Mathf.CeilToInt(recents.Count / (float)cols) : 0;
-			int allRows = Mathf.CeilToInt(allEmojis.Count / (float)cols);
+			int allRows = Mathf.CeilToInt(allEntries.Count / (float)cols);
 			float dividerBlockH = recents.Count > 0 ? 16f : 0f;
 			float contentH = recentRows * cellH + dividerBlockH + allRows * cellH;
 
@@ -36716,23 +36741,32 @@ if (leftNavigationTexture == null)
 				GUI.color = Color.white;
 				y += dividerBlockH - 6f;
 			}
-			for (int i = 0; i < allEmojis.Count; i++)
+			for (int i = 0; i < allEntries.Count; i++)
 			{
 				Rect cellRect = new Rect((i % cols) * cellW, y + (i / cols) * cellH, cellW, cellH);
-				if (DrawChatEmojiCell(cellRect, allEmojis[i], compact)) { GUI.EndScrollView(); return; }
+				if (DrawChatEmojiCell(cellRect, allEntries[i], compact)) { GUI.EndScrollView(); return; }
 			}
 			GUI.EndScrollView();
 		}
 
-		private static bool DrawChatEmojiCell(Rect cellRect, string emoji, bool compact)
+		private static bool DrawChatEmojiCell(Rect cellRect, ChatEmojiEntry entry, bool compact)
 		{
 			DrawPremiumPanel(new Rect(cellRect.x + 3f, cellRect.y + 3f, cellRect.width - 6f, cellRect.height - 6f), new Color(0.06f, 0.045f, 0.026f, 0.92f), new Color(0.55f, 0.40f, 0.15f, 0.40f));
-			if (GUI.Button(cellRect, emoji, new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 20 : 18 }))
+			bool clicked;
+			if (entry.Texture != null)
 			{
-				ChatEmojiInsert(emoji);
-				return true;
+				float iconPad = cellRect.width * 0.16f;
+				Rect iconRect = new Rect(cellRect.x + iconPad, cellRect.y + iconPad, cellRect.width - iconPad * 2f, cellRect.height - iconPad * 2f);
+				GUI.DrawTexture(iconRect, entry.Texture, ScaleMode.ScaleToFit, true);
+				clicked = GUI.Button(cellRect, string.Empty, GUIStyle.none);
 			}
-			return false;
+			else
+			{
+				clicked = GUI.Button(cellRect, entry.Glyph, new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 20 : 18 });
+			}
+			if (!clicked) return false;
+			ChatEmojiInsert(entry.InsertText);
+			return true;
 		}
 
 		private static List<string> ChatEmojiAllEmojis()
@@ -37023,7 +37057,7 @@ if (leftNavigationTexture == null)
 				DrawChatBubble(bubbleRect, true);
 				float innerW = bubbleRect.width - 16f;
 				float textH = ChatBubbleTextHeight(msg.Text, innerW, compact);
-				GUI.Label(new Rect(bubbleRect.x + 8f, bubbleRect.y + 4f, innerW, textH), msg.Text, ChatBubbleTextStyle(compact));
+				ChatDrawBubbleText(new Rect(bubbleRect.x + 8f, bubbleRect.y + 4f, innerW, textH), msg.Text, compact);
 				GUI.Label(new Rect(bubbleRect.xMax - 48f, bubbleRect.yMax - 16f, 42f, 13f), ChatStateText(msg.State), ChatStateStyle(msg.State));
 			}
 			else
@@ -37038,7 +37072,7 @@ if (leftNavigationTexture == null)
 				float nameH = compact ? 13f : 15f;
 				float textH = ChatBubbleTextHeight(msg.Text, innerW, compact);
 				GUI.Label(new Rect(bubbleRect.x + 10f, bubbleRect.y + 3f, innerW, nameH), msg.Author, ChatAuthorStyle(compact));
-				GUI.Label(new Rect(bubbleRect.x + 10f, bubbleRect.y + 3f + nameH, innerW, textH), msg.Text, ChatBubbleTextStyle(compact));
+				ChatDrawBubbleText(new Rect(bubbleRect.x + 10f, bubbleRect.y + 3f + nameH, innerW, textH), msg.Text, compact);
 				GUI.Label(new Rect(bubbleRect.x + 10f, bubbleRect.yMax - 15f, innerW, 12f), msg.TimeLabel, ChatTimeStyle());
 			}
 
@@ -37238,11 +37272,107 @@ if (leftNavigationTexture == null)
 			return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpperInvariant();
 		}
 
-		private static float ChatBubbleTextHeight(string text, float width, bool compact)
+		// M093-CL : messages "texte enrichi" - un mot au format ":shortcode:" correspondant a un
+		// fichier de Resources/beemojis est rendu comme une image inline plutot que du texte brut,
+		// exactement comme un emoji personnalise Discord/Slack. Decoupe en mots (espace = frontiere
+		// de mot, comme le retour a la ligne standard des messages de chat), chaque mot etant soit
+		// un jeton texte soit un jeton image ; le retour a la ligne se fait au niveau du mot entier,
+		// jamais a l'interieur d'un jeton, meme logique que le word-wrap habituel.
+		private struct ChatTextToken
+		{
+			public string Text;
+			public Texture2D Image;
+			public float Width;
+		}
+
+		private static Texture2D ChatCustomEmojiForToken(string word)
+		{
+			if (string.IsNullOrEmpty(word) || word.Length < 3 || word[0] != ':' || word[word.Length - 1] != ':') return null;
+			return ChatCustomEmojiTexture(word.Substring(1, word.Length - 2));
+		}
+
+		private static List<ChatTextToken> ChatBuildTextTokens(string text, GUIStyle style, float emojiSize)
+		{
+			List<ChatTextToken> tokens = new List<ChatTextToken>();
+			string[] words = (text ?? string.Empty).Split(' ');
+			for (int i = 0; i < words.Length; i++)
+			{
+				string word = words[i];
+				if (word.Length == 0) continue;
+				Texture2D emoji = ChatCustomEmojiForToken(word);
+				if (emoji != null) tokens.Add(new ChatTextToken { Image = emoji, Width = emojiSize });
+				else tokens.Add(new ChatTextToken { Text = word, Width = style.CalcSize(new GUIContent(word)).x });
+			}
+			return tokens;
+		}
+
+		private static List<List<ChatTextToken>> ChatWrapTextTokens(List<ChatTextToken> tokens, float maxWidth, float spaceWidth)
+		{
+			List<List<ChatTextToken>> lines = new List<List<ChatTextToken>>();
+			List<ChatTextToken> current = new List<ChatTextToken>();
+			float currentWidth = 0f;
+			for (int i = 0; i < tokens.Count; i++)
+			{
+				ChatTextToken token = tokens[i];
+				float addWidth = token.Width + (current.Count > 0 ? spaceWidth : 0f);
+				if (current.Count > 0 && currentWidth + addWidth > maxWidth)
+				{
+					lines.Add(current);
+					current = new List<ChatTextToken>();
+					currentWidth = 0f;
+					addWidth = token.Width;
+				}
+				current.Add(token);
+				currentWidth += addWidth;
+			}
+			lines.Add(current);
+			return lines;
+		}
+
+		private static float ChatTextLineHeight(GUIStyle style)
 		{
 			if (chatCalcContentCache == null) chatCalcContentCache = new GUIContent();
-			chatCalcContentCache.text = text ?? string.Empty;
-			return ChatBubbleTextStyle(compact).CalcHeight(chatCalcContentCache, Mathf.Max(1f, width));
+			chatCalcContentCache.text = "Ag";
+			return style.CalcHeight(chatCalcContentCache, 1000f);
+		}
+
+		private static float ChatBubbleTextHeight(string text, float width, bool compact)
+		{
+			GUIStyle style = ChatBubbleTextStyle(compact);
+			float lineHeight = ChatTextLineHeight(style);
+			float emojiSize = Mathf.Max(1f, lineHeight - 2f);
+			float spaceWidth = style.CalcSize(new GUIContent(" ")).x;
+			List<ChatTextToken> tokens = ChatBuildTextTokens(text, style, emojiSize);
+			List<List<ChatTextToken>> lines = ChatWrapTextTokens(tokens, Mathf.Max(1f, width), spaceWidth);
+			return Mathf.Max(lineHeight, lines.Count * lineHeight);
+		}
+
+		// Dessine le meme resultat que ChatBubbleTextHeight a mesure - toute modification de l'un
+		// doit etre reportee dans l'autre pour rester coherente (meme jetons, meme retour a la ligne).
+		private static void ChatDrawBubbleText(Rect rect, string text, bool compact)
+		{
+			GUIStyle style = ChatBubbleTextStyle(compact);
+			float lineHeight = ChatTextLineHeight(style);
+			float emojiSize = Mathf.Max(1f, lineHeight - 2f);
+			float spaceWidth = style.CalcSize(new GUIContent(" ")).x;
+			List<ChatTextToken> tokens = ChatBuildTextTokens(text, style, emojiSize);
+			List<List<ChatTextToken>> lines = ChatWrapTextTokens(tokens, Mathf.Max(1f, rect.width), spaceWidth);
+			float y = rect.y;
+			for (int li = 0; li < lines.Count; li++)
+			{
+				List<ChatTextToken> line = lines[li];
+				float x = rect.x;
+				for (int ti = 0; ti < line.Count; ti++)
+				{
+					ChatTextToken token = line[ti];
+					if (token.Image != null)
+						GUI.DrawTexture(new Rect(x, y + (lineHeight - emojiSize) * 0.5f, emojiSize, emojiSize), token.Image, ScaleMode.ScaleToFit, true);
+					else
+						GUI.Label(new Rect(x, y, token.Width, lineHeight), token.Text, style);
+					x += token.Width + spaceWidth;
+				}
+				y += lineHeight;
+			}
 		}
 
 		private static float ChatMessageBaseHeight(ChatMessageData msg, float width, bool compact)
@@ -48244,6 +48374,32 @@ public static void ResetMissionsStateForProof()
             if (texture != null) ConfigureUiTexture(texture);
             ChatActionIconTextures[file] = texture;
             return texture;
+        }
+
+        // M093-CL : catalogue des emojis personnalises du CEO (Resources/beemojis) - le nom de
+        // fichier EST le code sans les deux-points (bee_happy.png -> :bee_happy:), charge une seule
+        // fois puis mis en cache. Utilise a la fois par le selecteur (DrawChatEmojiPanel) et par le
+        // rendu des messages (ChatCustomEmojiForToken) - meme source, jamais desynchronisee.
+        private static Dictionary<string, Texture2D> chatCustomEmojiCache;
+
+        private static Dictionary<string, Texture2D> ChatCustomEmojiCatalog()
+        {
+            if (chatCustomEmojiCache != null) return chatCustomEmojiCache;
+            chatCustomEmojiCache = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+            Texture2D[] textures = Resources.LoadAll<Texture2D>("beemojis");
+            for (int i = 0; i < textures.Length; i++)
+            {
+                if (textures[i] == null) continue;
+                ConfigureUiTexture(textures[i]);
+                chatCustomEmojiCache[textures[i].name] = textures[i];
+            }
+            return chatCustomEmojiCache;
+        }
+
+        private static Texture2D ChatCustomEmojiTexture(string name)
+        {
+            Dictionary<string, Texture2D> catalog = ChatCustomEmojiCatalog();
+            return catalog.TryGetValue(name, out Texture2D texture) ? texture : null;
         }
 
         // M076-CL : loupe premium (meme dossier RoyalChatIcons) - remplace le glyphe "⌕", absent de
