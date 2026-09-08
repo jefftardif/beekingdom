@@ -36389,7 +36389,13 @@ if (leftNavigationTexture == null)
 			if (GUI.Button(add, string.Empty, GUIStyle.none)) OpenChatNewDiscussion();
 			Rect search = new Rect(area.x + 10f, area.y + 44f, area.width - 20f, 34f);
 			DrawPremiumPanel(search, new Color(0.025f, 0.025f, 0.03f, 0.98f), new Color(0.45f, 0.48f, 0.56f, 0.80f));
-			GUI.Label(new Rect(search.x + 10f, search.y + 4f, 20f, 24f), "⌕", new GUIStyle(titleStyle) { fontSize = 21, alignment = TextAnchor.MiddleCenter });
+			// M076-CL : icone loupe premium fournie par le CEO - remplace le glyphe "⌕" (carre vide,
+			// absent de la police du jeu).
+			Texture2D searchIcon = ChatSearchIconTexture();
+			if (searchIcon != null)
+				GUI.DrawTexture(new Rect(search.x + 8f, search.y + 5f, 24f, 24f), searchIcon, ScaleMode.ScaleToFit, true);
+			else
+				GUI.Label(new Rect(search.x + 10f, search.y + 4f, 20f, 24f), "🔍", new GUIStyle(titleStyle) { fontSize = 16, alignment = TextAnchor.MiddleCenter });
 			GUI.SetNextControlName("chatConversationSearch");
 			chatSearchQuery = GUI.TextField(new Rect(search.x + 34f, search.y + 5f, search.width - 42f, 24f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = mobile ? 11 : 12, normal = { textColor = new Color(0.78f, 0.80f, 0.86f, 1f) } });
 			GUI.color = new Color(1f, 0.60f, 0.14f, 0.80f);
@@ -48048,6 +48054,22 @@ public static void ResetMissionsStateForProof()
             if (texture != null) ConfigureUiTexture(texture);
             ChatChannelIconTextures[key] = texture;
             return texture;
+        }
+
+        // M076-CL : loupe premium (meme dossier RoyalChatIcons) - remplace le glyphe "⌕", absent de
+        // la police du jeu et affiche comme un carre vide (rapporte par le CEO).
+        private static Texture2D chatSearchIconTexture;
+        private static bool chatSearchIconTextureLoaded;
+
+        private static Texture2D ChatSearchIconTexture()
+        {
+            if (!chatSearchIconTextureLoaded)
+            {
+                chatSearchIconTexture = Resources.Load<Texture2D>("RoyalChatIcons/loupe");
+                if (chatSearchIconTexture != null) ConfigureUiTexture(chatSearchIconTexture);
+                chatSearchIconTextureLoaded = true;
+            }
+            return chatSearchIconTexture;
         }
 
         private static Texture2D GetIconTexture(string id)
