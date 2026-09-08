@@ -40,7 +40,206 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
-## Jalon courant — M058-CL : fuite de drapeaux d'input du perimetre Alliance (2026-09-07)
+## Jalon courant — M067 a M094-CL : refonte premium de Chat Royal + emojis personnalises + build Windows (2026-09-08)
+
+Longue serie continue (M067 a M094) sur l'ecran Chat Royal, en reponse a des
+retours CEO successifs sur des captures d'ecran reelles :
+
+- **Gestion de groupe (M067)** : confirmation avant d'exclure un membre
+  (meme motif que `DrawAllianceMemberAdminActionButton`), "Quitter" verifie
+  desormais la reponse serveur avant de fermer l'ecran au lieu de fermer de
+  facon optimiste.
+- **Refonte visuelle complete (M068-M092)** : grandes cartes de canaux/
+  discussions avec icones officielles (`Resources/RoyalChatIcons/*.png`),
+  avatars ronds a initiales, bulles de message plates et arrondies
+  (`DrawFlatRoundedRect`, rayon en pixels reels — l'API Unity 6 de
+  `GUI.DrawTexture` avec `borderRadiuses`, immunisee contre la distorsion
+  d'un masque texture etire sur un rect non carre, contrairement a la
+  premiere tentative qui deformait les bulles courtes en "blob"), panneau
+  Membres reconstruit a l'identique de la reference (icones officielles,
+  couronne doree, menu ⋮ par membre), barre d'action/recherche/composer
+  refaits en boutons plats premium avec icones officielles et placeholders.
+  Grille d'emojis fusionnee (recents en tete, ligne doree, puis tout le
+  reste) au lieu d'onglets par categorie.
+- **Emojis personnalises en couleur (M093)** : nouveau moteur "texte
+  enrichi" - un mot `:code:` correspondant a un fichier de
+  `Resources/beemojis/*.png` est rendu comme image inline dans les bulles
+  de message (voir `ChatBuildTextTokens`/`ChatWrapTextTokens`/
+  `ChatDrawBubbleText`). Le composer et l'apercu de conversation restent en
+  texte brut pendant la frappe (meme comportement que Slack/Discord). 6
+  emojis livres : bee_cry/hangry/happy/laugh/love/wow.
+- **Fuite d'UI monde trouvee et corrigee (M084)** : le bouton "i" d'info
+  production (`HiveMapProductionInfoBootstrap`) restait dessine ET
+  cliquable par-dessus Chat Royal - il avait sa propre liste de fenetres
+  bloquantes au lieu de reutiliser `HiveMapOverlayInputGateBootstrap.
+  IsAnyOverlayBlocking()`. Corrige. (M083, hypothese du curseur clavier
+  orphelin pour le meme symptome, s'est revelee etre la mauvaise piste -
+  laissee en place car inoffensive, mais ce n'etait pas la vraie cause.)
+- **Outil de build Windows corrige (M094)** : `BeeKingdomWindowsInternalBuild.cs`
+  bootait encore `Assets/Scenes/LivingHive.unity` (retiree definitivement) au
+  lieu de `Environment2D5D_HiveMap_Test.unity` — trouve en preparant un build
+  pour le CEO, corrige pour matcher l'etat connu-bon de
+  `ProjectSettings/EditorBuildSettings.asset` (M043D-CL).
+
+Toutes les icones officielles sont dans
+`Assets/BeeKingdom/Playground/Resources/RoyalChatIcons/` et
+`Resources/beemojis/` (PNG non commites par politique du depot — seuls les
+`.meta` le sont, meme regle que `PremiumBeeIcons`).
+
+**Piege environnement (deja documente, reconfirme aujourd'hui)** : en
+lancant `Bee Kingdom/Build/Build Windows Internal Debug EXE` via
+`script-execute` (appel synchrone bloquant), le transport MCP a echoue avec
+"apres 10 tentatives" a plusieurs reprises alors que **le build tournait
+reellement cote Unity** (confirme par les logs et par le contenu regenere
+du dossier `Data`, ex. `Assembly-CSharp.dll` reecrit avec le code du jour).
+Le fichier `.exe` lui-meme n'a PAS ete reecrit a chaque tentative
+(SentinelOne, deja documente comme suspect pour l'interception des acces
+disque sur cette machine, en cours d'execution confirme via
+`Get-Service SentinelAgent`) - mais Unity ne reecrit de toute facon pas un
+stub de lanceur strictement identique, donc ce n'est probablement PAS un
+echec : le contenu du jeu (`Data/`) est bien a jour. Ne PAS relancer le
+build en boucle sur un simple echec de transport MCP - verifier d'abord
+l'horodatage des fichiers dans `Builds/Windows/Internal/*_Data/` avant de
+conclure a un echec.
+
+Preuves : compilation Unity verte a chaque etape (0 erreur console),
+`Assembly-CSharp.dll` du build regenere apres 17:05 le 2026-09-08 (apres
+tous les commits M067-M093). Build sur la machine du CEO (pas de VM), a
+`C:\projets\beekingdomgame-master\Builds\Windows\Internal\
+BeeKingdom_Internal_Debug.exe`, scene d'entree
+`Environment2D5D_HiveMap_Test`.
+
+Prochain test utilisateur : lancer l'exe et confirmer que Chat Royal
+(bouton Communication) montre bien la refonte visuelle et que les emojis
+abeilles s'inserent/s'affichent correctement dans un message envoye.
+
+Ouvert / a faire ensuite : (1) valider en Play Mode/build les halos de
+selection canaux/discussions restes en attente de validation CEO (M078,
+jamais formellement confirmes) ; (2) si le CEO fournit d'autres emojis
+personnalises, memes emplacement/convention (`Resources/beemojis/`, nom de
+fichier = code) ; (3) si un gel/probleme de build reapparait sur cette
+machine, verifier une exclusion SentinelOne pour `Unity.exe` et le dossier
+projet avant d'investiguer plus loin (piste deja identifiee, jamais
+confirmee resolue).
+
+---
+
+## Jalon courant — M059-CL (correctif de routage post-test CEO) : le bootstrap n'existait pas dans la scene reelle (2026-09-07)
+
+Le CEO a teste M059 en Play Mode reel. **Part 1 validee** : la VUE COLONIE affiche ses vrais niveaux, les
+valeurs fantomes 22/24/25/27 ont disparu — ne plus y toucher. **Parts 2 et 3 en echec** : Defense etait
+bel et bien en amelioration (le Palais Royal repondait correctement « Un autre batiment occupe la file de
+construction »), mais aucune barre de progression n'apparaissait sur Defense et cliquer Defense ouvrait sa
+fenetre ordinaire (Fermer / Ameliorer) au lieu de la fenetre d'avancement.
+
+**Cause exacte, unique pour les deux symptomes** : `HiveMapBuildingUpgradeProgressBootstrap` n'etait pas
+cable dans `HiveMapRuntimeBootstrapInitializer`. Son seul point d'entree restait son propre
+`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]`, qui ne se declenche qu'une fois, sur la scene active a
+l'instant ou le Play Mode demarre (splash/login, jamais `Environment2D5D*`). **Le composant n'existait donc
+JAMAIS dans la scene reelle** : pas d'instance, donc pas de `OnGUI` (aucune barre) et surtout aucun appel a
+`RegisterCompletionPreemption` (le clic retombait sur `Selection.BuildingClicked`, dont l'abonne pour
+Defense ouvre la fenetre ordinaire). **Ce n'etait NI un probleme de source de donnees, NI un ordre de
+branchement, NI une couverture partielle par type de batiment** — la detection lisait deja la meme et unique
+autorite serveur que le message « file occupee » du Palais Royal. **TROISIEME recidive exacte** du meme
+defaut d'installation apres M038B-CL et M049C-CL : c'est un piege structurel du projet, a considerer comme
+le premier suspect chaque fois qu'un comportement HiveMap « marche en test mais pas en jeu ».
+
+Correction : **une ligne d'installation**, aucune reecriture. La fenetre, la barre, la detection, le pulse
+bleu/cyan et la validation au clic n'ont pas ete touches ; `HiveMapOverlayInputGateBootstrap.cs` non plus
+cette fois. Filet pose contre la 4e recidive : un test enumere par reflexion TOUS les bootstraps `HiveMap*`
+exposant `InitializeForScene(Scene)` et echoue si l'un d'eux manque a l'installeur (resultat actuel : aucun
+manquant). Genericite prouvee par execution reelle : **14/14 batiments** (Defense incluse) detectes comme en
+chantier, ouvrant la fenetre d'avancement et pas celle d'un autre — les 14 cles de `BuildingLegacyKeys.All`
+correspondent une a une aux 14 `SupportedBuildings` du client, miroir du catalogue serveur. Aucune liste de
+batiments codee en dur dans le chemin corrige.
+
+Preuves: nouveau `Assets/BeeKingdom/Playground/Editor/HiveMapUpgradeProgressWiringTests.cs` **4/4**, plus une
+sonde d'execution dans l'assembly reelle de l'editeur (cablage present, aucun bootstrap orphelin, 14/14).
+Compilation verte, scene active `Environment2D5D_HiveMap_Test`, aucune erreur console. Rien de commite,
+pousse ni deploye. Section « Correctif de routage post-certification CEO » du rapport
+`Docs/AI/Missions/M059-CL-New-Player-Feedback-Account-Isolation-Upgrade-UX.md`.
+
+**Limite** : toujours AUCUN test en Play Mode. Le lanceur de tests de l'editeur etait bloque par une
+execution restee active d'une autre session (en echec depuis 10:57) ; les tests ont donc ete joues par
+invocation directe des methodes compilees, et je me suis abstenu d'entrer en Play Mode pour ne pas detruire
+le travail de cette autre session.
+
+Prochain test utilisateur: rejouer les points 4, 5 et 6 de la section 6 du rapport — amelioration reelle en
+cours (barre visible sur le batiment + clic ouvrant la fenetre d'avancement), passage a « a valider » (barre
+qui disparait, clic qui valide comme avant), puis aller-retour ruche / carte du monde.
+
+Ouvert / a faire ensuite: (1) confirmation CEO en Play Mode ; (2) identifiant de ruche unique embarque cote
+client ; (3) menage des 22 tests obsoletes du bac a sable ; (4) le lanceur de tests Unity est reste bloque —
+verifier son etat avant la prochaine campagne de tests.
+
+---
+
+## Jalon precedent — M059-CL : premier retour joueur externe, isolation de compte + UX d'amelioration (2026-09-07)
+
+Premier test d'utilisabilite sur machine propre par un joueur qui n'avait jamais vu le jeu (Alex). Il a
+rapporte des niveaux de batiment impossibles dans la VUE COLONIE sur une ruche neuve (22, 24, 25, 27).
+
+**Diagnostic, a retenir : ce n'etait PAS une fuite de donnees entre joueurs.** Ces quatre nombres ne sont
+les niveaux de personne — ce sont les constantes de repli codees en dur du bac a sable de demonstration
+historique (27 Palais Royal, 25 Reserve de miel, 24 Caserne, 22 pour tous les autres, d'ou le 22 repete).
+Correspondance exacte, valeur par valeur, avec ce qu'Alex a vu. Causes A+G de la grille de la mission. La
+VUE COLONIE etait le SEUL ecran joueur a court-circuiter le resolveur « serveur d'abord, bac a sable en
+repli » que le reste du jeu utilise deja. **L'isolation serveur est saine et c'est demontre mecaniquement** :
+l'identifiant de joueur vient exclusivement du jeton authentifie (jamais de l'URL ni du corps de requete),
+et l'etat de ruche est stocke sous une cle composite (joueur, ruche). Aucun correctif serveur ecrit, rien
+a deployer. **Fragilite a garder en tete, sans danger aujourd'hui** : la configuration client embarque un
+identifiant de ruche UNIQUE et identique pour toutes les installations — la separation ne tient donc qu'au
+fait que le serveur le traite comme une simple moitie de cle et jamais comme une revendication de propriete.
+
+**Une vraie faille d'isolation a bien ete trouvee en chemin, locale celle-la** : le cache de progression
+d'apercu local etait partitionne par APPAREIL et jamais par COMPTE (cle aleatoire generee une fois par
+installation), donc deux comptes sur une meme machine le partageaient integralement ; et les caches en
+memoire du presentateur n'etaient jamais purges a la deconnexion ni au changement de compte — meme famille
+que les fuites de drapeaux de M056A/M058. Les deux sont fermes, avec migration sans perte (un cache herite
+sans compte est ADOPTE par le premier compte qui le lit, la progression locale du CEO est donc preservee).
+Piege trouve par un test qui echouait : tout etat de repli doit etre estampille au compte des sa creation,
+sinon le tout premier cache ecrit l'aurait ete sans compte, donc adoptable par le compte suivant.
+
+Parts 2 et 3 livrees : cliquer un batiment en chantier ouvre une fenetre d'avancement compacte (niveau
+actuel → niveau vise, progression, temps restant, Aide d'alliance reelle — **aucun bouton Accelerer, aucun
+endpoint serveur ne raccourcit une construction reelle**) ; et une barre de progression en espace monde
+s'affiche au-dessus du batiment, alimentee par le minutage serveur. Le pulse bleu/cyan n'est NI retire NI
+modifie, les deux signaux se completent. Le comportement deja valide du clic de validation en attente
+d'achevement n'a pas ete touche : le nouveau composant est volontairement SEPARE de
+`HiveMapBuildingUpgradeVisualStateBootstrap` (fichier d'une autre session) et les deux crochets de clic
+lisent deux etats mutuellement exclusifs du serveur. QoL du sprint : la VUE COLONIE porte un bandeau de
+provenance (« Donnees serveur · ta ruche » contre « Apercu local de demonstration · pas ta ruche »), meme
+convention que le CHAT ROYAL — c'est exactement le piege dans lequel Alex est tombe. Risque de plantage
+neutralise au passage : l'action d'Aide d'alliance dereference son controleur sans protection et aurait
+leve a chaque image depuis la nouvelle fenetre.
+
+Preuves: nouveau `Assets/BeeKingdom/Playground/Editor/ColonyViewAccountIsolationTests.cs` **10/10** ;
+`SandboxLivingHiveManualCollectionTests` **55/55** (couvre le codec modifie) ; `HiveMapSceneReentryInputTests`
+**6/6** (regression camera M056A non reintroduite) ; `BuildingInteractionControllerClickPriorityTests`
+**10/10** ; `SandboxLivingHiveUiStabilizationTests` **20/22, identique a l'etat documente par M058-CL**.
+Compilation verte. Rapport complet : `Docs/AI/Missions/M059-CL-New-Player-Feedback-Account-Isolation-Upgrade-UX.md`.
+
+**Limites, a lire avant de tester** : AUCUN test en Play Mode, AUCUNE capture d'ecran — la logique est
+prouvee, le rendu ne l'est pas. Un passage sur tout l'espace de noms du bac a sable donne 22 echecs, tous
+des attentes de tests obsoletes (anciens libelles de batiments, chaines de preuve d'anciennes missions) ;
+pour les deux seuls proches de mon perimetre la demonstration est mecanique (fichiers strictement
+identiques a leur version de reference). Je n'ai PAS pu produire de reference d'execution avant/apres :
+cela aurait exige de mettre de cote le travail non commite d'autres sessions presentes dans l'arbre.
+`HiveMapOverlayInputGateBootstrap.cs` appartient a une autre session — j'y ai ajoute UNE ligne strictement
+additive, indispensable (point unique d'enregistrement des fenetres bloquant l'input du monde). Rien n'a
+ete commite, pousse ni deploye.
+
+Prochain test utilisateur: voir la section 6 du rapport — en resume, VUE COLONIE sur compte reel puis sur
+compte neuf, bascule de compte sur la meme machine, puis une amelioration reelle de bout en bout (barre en
+cours → disparition a « a valider » → clic de validation), avec aller-retour ruche/carte du monde.
+
+Ouvert / a faire ensuite: (1) rejouer les Parts 2 et 3 en Play Mode reel ; (2) decider du sort de
+l'identifiant de ruche unique embarque cote client ; (3) passe de menage sur les 22 tests obsoletes du bac
+a sable, qui masquent aujourd'hui les vraies regressions.
+
+---
+
+## Jalon precedent — M058-CL : fuite de drapeaux d'input du perimetre Alliance (2026-09-07)
 
 La camera HiveMap (pan/zoom) pouvait rester bloquee **definitivement** apres un passage par le
 profil d'alliance, alors que batiments et menus repondaient encore. Cause reelle, prouvee par
