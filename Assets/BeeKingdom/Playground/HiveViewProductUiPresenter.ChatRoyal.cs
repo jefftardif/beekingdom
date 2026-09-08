@@ -810,12 +810,12 @@ namespace BeeKingdom.Playground
                 y += 46f;
             }
 
-            float footerH = 60f;
+            float footerH = detail.ViewerIsLeader ? 78f : 60f;
             Rect list = new Rect(area.x + 14f, y, area.width - 28f, Mathf.Max(1f, area.yMax - y - footerH));
             DrawPremiumPanel(list, new Color(0.02f, 0.018f, 0.014f, 0.94f), new Color(0.5f, 0.34f, 0.12f, 0.55f));
 
             IReadOnlyList<LivingHiveChatGroupMember> members = detail.Members;
-            float rowH = detail.ViewerIsLeader ? 58f : 42f;
+            float rowH = detail.ViewerIsLeader ? 64f : 48f;
             float gap = 6f;
             chatGroupMembersScroll = GUI.BeginScrollView(list, chatGroupMembersScroll,
                 new Rect(0f, 0f, list.width - 18f, Mathf.Max(1, members.Count + detail.PendingInvites.Count) * (rowH + gap)));
@@ -824,13 +824,19 @@ namespace BeeKingdom.Playground
             {
                 Rect row = new Rect(4f, rowIndex * (rowH + gap) + 2f, list.width - 26f, rowH);
                 DrawPremiumPanel(row, new Color(0.06f, 0.05f, 0.03f, 0.92f), member.IsLeader ? ChatAccentColor() : new Color(0.52f, 0.36f, 0.12f, 0.6f));
-                // Icone "createur" a cote du nom, comme demande.
-                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 20f, 20f),
+                // M070-CL : avatar rond avec initiales (reference CEO), meme texture que les autres
+                // avatars du chat (DrawRoundAvatarBase, defini dans HiveViewProductUiPresenter.cs).
+                Rect avatar = new Rect(row.x + 8f, row.y + (rowH - 34f) * 0.5f, 34f, 34f);
+                DrawRoundAvatarBase(avatar);
+                GUI.Label(avatar, ChatInitials(member.DisplayName), new GUIStyle(titleStyle) { fontSize = 13, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
+                float textX = avatar.xMax + 10f;
+                float textW = row.width - (textX - row.x) - 10f;
+                GUI.Label(new Rect(textX, row.y + 6f, textW, 20f),
                     (member.IsLeader ? "👑 " : "") + member.DisplayName,
                     new GUIStyle(smallStyle) { fontSize = 13, alignment = TextAnchor.MiddleLeft });
-                GUI.Label(new Rect(row.x + 10f, row.y + 24f, row.width - 20f, 16f),
-                    member.IsLeader ? "Chef" : "Membre",
-                    new GUIStyle(tinyLabelStyle) { fontSize = 9, alignment = TextAnchor.MiddleLeft, normal = { textColor = member.IsLeader ? ChatAccentColor() : new Color(0.7f, 0.62f, 0.5f, 0.85f) } });
+                GUI.Label(new Rect(textX, row.y + 27f, textW, 16f),
+                    member.IsLeader ? "CHEF" : "Membre",
+                    new GUIStyle(tinyLabelStyle) { fontSize = 9, fontStyle = member.IsLeader ? FontStyle.Bold : FontStyle.Normal, alignment = TextAnchor.MiddleLeft, normal = { textColor = member.IsLeader ? ChatAccentColor() : new Color(0.7f, 0.62f, 0.5f, 0.85f) } });
 
                 if (detail.ViewerIsLeader && !member.IsLeader)
                 {
@@ -892,10 +898,19 @@ namespace BeeKingdom.Playground
             }
             GUI.EndScrollView();
 
+            // M070-CL : libelle toujours "QUITTER LE GROUPE" (majuscules, reference CEO) - l'avis
+            // "transferez d'abord le leadership" passe en petite ligne au dessus du bouton au lieu
+            // de remplacer son libelle, la regle backend elle-meme reste inchangee
+            // (ChatLeaveGroupAndClose verifie deja le resultat serveur, voir M067-CL).
+            if (detail.ViewerIsLeader)
+            {
+                GUI.Label(new Rect(area.x + 14f, area.yMax - 66f, area.width - 28f, 16f),
+                    "Transferez d'abord le leadership pour quitter.",
+                    new GUIStyle(centeredTinyLabelStyle) { fontSize = 9, normal = { textColor = new Color(1f, 0.72f, 0.42f, 0.85f) } });
+            }
             Rect leave = new Rect(area.x + 14f, area.yMax - 46f, area.width - 28f, 38f);
-            DrawPremiumPanel(leave, new Color(0.26f, 0.10f, 0.09f, 0.94f), new Color(0.9f, 0.44f, 0.38f, 0.85f));
-            GUI.Label(leave, detail.ViewerIsLeader ? "Quitter (transferez d'abord le leadership)" : "Quitter le groupe",
-                new GUIStyle(centeredTinyLabelStyle) { fontSize = 11, wordWrap = true });
+            DrawPremiumPanel(leave, new Color(0.30f, 0.08f, 0.07f, 0.96f), new Color(1f, 0.72f, 0.24f, 0.85f));
+            GUI.Label(leave, "QUITTER LE GROUPE", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12, fontStyle = FontStyle.Bold });
             if (GUI.Button(leave, string.Empty, GUIStyle.none))
             {
                 AudioManager.Instance?.PlayUIClick();

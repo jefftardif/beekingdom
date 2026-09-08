@@ -36194,13 +36194,35 @@ if (leftNavigationTexture == null)
 				ChatBackOrClose(compact);
 			}
 			GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
-			Rect chatTab = new Rect(Screen.width - 430f, 12f, 128f, 38f);
-			DrawPremiumPanel(chatTab, new Color(0.34f, 0.22f, 0.06f, 0.96f), new Color(1f, 0.70f, 0.18f, 0.94f));
-			GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
-			Rect mailTab = new Rect(Screen.width - 292f, 12f, 128f, 38f);
+			// M070-CL : ajout Parametres + Fermer a droite (reference CEO : "CHAT / MAIL / Parametres
+			// / Fermer") - a cote des onglets CHAT/MAIL deja presents. "Fermer" ferme l'ecran Chat
+			// Royal (meme action que le bouton retour a gauche) ; "Parametres" ouvre le meme
+			// sous-ecran que le bouton de la barre d'action, rien de duplique fonctionnellement.
+			float closeW = 38f;
+			float gearW = 38f;
+			Rect closeButton = new Rect(Screen.width - closeW - 12f, 12f, closeW, 38f);
+			DrawPremiumPanel(closeButton, new Color(0.30f, 0.08f, 0.06f, 0.94f), new Color(0.92f, 0.46f, 0.36f, 0.85f));
+			GUI.Label(closeButton, "✕", new GUIStyle(centeredTinyLabelStyle) { fontSize = 16 });
+			if (GUI.Button(closeButton, string.Empty, GUIStyle.none))
+			{
+				AudioManager.Instance?.PlayUIClick();
+				ChatBackOrClose(compact);
+			}
+			Rect gearButton = new Rect(closeButton.x - gearW - 6f, 12f, gearW, 38f);
+			DrawPremiumPanel(gearButton, new Color(0.05f, 0.04f, 0.025f, 0.94f), new Color(0.66f, 0.46f, 0.16f, 0.76f));
+			GUI.Label(gearButton, "⚙", new GUIStyle(centeredTinyLabelStyle) { fontSize = 17 });
+			if (GUI.Button(gearButton, string.Empty, GUIStyle.none))
+			{
+				AudioManager.Instance?.PlayUIClick();
+				OpenChatSettings();
+			}
+			Rect mailTab = new Rect(gearButton.x - 128f - 6f, 12f, 128f, 38f);
 			DrawPremiumPanel(mailTab, new Color(0.05f, 0.04f, 0.025f, 0.94f), new Color(0.66f, 0.46f, 0.16f, 0.76f));
 			GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
-			Rect badge = new Rect(Screen.width - 168f, 9f, 106f, 30f);
+			Rect chatTab = new Rect(mailTab.x - 128f - 6f, 12f, 128f, 38f);
+			DrawPremiumPanel(chatTab, new Color(0.34f, 0.22f, 0.06f, 0.96f), new Color(1f, 0.70f, 0.18f, 0.94f));
+			GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
+			Rect badge = new Rect(chatTab.x - 106f - 8f, 9f, 106f, 30f);
 			DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
 			int unread = ChatUnreadTotal();
 			GUI.Label(badge, unread > 0 ? unread.ToString(CultureInfo.InvariantCulture) + " NON LUS" : "À JOUR", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
@@ -36307,14 +36329,19 @@ if (leftNavigationTexture == null)
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), viewport.width, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
 				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
-				DrawGameIcon(new Rect(row.x + 10f, row.y + 10f, 36f, 36f), channel.Icon, Color.white);
-				GUI.Label(new Rect(row.x + 54f, row.y + 8f, row.width - 114f, 24f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
+				// M070-CL : icone dans un socle rond (reference CEO), pas juste posee sur le fond.
+				float channelIconSize = mobile ? 46f : 40f;
+				Rect channelIconSocket = new Rect(row.x + 8f, row.y + (rowH - channelIconSize) * 0.5f, channelIconSize, channelIconSize);
+				DrawRoundAvatarBase(channelIconSocket);
+				DrawGameIcon(new Rect(channelIconSocket.x + channelIconSize * 0.18f, channelIconSocket.y + channelIconSize * 0.18f, channelIconSize * 0.64f, channelIconSize * 0.64f), channel.Icon, Color.white);
+				float channelTextX = channelIconSocket.xMax + 12f;
+				GUI.Label(new Rect(channelTextX, row.y + 8f, row.width - (channelTextX - row.x) - 60f, 24f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
 				string channelSubtitle = string.Equals(channel.Id, "alliance", StringComparison.Ordinal) ? "Discussions d'alliance"
 					: string.Equals(channel.Id, "world", StringComparison.Ordinal) ? "Discussion globale"
 					: string.Equals(channel.Id, "private", StringComparison.Ordinal) ? "Messages privés"
 					: string.Equals(channel.Id, ChatGroupsChannelId, StringComparison.Ordinal) ? "Vos groupes"
 					: string.Equals(channel.Id, "events", StringComparison.Ordinal) ? "Annonces spéciales" : "Notifications";
-				GUI.Label(new Rect(row.x + 54f, row.y + 34f, row.width - 114f, 16f), channelSubtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.72f, 0.72f, 0.76f, 1f) } });
+				GUI.Label(new Rect(channelTextX, row.y + 34f, row.width - (channelTextX - row.x) - 60f, 16f), channelSubtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.72f, 0.72f, 0.76f, 1f) } });
 				int chUnread = ChatChannelUnread(channel.Id);
 				if (chUnread > 0)
 				{
@@ -36436,7 +36463,25 @@ if (leftNavigationTexture == null)
 
 			bool readOnly = conv == null || conv.ReadOnly;
 			float composerH = readOnly ? 38f : (compact ? 72f : 72f);
-			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, Mathf.Max(1f, area.height - headerH - 6f - composerH));
+			// M070-CL : separateur de journee "Aujourd'hui" (reference CEO) - version statique, non
+			// scrollable, au dessus de la liste des messages. Le modele de donnees des messages
+			// (ChatMessageData) ne porte pas de date exploitable pour un regroupement par jour reel
+			// sans changer le pipeline de synchronisation serveur (hors perimetre de cette mission
+			// de presentation) - un seul separateur "Aujourd'hui" satisfait la reference, qui n'en
+			// montre elle-meme qu'un seul.
+			bool hasMessages = ChatMessagesFor(chatSelectedConversation).Count > 0;
+			float daySeparatorH = hasMessages ? 26f : 0f;
+			if (hasMessages)
+			{
+				Rect daySeparator = new Rect(area.x + 10f, area.y + headerH + 2f, area.width - 20f, daySeparatorH);
+				float lineY = daySeparator.y + daySeparator.height * 0.5f;
+				GUI.color = new Color(1f, 0.66f, 0.16f, 0.35f);
+				GUI.DrawTexture(new Rect(daySeparator.x, lineY, daySeparator.width * 0.5f - 46f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+				GUI.DrawTexture(new Rect(daySeparator.x + daySeparator.width * 0.5f + 46f, lineY, daySeparator.width * 0.5f - 46f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+				GUI.color = Color.white;
+				GUI.Label(new Rect(daySeparator.x + daySeparator.width * 0.5f - 46f, daySeparator.y, 92f, daySeparator.height), "Aujourd'hui", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.82f, 0.42f, 0.9f) } });
+			}
+			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f + daySeparatorH, area.width - 16f, Mathf.Max(1f, area.height - headerH - 6f - daySeparatorH - composerH));
 			// M043T-CL: the emoji panel (opened from inside DrawChatComposer below) is drawn
 			// directly above the composer, overlapping the tail of this message scroll view - its
 			// message-action buttons (react/copy/pin/report) must not stay clickable underneath.
@@ -37021,34 +37066,35 @@ if (leftNavigationTexture == null)
 			return new Color(0.90f, 0.86f, 0.72f, 1f);
 		}
 
+		// M070-CL : avatars ronds - texture "avatar-circle" (fond sombre + anneau or, cuite une
+		// fois) au lieu du panneau carre premium. Les initiales restent dessinees par dessus, le
+		// Label lui-meme reste rectangulaire mais son texte est centre dans le cercle visible.
+		private static void DrawRoundAvatarBase(Rect rect)
+		{
+			GUI.DrawTexture(rect, GetPremiumTexture("avatar-circle"), ScaleMode.StretchToFill, true);
+		}
+
+		private static void DrawPresenceDot(Rect rect, string presence)
+		{
+			if (string.IsNullOrEmpty(presence)) return;
+			Color previous = GUI.color;
+			GUI.color = AlliancePresenceColor(presence);
+			GUI.DrawTexture(rect, GetPremiumTexture("presence-dot"), ScaleMode.ScaleToFit, true);
+			GUI.color = previous;
+		}
+
 		private static void DrawChatAvatar(Rect rect, ChatConversationData conv)
 		{
-			DrawPremiumPanel(rect, new Color(0.10f, 0.07f, 0.03f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.90f));
+			DrawRoundAvatarBase(rect);
 			GUI.Label(rect, ChatInitials(conv.Title), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.34f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
-			if (!string.IsNullOrEmpty(conv.Presence))
-			{
-				Color presence = AlliancePresenceColor(conv.Presence);
-				Rect dot = new Rect(rect.xMax - 11f, rect.yMax - 11f, 10f, 10f);
-				Color previous = GUI.color;
-				GUI.color = presence;
-				GUI.DrawTexture(dot, Texture2D.whiteTexture, ScaleMode.ScaleToFit, false);
-				GUI.color = previous;
-			}
+			DrawPresenceDot(new Rect(rect.xMax - 12f, rect.yMax - 12f, 11f, 11f), conv.Presence);
 		}
 
 		private static void DrawChatAvatar(Rect rect, ChatMessageData msg)
 		{
-			DrawPremiumPanel(rect, new Color(0.10f, 0.07f, 0.03f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.90f));
+			DrawRoundAvatarBase(rect);
 			GUI.Label(rect, ChatInitials(msg.Author), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.32f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
-			if (!string.IsNullOrEmpty(msg.Presence))
-			{
-				Color presence = AlliancePresenceColor(msg.Presence);
-				Rect dot = new Rect(rect.xMax - 11f, rect.yMax - 11f, 10f, 10f);
-				Color previous = GUI.color;
-				GUI.color = presence;
-				GUI.DrawTexture(dot, Texture2D.whiteTexture, ScaleMode.ScaleToFit, false);
-				GUI.color = previous;
-			}
+			DrawPresenceDot(new Rect(rect.xMax - 12f, rect.yMax - 12f, 11f, 11f), msg.Presence);
 		}
 
 		private static string ChatInitials(string value)
@@ -47234,6 +47280,22 @@ public static void ResetMissionsStateForProof()
                     int py = 58 + ((dot * 31) % 66);
                     FillCircle(texture, px, py, 3, new Color(1f, 0.78f, 0.20f, 0.34f));
                 }
+            }
+            // M070-CL : avatars ronds (reference CEO) - fond sombre + anneau or, memes deux
+            // couleurs constantes utilisees partout (DrawChatAvatar) donc une seule texture cuite
+            // suffit, comme "red-badge"/"queen-hive" ci-dessus.
+            else if (id == "avatar-circle")
+            {
+                FillCircle(texture, 96, 96, 88, new Color(0.13f, 0.09f, 0.04f, 1f));
+                StrokeCircle(texture, 96, 96, 90, new Color(1f, 0.74f, 0.20f, 0.95f), 7);
+            }
+            // Pastille de presence ronde (remplace le carre Texture2D.whiteTexture) - le disque
+            // reste blanc pour heriter la teinte de presence appliquee via GUI.color au dessin,
+            // l'anneau sombre assure le contraste sur n'importe quel fond.
+            else if (id == "presence-dot")
+            {
+                FillCircle(texture, 96, 96, 74, Color.white);
+                StrokeCircle(texture, 96, 96, 86, new Color(0.02f, 0.02f, 0.02f, 1f), 20);
             }
             else
             {
