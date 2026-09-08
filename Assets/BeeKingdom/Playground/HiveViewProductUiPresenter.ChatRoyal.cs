@@ -515,6 +515,10 @@ namespace BeeKingdom.Playground
             chatPickerQuery = string.Empty;
             chatNewGroupTitle = string.Empty;
             chatPlayerPicker.Clear();
+            // M083-CL : un champ de recherche/texte du sous-modal ferme ici peut garder le focus
+            // clavier IMGUI, laissant un curseur "I" orphelin apparaitre ailleurs a l'affichage
+            // suivant (meme correctif que CloseChatScreen).
+            ReleaseGuiInputCapture();
         }
 
         // 3.3 / 3.4 : "Nouvelle discussion" (un joueur) et "Nouveau groupe" (plusieurs + titre)

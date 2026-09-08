@@ -35950,6 +35950,12 @@ if (leftNavigationTexture == null)
 			chatScreenOpen = false;
 			chatActionMessageIndex = -1;
 			chatEmojiPanelOpen = false;
+			// M083-CL : si le composer ou un champ de recherche avait le focus clavier au moment de
+			// la fermeture, IMGUI peut laisser un curseur clignotant "I" orphelin, qui se rattache
+			// au premier controle reutilisant le meme ID au prochain affichage (rapporte par le CEO
+			// comme une petite icone qui "n'a pas d'affaire la"). Meme correctif deja utilise
+			// ailleurs (CloseActiveMainMenuPanel) pour la meme famille de bug.
+			ReleaseGuiInputCapture();
 			AudioManager.Instance?.PlayMenuClose();
 		}
 
