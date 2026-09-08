@@ -36357,9 +36357,9 @@ if (leftNavigationTexture == null)
 				int chUnread = ChatChannelUnread(channel.Id);
 				if (chUnread > 0)
 				{
-					Rect badge = new Rect(row.xMax - 44f, row.y + 17f, 34f, 22f);
-					DrawPremiumPanel(badge, new Color(0.72f, 0.12f, 0.06f, 0.96f), new Color(1f, 0.62f, 0.20f, 0.92f));
-					GUI.Label(badge, chUnread > 9 ? "9+" : chUnread.ToString(CultureInfo.InvariantCulture), centeredTinyLabelStyle);
+					Rect badge = new Rect(row.xMax - 30f, row.y + 12f, 24f, 24f);
+					GUI.DrawTexture(badge, GetPremiumTexture("unread-bubble"), ScaleMode.ScaleToFit, true);
+					GUI.Label(badge, chUnread > 9 ? "9+" : chUnread.ToString(CultureInfo.InvariantCulture), new GUIStyle(centeredTinyLabelStyle) { fontSize = 11, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } });
 				}
 				if (GUI.Button(row, string.Empty, GUIStyle.none))
 				{
@@ -36412,9 +36412,9 @@ if (leftNavigationTexture == null)
 				GUI.Label(new Rect(row.x + row.width - rightW + 6f, row.y + 8f, rightW - 12f, 14f), ChatLastTimeFor(conv.Id), new GUIStyle(tinyLabelStyle) { fontSize = 9, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 				if (conv.Unread > 0)
 				{
-					Rect badge = new Rect(row.x + row.width - rightW + 12f, row.y + 25f, 34f, 20f);
-					DrawPremiumPanel(badge, new Color(0.72f, 0.12f, 0.06f, 0.96f), new Color(1f, 0.62f, 0.20f, 0.92f));
-					GUI.Label(badge, conv.Unread > 9 ? "9+" : conv.Unread.ToString(CultureInfo.InvariantCulture), centeredTinyLabelStyle);
+					Rect badge = new Rect(row.x + row.width - rightW + 18f, row.y + 22f, 24f, 24f);
+					GUI.DrawTexture(badge, GetPremiumTexture("unread-bubble"), ScaleMode.ScaleToFit, true);
+					GUI.Label(badge, conv.Unread > 9 ? "9+" : conv.Unread.ToString(CultureInfo.InvariantCulture), new GUIStyle(centeredTinyLabelStyle) { fontSize = 11, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } });
 				}
 				if (GUI.Button(row, string.Empty, GUIStyle.none))
 				{
@@ -47304,6 +47304,13 @@ public static void ResetMissionsStateForProof()
             // Pastille de presence ronde (remplace le carre Texture2D.whiteTexture) - le disque
             // reste blanc pour heriter la teinte de presence appliquee via GUI.color au dessin,
             // l'anneau sombre assure le contraste sur n'importe quel fond.
+            // M074-CL : bulle ronde rouge pour les compteurs de messages non lus (reference CEO) -
+            // remplace le petit rectangle premium utilise auparavant pour ce badge precis.
+            else if (id == "unread-bubble")
+            {
+                FillCircle(texture, 96, 96, 88, new Color(0.86f, 0.08f, 0.05f, 1f));
+                StrokeCircle(texture, 96, 96, 90, new Color(1f, 0.68f, 0.30f, 0.85f), 6);
+            }
             else if (id == "presence-dot")
             {
                 FillCircle(texture, 96, 96, 74, Color.white);
