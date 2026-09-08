@@ -36296,8 +36296,10 @@ if (leftNavigationTexture == null)
 			}
 
 			float gap = 8f;
-			float channelW = Mathf.Clamp(main.width * 0.16f, 150f, 270f);
-			float convW = Mathf.Clamp(main.width * 0.22f, 210f, 370f);
+			// M075-CL : panneaux elargis (reference CEO) - les minimums precedents (150/210) etaient
+			// trop etroits pour le texte/badges des cartes a certaines tailles de fenetre.
+			float channelW = Mathf.Clamp(main.width * 0.20f, 230f, 300f);
+			float convW = Mathf.Clamp(main.width * 0.26f, 280f, 400f);
 			float x = main.x + 10f;
 			float totalW = main.width - 20f - gap * 2f;
 			// M068-CL : sur desktop, le panneau Membres d'un groupe (reference CEO) est un 4e
@@ -36327,11 +36329,15 @@ if (leftNavigationTexture == null)
 			// procedural (le cadre premium fait deja partie de ces assets).
 			float rowH = mobile ? 84f : Mathf.Clamp(area.width * 0.34f, 74f, 100f);
 			float contentH = chatChannels.Count * rowH + (chatChannels.Count - 1) * ChatMessageGap;
-			chatChannelScroll = GUI.BeginScrollView(viewport, chatChannelScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
+			// M075-CL : reserve la largeur de la barre de defilement verticale, sinon elle
+			// chevauche/rogne le bord droit des cartes (badge non-lus notamment) quand le contenu
+			// depasse la hauteur visible.
+			float channelRowW = viewport.width - 18f;
+			chatChannelScroll = GUI.BeginScrollView(viewport, chatChannelScroll, new Rect(0f, 0f, channelRowW, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < chatChannels.Count; i++)
 			{
 				ChatChannelData channel = chatChannels[i];
-				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), viewport.width, rowH);
+				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), channelRowW, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
 				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float channelIconSize = Mathf.Min(rowH - 20f, mobile ? 64f : 58f);
@@ -36394,11 +36400,14 @@ if (leftNavigationTexture == null)
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, area.height - headerH - 10f);
 			float rowH = mobile ? 78f : Mathf.Clamp(area.width * 0.24f, 60f, 88f);
 			float contentH = convs.Count * rowH + (convs.Count - 1) * ChatMessageGap;
-			chatConversationScroll = GUI.BeginScrollView(viewport, chatConversationScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
+			// M075-CL : meme correctif que le panneau CANAUX - reserve la largeur de la barre de
+			// defilement pour que le bord droit des cartes (badge non-lus) ne soit jamais rogne.
+			float convRowW = viewport.width - 18f;
+			chatConversationScroll = GUI.BeginScrollView(viewport, chatConversationScroll, new Rect(0f, 0f, convRowW, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < convs.Count; i++)
 			{
 				ChatConversationData conv = convs[i];
-				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), viewport.width, rowH);
+				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), convRowW, rowH);
 				bool selected = string.Equals(conv.Id, chatSelectedConversation, StringComparison.Ordinal);
 				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float avatarSize = mobile ? 44f : 42f;
