@@ -1355,7 +1355,9 @@ private static string courierToast = string.Empty;
 
 		private static List<string> chatEmojiRecents = new List<string>();
 
-		private static string[] chatEmojiTabOrderCache;
+		// M092-CL : le panneau n'a plus d'onglets par categorie (toutes fusionnees dans une seule
+		// grille, recents en tete) - la grille peut donc depasser la hauteur visible et defile.
+		private static Vector2 chatEmojiScroll;
 
 		private static bool chatSearchActive;
 
@@ -36671,84 +36673,78 @@ if (leftNavigationTexture == null)
 			return new Rect(composer.x, composer.y - height - 6f, composer.width, height);
 		}
 
+		// M092-CL : toutes les categories fusionnees dans une seule grille (demande CEO) - plus
+		// d'onglets a selectionner. Les recents restent en tete, separes du reste par une ligne
+		// doree, comme demande. La grille peut deborder la hauteur visible et defile desormais
+		// (avant, chaque categorie tenait separement dans la hauteur fixe du panneau).
 		private static void DrawChatEmojiPanel(Rect panel, bool compact)
 		{
 			DrawPremiumPanel(panel, new Color(0.024f, 0.021f, 0.017f, 0.99f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
-			string[] tabIds = ChatEmojiTabOrder();
-			float tabH = compact ? 40f : 34f;
-			float tabW = panel.width / tabIds.Length;
-			for (int i = 0; i < tabIds.Length; i++)
+
+			List<string> recents = chatEmojiRecents;
+			List<string> allEmojis = ChatEmojiAllEmojis();
+			if (recents.Count == 0 && allEmojis.Count == 0)
 			{
-				bool selected = string.Equals(chatEmojiCategory, tabIds[i], StringComparison.Ordinal);
-				Rect tab = new Rect(panel.x + i * tabW, panel.y, tabW, tabH);
-				DrawPremiumPanel(tab, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.92f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
-				GUI.Label(new Rect(tab.x + 2f, tab.y, tabW - 4f, tabH), compact ? ChatEmojiTabLabelCompact(tabIds[i]) : ChatEmojiTabLabel(tabIds[i]), new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 14 : 10 });
-				if (GUI.Button(tab, string.Empty, GUIStyle.none))
-				{
-					AudioManager.Instance?.PlayUIClick();
-					chatEmojiCategory = tabIds[i];
-				}
-			}
-			List<string> emojis = ChatEmojiEmojisFor(chatEmojiCategory);
-			if (emojis.Count == 0)
-			{
-				GUI.Label(
-					new Rect(panel.x + 12f, panel.y + tabH + 14f, panel.width - 24f, 40f),
-					ChatEmojiEmptyText(chatEmojiCategory),
+				GUI.Label(new Rect(panel.x + 12f, panel.y + 14f, panel.width - 24f, 40f),
+					BeeLocalization.Text("chat.emoji.beekingdom.empty", "Les émoticônes exclusives BeeKingdom arrivent bientôt."),
 					new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 				return;
 			}
-			Rect grid = new Rect(panel.x + 6f, panel.y + tabH + 6f, panel.width - 12f, panel.height - tabH - 12f);
+
+			Rect grid = new Rect(panel.x + 6f, panel.y + 6f, panel.width - 12f, panel.height - 12f);
 			float targetCell = compact ? 40f : 36f;
 			int cols = Mathf.Max(1, Mathf.FloorToInt(grid.width / targetCell));
-			int rows = Mathf.Max(1, Mathf.FloorToInt(grid.height / targetCell));
 			float cellW = grid.width / cols;
-			float cellH = grid.height / rows;
-			int visible = cols * rows;
-			for (int i = 0; i < emojis.Count && i < visible; i++)
+			float cellH = cellW;
+			int recentRows = recents.Count > 0 ? Mathf.CeilToInt(recents.Count / (float)cols) : 0;
+			int allRows = Mathf.CeilToInt(allEmojis.Count / (float)cols);
+			float dividerBlockH = recents.Count > 0 ? 16f : 0f;
+			float contentH = recentRows * cellH + dividerBlockH + allRows * cellH;
+
+			chatEmojiScroll = GUI.BeginScrollView(grid, chatEmojiScroll, new Rect(0f, 0f, grid.width - 4f, Mathf.Max(grid.height, contentH)), false, true);
+			float y = 0f;
+			for (int i = 0; i < recents.Count; i++)
 			{
-				Rect cellRect = new Rect(grid.x + (i % cols) * cellW, grid.y + (i / cols) * cellH, cellW, cellH);
-				DrawPremiumPanel(new Rect(cellRect.x + 3f, cellRect.y + 3f, cellRect.width - 6f, cellRect.height - 6f), new Color(0.06f, 0.045f, 0.026f, 0.92f), new Color(0.55f, 0.40f, 0.15f, 0.40f));
-				if (GUI.Button(cellRect, emojis[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 20 : 18 }))
-				{
-					ChatEmojiInsert(emojis[i]);
-					return;
-				}
+				Rect cellRect = new Rect((i % cols) * cellW, y + (i / cols) * cellH, cellW, cellH);
+				if (DrawChatEmojiCell(cellRect, recents[i], compact)) { GUI.EndScrollView(); return; }
 			}
+			if (recents.Count > 0)
+			{
+				y += recentRows * cellH + 6f;
+				GUI.color = new Color(1f, 0.72f, 0.20f, 0.65f);
+				GUI.DrawTexture(new Rect(4f, y, grid.width - 8f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+				GUI.color = Color.white;
+				y += dividerBlockH - 6f;
+			}
+			for (int i = 0; i < allEmojis.Count; i++)
+			{
+				Rect cellRect = new Rect((i % cols) * cellW, y + (i / cols) * cellH, cellW, cellH);
+				if (DrawChatEmojiCell(cellRect, allEmojis[i], compact)) { GUI.EndScrollView(); return; }
+			}
+			GUI.EndScrollView();
 		}
 
-		private static string[] ChatEmojiTabOrder()
+		private static bool DrawChatEmojiCell(Rect cellRect, string emoji, bool compact)
 		{
-			if (chatEmojiTabOrderCache != null) return chatEmojiTabOrderCache;
-			List<string> ids = new List<string>();
-			ids.Add(ChatEmojiCatalog.RecentCategoryId);
-			for (int i = 0; i < ChatEmojiCatalog.Categories.Length; i++) ids.Add(ChatEmojiCatalog.Categories[i].Id);
-			chatEmojiTabOrderCache = ids.ToArray();
-			return chatEmojiTabOrderCache;
+			DrawPremiumPanel(new Rect(cellRect.x + 3f, cellRect.y + 3f, cellRect.width - 6f, cellRect.height - 6f), new Color(0.06f, 0.045f, 0.026f, 0.92f), new Color(0.55f, 0.40f, 0.15f, 0.40f));
+			if (GUI.Button(cellRect, emoji, new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 20 : 18 }))
+			{
+				ChatEmojiInsert(emoji);
+				return true;
+			}
+			return false;
 		}
 
-		private static string ChatEmojiTabLabel(string categoryId)
+		private static List<string> ChatEmojiAllEmojis()
 		{
-			if (string.Equals(categoryId, ChatEmojiCatalog.RecentCategoryId, StringComparison.Ordinal))
-				return "🕘 " + BeeLocalization.Text("chat.emoji.tab.recents", "Récents");
-			ChatEmojiCategory category = ChatEmojiCatalog.CategoryById(categoryId);
-			if (category == null) return categoryId;
-			return category.TabIcon + " " + BeeLocalization.Text(category.NameKey, category.FallbackName);
-		}
-
-		private static string ChatEmojiTabLabelCompact(string categoryId)
-		{
-			if (string.Equals(categoryId, ChatEmojiCatalog.RecentCategoryId, StringComparison.Ordinal))
-				return "🕘";
-			ChatEmojiCategory category = ChatEmojiCatalog.CategoryById(categoryId);
-			return category == null ? categoryId : category.TabIcon;
-		}
-
-		private static string ChatEmojiEmptyText(string categoryId)
-		{
-			if (string.Equals(categoryId, ChatEmojiCatalog.RecentCategoryId, StringComparison.Ordinal))
-				return BeeLocalization.Text("chat.emoji.recents.empty", "Vos émoticônes récentes apparaîtront ici.");
-			return BeeLocalization.Text("chat.emoji.beekingdom.empty", "Les émoticônes exclusives BeeKingdom arrivent bientôt.");
+			List<string> result = new List<string>();
+			for (int i = 0; i < ChatEmojiCatalog.Categories.Length; i++)
+			{
+				ChatEmojiCategory category = ChatEmojiCatalog.Categories[i];
+				for (int j = 0; j < category.Items.Count; j++)
+					if (category.Items[j].Kind == ChatEmojiKind.Emoji) result.Add(category.Items[j].Value);
+			}
+			return result;
 		}
 
 		private static List<string> ChatEmojiEmojisFor(string categoryId)
