@@ -682,11 +682,31 @@ namespace BeeKingdom.Playground
         {
             string title = (chatNewGroupTitle ?? string.Empty).Trim();
             string[] invitees = chatGroupSelection.Select(item => item.PlayerId.ToString("D")).ToArray();
-            LivingHiveChatRuntime.CreateGroupAsync(title, invitees);
+            ChatCreateGroupAndSyncSelection(title, invitees);
             CloseChatRoyalOverlays();
             EnsureChatGroupsChannel();
             ChatSelectChannel(ChatGroupsChannelId);
             ShowChatToast("Groupe « " + title + " » demande (" + invitees.Length + " invitation(s)).");
+        }
+
+        // M066-CL : meme piege que ChatStartPrivateConversation (M059D-CL) - ChatSelectChannel(...)
+        // ci-dessus choisit de facon SYNCHRONE le PREMIER groupe deja connu, avant meme que
+        // CreateGroupAsync (asynchrone, fire-and-forget) n'ait cree/selectionne le VRAI groupe cote
+        // controleur. Meme correctif : on resynchronise chatSelectedConversation sur l'identifiant
+        // reellement retourne des qu'il revient - sinon un groupe existant s'affiche a la place du
+        // groupe qu'on vient de creer.
+        private static async void ChatCreateGroupAndSyncSelection(string title, string[] invitees)
+        {
+            try
+            {
+                string conversationId = await LivingHiveChatRuntime.CreateGroupAsync(title, invitees);
+                if (string.IsNullOrWhiteSpace(conversationId)) return;
+                ChatRoyalSyncFromServer();
+                chatSelectedConversation = conversationId;
+                chatMessagesScroll = Vector2.zero;
+                chatActionMessageIndex = -1;
+            }
+            catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Failed to open new group: " + exception.GetType().Name); }
         }
 
         // 3.4 : gestion du groupe selectionne - membres, icone createur, ajouter/exclure, transfert.
