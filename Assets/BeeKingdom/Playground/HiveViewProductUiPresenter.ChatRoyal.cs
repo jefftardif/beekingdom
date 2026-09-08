@@ -645,7 +645,7 @@ namespace BeeKingdom.Playground
             // membre a un groupe existant (le leader arrive ici depuis l'ecran Membres).
             if (!string.IsNullOrWhiteSpace(chatAddMembersConversationId))
             {
-                LivingHiveChatRuntime.InviteToGroupAsync(chatAddMembersConversationId, entry.PlayerId.ToString("N"));
+                LivingHiveChatRuntime.InviteToGroupAsync(chatAddMembersConversationId, entry.PlayerId.ToString("D"));
                 ShowChatToast("Invitation envoyee a " + entry.DisplayName + ".");
                 return;
             }
@@ -666,7 +666,7 @@ namespace BeeKingdom.Playground
             // rattaches, sous le vrai identifiant retourne ici.
             CloseChatRoyalOverlays();
             ChatSelectChannel("private");
-            ChatStartPrivateConversationAndSyncSelection(entry.PlayerId.ToString("N"), entry.DisplayName);
+            ChatStartPrivateConversationAndSyncSelection(entry.PlayerId.ToString("D"), entry.DisplayName);
             ShowChatToast("Discussion avec " + entry.DisplayName + " demandee.");
             LivingHiveChatRuntime.RefreshInvitationsAsync();
         }
@@ -703,7 +703,7 @@ namespace BeeKingdom.Playground
         private static void ChatCreateGroupFromSelection()
         {
             string title = (chatNewGroupTitle ?? string.Empty).Trim();
-            string[] invitees = chatGroupSelection.Select(item => item.PlayerId.ToString("N")).ToArray();
+            string[] invitees = chatGroupSelection.Select(item => item.PlayerId.ToString("D")).ToArray();
             LivingHiveChatRuntime.CreateGroupAsync(title, invitees);
             CloseChatRoyalOverlays();
             EnsureChatGroupsChannel();
