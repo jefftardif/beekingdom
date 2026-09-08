@@ -134,8 +134,11 @@ namespace BeeKingdom.Playground
             for (int i = 0; i < TrackedBuildingTypes.Length; i++)
             {
                 string buildingType = TrackedBuildingTypes[i];
-                GameObject go = subscribedController.Registry.GetGameObjectByBuildingType(buildingType);
-                if (go == null) continue;
+                // M095-CL : meme correctif que HiveMapProductionInfoBootstrap - la variante
+                // throwing spammait une exception CHAQUE FRAME (OnGUI) tant que le batiment n'etait
+                // pas enregistre, ce qui masquait le vrai bug (BuildingRuntimeViewBootstrap, lecture
+                // disque brute en build standalone) derriere un mur d'erreurs dans la console.
+                if (!subscribedController.Registry.TryGetGameObjectByBuildingType(buildingType, out GameObject go) || go == null) continue;
 
                 Rect rect = ScreenRectFor(go, camera);
                 if (rect.width <= 0f) continue;

@@ -90,8 +90,8 @@ namespace BeeKingdom.Playground
             }
 
             if (!BuildingCatalog.TryGetByBuildingType(BuildingTypes.Research, out BuildingDefinition definition)) return;
-            GameObject target = controller.Registry.GetGameObjectByBuildingType(BuildingTypes.Research);
-            if (target == null) return;
+            // M095-CL : meme correctif que HiveMapProductionInfoBootstrap/HiveMapProductionBootstrap.
+            if (!controller.Registry.TryGetGameObjectByBuildingType(BuildingTypes.Research, out GameObject target) || target == null) return;
 
             if (highlight == null) highlight = target.AddComponent<BuildingSelectionHighlight>();
             BuildingActivityPulse.Research.Configure(highlight);
@@ -127,8 +127,7 @@ namespace BeeKingdom.Playground
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost || controller == null) return;
             if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
             if (string.IsNullOrEmpty(HiveViewProductUiPresenter.ReadyToCompleteOfficialResearchForExternalHost())) return;
-            GameObject target = controller.Registry.GetGameObjectByBuildingType(BuildingTypes.Research);
-            if (target == null) return;
+            if (!controller.Registry.TryGetGameObjectByBuildingType(BuildingTypes.Research, out GameObject target) || target == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
 

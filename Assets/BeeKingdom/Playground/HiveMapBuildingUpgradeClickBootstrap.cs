@@ -133,8 +133,8 @@ namespace BeeKingdom.Playground
             Camera camera = Camera.main;
             if (camera == null) return;
 
-            GameObject go = subscribedController.Registry.GetGameObjectByBuildingType(highlightedType);
-            if (go == null) return;
+            // M095-CL : meme correctif que HiveMapProductionInfoBootstrap/HiveMapProductionBootstrap.
+            if (!subscribedController.Registry.TryGetGameObjectByBuildingType(highlightedType, out GameObject go) || go == null) return;
             Rect rect = ScreenRectFor(go, camera);
             if (rect.width <= 0f) return;
             HiveViewProductUiPresenter.DrawPrerequisiteGlowForExternalHost(rect, Time.unscaledTime);

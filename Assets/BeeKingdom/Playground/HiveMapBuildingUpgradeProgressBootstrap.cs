@@ -138,8 +138,8 @@ namespace BeeKingdom.Playground
             string runningHotspotId = HiveViewProductUiPresenter.ActiveOfficialUpgradeHotspotIdForExternalHost();
             if (string.IsNullOrEmpty(runningHotspotId)) return;
             if (!BuildingCatalog.TryGetByLegacyKey(runningHotspotId, out BuildingDefinition definition)) return;
-            GameObject target = controller.Registry.GetGameObjectByBuildingType(definition.BuildingType);
-            if (target == null) return;
+            // M095-CL : meme correctif que HiveMapProductionInfoBootstrap/HiveMapProductionBootstrap.
+            if (!controller.Registry.TryGetGameObjectByBuildingType(definition.BuildingType, out GameObject target) || target == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
 

@@ -100,8 +100,8 @@ namespace BeeKingdom.Playground
             if (string.IsNullOrEmpty(activeHotspotId)) return;
 
             if (!BuildingCatalog.TryGetByLegacyKey(activeHotspotId, out BuildingDefinition definition)) return;
-            GameObject target = controller.Registry.GetGameObjectByBuildingType(definition.BuildingType);
-            if (target == null) return;
+            // M095-CL : meme correctif que HiveMapProductionInfoBootstrap/HiveMapProductionBootstrap.
+            if (!controller.Registry.TryGetGameObjectByBuildingType(definition.BuildingType, out GameObject target) || target == null) return;
 
             if (highlight == null) highlight = target.AddComponent<BuildingSelectionHighlight>();
             highlight.TintColor = UpgradingTintColor;
@@ -148,8 +148,7 @@ namespace BeeKingdom.Playground
             string readyHotspotId = HiveViewProductUiPresenter.ReadyToCompleteOfficialUpgradeHotspotIdForExternalHost();
             if (string.IsNullOrEmpty(readyHotspotId)) return;
             if (!BuildingCatalog.TryGetByLegacyKey(readyHotspotId, out BuildingDefinition definition)) return;
-            GameObject target = controller.Registry.GetGameObjectByBuildingType(definition.BuildingType);
-            if (target == null) return;
+            if (!controller.Registry.TryGetGameObjectByBuildingType(definition.BuildingType, out GameObject target) || target == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
 
