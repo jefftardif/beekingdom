@@ -10,9 +10,12 @@ public static class BeeKingdomWindowsInternalBuild
     public const string BuildDirectory = "Builds/Windows/Internal";
     public const string ExePath = BuildDirectory + "/BeeKingdom_Internal_Debug.exe";
 
+    // M094-CL : LivingHive.unity retiree definitivement (CLAUDE.md, confirme CEO 2026-09-03) -
+    // remplacee comme scene d'entree par la vraie ruche officielle, alignee sur l'etat courant
+    // connu-bon de ProjectSettings/EditorBuildSettings.asset (fixe par M043D-CL).
     private static readonly string[] InternalTestScenes =
     {
-        "Assets/Scenes/LivingHive.unity",
+        "Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_HiveMap_Test.unity",
         "Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity",
         "Assets/Scenes/WorldMapMmoFullscreenFoundation.unity",
         "Assets/Scenes/WorldMapWave5Premium25x25Test.unity",
