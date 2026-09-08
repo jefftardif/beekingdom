@@ -44,6 +44,11 @@ namespace BeeKingdom.Playground
         private static string chatTransferTargetPlayerId = string.Empty;
         private static readonly HashSet<string> chatAnnouncedInviteResponses = new HashSet<string>(StringComparer.Ordinal);
 
+        // M067-CL : confirmation simple avant d'exclure un membre, meme forme (arme/confirme sous
+        // 5s) que DrawAllianceMemberAdminActionButton - pas de nouveau systeme, juste le meme motif.
+        private static string chatGroupKickConfirmArmedId = string.Empty;
+        private static float chatGroupKickConfirmArmedAt = -999f;
+
         private static int chatAccentIndex = -1;
 
         private static IChatPlayerPickerController chatPlayerPicker = new UnavailableChatPlayerPickerController();
@@ -751,10 +756,12 @@ namespace BeeKingdom.Playground
                 {
                     Rect promote = new Rect(row.xMax - 140f, row.y + 5f, 64f, rowH - 10f);
                     Rect kick = new Rect(row.xMax - 70f, row.y + 5f, 62f, rowH - 10f);
+                    string kickKey = "kick|" + member.PlayerId;
+                    bool kickArmed = string.Equals(chatGroupKickConfirmArmedId, kickKey, StringComparison.Ordinal) && NowForUi() - chatGroupKickConfirmArmedAt <= 5f;
                     DrawPremiumPanel(promote, new Color(0.16f, 0.20f, 0.30f, 0.94f), new Color(0.52f, 0.72f, 1f, 0.8f));
                     GUI.Label(promote, "Leader", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
-                    DrawPremiumPanel(kick, new Color(0.30f, 0.12f, 0.10f, 0.94f), new Color(0.92f, 0.46f, 0.40f, 0.85f));
-                    GUI.Label(kick, "Exclure", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+                    DrawPremiumPanel(kick, new Color(0.30f, 0.12f, 0.10f, 0.94f), kickArmed ? new Color(1f, 0.62f, 0.2f, 0.95f) : new Color(0.92f, 0.46f, 0.40f, 0.85f));
+                    GUI.Label(kick, kickArmed ? "Confirmer ?" : "Exclure", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
                     if (GUI.Button(promote, string.Empty, GUIStyle.none))
                     {
                         AudioManager.Instance?.PlayUIClick();
@@ -764,8 +771,17 @@ namespace BeeKingdom.Playground
                     else if (GUI.Button(kick, string.Empty, GUIStyle.none))
                     {
                         AudioManager.Instance?.PlayUIClick();
-                        LivingHiveChatRuntime.RemoveGroupMemberAsync(detail.ConversationId, member.PlayerId);
-                        ShowChatToast(member.DisplayName + " a ete exclu du groupe.");
+                        if (!kickArmed)
+                        {
+                            chatGroupKickConfirmArmedId = kickKey;
+                            chatGroupKickConfirmArmedAt = NowForUi();
+                        }
+                        else
+                        {
+                            chatGroupKickConfirmArmedId = string.Empty;
+                            LivingHiveChatRuntime.RemoveGroupMemberAsync(detail.ConversationId, member.PlayerId);
+                            ShowChatToast(member.DisplayName + " a ete exclu du groupe.");
+                        }
                     }
                 }
                 rowIndex++;
@@ -814,9 +830,30 @@ namespace BeeKingdom.Playground
             if (GUI.Button(leave, string.Empty, GUIStyle.none))
             {
                 AudioManager.Instance?.PlayUIClick();
-                LivingHiveChatRuntime.LeaveGroupAsync(detail.ConversationId);
+                ChatLeaveGroupAndClose(detail.ConversationId);
+            }
+        }
+
+        // M067-CL : le controleur avale deja l'exception serveur (leader-must-transfer, regle deja
+        // appliquee cote backend - rien recree ici) et se contente de journaliser un statut d'erreur -
+        // fermer l'ecran sans verifier laissait croire que "Quitter" avait reussi alors que le
+        // serveur avait refuse. On attend le retour, puis on ne ferme que si le groupe a
+        // effectivement disparu de la liste des conversations.
+        private static async void ChatLeaveGroupAndClose(string conversationId)
+        {
+            try
+            {
+                await LivingHiveChatRuntime.LeaveGroupAsync(conversationId);
+                ChatRoyalSyncFromServer();
+                bool stillMember = ChatServerSnapshot()?.Conversations.Any(item => string.Equals(item.ConversationId, conversationId, StringComparison.Ordinal)) == true;
+                if (stillMember)
+                {
+                    ShowChatToast("Impossible de quitter : transferez d'abord le leadership.");
+                    return;
+                }
                 CloseChatRoyalOverlays();
             }
+            catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Failed to leave group: " + exception.GetType().Name); }
         }
 
         // Ajout de membres apres coup : on reutilise le selecteur, mais la validation invite dans le
