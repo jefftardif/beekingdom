@@ -1,0 +1,4 @@
+- Cause : la fenêtre restait organisée comme un panneau utilitaire (bannière et colonnes trop compactes).
+- Fichier : `Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs` ; géométrie premium reconstruite : bannière, onglets, colonnes, cartes, header conversation, composer et panneau membres.
+- Fonctionnel inchangé : contrôleurs, sélection, messages, groupes et actions membres réutilisés.
+- Compilation `Assembly-CSharp.csproj` : 0 erreur, 355 avertissements. Commit local, aucun push.

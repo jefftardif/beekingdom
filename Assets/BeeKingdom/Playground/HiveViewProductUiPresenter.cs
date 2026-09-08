@@ -36133,7 +36133,7 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 
-			float bannerHeight = compact ? Mathf.Min(150f, Screen.height * 0.20f) : Mathf.Clamp(Screen.height * 0.20f, 150f, 190f);
+			float bannerHeight = compact ? Mathf.Min(132f, Screen.height * 0.18f) : Mathf.Clamp(Screen.height * 0.15f, 124f, 146f);
 			DrawChatBanner(bannerHeight, compact);
 			DrawChatTopBar(bannerHeight, compact);
 			if (!chatScreenOpen)
@@ -36143,7 +36143,7 @@ if (leftNavigationTexture == null)
 			}
 
 			float quickY = bannerHeight + 6f;
-			float quickH = compact ? 56f : 60f;
+			float quickH = compact ? 56f : 54f;
 			// RAP-OPTIONNEL-COMMUNICATIONS_01 : searchH etait calcule AVANT DrawChatActionBar, qui
 			// bascule lui-meme chatSearchActive dans le meme appel. Le mainTop de cette frame restait
 			// donc base sur l'ancien etat : au clic sur "Recherche" (ou "Nouvelle discussion", qui
@@ -36179,8 +36179,8 @@ if (leftNavigationTexture == null)
 			GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
 			GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
 			GUI.color = Color.white;
-			GUI.Label(new Rect(28f, height - (compact ? 46f : 54f), Screen.width * 0.72f, 34f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 24 : 34, fontStyle = FontStyle.Bold });
-			GUI.Label(new Rect(30f, height - (compact ? 20f : 24f), Screen.width * 0.72f, 18f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 14 });
+			GUI.Label(new Rect(34f, compact ? height - 48f : 22f, Screen.width * 0.72f, 42f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 24 : 38, fontStyle = FontStyle.Bold });
+			GUI.Label(new Rect(36f, compact ? height - 22f : 68f, Screen.width * 0.72f, 20f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 15 });
 		}
 
 		private static void DrawChatTopBar(float bannerHeight, bool compact)
@@ -36194,6 +36194,12 @@ if (leftNavigationTexture == null)
 				ChatBackOrClose(compact);
 			}
 			GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
+			Rect chatTab = new Rect(Screen.width - 430f, 12f, 128f, 38f);
+			DrawPremiumPanel(chatTab, new Color(0.34f, 0.22f, 0.06f, 0.96f), new Color(1f, 0.70f, 0.18f, 0.94f));
+			GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
+			Rect mailTab = new Rect(Screen.width - 292f, 12f, 128f, 38f);
+			DrawPremiumPanel(mailTab, new Color(0.05f, 0.04f, 0.025f, 0.94f), new Color(0.66f, 0.46f, 0.16f, 0.76f));
+			GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
 			Rect badge = new Rect(Screen.width - 168f, 9f, 106f, 30f);
 			DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
 			int unread = ChatUnreadTotal();
@@ -36266,14 +36272,14 @@ if (leftNavigationTexture == null)
 			}
 
 			float gap = 8f;
-			float channelW = 216f;
-			float convW = 284f;
+			float channelW = Mathf.Clamp(main.width * 0.16f, 238f, 270f);
+			float convW = Mathf.Clamp(main.width * 0.22f, 320f, 370f);
 			float x = main.x + 10f;
 			float totalW = main.width - 20f - gap * 2f;
 			// M068-CL : sur desktop, le panneau Membres d'un groupe (reference CEO) est un 4e
 			// panneau ancre a droite, pas un modal - il retranche sa largeur a la zone messages.
 			bool membersOpen = ChatGroupMembersPanelVisible();
-			float membersW = membersOpen ? Mathf.Min(300f, totalW * 0.28f) : 0f;
+			float membersW = membersOpen ? Mathf.Min(294f, totalW * 0.24f) : 0f;
 			float messagesW = totalW - channelW - convW - gap * 2f - (membersOpen ? membersW + gap : 0f);
 			DrawChatChannelsPane(new Rect(x, main.y + 6f, channelW, main.height - 12f), false);
 			DrawChatConversationsPane(new Rect(x + channelW + gap, main.y + 6f, convW, main.height - 12f), false);
@@ -36292,7 +36298,7 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, area.height - headerH - 10f);
-			float rowH = 58f;
+			float rowH = mobile ? 72f : 70f;
 			float contentH = chatChannels.Count * rowH + (chatChannels.Count - 1) * ChatMessageGap;
 			chatChannelScroll = GUI.BeginScrollView(viewport, chatChannelScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < chatChannels.Count; i++)
@@ -36333,7 +36339,7 @@ if (leftNavigationTexture == null)
 			GUI.color = Color.white;
 			List<ChatConversationData> convs = ChatConversationsFor(chatSelectedChannel);
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, area.height - headerH - 10f);
-			float rowH = 64f;
+			float rowH = mobile ? 78f : 82f;
 			float contentH = convs.Count * rowH + (convs.Count - 1) * ChatMessageGap;
 			chatConversationScroll = GUI.BeginScrollView(viewport, chatConversationScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, contentH)), false, true);
 			for (int i = 0; i < convs.Count; i++)
@@ -36385,7 +36391,7 @@ if (leftNavigationTexture == null)
 			// statut serveur en haut de l'ecran (qui ne fonctionnait pas correctement).
 			bool isGroupConversation = conv != null && string.Equals(conv.Channel, ChatGroupsChannelId, StringComparison.Ordinal);
 			bool showMembersButton = isGroupConversation && chatUsingServerData;
-			float headerH = compact ? 52f : 56f;
+			float headerH = compact ? 58f : 76f;
 			float membersButtonW = showMembersButton ? (compact ? 100f : 114f) : 0f;
 			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - membersButtonW, compact ? 24f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft });
 			GUI.Label(new Rect(area.x + 12f, area.y + 33f, area.width - 24f - membersButtonW, 16f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
@@ -36406,7 +36412,7 @@ if (leftNavigationTexture == null)
 			GUI.color = Color.white;
 
 			bool readOnly = conv == null || conv.ReadOnly;
-			float composerH = readOnly ? 34f : (compact ? 64f : 60f);
+			float composerH = readOnly ? 38f : (compact ? 72f : 72f);
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, Mathf.Max(1f, area.height - headerH - 6f - composerH));
 			// M043T-CL: the emoji panel (opened from inside DrawChatComposer below) is drawn
 			// directly above the composer, overlapping the tail of this message scroll view - its
