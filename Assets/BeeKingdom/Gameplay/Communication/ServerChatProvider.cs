@@ -524,15 +524,6 @@ namespace BeeKingdom.Gameplay.Communication
         {
             RemoteChatProblem problem = errorDecoder?.Decode(response.RawBody);
             Emit("http_error", "request", response.StatusCode, error, problem?.Code);
-            // M065-CL RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
-            // le seul code d'erreur qui remontait jusqu'a l'UI etait le nom generique de l'enum
-            // (InvalidResponse) - ceci montre le vrai statut HTTP et le code serveur decode (ou un
-            // extrait borne du corps brut si le decodeur n'a rien trouve), sans jamais journalier de
-            // jeton/contenu de message.
-            UnityEngine.Debug.LogWarning("[M065-CL RUNTIME] Chat HTTP error | statusCode=" + response.StatusCode
-                + " | mappedError=" + error
-                + " | problemCode=" + (problem?.Code ?? "<none>")
-                + " | rawBodyExcerpt=" + (string.IsNullOrEmpty(response.RawBody) ? "<empty>" : response.RawBody.Substring(0, Math.Min(300, response.RawBody.Length))));
             return new RemoteChatTransportException(error, "Chat request failed with HTTP status " + response.StatusCode + ".", response.StatusCode, problem?.Code, response.RetryAfterSeconds ?? problem?.RetryAfterSeconds);
         }
         private void ValidateCapabilityCachePolicy(string cacheControl, int? ageSeconds)
@@ -752,20 +743,7 @@ namespace BeeKingdom.Gameplay.Communication
                 RemoteCreateConversationResult result = await PostAsync<RemoteCreateConversationResult>("/chat/v1/conversations", pending.Request, ct, initialSession: operationSession, initialEpoch: operationEpoch);
                 if (result?.Conversation == null || result.Inbox == null || !string.Equals(result.ClientRequestId, pending.Request.ClientRequestId, StringComparison.Ordinal) ||
                     string.IsNullOrWhiteSpace(result.Conversation.ConversationId) || !string.Equals(result.Inbox.ConversationId, result.Conversation.ConversationId, StringComparison.Ordinal) || result.Conversation.LastSequence < 0)
-                {
-                    // M065-CL RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
-                    // identifie EXACTEMENT laquelle des 5 conditions rejette la reponse serveur -
-                    // aucune ne journalisait avant, seul le code d'erreur generique "InvalidResponse"
-                    // remontait jusqu'a l'UI.
-                    UnityEngine.Debug.LogWarning("[M065-CL RUNTIME] conversation_receipt_mismatch"
-                        + " | conversationNull=" + (result?.Conversation == null)
-                        + " | inboxNull=" + (result?.Inbox == null)
-                        + " | clientRequestIdMatches=" + string.Equals(result?.ClientRequestId, pending.Request.ClientRequestId, StringComparison.Ordinal)
-                        + " | conversationIdEmpty=" + string.IsNullOrWhiteSpace(result?.Conversation?.ConversationId)
-                        + " | inboxConversationIdMatches=" + string.Equals(result?.Inbox?.ConversationId, result?.Conversation?.ConversationId, StringComparison.Ordinal)
-                        + " | lastSequence=" + result?.Conversation?.LastSequence);
                     throw InvalidReceipt("conversation_receipt_mismatch");
-                }
                 await AccessPendingAsync(() => pendingConversations.RemoveAsync(pending.Request.ClientRequestId, ct), "create_conversation");
                 return result;
             }

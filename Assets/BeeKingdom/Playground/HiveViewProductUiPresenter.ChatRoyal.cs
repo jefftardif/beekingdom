@@ -619,27 +619,11 @@ namespace BeeKingdom.Playground
             // endroits sans rapport avec le chat, donc son propre cache ne suffit pas seul.
             if (!string.IsNullOrWhiteSpace(entry.DisplayName)) chatKnownDisplayNames[entry.PlayerId] = entry.DisplayName;
 
-            // M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
-            // capture l'etat de connexion exact au moment precis du clic Discuter, pour expliquer
-            // pourquoi le meme geste reussit dans une session Play Mode fraiche et echoue dans une
-            // autre.
-            LivingHiveChatSnapshot diagnosticSnapshot = ChatServerSnapshot();
-            Debug.Log("[M059D RUNTIME] ChatStartPrivateConversation CONNECTION STATE - click"
-                + " | isConfigured=" + LivingHiveChatRuntime.IsConfigured
-                + " | status=" + (diagnosticSnapshot == null ? "<null snapshot>" : diagnosticSnapshot.Status.ToString())
-                + " | errorCode=" + (diagnosticSnapshot == null ? "<n/a>" : (diagnosticSnapshot.ErrorCode ?? "<none>"))
-                + " | chatServerConnected=" + ChatServerConnected()
-                + " | openInProgress=" + LivingHiveChatRuntime.OpenInProgressForDiagnostics
-                + " | conversationsLoaded=" + (diagnosticSnapshot == null ? -1 : diagnosticSnapshot.Conversations.Count)
-                + " | chatUsingServerData=" + chatUsingServerData);
-
             if (!ChatServerConnected())
             {
                 ShowChatToast("Chat serveur indisponible : impossible d'ouvrir une discussion.");
                 return;
             }
-
-            Debug.Log("[M059D RUNTIME] ChatStartPrivateConversation CONNECTION STATE - connected, reaching CreatePrivateConversationAsync");
 
             // Le meme selecteur sert a deux choses : ouvrir une discussion privee, ou ajouter un
             // membre a un groupe existant (le leader arrive ici depuis l'ecran Membres).
@@ -678,12 +662,6 @@ namespace BeeKingdom.Playground
             try
             {
                 string conversationId = await LivingHiveChatRuntime.CreatePrivateConversationAsync(participantPlayerId);
-                // M065-CL RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
-                // trace le resultat reel de CreatePrivateConversationAsync, qui echouait
-                // silencieusement (aucune exception, aucun log) apres le nettoyage de la base.
-                Debug.Log("[M065-CL RUNTIME] CreatePrivateConversationAsync result | conversationId=" + (conversationId ?? "<null>")
-                    + " | snapshotErrorCode=" + (ChatServerSnapshot()?.ErrorCode ?? "<none>")
-                    + " | snapshotStatus=" + (ChatServerSnapshot()?.Status.ToString() ?? "<null>"));
                 if (string.IsNullOrWhiteSpace(conversationId)) return;
                 ChatRoyalSyncFromServer();
                 ChatConversationData conversation = ChatConversationById(conversationId);

@@ -109,9 +109,9 @@ namespace BeeKingdom.Gameplay.Communication
         private CancellationTokenSource liveUpdates;
         private Task pollingTask = Task.CompletedTask;
         private Task realtimeReceiptTask = Task.CompletedTask;
-        // M059D RUNTIME - drapeau de diagnostic temporaire (a retirer apres confirmation CEO) :
-        // permet de savoir si OpenAsync est encore en vol au moment d'un clic Discuter, sans rien
-        // changer au comportement d'ouverture lui-meme.
+        // M059D-CL - indique si OpenAsync est encore en vol : utilise par
+        // LivingHiveChatBridgeBootstrap.Update() pour eviter de relancer une ouverture en double
+        // pendant que la precedente tourne encore.
         private volatile bool openInFlight;
         public bool OpenInProgressForDiagnostics => openInFlight;
 
@@ -206,7 +206,6 @@ namespace BeeKingdom.Gameplay.Communication
             // l'exception se propager ne ferait que produire un fault non observe.
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                UnityEngine.Debug.Log("[M059D RUNTIME] LivingHiveChatController.OpenAsync - cancelled by its own token owner (lifecycle supersede), not a network timeout. Status reset to Offline.");
                 SetStatus(LivingHiveChatStatus.Offline, "local_open_superseded");
             }
             // Meme raisonnement que ci-dessus pour tout type d'exception non prevu par les deux
@@ -215,7 +214,7 @@ namespace BeeKingdom.Gameplay.Communication
             // bloque indefiniment.
             catch (Exception exception)
             {
-                UnityEngine.Debug.LogError("[M059D RUNTIME] LivingHiveChatController.OpenAsync - unexpected exception type: " + exception.GetType().FullName + " - " + exception.Message);
+                UnityEngine.Debug.LogError("LivingHiveChatController.OpenAsync - unexpected exception type: " + exception.GetType().FullName + " - " + exception.Message);
                 SetStatus(LivingHiveChatStatus.Error, "local_open_unexpected_exception");
             }
             finally
@@ -576,7 +575,6 @@ namespace BeeKingdom.Gameplay.Communication
         private static CancellationTokenSource lifetime;
 
         public static bool IsConfigured { get { lock (Gate) return controller != null; } }
-        // M059D RUNTIME - diagnostic temporaire (a retirer apres confirmation CEO).
         public static bool OpenInProgressForDiagnostics { get { lock (Gate) return controller != null && controller.OpenInProgressForDiagnostics; } }
         public static LivingHiveChatSnapshot Snapshot { get { lock (Gate) return controller?.Snapshot() ?? new LivingHiveChatSnapshot { Status = LivingHiveChatStatus.NotConfigured }; } }
         public static async Task ReconfigureAsync(LivingHiveChatController value)

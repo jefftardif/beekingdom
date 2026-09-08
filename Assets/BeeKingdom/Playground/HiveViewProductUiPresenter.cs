@@ -36646,12 +36646,6 @@ if (leftNavigationTexture == null)
 		private static void ChatSendCurrent()
 		{
 			string text = chatComposerText.Trim();
-			// M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
-			// prouve que CE ChatSendCurrent() (post-adde6c7) est bien celui execute par la fenetre
-			// visible, sans supposer sur la lecture de code seule.
-			Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - enter | textEmpty=" + string.IsNullOrEmpty(text)
-				+ " | chatUsingServerData=" + chatUsingServerData
-				+ " | chatSelectedConversation=" + (string.IsNullOrEmpty(chatSelectedConversation) ? "<none>" : chatSelectedConversation));
 			if (string.IsNullOrEmpty(text)) return;
 
 			// M059D-CL : pour une conversation reelle, cable sur le meme point d'entree deja
@@ -36698,35 +36692,8 @@ if (leftNavigationTexture == null)
 		// par type seulement, jamais le contenu du message).
 		private static async void ChatSendCurrentToServer(string body)
 		{
-			// M059D RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO).
-			Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - calling LivingHiveChatRuntime.SendAsync"
-				+ " | conversation=" + (string.IsNullOrEmpty(chatSelectedConversation) ? "<none>" : chatSelectedConversation)
-				+ " | bodyLength=" + (body == null ? 0 : body.Length));
-			try
-			{
-				await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body);
-				LivingHiveChatSnapshot postSendSnapshot = ChatServerSnapshot();
-				// M059D RUNTIME - compare l'ID reellement selectionne cote controleur (celui a qui
-				// SendAsync a vraiment envoye le message) avec l'ID affiche cote UI
-				// (chatSelectedConversation) : un ecart ici prouve que l'ecran plein regarde une
-				// conversation differente de celle qui vient de recevoir le message.
-				string controllerSelected = postSendSnapshot?.SelectedConversationId;
-				bool selectionMatches = string.Equals(controllerSelected, chatSelectedConversation, StringComparison.Ordinal);
-				int matchingMessageCount = postSendSnapshot == null ? -1 : postSendSnapshot.Messages.Count(message => string.Equals(message.ConversationId, chatSelectedConversation, StringComparison.Ordinal));
-				Debug.Log("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - SendAsync returned OK"
-					+ " | postSendStatus=" + (postSendSnapshot == null ? "<null snapshot>" : postSendSnapshot.Status.ToString())
-					+ " | postSendErrorCode=" + (postSendSnapshot?.ErrorCode ?? "<none>")
-					+ " | postSendMessageCount=" + (postSendSnapshot == null ? -1 : postSendSnapshot.Messages.Count)
-					+ " | controllerSelectedConversation=" + (string.IsNullOrEmpty(controllerSelected) ? "<none>" : controllerSelected)
-					+ " | uiSelectedConversation=" + (string.IsNullOrEmpty(chatSelectedConversation) ? "<none>" : chatSelectedConversation)
-					+ " | selectionMatches=" + selectionMatches
-					+ " | messagesVisibleToUiSelection=" + matchingMessageCount);
-			}
-			catch (Exception exception)
-			{
-				Debug.LogWarning("[M059D RUNTIME] ChatSendCurrent REAL BACKEND PATH - SendAsync threw " + exception.GetType().Name);
-				Debug.LogWarning("[ChatRoyal] Send failed: " + exception.GetType().Name);
-			}
+			try { await BeeKingdom.Gameplay.Communication.LivingHiveChatRuntime.SendAsync(body); }
+			catch (Exception exception) { Debug.LogWarning("[ChatRoyal] Send failed: " + exception.GetType().Name); }
 		}
 
 		// M059D-CL - crochets de preuve EditMode pour ChatSendCurrent(), sur le meme modele que
