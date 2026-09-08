@@ -36339,7 +36339,8 @@ if (leftNavigationTexture == null)
 				ChatChannelData channel = chatChannels[i];
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), channelRowW, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
-				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
+				if (selected) DrawSelectedRowGlow(row);
+				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float channelIconSize = Mathf.Min(rowH - 20f, mobile ? 64f : 58f);
 				Rect channelIconRect = new Rect(row.x + 10f, row.y + (rowH - channelIconSize) * 0.5f, channelIconSize, channelIconSize);
 				Texture2D channelIconTexture = ChatChannelIconTexture(channel.Id);
@@ -36415,7 +36416,8 @@ if (leftNavigationTexture == null)
 				ChatConversationData conv = convs[i];
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), convRowW, rowH);
 				bool selected = string.Equals(conv.Id, chatSelectedConversation, StringComparison.Ordinal);
-				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
+				if (selected) DrawSelectedRowGlow(row);
+				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float avatarSize = mobile ? 44f : 42f;
 				Rect avatarRect = new Rect(row.x + 8f, row.y + (rowH - avatarSize) * 0.5f, avatarSize, avatarSize);
 				DrawChatAvatar(avatarRect, conv);
@@ -37099,6 +37101,17 @@ if (leftNavigationTexture == null)
 		private static void DrawRoundAvatarBase(Rect rect)
 		{
 			GUI.DrawTexture(rect, GetPremiumTexture("avatar-circle"), ScaleMode.StretchToFill, true);
+		}
+
+		// M077-CL : halo dore derriere une carte selectionnee (canal/discussion), meme technique
+		// deja utilisee ailleurs dans l'interface ("honey-glow-pool", cf. DrawSplashLogo) - doit
+		// etre dessine AVANT le panneau premium de la carte pour rester derriere lui.
+		private static void DrawSelectedRowGlow(Rect row)
+		{
+			Color previous = GUI.color;
+			GUI.color = new Color(1f, 0.72f, 0.20f, 0.55f);
+			GUI.DrawTexture(new Rect(row.x - 10f, row.y - 8f, row.width + 20f, row.height + 16f), GetPremiumTexture("honey-glow-pool"), ScaleMode.StretchToFill, true);
+			GUI.color = previous;
 		}
 
 		private static void DrawPresenceDot(Rect rect, string presence)
