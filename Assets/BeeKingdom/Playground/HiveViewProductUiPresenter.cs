@@ -36483,15 +36483,24 @@ if (leftNavigationTexture == null)
 			bool isGroupConversation = conv != null && string.Equals(conv.Channel, ChatGroupsChannelId, StringComparison.Ordinal);
 			bool showMembersButton = isGroupConversation && chatUsingServerData;
 			float headerH = compact ? 58f : 76f;
-			float membersButtonW = showMembersButton ? (compact ? 100f : 114f) : 0f;
+			float membersButtonW = showMembersButton ? (compact ? 120f : 138f) : 0f;
 			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - membersButtonW, compact ? 24f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft });
 			GUI.Label(new Rect(area.x + 12f, area.y + 33f, area.width - 24f - membersButtonW, 16f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 			if (showMembersButton)
 			{
+				// M086-CL : bouton plat arrondi + icone officielle (membres.png), remplace le rendu
+				// "panneau premium" + libelle texte seul.
 				Rect membersButton = new Rect(area.xMax - membersButtonW - 10f, area.y + 10f, membersButtonW, headerH - 20f);
 				bool membersOn = chatGroupMembersOpen;
-				DrawPremiumPanel(membersButton, membersOn ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.08f, 0.06f, 0.03f, 0.94f), membersOn ? new Color(1f, 0.70f, 0.18f, 0.92f) : new Color(0.64f, 0.44f, 0.14f, 0.64f));
-				GUI.Label(membersButton, "👥 Membres", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 12 });
+				DrawFlatRoundedRect(membersButton, membersOn ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.12f, 0.10f, 0.08f, 0.95f), 10f);
+				if (membersOn) DrawFlatRoundedRect(new Rect(membersButton.x - 2f, membersButton.y - 2f, membersButton.width + 4f, membersButton.height + 4f), new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
+				if (membersOn) DrawFlatRoundedRect(membersButton, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
+				Texture2D membersIcon = RoyalChatIcon("membres");
+				float membersIconSize = Mathf.Min(membersButton.height - 10f, 26f);
+				Rect membersIconRect = new Rect(membersButton.x + 8f, membersButton.y + (membersButton.height - membersIconSize) * 0.5f, membersIconSize, membersIconSize);
+				if (membersIcon != null) GUI.DrawTexture(membersIconRect, membersIcon, ScaleMode.ScaleToFit, true);
+				GUI.Label(new Rect(membersIconRect.xMax + 6f, membersButton.y, membersButton.width - membersIconSize - 18f, membersButton.height),
+					"Membres", new GUIStyle(badgeStyle) { fontSize = compact ? 11 : 13, alignment = TextAnchor.MiddleLeft });
 				if (GUI.Button(membersButton, string.Empty, GUIStyle.none))
 				{
 					AudioManager.Instance?.PlayUIClick();
@@ -48152,6 +48161,20 @@ public static void ResetMissionsStateForProof()
             Texture2D texture = Resources.Load<Texture2D>("RoyalChatIcons/chat_channel_" + key);
             if (texture != null) ConfigureUiTexture(texture);
             ChatChannelIconTextures[key] = texture;
+            return texture;
+        }
+
+        // M086-CL : chargeur generique pour les assets RoyalChatIcons ajoutes au coup par coup
+        // (membres.png, ajout_membres.png, couronne.png...) - evite de multiplier des dictionnaires
+        // de cache quasi identiques a chaque nouvelle icone fournie par le CEO.
+        private static readonly Dictionary<string, Texture2D> RoyalChatIconCache = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+
+        private static Texture2D RoyalChatIcon(string file)
+        {
+            if (RoyalChatIconCache.TryGetValue(file, out Texture2D cached)) return cached;
+            Texture2D texture = Resources.Load<Texture2D>("RoyalChatIcons/" + file);
+            if (texture != null) ConfigureUiTexture(texture);
+            RoyalChatIconCache[file] = texture;
             return texture;
         }
 
