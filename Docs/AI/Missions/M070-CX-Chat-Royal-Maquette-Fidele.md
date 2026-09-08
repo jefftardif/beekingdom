@@ -1,0 +1,3 @@
+- Refonte visuelle uniquement du Chat Royal : architecture 4 zones, en-têtes premium, cartes de canaux/discussions, recherche +, actions du header conversation, avatars temporaires à initiales et composer avec bouton carré d’envoi.
+- Contrôleurs, connexion, conversations, groupes, messages et membres inchangés.
+- Compilation `Assembly-CSharp.csproj` : 0 erreur. Commit local, aucun push.

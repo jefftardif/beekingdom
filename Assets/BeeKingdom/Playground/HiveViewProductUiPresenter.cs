@@ -36464,7 +36464,7 @@ if (leftNavigationTexture == null)
 			}
 			GUIStyle fieldStyle = new GUIStyle(smallStyle) { fontSize = compact ? 13 : 15, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } };
 			float emojiW = compact ? 42f : 40f;
-			float sendW = compact ? 84f : 92f;
+			float sendW = compact ? 78f : 86f;
 			Rect textRect = new Rect(rect.x + 10f, rect.y + 6f, rect.width - sendW - emojiW - 20f, rect.height - 12f);
 			GUI.SetNextControlName("chatComposer");
 			chatComposerText = GUI.TextField(textRect, chatComposerText, fieldStyle);
@@ -36478,7 +36478,7 @@ if (leftNavigationTexture == null)
 			}
 			Rect sendButton = new Rect(rect.xMax - sendW - 6f, rect.y + 6f, sendW, rect.height - 12f);
 			DrawPremiumPanel(sendButton, new Color(0.30f, 0.20f, 0.06f, 0.96f), ChatAccentColor());
-			GUI.Label(sendButton, "✉  Envoyer", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 12 : 13 });
+			GUI.Label(sendButton, "➤", new GUIStyle(titleStyle) { fontSize = compact ? 22 : 26, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.94f, 0.74f, 1f) } });
 			if (GUI.Button(sendButton, string.Empty, GUIStyle.none))
 			{
 				ChatSendCurrent();
@@ -37024,8 +37024,7 @@ if (leftNavigationTexture == null)
 		private static void DrawChatAvatar(Rect rect, ChatConversationData conv)
 		{
 			DrawPremiumPanel(rect, new Color(0.10f, 0.07f, 0.03f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.90f));
-			string name = string.IsNullOrWhiteSpace(conv.Title) ? "?" : conv.Title.Trim();
-			GUI.Label(rect, name.Substring(0, 1).ToUpperInvariant(), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.48f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
+			GUI.Label(rect, ChatInitials(conv.Title), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.34f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
 			if (!string.IsNullOrEmpty(conv.Presence))
 			{
 				Color presence = AlliancePresenceColor(conv.Presence);
@@ -37040,8 +37039,7 @@ if (leftNavigationTexture == null)
 		private static void DrawChatAvatar(Rect rect, ChatMessageData msg)
 		{
 			DrawPremiumPanel(rect, new Color(0.10f, 0.07f, 0.03f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.90f));
-			string name = string.IsNullOrWhiteSpace(msg.Author) ? "?" : msg.Author.Trim();
-			GUI.Label(rect, name.Substring(0, 1).ToUpperInvariant(), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.44f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
+			GUI.Label(rect, ChatInitials(msg.Author), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.32f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
 			if (!string.IsNullOrEmpty(msg.Presence))
 			{
 				Color presence = AlliancePresenceColor(msg.Presence);
@@ -37051,6 +37049,14 @@ if (leftNavigationTexture == null)
 				GUI.DrawTexture(dot, Texture2D.whiteTexture, ScaleMode.ScaleToFit, false);
 				GUI.color = previous;
 			}
+		}
+
+		private static string ChatInitials(string value)
+		{
+			string[] parts = (value ?? string.Empty).Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length == 0) return "?";
+			if (parts.Length == 1) return parts[0].Substring(0, 1).ToUpperInvariant();
+			return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpperInvariant();
 		}
 
 		private static float ChatBubbleTextHeight(string text, float width, bool compact)
