@@ -36340,7 +36340,11 @@ if (leftNavigationTexture == null)
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), channelRowW, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
 				if (selected) DrawSelectedRowGlow(row);
-				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
+				// M078-CL : panneau retreci de 4px sur la carte selectionnee, pour que l'anneau dore
+				// du halo (dessine sur `row` en entier) reste visible tout autour - sans cela le
+				// panneau (quasi opaque) recouvre entierement le halo.
+				Rect channelPanelRect = selected ? new Rect(row.x + 4f, row.y + 4f, row.width - 8f, row.height - 8f) : row;
+				DrawPremiumPanel(channelPanelRect, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float channelIconSize = Mathf.Min(rowH - 20f, mobile ? 64f : 58f);
 				Rect channelIconRect = new Rect(row.x + 10f, row.y + (rowH - channelIconSize) * 0.5f, channelIconSize, channelIconSize);
 				Texture2D channelIconTexture = ChatChannelIconTexture(channel.Id);
@@ -36417,7 +36421,8 @@ if (leftNavigationTexture == null)
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), convRowW, rowH);
 				bool selected = string.Equals(conv.Id, chatSelectedConversation, StringComparison.Ordinal);
 				if (selected) DrawSelectedRowGlow(row);
-				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
+				Rect convPanelRect = selected ? new Rect(row.x + 4f, row.y + 4f, row.width - 8f, row.height - 8f) : row;
+				DrawPremiumPanel(convPanelRect, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.86f, 0.30f, 1f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				float avatarSize = mobile ? 44f : 42f;
 				Rect avatarRect = new Rect(row.x + 8f, row.y + (rowH - avatarSize) * 0.5f, avatarSize, avatarSize);
 				DrawChatAvatar(avatarRect, conv);
@@ -37103,14 +37108,18 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(rect, GetPremiumTexture("avatar-circle"), ScaleMode.StretchToFill, true);
 		}
 
-		// M077-CL : halo dore derriere une carte selectionnee (canal/discussion), meme technique
-		// deja utilisee ailleurs dans l'interface ("honey-glow-pool", cf. DrawSplashLogo) - doit
-		// etre dessine AVANT le panneau premium de la carte pour rester derriere lui.
+		// M078-CL : la 1re version (M077-CL) etendait le halo AU DELA du rectangle de la ligne -
+		// invisible en pratique, car les listes de canaux/discussions sont dessinees dans un
+		// GUI.BeginScrollView dont le clipping ne laisse rien passer hors du rectangle de contenu
+		// exact (confirme par le CEO : "je ne vois pas les halos"). Le halo remplit maintenant
+		// exactement `row`, et le panneau premium est dessine legerement RETRECI par dessus (voir
+		// les appelants) pour laisser deborder un anneau dore visible tout autour, sans jamais
+		// sortir des bornes de `row`.
 		private static void DrawSelectedRowGlow(Rect row)
 		{
 			Color previous = GUI.color;
-			GUI.color = new Color(1f, 0.72f, 0.20f, 0.55f);
-			GUI.DrawTexture(new Rect(row.x - 10f, row.y - 8f, row.width + 20f, row.height + 16f), GetPremiumTexture("honey-glow-pool"), ScaleMode.StretchToFill, true);
+			GUI.color = new Color(1f, 0.80f, 0.28f, 1f);
+			GUI.DrawTexture(row, GetPremiumTexture("selection-ring-glow"), ScaleMode.StretchToFill, true);
 			GUI.color = previous;
 		}
 
@@ -47320,6 +47329,28 @@ public static void ResetMissionsStateForProof()
                     int py = 58 + ((dot * 31) % 66);
                     FillCircle(texture, px, py, 3, new Color(1f, 0.78f, 0.20f, 0.34f));
                 }
+            }
+            // M078-CL : halo de bordure (contraire d'un "pool" centre-brillant comme
+            // "honey-glow-pool" : ici l'alpha est FORT pres du bord et retombe vite vers le
+            // centre) - utilise derriere une carte selectionnee (canal/discussion) dont le panneau
+            // est legerement retreci par dessus, pour laisser deborder un anneau dore visible tout
+            // autour sans jamais sortir du rectangle de la carte (le clipping du
+            // GUI.BeginScrollView parent ne laisse rien passer au dela).
+            else if (id == "selection-ring-glow")
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float nx = x / (float)(size - 1);
+                        float ny = y / (float)(size - 1);
+                        float distanceToEdge = Mathf.Min(Mathf.Min(nx, 1f - nx), Mathf.Min(ny, 1f - ny));
+                        float alpha = 1f - Mathf.Clamp01(distanceToEdge * 7f);
+                        texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                    }
+                }
+                texture.wrapMode = TextureWrapMode.Clamp;
+                texture.filterMode = FilterMode.Bilinear;
             }
             // M070-CL : avatars ronds (reference CEO) - fond sombre + anneau or, memes deux
             // couleurs constantes utilisees partout (DrawChatAvatar) donc une seule texture cuite
