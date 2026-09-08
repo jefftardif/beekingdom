@@ -36486,15 +36486,6 @@ if (leftNavigationTexture == null)
 			float membersButtonW = showMembersButton ? (compact ? 100f : 114f) : 0f;
 			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - membersButtonW, compact ? 24f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft });
 			GUI.Label(new Rect(area.x + 12f, area.y + 33f, area.width - 24f - membersButtonW, 16f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
-			if (!compact)
-			{
-				Rect bell = new Rect(area.xMax - (showMembersButton ? membersButtonW + 78f : 74f), area.y + 12f, 30f, 30f);
-				DrawPremiumPanel(bell, new Color(0.06f, 0.045f, 0.025f, 0.96f), new Color(0.56f, 0.40f, 0.15f, 0.70f));
-				GUI.Label(bell, "♢", new GUIStyle(centeredTinyLabelStyle) { fontSize = 17 });
-				Rect more = new Rect(bell.xMax + 8f, bell.y, 30f, 30f);
-				DrawPremiumPanel(more, new Color(0.06f, 0.045f, 0.025f, 0.96f), new Color(0.56f, 0.40f, 0.15f, 0.70f));
-				GUI.Label(more, "⋮", new GUIStyle(centeredTinyLabelStyle) { fontSize = 20 });
-			}
 			if (showMembersButton)
 			{
 				Rect membersButton = new Rect(area.xMax - membersButtonW - 10f, area.y + 10f, membersButtonW, headerH - 20f);
