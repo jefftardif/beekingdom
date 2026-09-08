@@ -678,6 +678,12 @@ namespace BeeKingdom.Playground
             try
             {
                 string conversationId = await LivingHiveChatRuntime.CreatePrivateConversationAsync(participantPlayerId);
+                // M065-CL RUNTIME - instrumentation temporaire (a retirer apres confirmation CEO) :
+                // trace le resultat reel de CreatePrivateConversationAsync, qui echouait
+                // silencieusement (aucune exception, aucun log) apres le nettoyage de la base.
+                Debug.Log("[M065-CL RUNTIME] CreatePrivateConversationAsync result | conversationId=" + (conversationId ?? "<null>")
+                    + " | snapshotErrorCode=" + (ChatServerSnapshot()?.ErrorCode ?? "<none>")
+                    + " | snapshotStatus=" + (ChatServerSnapshot()?.Status.ToString() ?? "<null>"));
                 if (string.IsNullOrWhiteSpace(conversationId)) return;
                 ChatRoyalSyncFromServer();
                 ChatConversationData conversation = ChatConversationById(conversationId);

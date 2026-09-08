@@ -270,11 +270,34 @@ namespace BeeKingdom.Gameplay.Communication
             string trimmed = participantPlayerId?.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) throw new ArgumentException("A participant player id is required.", nameof(participantPlayerId));
 
+            // M065-CL - preuve runtime (session CEO du 2026-09-07, apres nettoyage complet de la
+            // base de production) : cette methode n'a JAMAIS rempli GameServerId/WorldId sur la
+            // requete de creation - le serveur exige ces deux champs (Guid non-nullable), donc
+            // chaque VRAIE creation echouait avec un 400 muet avant meme d'atteindre le code de
+            // l'endpoint (echec de liaison du modele ASP.NET, invisible cote client : aucune
+            // exception applicative, juste un corps de reponse vide). Masque tout ce temps parce que
+            // le tiroir de chat Alliance (seule preuve fonctionnelle anterieure) n'a jamais cree de
+            // conversation depuis zero - il ouvre un id deja connu - et parce que les conversations
+            // privees de test existaient deja en base (creation "reussie" = simple retrouvaille
+            // idempotente par cle d'audience, jamais une vraie creation). Meme scope, meme garde-fou
+            // que CreateGroupAsync juste au-dessus (LivingHiveChatController.Groups.cs) : jamais
+            // inventer un GUID, refuser proprement si le scope n'est pas encore connu.
+            string gameServerId;
+            string worldId;
+            lock (gate) { gameServerId = groupGameServerId; worldId = groupWorldId; }
+            if (string.IsNullOrWhiteSpace(gameServerId) || string.IsNullOrWhiteSpace(worldId))
+            {
+                SetStatus(LivingHiveChatStatus.Error, "chat_private_scope_not_configured");
+                return null;
+            }
+
             try
             {
                 RemoteCreateConversationResult result = await provider.CreateConversationAsync(new RemoteCreateConversationRequest
                 {
                     ChannelType = "Private",
+                    GameServerId = gameServerId,
+                    WorldId = worldId,
                     ParticipantIds = new List<string> { trimmed },
                     ClientRequestId = Guid.NewGuid().ToString("N")
                 }, ct);
