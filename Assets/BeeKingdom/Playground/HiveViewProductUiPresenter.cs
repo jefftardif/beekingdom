@@ -36609,8 +36609,16 @@ if (leftNavigationTexture == null)
 			{
 				GUI.Label(textRect, "Écrire un message...", new GUIStyle(fieldStyle) { normal = { textColor = new Color(0.68f, 0.60f, 0.48f, 0.75f) } });
 			}
+			// M091-CL : boutons plats arrondis (DrawFlatRoundedRect) - retire le rendu "panneau
+			// premium" (DrawPremiumPanel) dont les coins decoratifs debordaient mal sur des boutons
+			// aussi petits (meme defaut deja corrige ailleurs par M080/M082/M086/M088/M089).
 			Rect emojiButton = new Rect(rect.xMax - sendW - emojiW - 16f, rect.y + 6f, emojiW, rect.height - 12f);
-			DrawPremiumPanel(emojiButton, chatEmojiPanelOpen ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.06f, 0.045f, 0.025f, 0.94f), new Color(0.64f, 0.44f, 0.14f, 0.64f));
+			DrawFlatRoundedRect(emojiButton, chatEmojiPanelOpen ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.12f, 0.10f, 0.08f, 0.95f), 10f);
+			if (chatEmojiPanelOpen)
+			{
+				DrawFlatRoundedRect(new Rect(emojiButton.x - 2f, emojiButton.y - 2f, emojiButton.width + 4f, emojiButton.height + 4f), new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
+				DrawFlatRoundedRect(emojiButton, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
+			}
 			GUI.Label(emojiButton, "😊", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 18 : 17 });
 			if (GUI.Button(emojiButton, string.Empty, GUIStyle.none))
 			{
@@ -36618,7 +36626,7 @@ if (leftNavigationTexture == null)
 				ChatEmojiToggle();
 			}
 			Rect sendButton = new Rect(rect.xMax - sendW - 6f, rect.y + 6f, sendW, rect.height - 12f);
-			DrawPremiumPanel(sendButton, new Color(0.30f, 0.20f, 0.06f, 0.96f), ChatAccentColor());
+			DrawFlatRoundedRect(sendButton, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
 			GUI.Label(sendButton, "➤", new GUIStyle(titleStyle) { fontSize = compact ? 22 : 26, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.94f, 0.74f, 1f) } });
 			if (GUI.Button(sendButton, string.Empty, GUIStyle.none))
 			{
