@@ -40,6 +40,47 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M073-CL : prototype eau animee sur la World Map (2026-09-08)
+
+Demande CEO (capture de la World Map wave5method_12288_preview) : faire
+sembler la riviere couler et la chute tomber, sans toucher au fond peint ni
+a la logique World Map. Prototype visuel uniquement, aucun audit, aucun
+Test Runner, compile seulement, commit local (pas de push).
+
+Approche retenue : un shader URP unlit qui derive son masque d'eau
+directement des couleurs du terrain peint (dominance de bleu / blanc tres
+clair = eau/ecume), sans aucune nouvelle image ni retouche du package
+terrain fige (`UIB_ImmenseContinuousMaster50x50_wave5method_12288_preview`).
+Le shader applique une distorsion de ripple + bandes de courant animees
+dans le temps, calculees en espace monde (uniformes par tuile) pour rester
+coherentes d'une tuile a l'autre; les pixels blancs tres lumineux pres de
+l'eau recoivent en plus un pulse pour suggerer l'ecume au pied de la chute.
+
+Branchement : `WorldMapMmoFullscreenFoundationBootstrap.DrawWave6WorldTerrain`
+route desormais vers `Graphics.DrawTexture(..., material)` quand un material
+optionnel (charge paresseusement depuis Resources, absent = repli silencieux
+sur l'ancien chemin `GUI.DrawTextureWithTexCoords`) est present, au lieu de
+modifier la logique de streaming/placement. Aucune autre fonction World Map
+touchee.
+
+Preuves : compilation Unity verte (assets-refresh sans erreur CS, seulement
+des warnings CS0618 preexistants sans rapport). Commit local
+`594f651` (aucun push).
+
+Prochain test utilisateur : ouvrir la scene canonique
+`Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity` en Play Mode et
+regarder la riviere/chute visibles sur la capture CEO — verifier que le
+courant/l'ecume se voient sans halo grossier debordant sur foret/rochers, et
+qu'aucune autre partie de la World Map (colonies, HUD, streaming) n'a
+change de comportement.
+
+Ouvert / a faire ensuite : si le mask couleur accroche trop de terrain
+non-aquatique (ex. rochers gris-bleu) a l'usage, affiner les seuils de
+`WorldMapWaterOverlay.shader` (`blueDominance`/`whiteFoamCandidate`) plutot
+que de revenir a un mask peint a la main.
+
+---
+
 ## Jalon courant — M067 a M094-CL : refonte premium de Chat Royal + emojis personnalises + build Windows (2026-09-08)
 
 Longue serie continue (M067 a M094) sur l'ecran Chat Royal, en reponse a des
