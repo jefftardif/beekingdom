@@ -105,8 +105,13 @@ namespace BeeKingdom.Playground
 
         // ==================== synchronisation serveur ====================
 
-        private static bool ChatRoyalOwnOverlayOpen =>
-            chatNewDiscussionOpen || chatNewGroupOpen || chatSettingsOpen || chatGroupMembersOpen || ChatHasPendingInvitation();
+        // M068-CL : sur desktop (non compact), le panneau Membres devient un panneau ancre a droite
+        // de la conversation (voir DrawChatGroupMembersPanel / ChatGroupMembersPanelVisible) au lieu
+        // d'un modal plein ecran - il coexiste avec le reste de l'ecran et ne doit donc plus le
+        // masquer. Sur mobile (compact), l'espace manque pour un 4e panneau : chatGroupMembersOpen
+        // continue d'ouvrir le modal plein ecran existant, qui doit donc toujours gater le dessous.
+        private static bool ChatRoyalOwnOverlayOpen(bool compact) =>
+            chatNewDiscussionOpen || chatNewGroupOpen || chatSettingsOpen || (compact && chatGroupMembersOpen) || ChatHasPendingInvitation();
 
         private static LivingHiveChatSnapshot ChatServerSnapshot()
         {
@@ -419,14 +424,35 @@ namespace BeeKingdom.Playground
                 LivingHiveChatRuntime.RefreshGroupDetailAsync(chatSelectedConversation);
         }
 
+        // M068-CL : bouton "Membres" de l'en-tete de conversation (DrawChatMessagesPane) - ouvre/
+        // ferme le panneau. Sur desktop c'est un panneau ancre a droite (DrawChatGroupMembersPanel),
+        // sur mobile le modal plein ecran existant (DrawChatGroupMembersOverlay) - meme etat
+        // (chatGroupMembersOpen), meme donnees, seul l'habillage change.
+        private static void ChatToggleGroupMembers()
+        {
+            if (chatGroupMembersOpen) { chatGroupMembersOpen = false; return; }
+            OpenChatGroupMembers();
+        }
+
+        private static bool ChatGroupMembersPanelVisible() =>
+            chatGroupMembersOpen
+            && chatUsingServerData
+            && string.Equals(chatSelectedChannel, ChatGroupsChannelId, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(chatSelectedConversation);
+
         // QoL (regle CLAUDE.md du 2026-08-04) : un bandeau discret qui dit en permanence si l'ecran
         // affiche des donnees SERVEUR ou la maquette locale, et l'etat de connexion. Sans lui, un
         // testeur ne peut pas distinguer "le chat marche" de "je regarde des donnees inventees" -
         // c'est exactement le piege qui a coute une mission de diagnostic entiere (M056A).
         // Quand un groupe est ouvert, le bandeau devient aussi le bouton "membres du groupe".
+        // M068-CL : le bouton "Membres" qui vivait ici (colle au badge de statut serveur, en haut a
+        // droite de l'ecran entier) etait mal place et deconnecte visuellement de la conversation
+        // qu'il concernait - deplace dans l'en-tete de la conversation elle-meme
+        // (DrawChatMessagesPane), comme sur la reference. Ce badge ne fait plus que son travail
+        // d'origine : indiquer si l'ecran affiche des donnees serveur ou la maquette locale.
         private static void DrawChatServerSourceBadge(float mainTop, bool compact)
         {
-            if (ChatRoyalOwnOverlayOpen) return;
+            if (ChatRoyalOwnOverlayOpen(compact)) return;
             float width = compact ? 190f : 260f;
             Rect badge = new Rect(Screen.width - width - 12f, mainTop - 22f, width, 18f);
             if (badge.y < 0f) return;
@@ -437,20 +463,6 @@ namespace BeeKingdom.Playground
             GUI.color = Color.white;
             GUI.Label(badge, (chatUsingServerData ? "● SERVEUR · " : "○ DEMO · ") + chatServerStatusLabel,
                 new GUIStyle(centeredTinyLabelStyle) { fontSize = 8, normal = { textColor = tint } });
-
-            bool groupOpen = chatUsingServerData
-                && string.Equals(chatSelectedChannel, ChatGroupsChannelId, StringComparison.Ordinal)
-                && !string.IsNullOrWhiteSpace(chatSelectedConversation);
-            if (!groupOpen) return;
-
-            Rect members = new Rect(badge.x - 88f, badge.y, 84f, 18f);
-            DrawPremiumPanel(members, new Color(0.10f, 0.08f, 0.04f, 0.94f), ChatAccentColor());
-            GUI.Label(members, "Membres", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
-            if (GUI.Button(members, string.Empty, GUIStyle.none))
-            {
-                AudioManager.Instance?.PlayUIClick();
-                OpenChatGroupMembers();
-            }
         }
 
         // ==================== sous-ecrans (modaux) ====================
@@ -464,7 +476,8 @@ namespace BeeKingdom.Playground
             if (chatNewDiscussionOpen) DrawChatPlayerPickerOverlay(compact, groupMode: false);
             else if (chatNewGroupOpen) DrawChatPlayerPickerOverlay(compact, groupMode: true);
             else if (chatSettingsOpen) DrawChatSettingsOverlay(compact);
-            else if (chatGroupMembersOpen) DrawChatGroupMembersOverlay(compact);
+            // Desktop dessine le panneau Membres ancre a droite depuis DrawChatMainLayout, pas ici.
+            else if (chatGroupMembersOpen && compact) DrawChatGroupMembersOverlay(compact);
         }
 
         private static Rect ChatOverlayRect(bool compact)
@@ -575,8 +588,8 @@ namespace BeeKingdom.Playground
                         Rect row = new Rect(4f, i * (rowH + 4f) + 2f, list.width - 26f, rowH);
                         bool selected = groupMode && chatGroupSelection.Any(item => item.PlayerId == entry.PlayerId);
                         DrawPremiumPanel(row, selected ? new Color(0.26f, 0.18f, 0.05f, 0.96f) : new Color(0.06f, 0.05f, 0.03f, 0.92f), selected ? ChatAccentColor() : new Color(0.52f, 0.36f, 0.12f, 0.6f));
-                        GUI.Label(new Rect(row.x + 10f, row.y + 8f, row.width - 90f, 20f), entry.DisplayName, new GUIStyle(smallStyle) { fontSize = 11, alignment = TextAnchor.MiddleLeft });
-                        GUI.Label(new Rect(row.xMax - 84f, row.y + 8f, 76f, 20f), groupMode ? (selected ? "Retirer" : "Ajouter") : "Discuter", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                        GUI.Label(new Rect(row.x + 10f, row.y + 7f, row.width - 90f, 22f), entry.DisplayName, new GUIStyle(smallStyle) { fontSize = 13, alignment = TextAnchor.MiddleLeft });
+                        GUI.Label(new Rect(row.xMax - 84f, row.y + 7f, 76f, 22f), groupMode ? (selected ? "Retirer" : "Ajouter") : "Discuter", new GUIStyle(centeredTinyLabelStyle) { fontSize = 11 });
                         if (GUI.Button(row, string.Empty, GUIStyle.none))
                         {
                             AudioManager.Instance?.PlayUIClick();
@@ -715,6 +728,8 @@ namespace BeeKingdom.Playground
         }
 
         // 3.4 : gestion du groupe selectionne - membres, icone createur, ajouter/exclure, transfert.
+        // Modal plein ecran (mobile uniquement depuis M068-CL - voir DrawChatGroupMembersPanel pour
+        // le panneau ancre desktop). Meme contenu, factorise dans DrawChatGroupMembersBody.
         private static void DrawChatGroupMembersOverlay(bool compact)
         {
             Rect panel = ChatOverlayRect(compact);
@@ -725,43 +740,109 @@ namespace BeeKingdom.Playground
             if (detail == null)
             {
                 GUI.Label(new Rect(panel.x + 18f, panel.y + 60f, panel.width - 36f, 40f),
-                    "Selectionnez un groupe dans l'onglet Groupes.", new GUIStyle(smallStyle) { fontSize = 11, wordWrap = true });
+                    "Selectionnez un groupe dans l'onglet Groupes.", new GUIStyle(smallStyle) { fontSize = 13, wordWrap = true });
                 return;
             }
 
-            float y = panel.y + 48f;
-            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 20f),
-                detail.ViewerIsLeader ? "Vous etes le createur de ce groupe." : "Membre du groupe.",
-                new GUIStyle(smallStyle) { fontSize = 10 });
-            y += 26f;
+            DrawChatGroupMembersBody(new Rect(panel.x, panel.y + 44f, panel.width, panel.height - 44f), detail);
+        }
 
-            float footer = detail.ViewerIsLeader ? 100f : 58f;
-            Rect list = new Rect(panel.x + 18f, y, panel.width - 36f, panel.yMax - y - footer);
+        // M068-CL : panneau "MEMBRES (n)" ancre a droite de la conversation sur desktop, comme la
+        // reference visuelle fournie par le CEO - dimensionne et positionne par DrawChatMainLayout
+        // (via ChatGroupMembersPanelVisible). Meme donnees/logique que le modal mobile
+        // (DrawChatGroupMembersBody) : ajouter, exclure, transferer, quitter passent tous par les
+        // memes fonctions LivingHiveChatRuntime deja fonctionnelles (M067-CL) - rien de recree ici.
+        private static void DrawChatGroupMembersPanel(Rect panel, bool compact)
+        {
+            DrawPremiumPanel(panel, new Color(0.024f, 0.021f, 0.017f, 0.97f), new Color(0.78f, 0.52f, 0.15f, 0.70f));
+            LivingHiveChatSnapshot snapshot = ChatServerSnapshot();
+            LivingHiveChatGroupDetail detail = snapshot?.SelectedGroup;
+
+            int memberCount = detail?.Members.Count ?? 0;
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 10f, panel.width - 60f, 24f), "MEMBRES (" + memberCount + ")",
+                new GUIStyle(badgeStyle) { fontSize = 14, alignment = TextAnchor.MiddleLeft });
+            Rect close = new Rect(panel.xMax - 38f, panel.y + 8f, 26f, 26f);
+            DrawPremiumPanel(close, new Color(0.10f, 0.07f, 0.04f, 0.96f), new Color(0.72f, 0.48f, 0.16f, 0.85f));
+            GUI.Label(close, "✕", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+            if (GUI.Button(close, string.Empty, GUIStyle.none))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                chatGroupMembersOpen = false;
+            }
+            GUI.color = new Color(1f, 0.60f, 0.14f, 0.80f);
+            GUI.DrawTexture(new Rect(panel.x + 12f, panel.y + 42f, panel.width - 24f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+            GUI.color = Color.white;
+
+            if (detail == null)
+            {
+                GUI.Label(new Rect(panel.x + 14f, panel.y + 56f, panel.width - 28f, 40f),
+                    "Selectionnez un groupe.", new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true });
+                return;
+            }
+
+            DrawChatGroupMembersBody(new Rect(panel.x, panel.y + 44f, panel.width, panel.height - 44f), detail);
+        }
+
+        // Contenu partage entre le modal mobile et le panneau desktop : liste des membres (couronne,
+        // "Leader"/"Exclure" avec confirmation M067-CL), invitations en attente, "Ajouter des
+        // membres" et "Quitter". `area` est la zone SOUS l'en-tete deja dessine par l'appelant.
+        private static void DrawChatGroupMembersBody(Rect area, LivingHiveChatGroupDetail detail)
+        {
+            float y = area.y + 4f;
+            GUI.Label(new Rect(area.x + 14f, y, area.width - 28f, 20f),
+                detail.ViewerIsLeader ? "Vous etes le createur de ce groupe." : "Membre du groupe.",
+                new GUIStyle(smallStyle) { fontSize = 12 });
+            y += 28f;
+
+            if (detail.ViewerIsLeader)
+            {
+                Rect add = new Rect(area.x + 14f, y, area.width - 28f, 36f);
+                DrawPremiumPanel(add, new Color(0.28f, 0.19f, 0.05f, 0.96f), ChatAccentColor());
+                GUI.Label(add, "➕ Ajouter des membres", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+                if (GUI.Button(add, string.Empty, GUIStyle.none))
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    chatGroupMembersOpen = false;
+                    chatNewGroupOpen = false;
+                    chatNewDiscussionOpen = false;
+                    ChatOpenAddMembersPicker(detail);
+                }
+                y += 46f;
+            }
+
+            float footerH = 60f;
+            Rect list = new Rect(area.x + 14f, y, area.width - 28f, Mathf.Max(1f, area.yMax - y - footerH));
             DrawPremiumPanel(list, new Color(0.02f, 0.018f, 0.014f, 0.94f), new Color(0.5f, 0.34f, 0.12f, 0.55f));
 
             IReadOnlyList<LivingHiveChatGroupMember> members = detail.Members;
-            float rowH = 34f;
-            chatGroupMembersScroll = GUI.BeginScrollView(list, chatGroupMembersScroll, new Rect(0f, 0f, list.width - 18f, Mathf.Max(1, members.Count + detail.PendingInvites.Count) * (rowH + 4f)));
+            float rowH = detail.ViewerIsLeader ? 58f : 42f;
+            float gap = 6f;
+            chatGroupMembersScroll = GUI.BeginScrollView(list, chatGroupMembersScroll,
+                new Rect(0f, 0f, list.width - 18f, Mathf.Max(1, members.Count + detail.PendingInvites.Count) * (rowH + gap)));
             int rowIndex = 0;
             foreach (LivingHiveChatGroupMember member in members)
             {
-                Rect row = new Rect(4f, rowIndex * (rowH + 4f) + 2f, list.width - 26f, rowH);
+                Rect row = new Rect(4f, rowIndex * (rowH + gap) + 2f, list.width - 26f, rowH);
                 DrawPremiumPanel(row, new Color(0.06f, 0.05f, 0.03f, 0.92f), member.IsLeader ? ChatAccentColor() : new Color(0.52f, 0.36f, 0.12f, 0.6f));
                 // Icone "createur" a cote du nom, comme demande.
-                GUI.Label(new Rect(row.x + 10f, row.y + 8f, row.width - 150f, 20f),
+                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 20f, 20f),
                     (member.IsLeader ? "👑 " : "") + member.DisplayName,
-                    new GUIStyle(smallStyle) { fontSize = 11, alignment = TextAnchor.MiddleLeft });
+                    new GUIStyle(smallStyle) { fontSize = 13, alignment = TextAnchor.MiddleLeft });
+                GUI.Label(new Rect(row.x + 10f, row.y + 24f, row.width - 20f, 16f),
+                    member.IsLeader ? "Chef" : "Membre",
+                    new GUIStyle(tinyLabelStyle) { fontSize = 9, alignment = TextAnchor.MiddleLeft, normal = { textColor = member.IsLeader ? ChatAccentColor() : new Color(0.7f, 0.62f, 0.5f, 0.85f) } });
 
                 if (detail.ViewerIsLeader && !member.IsLeader)
                 {
-                    Rect promote = new Rect(row.xMax - 140f, row.y + 5f, 64f, rowH - 10f);
-                    Rect kick = new Rect(row.xMax - 70f, row.y + 5f, 62f, rowH - 10f);
+                    float btnW = (row.width - 30f) * 0.5f;
+                    Rect promote = new Rect(row.x + 10f, row.yMax - 24f, btnW, 20f);
+                    Rect kick = new Rect(promote.xMax + 10f, row.yMax - 24f, btnW, 20f);
                     string kickKey = "kick|" + member.PlayerId;
                     bool kickArmed = string.Equals(chatGroupKickConfirmArmedId, kickKey, StringComparison.Ordinal) && NowForUi() - chatGroupKickConfirmArmedAt <= 5f;
                     DrawPremiumPanel(promote, new Color(0.16f, 0.20f, 0.30f, 0.94f), new Color(0.52f, 0.72f, 1f, 0.8f));
-                    GUI.Label(promote, "Leader", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+                    GUI.Label(promote, "Leader", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
                     DrawPremiumPanel(kick, new Color(0.30f, 0.12f, 0.10f, 0.94f), kickArmed ? new Color(1f, 0.62f, 0.2f, 0.95f) : new Color(0.92f, 0.46f, 0.40f, 0.85f));
-                    GUI.Label(kick, kickArmed ? "Confirmer ?" : "Exclure", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+                    GUI.Label(kick, kickArmed ? "Confirmer ?" : "Exclure", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
                     if (GUI.Button(promote, string.Empty, GUIStyle.none))
                     {
                         AudioManager.Instance?.PlayUIClick();
@@ -789,16 +870,18 @@ namespace BeeKingdom.Playground
 
             foreach (LivingHiveChatInvitation invite in detail.PendingInvites)
             {
-                Rect row = new Rect(4f, rowIndex * (rowH + 4f) + 2f, list.width - 26f, rowH);
+                Rect row = new Rect(4f, rowIndex * (rowH + gap) + 2f, list.width - 26f, rowH);
                 DrawPremiumPanel(row, new Color(0.05f, 0.045f, 0.03f, 0.86f), new Color(0.42f, 0.32f, 0.14f, 0.5f));
-                GUI.Label(new Rect(row.x + 10f, row.y + 8f, row.width - 90f, 20f),
-                    "⏳ " + (invite.InviteeDisplayName ?? "Invitation") + " — en attente",
-                    new GUIStyle(smallStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft });
+                GUI.Label(new Rect(row.x + 10f, row.y + 4f, row.width - 20f, 20f),
+                    "⏳ " + (invite.InviteeDisplayName ?? "Invitation"),
+                    new GUIStyle(smallStyle) { fontSize = 12, alignment = TextAnchor.MiddleLeft });
+                GUI.Label(new Rect(row.x + 10f, row.y + 24f, row.width - 20f, 16f), "En attente",
+                    new GUIStyle(tinyLabelStyle) { fontSize = 9, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.86f, 0.62f, 0.28f, 0.9f) } });
                 if (detail.ViewerIsLeader)
                 {
-                    Rect cancel = new Rect(row.xMax - 70f, row.y + 5f, 62f, rowH - 10f);
+                    Rect cancel = new Rect(row.xMax - 82f, row.yMax - 24f, 72f, 20f);
                     DrawPremiumPanel(cancel, new Color(0.24f, 0.14f, 0.10f, 0.92f), new Color(0.82f, 0.48f, 0.36f, 0.7f));
-                    GUI.Label(cancel, "Annuler", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+                    GUI.Label(cancel, "Annuler", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
                     if (GUI.Button(cancel, string.Empty, GUIStyle.none))
                     {
                         AudioManager.Instance?.PlayUIClick();
@@ -809,24 +892,10 @@ namespace BeeKingdom.Playground
             }
             GUI.EndScrollView();
 
-            if (detail.ViewerIsLeader)
-            {
-                Rect add = new Rect(panel.x + 18f, panel.yMax - 92f, panel.width - 36f, 32f);
-                DrawPremiumPanel(add, new Color(0.28f, 0.19f, 0.05f, 0.96f), ChatAccentColor());
-                GUI.Label(add, "Ajouter des membres", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
-                if (GUI.Button(add, string.Empty, GUIStyle.none))
-                {
-                    AudioManager.Instance?.PlayUIClick();
-                    chatGroupMembersOpen = false;
-                    chatNewGroupOpen = false;
-                    chatNewDiscussionOpen = false;
-                    ChatOpenAddMembersPicker(detail);
-                }
-            }
-
-            Rect leave = new Rect(panel.x + 18f, panel.yMax - 52f, panel.width - 36f, 34f);
+            Rect leave = new Rect(area.x + 14f, area.yMax - 46f, area.width - 28f, 38f);
             DrawPremiumPanel(leave, new Color(0.26f, 0.10f, 0.09f, 0.94f), new Color(0.9f, 0.44f, 0.38f, 0.85f));
-            GUI.Label(leave, detail.ViewerIsLeader ? "Quitter (transferez d'abord le leadership)" : "Quitter le groupe", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+            GUI.Label(leave, detail.ViewerIsLeader ? "Quitter (transferez d'abord le leadership)" : "Quitter le groupe",
+                new GUIStyle(centeredTinyLabelStyle) { fontSize = 11, wordWrap = true });
             if (GUI.Button(leave, string.Empty, GUIStyle.none))
             {
                 AudioManager.Instance?.PlayUIClick();

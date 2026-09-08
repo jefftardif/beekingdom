@@ -36155,7 +36155,7 @@ if (leftNavigationTexture == null)
 			// dessus son propre contenu ; sans cette porte, IMGUI resout un clic destine au modal sur
 			// le premier controle qui matche dans l'ordre de dessin, c'est-a-dire un controle
 			// invisible de la barre d'action ou de la liste des conversations juste en dessous.
-			bool ownOverlayOpen = ChatRoyalOwnOverlayOpen;
+			bool ownOverlayOpen = ChatRoyalOwnOverlayOpen(compact);
 			float searchH = 0f;
 			DrawUnderOwnOverlayGate(ownOverlayOpen, () =>
 			{
@@ -36179,8 +36179,8 @@ if (leftNavigationTexture == null)
 			GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
 			GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
 			GUI.color = Color.white;
-			GUI.Label(new Rect(28f, height - (compact ? 42f : 48f), Screen.width * 0.66f, 26f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 20 : 28, fontStyle = FontStyle.Bold });
-			GUI.Label(new Rect(30f, height - (compact ? 20f : 23f), Screen.width * 0.72f, 16f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 9 : 12 });
+			GUI.Label(new Rect(28f, height - (compact ? 46f : 54f), Screen.width * 0.72f, 34f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 24 : 34, fontStyle = FontStyle.Bold });
+			GUI.Label(new Rect(30f, height - (compact ? 20f : 24f), Screen.width * 0.72f, 18f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 14 });
 		}
 
 		private static void DrawChatTopBar(float bannerHeight, bool compact)
@@ -36193,11 +36193,11 @@ if (leftNavigationTexture == null)
 				AudioManager.Instance?.PlayUIClick();
 				ChatBackOrClose(compact);
 			}
-			GUI.Label(new Rect(54f, 12f, Screen.width - 220f, 24f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 11 });
-			Rect badge = new Rect(Screen.width - 158f, 10f, 96f, 28f);
+			GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
+			Rect badge = new Rect(Screen.width - 168f, 9f, 106f, 30f);
 			DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
 			int unread = ChatUnreadTotal();
-			GUI.Label(badge, unread > 0 ? unread.ToString(CultureInfo.InvariantCulture) + " NON LUS" : "À JOUR", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+			GUI.Label(badge, unread > 0 ? unread.ToString(CultureInfo.InvariantCulture) + " NON LUS" : "À JOUR", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
 		}
 
 		private static void DrawChatActionBar(Rect rect, bool compact)
@@ -36216,7 +36216,7 @@ if (leftNavigationTexture == null)
 					|| (string.Equals(ids[i], "favorites", StringComparison.Ordinal) && chatFavoritesOnly);
 				DrawPremiumPanel(button, on ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.06f, 0.045f, 0.025f, 0.94f), on ? new Color(1f, 0.70f, 0.18f, 0.92f) : new Color(0.64f, 0.44f, 0.14f, 0.64f));
 				DrawGameIcon(new Rect(button.x + 8f, button.y + 8f, 24f, 24f), icons[i], Color.white);
-				GUI.Label(new Rect(button.x + 38f, button.y + 7f, button.width - 44f, 28f), labels[i], new GUIStyle(smallStyle) { fontSize = compact ? 8 : 9, alignment = TextAnchor.MiddleLeft });
+				GUI.Label(new Rect(button.x + 38f, button.y + 7f, button.width - 44f, 28f), labels[i], new GUIStyle(smallStyle) { fontSize = compact ? 10 : 11, alignment = TextAnchor.MiddleLeft });
 				if (GUI.Button(button, string.Empty, GUIStyle.none))
 				{
 					AudioManager.Instance?.PlayUIClick();
@@ -36247,7 +36247,7 @@ if (leftNavigationTexture == null)
 				// M056A-CL : le bouton faisait 46px de large, trop etroit pour le mot "Effacer" :
 				// IMGUI le tronquait a l'ecran en "Efface..." (defaut rapporte par le testeur
 				// externe). Largeur portee a 64px et champ de saisie raccourci d'autant.
-				chatSearchQuery = GUI.TextField(new Rect(searchRect.x + 10f, searchRect.y + 5f, searchRect.width - 84f, searchRect.height - 10f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = compact ? 10 : 12, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } });
+				chatSearchQuery = GUI.TextField(new Rect(searchRect.x + 10f, searchRect.y + 5f, searchRect.width - 84f, searchRect.height - 10f), chatSearchQuery, new GUIStyle(smallStyle) { fontSize = compact ? 12 : 14, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } });
 				if (GUI.Button(new Rect(searchRect.xMax - 72f, searchRect.y + 4f, 64f, searchRect.height - 8f), "Effacer"))
 				{
 					chatSearchQuery = string.Empty;
@@ -36270,9 +36270,16 @@ if (leftNavigationTexture == null)
 			float convW = 284f;
 			float x = main.x + 10f;
 			float totalW = main.width - 20f - gap * 2f;
+			// M068-CL : sur desktop, le panneau Membres d'un groupe (reference CEO) est un 4e
+			// panneau ancre a droite, pas un modal - il retranche sa largeur a la zone messages.
+			bool membersOpen = ChatGroupMembersPanelVisible();
+			float membersW = membersOpen ? Mathf.Min(300f, totalW * 0.28f) : 0f;
+			float messagesW = totalW - channelW - convW - gap * 2f - (membersOpen ? membersW + gap : 0f);
 			DrawChatChannelsPane(new Rect(x, main.y + 6f, channelW, main.height - 12f), false);
 			DrawChatConversationsPane(new Rect(x + channelW + gap, main.y + 6f, convW, main.height - 12f), false);
-			DrawChatMessagesPane(new Rect(x + channelW + gap + convW + gap, main.y + 6f, totalW - channelW - convW - gap * 2f, main.height - 12f), false);
+			DrawChatMessagesPane(new Rect(x + channelW + gap + convW + gap, main.y + 6f, messagesW, main.height - 12f), false);
+			if (membersOpen)
+				DrawChatGroupMembersPanel(new Rect(x + channelW + gap + convW + gap + messagesW + gap, main.y + 6f, membersW, main.height - 12f), false);
 		}
 
 		private static void DrawChatChannelsPane(Rect area, bool mobile)
@@ -36280,7 +36287,7 @@ if (leftNavigationTexture == null)
 			EnsureChatData();
 			DrawPremiumPanel(area, new Color(0.024f, 0.021f, 0.017f, 0.97f), new Color(0.78f, 0.52f, 0.15f, 0.70f));
 			float headerH = 40f;
-			GUI.Label(new Rect(area.x + 10f, area.y + 8f, area.width - 20f, 26f), mobile ? "Canaux" : "CANAUX", new GUIStyle(badgeStyle) { fontSize = 11 });
+			GUI.Label(new Rect(area.x + 10f, area.y + 8f, area.width - 20f, 26f), mobile ? "Canaux" : "CANAUX", new GUIStyle(badgeStyle) { fontSize = 14 });
 			GUI.color = new Color(1f, 0.60f, 0.14f, 0.80f);
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
@@ -36294,9 +36301,9 @@ if (leftNavigationTexture == null)
 				Rect row = new Rect(0f, i * (rowH + ChatMessageGap), viewport.width, rowH);
 				bool selected = string.Equals(channel.Id, chatSelectedChannel, StringComparison.Ordinal);
 				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
-				DrawGameIcon(new Rect(row.x + 10f, row.y + 12f, 34f, 34f), channel.Icon, Color.white);
-				GUI.Label(new Rect(row.x + 52f, row.y + 9f, row.width - 112f, 22f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 13 : 12, alignment = TextAnchor.MiddleLeft });
-				GUI.Label(new Rect(row.x + 52f, row.y + 33f, row.width - 112f, 14f), channel.ReadOnly ? "Lecture seule" : "Discussion", new GUIStyle(tinyLabelStyle) { fontSize = 8, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+				DrawGameIcon(new Rect(row.x + 10f, row.y + 10f, 36f, 36f), channel.Icon, Color.white);
+				GUI.Label(new Rect(row.x + 54f, row.y + 8f, row.width - 114f, 24f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
+				GUI.Label(new Rect(row.x + 54f, row.y + 34f, row.width - 114f, 16f), channel.ReadOnly ? "Lecture seule" : "Discussion", new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 				int chUnread = ChatChannelUnread(channel.Id);
 				if (chUnread > 0)
 				{
@@ -36319,8 +36326,8 @@ if (leftNavigationTexture == null)
 			DrawPremiumPanel(area, new Color(0.024f, 0.021f, 0.017f, 0.97f), new Color(0.78f, 0.52f, 0.15f, 0.70f));
 			ChatChannelData channel = ChatChannelById(chatSelectedChannel);
 			float headerH = 40f;
-			GUI.Label(new Rect(area.x + 10f, area.y + 6f, area.width - 20f, 22f), mobile ? "Discussions" : "DISCUSSIONS", new GUIStyle(badgeStyle) { fontSize = 11 });
-			GUI.Label(new Rect(area.x + 10f, area.y + 26f, area.width - 20f, 14f), channel != null ? channel.Name : string.Empty, new GUIStyle(tinyLabelStyle) { fontSize = 8, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+			GUI.Label(new Rect(area.x + 10f, area.y + 6f, area.width - 20f, 22f), mobile ? "Discussions" : "DISCUSSIONS", new GUIStyle(badgeStyle) { fontSize = 14 });
+			GUI.Label(new Rect(area.x + 10f, area.y + 27f, area.width - 20f, 14f), channel != null ? channel.Name : string.Empty, new GUIStyle(tinyLabelStyle) { fontSize = 10, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 			GUI.color = new Color(1f, 0.60f, 0.14f, 0.80f);
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
@@ -36341,9 +36348,9 @@ if (leftNavigationTexture == null)
 				float textX = avatarRect.xMax + 10f;
 				float rightW = 70f;
 				float textW = row.width - textX - rightW - 8f;
-				GUI.Label(new Rect(textX, row.y + 7f, textW, 18f), conv.Title + (conv.Favorite ? "  ★" : string.Empty), new GUIStyle(badgeStyle) { fontSize = mobile ? 13 : 12, alignment = TextAnchor.MiddleLeft });
-				GUI.Label(new Rect(textX, row.y + 28f, textW, 14f), ChatPreviewFor(conv.Id), new GUIStyle(tinyLabelStyle) { fontSize = 8, alignment = TextAnchor.MiddleLeft, clipping = TextClipping.Clip });
-				GUI.Label(new Rect(row.x + row.width - rightW + 6f, row.y + 8f, rightW - 12f, 14f), ChatLastTimeFor(conv.Id), new GUIStyle(tinyLabelStyle) { fontSize = 7, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+				GUI.Label(new Rect(textX, row.y + 6f, textW, 20f), conv.Title + (conv.Favorite ? "  ★" : string.Empty), new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
+				GUI.Label(new Rect(textX, row.y + 29f, textW, 16f), ChatPreviewFor(conv.Id), new GUIStyle(tinyLabelStyle) { fontSize = 11, alignment = TextAnchor.MiddleLeft, clipping = TextClipping.Clip });
+				GUI.Label(new Rect(row.x + row.width - rightW + 6f, row.y + 8f, rightW - 12f, 14f), ChatLastTimeFor(conv.Id), new GUIStyle(tinyLabelStyle) { fontSize = 9, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 				if (conv.Unread > 0)
 				{
 					Rect badge = new Rect(row.x + row.width - rightW + 12f, row.y + 25f, 34f, 20f);
@@ -36373,15 +36380,33 @@ if (leftNavigationTexture == null)
 			ChatConversationData conv = ChatConversationById(chatSelectedConversation);
 			string title = conv != null ? conv.Title : "Discussion";
 			string subtitle = conv != null ? ChatConversationSubtitle(conv) : string.Empty;
-			float headerH = compact ? 44f : 40f;
-			GUI.Label(new Rect(area.x + 10f, area.y + 6f, area.width - 20f, 22f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 14 : 13, alignment = TextAnchor.MiddleLeft });
-			GUI.Label(new Rect(area.x + 10f, area.y + 27f, area.width - 20f, 14f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 8, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+			// M068-CL : bouton "Membres" deplace ici, dans l'en-tete de la conversation elle-meme,
+			// comme sur la reference CEO - remplace l'ancien bouton mal place colle au badge de
+			// statut serveur en haut de l'ecran (qui ne fonctionnait pas correctement).
+			bool isGroupConversation = conv != null && string.Equals(conv.Channel, ChatGroupsChannelId, StringComparison.Ordinal);
+			bool showMembersButton = isGroupConversation && chatUsingServerData;
+			float headerH = compact ? 52f : 56f;
+			float membersButtonW = showMembersButton ? (compact ? 100f : 114f) : 0f;
+			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - membersButtonW, compact ? 24f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft });
+			GUI.Label(new Rect(area.x + 12f, area.y + 33f, area.width - 24f - membersButtonW, 16f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+			if (showMembersButton)
+			{
+				Rect membersButton = new Rect(area.xMax - membersButtonW - 10f, area.y + 10f, membersButtonW, headerH - 20f);
+				bool membersOn = chatGroupMembersOpen;
+				DrawPremiumPanel(membersButton, membersOn ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.08f, 0.06f, 0.03f, 0.94f), membersOn ? new Color(1f, 0.70f, 0.18f, 0.92f) : new Color(0.64f, 0.44f, 0.14f, 0.64f));
+				GUI.Label(membersButton, "👥 Membres", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 12 });
+				if (GUI.Button(membersButton, string.Empty, GUIStyle.none))
+				{
+					AudioManager.Instance?.PlayUIClick();
+					ChatToggleGroupMembers();
+				}
+			}
 			GUI.color = new Color(1f, 0.60f, 0.14f, 0.80f);
 			GUI.DrawTexture(new Rect(area.x + 10f, area.y + headerH - 2f, area.width - 20f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 
 			bool readOnly = conv == null || conv.ReadOnly;
-			float composerH = readOnly ? 30f : (compact ? 58f : 54f);
+			float composerH = readOnly ? 34f : (compact ? 64f : 60f);
 			Rect viewport = new Rect(area.x + 8f, area.y + headerH + 2f, area.width - 16f, Mathf.Max(1f, area.height - headerH - 6f - composerH));
 			// M043T-CL: the emoji panel (opened from inside DrawChatComposer below) is drawn
 			// directly above the composer, overlapping the tail of this message scroll view - its
@@ -36391,7 +36416,7 @@ if (leftNavigationTexture == null)
 			if (readOnly)
 			{
 				chatEmojiPanelOpen = false;
-				GUI.Label(new Rect(area.x + 10f, area.y + area.height - composerH + 5f, area.width - 20f, 20f), conv == null ? "Sélectionnez une discussion." : "Cette conversation est en lecture seule.", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+				GUI.Label(new Rect(area.x + 10f, area.y + area.height - composerH + 5f, area.width - 20f, 24f), conv == null ? "Sélectionnez une discussion." : "Cette conversation est en lecture seule.", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 			}
 			else
 			{
@@ -36408,20 +36433,24 @@ if (leftNavigationTexture == null)
 				Event.current.Use();
 				return;
 			}
-			GUIStyle fieldStyle = new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } };
-			float emojiW = compact ? 40f : 36f;
-			Rect textRect = new Rect(rect.x + 10f, rect.y + 6f, rect.width - 96f - emojiW - 8f, rect.height - 12f);
+			GUIStyle fieldStyle = new GUIStyle(smallStyle) { fontSize = compact ? 13 : 15, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } };
+			float emojiW = compact ? 42f : 40f;
+			float sendW = compact ? 84f : 92f;
+			Rect textRect = new Rect(rect.x + 10f, rect.y + 6f, rect.width - sendW - emojiW - 20f, rect.height - 12f);
 			GUI.SetNextControlName("chatComposer");
 			chatComposerText = GUI.TextField(textRect, chatComposerText, fieldStyle);
-			Rect emojiButton = new Rect(rect.xMax - 82f - emojiW - 8f, rect.y + 6f, emojiW, rect.height - 12f);
+			Rect emojiButton = new Rect(rect.xMax - sendW - emojiW - 16f, rect.y + 6f, emojiW, rect.height - 12f);
 			DrawPremiumPanel(emojiButton, chatEmojiPanelOpen ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.06f, 0.045f, 0.025f, 0.94f), new Color(0.64f, 0.44f, 0.14f, 0.64f));
-			GUI.Label(emojiButton, "😊", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 17 : 15 });
+			GUI.Label(emojiButton, "😊", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 18 : 17 });
 			if (GUI.Button(emojiButton, string.Empty, GUIStyle.none))
 			{
 				AudioManager.Instance?.PlayUIClick();
 				ChatEmojiToggle();
 			}
-			if (GUI.Button(new Rect(rect.xMax - 82f, rect.y + 6f, 72f, rect.height - 12f), "Envoyer"))
+			Rect sendButton = new Rect(rect.xMax - sendW - 6f, rect.y + 6f, sendW, rect.height - 12f);
+			DrawPremiumPanel(sendButton, new Color(0.30f, 0.20f, 0.06f, 0.96f), ChatAccentColor());
+			GUI.Label(sendButton, "➤ Envoyer", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 12 : 13 });
+			if (GUI.Button(sendButton, string.Empty, GUIStyle.none))
 			{
 				ChatSendCurrent();
 			}
@@ -36766,7 +36795,7 @@ if (leftNavigationTexture == null)
 			int count = messages.Count;
 			if (count == 0)
 			{
-				GUI.Label(new Rect(viewport.x + 20f, viewport.y + 20f, viewport.width - 40f, 60f), "Aucun message pour le moment.", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+				GUI.Label(new Rect(viewport.x + 20f, viewport.y + 20f, viewport.width - 40f, 60f), "Aucun message pour le moment.", new GUIStyle(centeredTinyLabelStyle) { fontSize = 13 });
 				return;
 			}
 			EnsureChatHeights(conversationId, viewport.width, compact);
@@ -36890,7 +36919,7 @@ if (leftNavigationTexture == null)
 		private static GUIStyle ChatBubbleTextStyle(bool compact)
 		{
 			if (chatBubbleStyleCache == null) chatBubbleStyleCache = new GUIStyle(smallStyle) { wordWrap = true };
-			chatBubbleStyleCache.fontSize = compact ? 11 : 13;
+			chatBubbleStyleCache.fontSize = compact ? 13 : 15;
 			return chatBubbleStyleCache;
 		}
 
@@ -36905,7 +36934,7 @@ if (leftNavigationTexture == null)
 					normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) }
 				};
 			}
-			chatAuthorStyleCache.fontSize = compact ? 8 : 9;
+			chatAuthorStyleCache.fontSize = compact ? 11 : 12;
 			return chatAuthorStyleCache;
 		}
 
@@ -36915,7 +36944,7 @@ if (leftNavigationTexture == null)
 			{
 				chatTimeStyleCache = new GUIStyle(tinyLabelStyle)
 				{
-					fontSize = 7,
+					fontSize = 10,
 					alignment = TextAnchor.MiddleRight,
 					normal = { textColor = new Color(0.92f, 0.86f, 0.70f, 1f) }
 				};
@@ -36929,7 +36958,7 @@ if (leftNavigationTexture == null)
 			{
 				chatStateStyleCache = new GUIStyle(tinyLabelStyle)
 				{
-					fontSize = 8,
+					fontSize = 10,
 					alignment = TextAnchor.MiddleRight
 				};
 			}
@@ -36946,7 +36975,7 @@ if (leftNavigationTexture == null)
 		private static GUIStyle ChatActionLabelStyle(bool compact)
 		{
 			if (chatActionLabelStyleCache == null) chatActionLabelStyleCache = new GUIStyle(centeredTinyLabelStyle);
-			chatActionLabelStyleCache.fontSize = compact ? 8 : 9;
+			chatActionLabelStyleCache.fontSize = compact ? 10 : 11;
 			return chatActionLabelStyleCache;
 		}
 
