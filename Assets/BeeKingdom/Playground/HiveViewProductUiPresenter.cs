@@ -36942,9 +36942,13 @@ if (leftNavigationTexture == null)
 
 			if (isSelf)
 			{
-				float textW = row.width - 2f * pad;
+				// M081-CL : avatar rond du joueur a droite de sa propre bulle (reference CEO) -
+				// symetrique de l'avatar de l'interlocuteur a gauche, manquait completement ici.
+				Rect avatarRect = new Rect(row.xMax - avatarSize - pad, bubbleArea.y + 2f, avatarSize, avatarSize);
+				DrawChatAvatar(avatarRect, msg);
+				float textW = row.width - avatarSize - 3f * pad;
 				float bubbleW = Mathf.Min(textW, row.width * 0.78f);
-				Rect bubbleRect = new Rect(row.xMax - bubbleW - pad, bubbleArea.y + 2f, bubbleW, bubbleArea.height - 4f);
+				Rect bubbleRect = new Rect(avatarRect.x - pad - bubbleW, bubbleArea.y + 2f, bubbleW, bubbleArea.height - 4f);
 				DrawChatBubble(bubbleRect, true);
 				float innerW = bubbleRect.width - 16f;
 				float textH = ChatBubbleTextHeight(msg.Text, innerW, compact);
@@ -37174,7 +37178,9 @@ if (leftNavigationTexture == null)
 		{
 			float avatarSize = compact ? 34f : 38f;
 			float pad = compact ? 8f : 10f;
-			float textW = msg.FromSelf ? width - 2f * pad : width - avatarSize - 3f * pad;
+			// M081-CL : le message du joueur reserve maintenant aussi la largeur de son propre
+			// avatar (a droite), meme calcul que pour l'interlocuteur.
+			float textW = width - avatarSize - 3f * pad;
 			float bubbleW = Mathf.Min(textW, width * 0.78f);
 			float innerW = bubbleW - (msg.FromSelf ? 16f : 20f);
 			float nameH = msg.FromSelf ? 0f : (compact ? 13f : 15f);
