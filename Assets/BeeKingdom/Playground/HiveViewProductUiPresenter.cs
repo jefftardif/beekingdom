@@ -36309,7 +36309,12 @@ if (leftNavigationTexture == null)
 				DrawPremiumPanel(row, selected ? new Color(0.30f, 0.20f, 0.06f, 0.96f) : new Color(0.05f, 0.040f, 0.026f, 0.90f), selected ? new Color(1f, 0.70f, 0.18f, 0.90f) : new Color(0.55f, 0.40f, 0.15f, 0.55f));
 				DrawGameIcon(new Rect(row.x + 10f, row.y + 10f, 36f, 36f), channel.Icon, Color.white);
 				GUI.Label(new Rect(row.x + 54f, row.y + 8f, row.width - 114f, 24f), channel.Name, new GUIStyle(badgeStyle) { fontSize = mobile ? 15 : 14, alignment = TextAnchor.MiddleLeft });
-				GUI.Label(new Rect(row.x + 54f, row.y + 34f, row.width - 114f, 16f), channel.ReadOnly ? "Lecture seule" : "Discussion", new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+				string channelSubtitle = string.Equals(channel.Id, "alliance", StringComparison.Ordinal) ? "Discussions d'alliance"
+					: string.Equals(channel.Id, "world", StringComparison.Ordinal) ? "Discussion globale"
+					: string.Equals(channel.Id, "private", StringComparison.Ordinal) ? "Messages privés"
+					: string.Equals(channel.Id, ChatGroupsChannelId, StringComparison.Ordinal) ? "Vos groupes"
+					: string.Equals(channel.Id, "events", StringComparison.Ordinal) ? "Annonces spéciales" : "Notifications";
+				GUI.Label(new Rect(row.x + 54f, row.y + 34f, row.width - 114f, 16f), channelSubtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.72f, 0.72f, 0.76f, 1f) } });
 				int chUnread = ChatChannelUnread(channel.Id);
 				if (chUnread > 0)
 				{
@@ -36455,7 +36460,7 @@ if (leftNavigationTexture == null)
 			}
 			Rect sendButton = new Rect(rect.xMax - sendW - 6f, rect.y + 6f, sendW, rect.height - 12f);
 			DrawPremiumPanel(sendButton, new Color(0.30f, 0.20f, 0.06f, 0.96f), ChatAccentColor());
-			GUI.Label(sendButton, "➤ Envoyer", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 12 : 13 });
+			GUI.Label(sendButton, "✉  Envoyer", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 12 : 13 });
 			if (GUI.Button(sendButton, string.Empty, GUIStyle.none))
 			{
 				ChatSendCurrent();
@@ -37001,7 +37006,8 @@ if (leftNavigationTexture == null)
 		private static void DrawChatAvatar(Rect rect, ChatConversationData conv)
 		{
 			DrawPremiumPanel(rect, new Color(0.10f, 0.07f, 0.03f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.90f));
-			DrawGameIcon(new Rect(rect.x + 6f, rect.y + 6f, rect.width - 12f, rect.height - 12f), conv.Icon, Color.white);
+			string name = string.IsNullOrWhiteSpace(conv.Title) ? "?" : conv.Title.Trim();
+			GUI.Label(rect, name.Substring(0, 1).ToUpperInvariant(), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.48f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
 			if (!string.IsNullOrEmpty(conv.Presence))
 			{
 				Color presence = AlliancePresenceColor(conv.Presence);
@@ -37016,7 +37022,8 @@ if (leftNavigationTexture == null)
 		private static void DrawChatAvatar(Rect rect, ChatMessageData msg)
 		{
 			DrawPremiumPanel(rect, new Color(0.10f, 0.07f, 0.03f, 0.98f), new Color(1f, 0.72f, 0.18f, 0.90f));
-			DrawGameIcon(new Rect(rect.x + 6f, rect.y + 6f, rect.width - 12f, rect.height - 12f), "bee", Color.white);
+			string name = string.IsNullOrWhiteSpace(msg.Author) ? "?" : msg.Author.Trim();
+			GUI.Label(rect, name.Substring(0, 1).ToUpperInvariant(), new GUIStyle(titleStyle) { fontSize = Mathf.RoundToInt(rect.height * 0.44f), alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.82f, 0.36f, 1f) } });
 			if (!string.IsNullOrEmpty(msg.Presence))
 			{
 				Color presence = AlliancePresenceColor(msg.Presence);

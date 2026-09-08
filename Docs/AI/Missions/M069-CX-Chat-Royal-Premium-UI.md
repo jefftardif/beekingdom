@@ -2,3 +2,4 @@
 - Fichier : `Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs` ; géométrie premium reconstruite : bannière, onglets, colonnes, cartes, header conversation, composer et panneau membres.
 - Fonctionnel inchangé : contrôleurs, sélection, messages, groupes et actions membres réutilisés.
 - Compilation `Assembly-CSharp.csproj` : 0 erreur, 355 avertissements. Commit local, aucun push.
+- Complément visuel : sous-titres des canaux, badges non lus et cartes sélectionnées renforcés ; avatars remplacés par initiales dorées ; bouton d’envoi avec icône enveloppe ; onglets Chat/Mail positionnés dans le header.
