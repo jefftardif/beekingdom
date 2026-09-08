@@ -493,11 +493,11 @@ namespace BeeKingdom.Playground
             GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.blackTexture, ScaleMode.StretchToFill, false);
             GUI.color = Color.white;
             DrawPremiumPanel(panel, new Color(0.035f, 0.028f, 0.02f, 0.99f), ChatAccentColor());
-            GUI.Label(new Rect(panel.x + 18f, panel.y + 12f, panel.width - 80f, 24f), title, new GUIStyle(badgeStyle) { fontSize = 12 });
+            GUI.Label(new Rect(panel.x + 18f, panel.y + 12f, panel.width - 80f, 28f), title, new GUIStyle(badgeStyle) { fontSize = 16 });
 
             Rect close = new Rect(panel.xMax - 42f, panel.y + 10f, 28f, 28f);
-            DrawPremiumPanel(close, new Color(0.10f, 0.07f, 0.04f, 0.96f), new Color(0.72f, 0.48f, 0.16f, 0.85f));
-            GUI.Label(close, "✕", new GUIStyle(centeredTinyLabelStyle) { fontSize = 12 });
+            DrawFlatRoundedRect(close, new Color(0.20f, 0.14f, 0.08f, 0.96f), 8f);
+            GUI.Label(close, "✕", new GUIStyle(centeredTinyLabelStyle) { fontSize = 14 });
             if (GUI.Button(close, string.Empty, GUIStyle.none))
             {
                 AudioManager.Instance?.PlayUIClick();
@@ -986,35 +986,49 @@ namespace BeeKingdom.Playground
         }
 
         // 3.6 : parametres - couleur d'accent (locale) + regle d'auto-reponse (serveur).
+        // M088-CL : refonte complete des "onglets" (couleur d'accent + regle d'invitation) avec le
+        // meme bouton plat arrondi (DrawFlatRoundedRect) que le reste de Chat Royal depuis M080/
+        // M082/M086 - le rendu "panneau premium" (DrawPremiumPanel) laissait deborder ses coins
+        // decoratifs sur des rectangles trop etroits, rapporte par le CEO ("les onglets sortent
+        // mal"). Police nettement plus grande sur tout l'ecran.
         private static void DrawChatSettingsOverlay(bool compact)
         {
             Rect panel = ChatOverlayRect(compact);
             DrawChatOverlayChrome(panel, "PARAMETRES DU CHAT", CloseChatRoyalOverlays);
 
-            float y = panel.y + 52f;
-            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 20f), "Couleur d'accent (cet appareil)", new GUIStyle(smallStyle) { fontSize = 11 });
-            y += 24f;
-            float swatchWidth = (panel.width - 36f - (ChatAccentColors.Length - 1) * 8f) / ChatAccentColors.Length;
+            float y = panel.y + 56f;
+            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 24f), "Couleur d'accent (cet appareil)", new GUIStyle(badgeStyle) { fontSize = 15, alignment = TextAnchor.MiddleLeft });
+            y += 30f;
+            float swatchGap = 8f;
+            float swatchWidth = (panel.width - 36f - (ChatAccentColors.Length - 1) * swatchGap) / ChatAccentColors.Length;
             for (int i = 0; i < ChatAccentColors.Length; i++)
             {
-                Rect swatch = new Rect(panel.x + 18f + i * (swatchWidth + 8f), y, swatchWidth, 44f);
+                Rect swatch = new Rect(panel.x + 18f + i * (swatchWidth + swatchGap), y, swatchWidth, 54f);
                 bool active = i == ChatAccentIndex();
-                DrawPremiumPanel(swatch, new Color(ChatAccentColors[i].r * 0.32f, ChatAccentColors[i].g * 0.32f, ChatAccentColors[i].b * 0.32f, 0.96f), active ? Color.white : ChatAccentColors[i]);
-                GUI.Label(new Rect(swatch.x, swatch.y + 26f, swatch.width, 16f), ChatAccentNames[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = 7 });
+                DrawFlatRoundedRect(swatch, new Color(ChatAccentColors[i].r * 0.30f, ChatAccentColors[i].g * 0.30f, ChatAccentColors[i].b * 0.30f, 0.97f), 10f);
+                if (active)
+                {
+                    Rect border = new Rect(swatch.x - 2f, swatch.y - 2f, swatch.width + 4f, swatch.height + 4f);
+                    DrawFlatRoundedRect(border, Color.white, 12f);
+                    DrawFlatRoundedRect(swatch, new Color(ChatAccentColors[i].r * 0.30f, ChatAccentColors[i].g * 0.30f, ChatAccentColors[i].b * 0.30f, 0.97f), 10f);
+                }
+                Rect dot = new Rect(swatch.x + swatch.width * 0.5f - 9f, swatch.y + 8f, 18f, 18f);
+                DrawFlatRoundedRect(dot, ChatAccentColors[i], 9f);
+                GUI.Label(new Rect(swatch.x, swatch.y + 30f, swatch.width, 20f), ChatAccentNames[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
                 if (GUI.Button(swatch, string.Empty, GUIStyle.none))
                 {
                     AudioManager.Instance?.PlayUIClick();
                     SetChatAccentIndex(i);
                 }
             }
-            y += 60f;
+            y += 70f;
 
-            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 20f), "Invitations de groupe", new GUIStyle(smallStyle) { fontSize = 11 });
-            y += 22f;
-            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 30f),
+            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 24f), "Invitations de groupe", new GUIStyle(badgeStyle) { fontSize = 15, alignment = TextAnchor.MiddleLeft });
+            y += 26f;
+            GUI.Label(new Rect(panel.x + 18f, y, panel.width - 36f, 34f),
                 "Cette regle est enregistree sur le serveur : elle s'applique meme lorsque vous etes hors ligne.",
-                new GUIStyle(smallStyle) { fontSize = 9, wordWrap = true });
-            y += 32f;
+                new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true });
+            y += 38f;
 
             LivingHiveChatSnapshot snapshot = ChatServerSnapshot();
             string current = snapshot?.AutoInviteResponse ?? RemoteChatAutoInviteResponse.Ask;
@@ -1022,10 +1036,17 @@ namespace BeeKingdom.Playground
             string[] ruleLabels = { "Demander a chaque fois", "Accepter automatiquement", "Refuser automatiquement" };
             for (int i = 0; i < rules.Length; i++)
             {
-                Rect option = new Rect(panel.x + 18f, y + i * 40f, panel.width - 36f, 34f);
+                Rect option = new Rect(panel.x + 18f, y + i * 48f, panel.width - 36f, 42f);
                 bool active = string.Equals(current, rules[i], StringComparison.Ordinal);
-                DrawPremiumPanel(option, active ? new Color(0.28f, 0.19f, 0.05f, 0.96f) : new Color(0.05f, 0.045f, 0.03f, 0.92f), active ? ChatAccentColor() : new Color(0.5f, 0.34f, 0.12f, 0.55f));
-                GUI.Label(new Rect(option.x + 12f, option.y + 8f, option.width - 24f, 20f), (active ? "● " : "○ ") + ruleLabels[i], new GUIStyle(smallStyle) { fontSize = 11, alignment = TextAnchor.MiddleLeft });
+                DrawFlatRoundedRect(option, active ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
+                if (active)
+                {
+                    Rect border = new Rect(option.x - 2f, option.y - 2f, option.width + 4f, option.height + 4f);
+                    DrawFlatRoundedRect(border, new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
+                    DrawFlatRoundedRect(option, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
+                }
+                GUI.Label(new Rect(option.x + 16f, option.y, option.width - 32f, option.height),
+                    (active ? "● " : "○ ") + ruleLabels[i], new GUIStyle(badgeStyle) { fontSize = 14, alignment = TextAnchor.MiddleLeft });
                 if (!active && GUI.Button(option, string.Empty, GUIStyle.none))
                 {
                     AudioManager.Instance?.PlayUIClick();
