@@ -57,6 +57,12 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            // M087-CL : masque le filigrane pendant l'evaluation visuelle de Chat Royal (demande
+            // CEO explicite) - le filigrane reste actif partout ailleurs pour la tracabilite des
+            // rapports de bug externes, seule raison d'etre de ce fichier (voir commentaire de
+            // classe). A retirer si le CEO veut le revoir sur cet ecran plus tard.
+            if (HiveViewProductUiPresenter.ChatScreenOpenForProof) return;
+
             // Depth NEGATIVE = dessine par-dessus les autres OnGUI du jeu. Verifie en build
             // standalone : avec une depth elevee (sous le reste), le label etait entierement
             // masque par l'IMGUI plein ecran de HiveViewProductUiPresenter.

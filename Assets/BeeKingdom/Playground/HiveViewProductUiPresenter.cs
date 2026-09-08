@@ -36173,7 +36173,8 @@ if (leftNavigationTexture == null)
 				float innerTop = quickY + quickH + 6f + searchH;
 				DrawChatMainLayout(new Rect(0f, innerTop, Screen.width, Mathf.Max(1f, Screen.height - innerTop)), compact);
 			});
-			DrawChatServerSourceBadge(quickY + quickH + 6f + searchH, compact);
+			// M087-CL : badge SERVEUR/DEMO masque pendant l'evaluation visuelle de Chat Royal
+			// (demande CEO explicite) - la fonction reste en place, prete a etre rebranchee.
 			DrawChatRoyalOverlays(compact);
 			DrawChatToast();
 			GUI.matrix = Matrix4x4.identity;
