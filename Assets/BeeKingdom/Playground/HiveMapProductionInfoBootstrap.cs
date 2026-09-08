@@ -85,6 +85,14 @@ namespace BeeKingdom.Playground
             if (BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost ||
                 HiveMapActivitiesBootstrap.ModalOpenForExternalHost ||
                 HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
+            // M084-CL : ce bootstrap listait ses propres exceptions au lieu de reutiliser le verrou
+            // partage - Chat Royal (et tout autre overlay plein ecran, ex. Alliance, Inventaire)
+            // n'y figurait pas, donc le petit bouton "i" (Reserve de miel/Entrepot/Transformation)
+            // restait dessine ET cliquable par-dessus, meme fenetre fermee au premier plan. Rapporte
+            // par le CEO : une "icone d'information" qui traverse Chat Royal, confirmee en cliquant
+            // dessus (fait apparaitre le panneau "Transformation"). Meme garde deja utilisee par
+            // HiveMapBuildingUpgradeProgressBootstrap pour la barre de construction.
+            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
