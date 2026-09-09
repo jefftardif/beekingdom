@@ -109,19 +109,61 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 return max(m, foam * 0.85);
             }
 
+            // Brightness + blue-dominance at a UV, packed together so the neighborhood
+            // average below can be computed with one call per sample point.
+            half2 wmBrightBlueAt(float2 uv)
+            {
+                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * _Color;
+                half bd = c.b - max(c.r, c.g);
+                half br = dot(c.rgb, half3(0.333, 0.333, 0.334));
+                return half2(br, bd);
+            }
+
             half4 frag(Varyings input) : SV_Target
             {
                 half4 baseColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color;
 
+                // input.uv's V axis runs opposite to on-screen "down" (Unity flips V so the
+                // image renders right-side-up), but world Y increases downward on screen
+                // (see WorldMapMmoFullscreenFoundationBootstrap.WorldToScreen). Un-flip V
+                // here so worldPos.y actually increases going down the screen/world - without
+                // this the current/foam motion reads as flowing backwards.
+                float2 local01 = saturate((input.uv - _WmWaterSrcRect.xy) / max(_WmWaterSrcRect.zw, 0.0001));
+                float2 worldPos = float2(
+                    _WmWaterWorldRect.x + local01.x * _WmWaterWorldRect.z,
+                    _WmWaterWorldRect.y + (1.0 - local01.y) * _WmWaterWorldRect.w);
+                float2 worldPerTexelUv = _WmWaterSrcRect.zw / max(_WmWaterWorldRect.zw, 0.0001);
+
                 half blueDominance = baseColor.b - max(baseColor.r, baseColor.g);
                 half brightness = dot(baseColor.rgb, half3(0.333, 0.333, 0.334));
-                // Continuous foam weight (0 = calm blue water, 1 = bright cascading foam)
-                // instead of a hard brightness>=0.78 step. That step only caught the
-                // purest-white pixels of a waterfall, leaving the rest of the cascade (the
-                // much more common mid-tone grey/blue falling water) getting the calm-river
-                // glint/current treatment instead - CEO: the good foam look only showed in
-                // "small windows" of a waterfall rather than covering the whole thing.
-                half foamWeight = smoothstep(0.42, 0.7, brightness) * step(-0.03, blueDominance);
+
+                // CEO: a genuine waterfall has huge PER-PIXEL brightness/color swings (bright
+                // foam streaks right next to darker shadowed ribbons, in the same cascade).
+                // Classifying "is this pixel foam or calm water" per-pixel made the two
+                // different-looking treatments interleave at texel scale within one
+                // continuous waterfall - a hard visible patchwork ("l'effet... trop
+                // fenetre"), worse than either look on its own. Average brightness/blue over
+                // a wide WORLD-space neighborhood (same technique as the flow-direction probe
+                // below - never screen-space derivatives, see that comment for why) before
+                // classifying, so the WHOLE cascade reads as one consistent region instead of
+                // flickering between two treatments pixel to pixel.
+                const float FoamClassifyWorldRadius = 34.0;
+                float2 classifyUv = worldPerTexelUv * FoamClassifyWorldRadius;
+                half2 bbCenter = half2(brightness, blueDominance);
+                half2 bbE = wmBrightBlueAt(input.uv + float2(classifyUv.x, 0.0));
+                half2 bbW = wmBrightBlueAt(input.uv - float2(classifyUv.x, 0.0));
+                half2 bbN = wmBrightBlueAt(input.uv + float2(0.0, classifyUv.y));
+                half2 bbS = wmBrightBlueAt(input.uv - float2(0.0, classifyUv.y));
+                half2 bbNE = wmBrightBlueAt(input.uv + classifyUv);
+                half2 bbSW = wmBrightBlueAt(input.uv - classifyUv);
+                half2 bbNW = wmBrightBlueAt(input.uv + float2(-classifyUv.x, classifyUv.y));
+                half2 bbSE = wmBrightBlueAt(input.uv + float2(classifyUv.x, -classifyUv.y));
+                half2 bbAvg = (bbCenter + bbE + bbW + bbN + bbS + bbNE + bbSW + bbNW + bbSE) * (1.0 / 9.0);
+
+                // Continuous foam weight (0 = calm blue water, 1 = bright cascading foam),
+                // driven by the NEIGHBORHOOD-AVERAGED brightness/blue above rather than this
+                // single pixel's own color, for the spatial-coherence reason above.
+                half foamWeight = smoothstep(0.24, 0.55, bbAvg.x) * smoothstep(-0.16, 0.0, bbAvg.y);
                 half waterMask = saturate(blueDominance * 6.0 - 0.05);
                 waterMask = max(waterMask, foamWeight * 0.85);
 
@@ -136,16 +178,6 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 {
                     return baseColor;
                 }
-
-                // input.uv's V axis runs opposite to on-screen "down" (Unity flips V so the
-                // image renders right-side-up), but world Y increases downward on screen
-                // (see WorldMapMmoFullscreenFoundationBootstrap.WorldToScreen). Un-flip V
-                // here so worldPos.y actually increases going down the screen/world - without
-                // this the current/foam motion reads as flowing backwards.
-                float2 local01 = saturate((input.uv - _WmWaterSrcRect.xy) / max(_WmWaterSrcRect.zw, 0.0001));
-                float2 worldPos = float2(
-                    _WmWaterWorldRect.x + local01.x * _WmWaterWorldRect.z,
-                    _WmWaterWorldRect.y + (1.0 - local01.y) * _WmWaterWorldRect.w);
 
                 float t = _Time.y;
 
@@ -163,7 +195,6 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // a low-pass filter - it only sees real water/bank transitions, not paint
                 // texture grain, and its result no longer depends on zoom level.
                 const float FlowProbeWorldRadius = 14.0;
-                float2 worldPerTexelUv = _WmWaterSrcRect.zw / max(_WmWaterWorldRect.zw, 0.0001);
                 float2 probeUv = worldPerTexelUv * FlowProbeWorldRadius;
                 half maskEast = wmWaterMaskAt(input.uv + float2(probeUv.x, 0.0));
                 half maskWest = wmWaterMaskAt(input.uv - float2(probeUv.x, 0.0));
