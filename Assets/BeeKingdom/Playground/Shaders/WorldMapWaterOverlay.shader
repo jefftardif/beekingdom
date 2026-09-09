@@ -119,25 +119,35 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // direction so every effect drifts the same way instead of each
                 // picking its own diagonal.
                 float2 FlowDir = float2(0.7071068, 0.7071068);
+                float2 FlowPerp = float2(-FlowDir.y, FlowDir.x);
 
-                // Two noise octaves advected along FlowDir read as choppy/organic water
-                // instead of a visibly regular sine grid, while staying on-direction.
-                float2 flowUv1 = worldPos * 0.02 - FlowDir * (t * 0.45);
-                float2 flowUv2 = worldPos * 0.06 - FlowDir * (t * 0.85);
-                float n1 = wmNoise(flowUv1) - 0.5;
-                float n2 = wmNoise(flowUv2) - 0.5;
+                // Real flowing water shows streaks/reflections elongated ALONG the current,
+                // not round blobs - isotropic noise (equal frequency on both axes) was
+                // reading as flat, static-looking mottling on calm stretches (CEO: "il
+                // manque encore quelque chose"). Sample noise in a flow-aligned frame -
+                // low frequency along the flow, higher frequency across it - so the noise
+                // itself is stretched into long bands running the same way as the current,
+                // then scroll that frame along the flow direction over time.
+                float along = dot(worldPos, FlowDir);
+                float across = dot(worldPos, FlowPerp);
+
+                float2 streakUv1 = float2(across * 0.05, along * 0.006 - t * 1.1);
+                float2 streakUv2 = float2(across * 0.12, along * 0.014 - t * 1.9);
+                float n1 = wmNoise(streakUv1) - 0.5;
+                float n2 = wmNoise(streakUv2) - 0.5;
                 float2 rippleOffset = FlowDir * (n1 * 0.016 + n2 * 0.008) * waterMask;
                 half4 rippleColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + rippleOffset) * _Color;
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
-                // Downstream current bands driven by the same noise field for cohesion.
+                // Downstream current bands driven by the same streak field for cohesion.
                 half currentBand = saturate(n1 * 1.6 + 0.5);
                 currentBand = pow(currentBand, 3.0);
                 flowing.rgb += currentBand * waterMask * 0.28;
 
-                // Fast, tight glints on top of the current for a "sparkling water" look -
-                // driven by noise (not a pure sine) so it doesn't read as a regular grid.
-                float n3 = wmNoise(worldPos * 0.25 - FlowDir * (t * 1.3));
+                // Fast, tight glints - also streak-shaped and flow-aligned - for a
+                // "sparkling water" look without reading as a regular grid.
+                float2 glintUv = float2(across * 0.22, along * 0.03 - t * 2.6);
+                float n3 = wmNoise(glintUv);
                 half glint = pow(saturate(n3), 6.0);
                 flowing.rgb += glint * waterMask * 0.22;
 
