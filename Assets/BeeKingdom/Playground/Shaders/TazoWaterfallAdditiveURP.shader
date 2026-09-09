@@ -61,7 +61,10 @@ Shader "BeeKingdom/WaterfallFX/ParticleAdditiveURP"
             half4 frag(Varyings input) : SV_Target
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
-                half3 rgb = tex.rgb * _TintColor.rgb * input.color.rgb * _TintColor.a * input.color.a * 2.0;
+                // See TazoWaterfallMeshAdditiveURP.shader's header: the pack's
+                // additive sprites store their shape in alpha over near-white
+                // RGB, so tex.a must mask the additive contribution.
+                half3 rgb = tex.rgb * tex.a * _TintColor.rgb * input.color.rgb * _TintColor.a * input.color.a * 2.0;
                 return half4(rgb, 0.0);
             }
             ENDHLSL

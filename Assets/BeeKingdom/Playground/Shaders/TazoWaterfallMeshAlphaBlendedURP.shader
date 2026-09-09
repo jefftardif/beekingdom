@@ -17,7 +17,16 @@ Shader "BeeKingdom/WaterfallFX/MeshAlphaBlendedURP"
     SubShader
     {
         Tags { "RenderType" = "Transparent" "Queue" = "Transparent" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True" }
-        Blend SrcAlpha OneMinusSrcAlpha
+        // Two-part blend: RGB uses standard straight-alpha "over" (SrcAlpha,
+        // OneMinusSrcAlpha), but ALPHA needs its own (One, OneMinusSrcAlpha) -
+        // without this, compositing several semi-transparent layers onto an
+        // already-transparent render target (this shader draws into an
+        // offscreen RenderTexture cleared to alpha=0) squares the alpha each
+        // layer (result.a = src.a * src.a + dst.a * (1-src.a) with dst.a
+        // starting at 0), making the whole waterfall look far fainter than the
+        // tint colors intend. CEO: "effet presque transparent, très peu
+        // visible" - this was the cause.
+        Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
 

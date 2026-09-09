@@ -17,7 +17,11 @@ Shader "BeeKingdom/WaterfallFX/ParticleAlphaBlendedURP"
     SubShader
     {
         Tags { "RenderType" = "Transparent" "Queue" = "Transparent" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True" }
-        Blend SrcAlpha OneMinusSrcAlpha
+        // See TazoWaterfallMeshAlphaBlendedURP.shader's header: two-part blend
+        // (separate factors for RGB vs ALPHA) avoids alpha getting squared
+        // when compositing multiple semi-transparent layers onto an already-
+        // transparent offscreen RenderTexture.
+        Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
 

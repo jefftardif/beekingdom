@@ -57,7 +57,17 @@ Shader "BeeKingdom/WaterfallFX/MeshAdditiveURP"
             half4 frag(Varyings input) : SV_Target
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
-                half3 rgb = tex.rgb * _TintColor.rgb * _TintColor.a * 2.0;
+                // CORRECTED (M073B-CL live Play Mode debugging, 2026-09-09): the
+                // pack's caustics/foam sprites (e.g. highlight_1.png) are stored
+                // as near-solid-white RGB with the actual glow/caustic SHAPE
+                // baked into the alpha channel - standard convention for
+                // additive glow sprites. Without multiplying by tex.a here, the
+                // shader added full white brightness across the ENTIRE mesh
+                // footprint regardless of the sprite's pattern, washing the
+                // colored water sheet underneath into a flat white/grey blob -
+                // the CEO's "gris plat" report. tex.a now masks the additive
+                // contribution to the actual sprite shape.
+                half3 rgb = tex.rgb * tex.a * _TintColor.rgb * _TintColor.a * 2.0;
                 return half4(rgb, 0.0);
             }
             ENDHLSL

@@ -3903,14 +3903,25 @@ namespace BeeKingdom.Playground
             {
                 waterfallFxLookupAttempted = true;
                 waterfallFx = FindAnyObjectByType<WorldMapWaterfallFxBootstrap>();
+                Debug.Log("[WaterfallFX] Overlay lookup: found=" + (waterfallFx != null));
             }
 
-            if (waterfallFx == null || waterfallFx.Texture == null) return;
+            if (waterfallFx == null) return;
             if (Event.current == null || Event.current.type != EventType.Repaint) return;
+            if (waterfallFx.Texture == null)
+            {
+                if (Time.frameCount % 120 == 0) Debug.Log("[WaterfallFX] Overlay: texture is null this frame.");
+                return;
+            }
 
             Rect projected = WorldRectToScreenRect(WorldMapWaterfallFxBootstrap.WorldRect);
             Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
-            if (!projected.Overlaps(screen)) return;
+            bool overlaps = projected.Overlaps(screen);
+            if (Time.frameCount % 120 == 0)
+            {
+                Debug.Log("[WaterfallFX] Overlay: projectedRect=" + projected + " screen=" + screen + " overlaps=" + overlaps + " worldCenter=" + currentWorldCenter + " zoom=" + currentZoom);
+            }
+            if (!overlaps) return;
 
             GUI.DrawTexture(projected, waterfallFx.Texture, ScaleMode.StretchToFill, true);
         }
