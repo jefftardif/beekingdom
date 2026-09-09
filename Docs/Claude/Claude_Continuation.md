@@ -40,6 +40,53 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M073B-CL : debug live waterfall FX (computer-use) (2026-09-09)
+
+Suite directe du jalon M073B-CL ci-dessous. Le CEO a teste en Play Mode et
+signale l'effet invisible/quasi invisible, puis un rectangle gris plat sans
+detail de texture ("le gris plat est l'effet. On voit bouger"). A sa demande
+("pourquoi ne prends tu pas controle de mon ecran"), acces `computer-use`
+obtenu et utilise pour debugger en direct dans l'Editeur Unity (Hierarchy,
+Inspector, Game view) au lieu de deviner via logs uniquement.
+
+Quatre corrections reelles trouvees et appliquees :
+1. **Mauvaise chute peinte** : le scan initial (sans Play Mode) avait trouve
+   R02C20/21 - une vraie chute mais pas celle du secteur ou joue le CEO.
+   Recale par comparaison avec son `worldCenter` reel releve en direct :
+   tuiles R05C07/08, `WorldRect` corrige a `(7168, 6144, 1024, 512)`.
+2. **Cadrage camera casse** : la camera de rendu visait une position locale
+   fixe supposant le pivot du maillage a son centre vertical, alors qu'il est
+   a la base - le maillage remplissait ~5% de la RenderTexture (confirme par
+   lecture de pixels via script). Corrige : `WorldMapWaterfallFxBootstrap`
+   calcule maintenant le cadrage a partir des `Bounds` combines des
+   `MeshRenderer` reels (pas les `ParticleSystemRenderer`, dont les bounds
+   sont degeneres avant la premiere simulation).
+3. **Vrai coupable du "gris plat"** : le shader additif (`caustics_1`,
+   `foam_1`) ne multipliait pas par `tex.a` - or les sprites additifs du pack
+   (`highlight_1.png`) sont quasi blancs en RGB avec la forme reelle du motif
+   dans le canal alpha (convention standard glow). Sans ce facteur, le
+   shader peignait du blanc plein sur toute la surface du maillage au lieu de
+   suivre la forme. Corrige dans `TazoWaterfallMeshAdditiveURP.shader` et
+   `TazoWaterfallAdditiveURP.shader`.
+4. Largeur de couverture elargie : 2 instances laterales de
+   `sold3_waterfall_high` reajoutees (le cadrage auto-centre gere maintenant
+   correctement plusieurs instances).
+
+Verifie visuellement en Play Mode (camera de jeu reelle, pas juste Scene
+View, via teleportation de `currentWorldCenter`/`targetWorldCenter` par
+script) : motif d'eau bleu-vert marbre desormais visible et anime, aucune
+erreur console, aucun materiau rose. Rapport mis a jour :
+`Docs/AI/Missions/M073B-CL-Realistic-Waterfall-Prefab-Integration.md`.
+
+Prochain test utilisateur : ouvrir la scene, Play Mode, naviguer vers
+`worldCenter` ~ (7680, 6400), juger si le cadrage/l'espacement des 3
+instances merite un reglage fin supplementaire. Jonctions riviere/bassin et
+performance mobile restent a faire (hors scope de cette mission).
+
+Commit local uniquement (pas de push), comme demande.
+
+---
+
 ## Jalon courant — M073B-CL : integration Realistic Waterfall Prefab (Tazo_fx) (2026-09-09)
 
 Nouvelle mission distincte de M073-CL (shader procedural, abandonne) : le CEO
