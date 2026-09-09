@@ -230,6 +230,14 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 float along = dot(worldPos, FlowDir);
                 float across = dot(worldPos, FlowPerp);
 
+                // Per-region time offset for calm water only (Catlike Coding's flow/texture-
+                // distortion tutorial: without this, every part of the water animates on the
+                // exact same clock and the whole surface pulses in visible unison, which
+                // reads as artificial. A slow, large-scale spatial noise desyncs the phase
+                // from one stretch of river to the next - not applied to the foam turbulence
+                // below, which already reads fine on its own.
+                float tCalm = t + wmNoise(worldPos * 0.006) * 6.0;
+
                 // CEO: previous pass was too subtle to read as motion even zoomed in, then
                 // (after boosting it) looked blocky/pixelated on calm river stretches - a
                 // single anisotropic octave stretched into "streaks" still reads as visible
@@ -237,8 +245,8 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // by shrinking the along-flow axis much faster than the across axis per
                 // octave, so the fine octaves are near-isotropic detail that breaks up the
                 // base streak's edges instead of just rescaling the same rectangle.
-                float field1 = wmStreakField(across, along, 0.05, 0.006, 3.2, t) - 0.5;
-                float field2 = wmStreakField(across, along, 0.12, 0.014, 5.4, t) - 0.5;
+                float field1 = wmStreakField(across, along, 0.05, 0.006, 3.2, tCalm) - 0.5;
+                float field2 = wmStreakField(across, along, 0.12, 0.014, 5.4, tCalm) - 0.5;
                 float2 rippleOffset = FlowDir * (field1 * 0.05 + field2 * 0.025) * waterMask;
 
                 // Blur radius ~1.5 world units, converted through the same world<->UV scale
@@ -263,7 +271,7 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // produced the grainy look) and a wide threshold so they read as gentle
                 // sheen drifting across the water rather than per-pixel static. Same
                 // calm-water-only scaling as the current band.
-                half glintField = wmStreakField(across, along, 0.035, 0.008, 2.4, t);
+                half glintField = wmStreakField(across, along, 0.035, 0.008, 2.4, tCalm);
                 half glint = smoothstep(0.45, 0.85, glintField);
                 flowing.rgb += glint * waterMask * calmWater * 0.22;
 
