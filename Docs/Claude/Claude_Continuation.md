@@ -40,6 +40,12 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M076-CX : placements des chutes corrigés et vérifiés (2026-09-09)
+
+M075 annonçait des placements corrects sans preuve suffisante : origine runtime omise et catalogue non chargé. M076 remplace ces coordonnées par 12 configurations mesurées sur le terrain source (`pixel * 25/12 + 3584`), chacune avec ses propres contours. Le renderer commun charge réellement le JSON et gère les RT/caméras, matériaux, animation et OnGUI ; transfert de la même carte sans replacer les instances.
+
+Compilation et tournée visuelle Play Mode effectuées. Référence comparée au maillage/shader approuvés à temps figé : zéro pixel différent sur la RT 640 × 429. Rapport et preuves : `Docs/AI/Missions/M076-CX-Waterfall-Placement-Correction.md`. Aucun changement de scène ou de terrain dans cette correction ; les modifications concurrentes restent exclues du commit.
+
 ## Jalon courant — M075-CX : catalogue réutilisable des chutes (2026-09-09)
 
 Correction après les captures annotées du CEO : les entrées secondaires

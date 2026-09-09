@@ -3903,30 +3903,12 @@ namespace BeeKingdom.Playground
             {
                 waterfallFxLookupAttempted = true;
                 waterfallFx = FindAnyObjectByType<WorldMapWaterfallFxBootstrap>();
-                Debug.Log("[WaterfallFX] Overlay lookup: found=" + (waterfallFx != null));
+                if (waterfallFx == null) waterfallFx = new GameObject("WaterfallFX").AddComponent<WorldMapWaterfallFxBootstrap>();
             }
 
             if (waterfallFx == null) return;
             if (Event.current == null || Event.current.type != EventType.Repaint) return;
-            if (waterfallFx.Texture == null)
-            {
-                if (Time.frameCount % 120 == 0) Debug.Log("[WaterfallFX] Overlay: texture is null this frame.");
-                return;
-            }
-
-            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
-            IReadOnlyList<WaterfallDefinition> definitions = waterfallFx.Definitions;
-            for (int i = 0; i < definitions.Count; i++)
-            {
-                WaterfallDefinition definition = definitions[i];
-                Rect projected = WorldRectToScreenRect(definition.worldRect);
-                if (!projected.Overlaps(screen)) continue;
-                GUI.color = new Color(1f, 1f, 1f, Mathf.Clamp01(definition.opacity));
-                GUIUtility.RotateAroundPivot(definition.rotationDegrees, projected.center);
-                GUI.DrawTexture(projected, waterfallFx.Texture, ScaleMode.StretchToFill, true);
-                GUIUtility.RotateAroundPivot(-definition.rotationDegrees, projected.center);
-                GUI.color = Color.white;
-            }
+            waterfallFx.DrawOverlay(currentWorldCenter, currentZoom, new Rect(0f, 0f, Screen.width, Screen.height));
         }
 
         private void DrawWave6WorldTerrain()
