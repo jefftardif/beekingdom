@@ -10,7 +10,7 @@ Le composant expose maintenant des `WaterfallDefinition` sérialisées : identif
 Unity Play Mode : compilation sans erreur, shader sans erreur, chute de référence inchangée visuellement, 1 renderer runtime, aucun sommet hors caméra et aucun pixel opaque sur le bord de RenderTexture. Console Unity : aucune erreur. Vérification visuelle effectuée au zoom de référence.
 
 ## Ajustement secondaire
-Les coordonnées secondaires ont été corrigées dans le repère monde de la carte. Une zone secondaire a été testée en Play Mode : l'effet partagé est désormais visible et animé sur une autre chute. Les quatre zones restent à affiner visuellement une par une avant production.
+Les captures CEO annotées ont montré huit chutes supplémentaires. Les entrées ont été recalées dans le repère monde 25 600 unités à partir du repère source 12 288 pixels, puis ajoutées au catalogue. Play Mode compile sans erreur et la console reste propre. L'effet est maintenant projeté sur les zones annotées.
 
 ## Acceptation
 - [x] Référence visuelle conservée.

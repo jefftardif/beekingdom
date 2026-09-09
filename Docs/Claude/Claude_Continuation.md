@@ -42,18 +42,17 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ## Jalon courant — M075-CX : catalogue réutilisable des chutes (2026-09-09)
 
-Correction après retour CEO : les entrées secondaires utilisaient d'abord des
-coordonnées pixel au lieu du repère monde. Les quatre rects du catalogue ont
-été convertis ; validation Play Mode sur une zone secondaire confirmée, avec
-texture animée visible et aucune erreur console. L'alignement fin de chaque
-zone reste une passe visuelle distincte.
+Correction après les captures annotées du CEO : les entrées secondaires
+utilisaient d'abord des coordonnées pixel au lieu du repère monde. Huit chutes
+supplémentaires sont maintenant cataloguées après conversion 12 288 pixels vers
+25 600 unités monde ; Play Mode compile et la console reste propre.
 
 La chute validée reste la référence visuelle. Le placement est maintenant
 décrit par des données `WaterfallDefinition` (identifiant, rect monde,
 échelle, orientation, direction de flux, opacité) et un catalogue JSON dans
 `Resources/WaterfallFX/WaterfallCatalog.json`; le composant commun conserve la
 caméra orthographique, RenderTexture, shader, animation, feathering et rendu
-OnGUI. Quatre entrées secondaires sont présentes pour préparer l'application
+OnGUI. Huit entrées secondaires sont présentes pour préparer l'application
 aux autres chutes et le transfert vers la World Map de production sans
 reconstruction manuelle.
 
