@@ -40,6 +40,38 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M073B-CL : integration Realistic Waterfall Prefab (Tazo_fx) (2026-09-09)
+
+Nouvelle mission distincte de M073-CL (shader procedural, abandonne) : le CEO
+a fourni un asset achete `Assets/Tazo_fx` (Realistic Waterfall Prefab v1.6) a
+integrer sur la vraie chute peinte de
+`Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity`. Rapport complet :
+`Docs/AI/Missions/M073B-CL-Realistic-Waterfall-Prefab-Integration.md`.
+
+Resume : `sold3_waterfall_high` (Standard Mesh + particules) choisi, 3
+instances cote a cote. Deux problemes reels trouves et corriges : (1) tous
+les materiaux du pack utilisent des shaders Legacy (Built-in RP) qui
+rendent rose sous URP - corrige avec 2 nouveaux shaders URP + 8 materiaux
+copies dans `Assets/BeeKingdom` (Tazo_fx jamais modifie) ; (2) le terrain de
+la World Map se dessine via `OnGUI` chaque frame, qui peint TOUJOURS
+par-dessus le rendu 3D de la Main Camera - un prefab 3D place normalement
+aurait ete invisible. Resolu avec une camera de rendu dediee (layer isole)
+vers une `RenderTexture`, composee dans le meme flux `OnGUI` que le terrain
+via `WorldRectToScreenRect` (nouveau composant
+`WorldMapWaterfallFxBootstrap.cs`). Localisation de la chute peinte trouvee
+par script (scan des 2500 tuiles, signature "fraction de surface ecume") :
+tuiles R02C20/R02C21, world rect (13824,4608,1024,512).
+
+**Limitation importante** : aucun acces Play Mode ni capture Game View
+possible cette session (outils MCP indisponibles) - tout verifie par la
+donnee (compilation, references de composants/materiaux), jamais vu a
+l'ecran. Prochain test utilisateur : ouvrir la scene, Play Mode, naviguer
+vers la chute (secteur nord, R02C20-21), juger l'echelle/le cadrage.
+
+Commit local uniquement (pas de push), comme demande.
+
+---
+
 ## Jalon courant — M073-CL (suite 3, meme nuit) : CEO demande de tout retirer, repart de zero (2026-09-09)
 
 Apres la serie de correctifs de classification foam/eau-calme (voir
