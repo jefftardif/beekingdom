@@ -78,6 +78,19 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
             }
 
+            // Three octaves at unrelated frequencies/offsets so their grid cells never line
+            // up. A single octave of wmNoise, once pushed through a hard threshold/pow (as
+            // the current band and glints do to read as bold motion), shows its own square
+            // interpolation cells as blocky "1980s TV static" - this breaks that alignment
+            // up into something organic instead.
+            float wmFbm(float2 p)
+            {
+                float f = wmNoise(p) * 0.55;
+                f += wmNoise(p * 2.37 + float2(11.7, 3.1)) * 0.30;
+                f += wmNoise(p * 4.81 + float2(-5.3, 8.9)) * 0.15;
+                return f;
+            }
+
             // Same water-color heuristic as the main mask below, isolated so the local
             // flow-direction probe further down can reuse it at neighboring UVs.
             half wmWaterMaskAt(float2 uv)
@@ -191,16 +204,17 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
                 // Downstream current bands driven by the same streak field for cohesion.
-                // smoothstep instead of a steep pow() keeps a wide visible band instead of
-                // crushing most of the signal down to near-zero between rare bright peaks.
-                half currentBand = smoothstep(0.15, 0.55, n1 + 0.5);
+                // wmFbm (three overlapping octaves) instead of raw n1, and smoothstep
+                // instead of a steep pow(): a single hard-thresholded octave showed its own
+                // grid cells as blocky "1980s TV static" once amplified for visibility.
+                half currentBand = smoothstep(0.15, 0.55, wmFbm(streakUv1) + 0.35);
                 flowing.rgb += currentBand * waterMask * 0.55;
 
                 // Fast, tight glints - also streak-shaped and flow-aligned - for a
-                // "sparkling water" look without reading as a regular grid.
+                // "sparkling water" look. Same fbm + smoothstep treatment as the current
+                // band, for the same blockiness reason.
                 float2 glintUv = float2(across * 0.22, along * 0.03 - t * 7.0);
-                float n3 = wmNoise(glintUv);
-                half glint = pow(saturate(n3), 4.0);
+                half glint = smoothstep(0.55, 0.82, wmFbm(glintUv));
                 flowing.rgb += glint * waterMask * 0.4;
 
                 // Reference note (VDB waterfall breakdown): real falling water reads almost
@@ -209,10 +223,8 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // Approximate both cheaply: two noise octaves at different scale/speed
                 // "tear up" the painted foam into moving clumps instead of a smooth pulse,
                 // and calm (non-foam) water gets a small push toward cyan for richer color.
-                float foamNoiseA = wmNoise(worldPos * 0.09 - FlowDir * (t * 5.0));
-                float foamNoiseB = wmNoise(worldPos * 0.22 - FlowDir * (t * 8.0));
-                half foamTurbulence = saturate(foamNoiseA * 0.6 + foamNoiseB * 0.4);
-                half foam = whiteFoamCandidate * saturate(pow(foamTurbulence, 1.2) * 1.5);
+                half foamTurbulence = wmFbm(worldPos * 0.1 - FlowDir * (t * 6.0));
+                half foam = whiteFoamCandidate * smoothstep(0.3, 0.7, foamTurbulence);
                 flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.6);
                 flowing.rgb += foam * 0.15;
 
