@@ -78,6 +78,18 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
             }
 
+            // Same water-color heuristic as the main mask below, isolated so the local
+            // flow-direction probe further down can reuse it at neighboring UVs.
+            half wmWaterMaskAt(float2 uv)
+            {
+                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * _Color;
+                half bd = c.b - max(c.r, c.g);
+                half br = dot(c.rgb, half3(0.333, 0.333, 0.334));
+                half foam = step(0.78, br) * step(-0.03, bd);
+                half m = saturate(bd * 6.0 - 0.05);
+                return max(m, foam * 0.85);
+            }
+
             half4 frag(Varyings input) : SV_Target
             {
                 half4 baseColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color;
@@ -112,13 +124,49 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
                 float t = _Time.y;
 
-                // CEO: every river/waterfall on this map runs southeast. worldPos.x
-                // increases east and worldPos.y increases south (see the V-flip note
-                // above), so southeast is the single fixed direction float2(1, 1)
-                // normalized. All scrolling noise below is advected along this one
-                // direction so every effect drifts the same way instead of each
-                // picking its own diagonal.
-                float2 FlowDir = float2(0.7071068, 0.7071068);
+                // Auto-detected local flow direction: probe the water mask a fixed WORLD
+                // distance (not screen/texel distance) to each side of this pixel and take
+                // the gradient across the river banks; the flow tangent runs perpendicular
+                // to that gradient (along the banks, not across them). This follows real
+                // bends in the river instead of assuming one direction for the whole map.
+                //
+                // Deliberately NOT screen-space derivatives (ddx/ddy/fwidth) here: an
+                // earlier revision used fwidth() on the per-pixel color mask and it reacted
+                // to ordinary rock/moss shading noise everywhere, producing a full-screen
+                // diagonal hatch (confirmed from a CEO screenshot). Sampling at a fixed,
+                // fairly large WORLD-space radius instead of adjacent screen pixels acts as
+                // a low-pass filter - it only sees real water/bank transitions, not paint
+                // texture grain, and its result no longer depends on zoom level.
+                const float FlowProbeWorldRadius = 14.0;
+                float2 worldPerTexelUv = _WmWaterSrcRect.zw / max(_WmWaterWorldRect.zw, 0.0001);
+                float2 probeUv = worldPerTexelUv * FlowProbeWorldRadius;
+                half maskEast = wmWaterMaskAt(input.uv + float2(probeUv.x, 0.0));
+                half maskWest = wmWaterMaskAt(input.uv - float2(probeUv.x, 0.0));
+                // input.uv's V axis is flipped relative to world Y (see the note below on
+                // worldPos), so "+V" is a step NORTH in world space, not south.
+                half maskNorth = wmWaterMaskAt(input.uv + float2(0.0, probeUv.y));
+                half maskSouth = wmWaterMaskAt(input.uv - float2(0.0, probeUv.y));
+
+                // maskNorth/maskSouth were sampled along +V/-V, which is -worldY/+worldY (the
+                // same flip as above) - negate that component so bankGradient is a genuine
+                // (d/dWorldX, d/dWorldY) gradient, matching bankGradient.x's un-flipped sign.
+                float2 bankGradient = float2(maskEast - maskWest, -(maskNorth - maskSouth));
+                float gradientStrength = length(bankGradient);
+
+                // River/waterfall on this map generally trend southeast - used only to
+                // pick a fallback in open water where the bank gradient is too weak/noisy
+                // to trust, and to resolve the tangent's 180-degree ambiguity (the gradient
+                // alone can't tell upstream from downstream).
+                float2 FallbackFlowDir = float2(0.7071068, 0.7071068);
+                float2 FlowDir = FallbackFlowDir;
+                if (gradientStrength > 0.02)
+                {
+                    float2 tangent = normalize(float2(-bankGradient.y, bankGradient.x));
+                    if (dot(tangent, FallbackFlowDir) < 0.0) tangent = -tangent;
+                    float confidence = saturate((gradientStrength - 0.02) * 8.0);
+                    FlowDir = normalize(lerp(FallbackFlowDir, tangent, confidence));
+                }
+
                 float2 FlowPerp = float2(-FlowDir.y, FlowDir.x);
 
                 // Real flowing water shows streaks/reflections elongated ALONG the current,
