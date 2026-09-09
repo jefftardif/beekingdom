@@ -179,25 +179,29 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 float along = dot(worldPos, FlowDir);
                 float across = dot(worldPos, FlowPerp);
 
-                float2 streakUv1 = float2(across * 0.05, along * 0.006 - t * 1.1);
-                float2 streakUv2 = float2(across * 0.12, along * 0.014 - t * 1.9);
+                // CEO: previous pass was too subtle to read as motion even zoomed in.
+                // Scroll speeds and contrast below are deliberately bold - clearly moving
+                // takes priority over photorealistic restraint for this prototype.
+                float2 streakUv1 = float2(across * 0.05, along * 0.006 - t * 3.2);
+                float2 streakUv2 = float2(across * 0.12, along * 0.014 - t * 5.4);
                 float n1 = wmNoise(streakUv1) - 0.5;
                 float n2 = wmNoise(streakUv2) - 0.5;
-                float2 rippleOffset = FlowDir * (n1 * 0.016 + n2 * 0.008) * waterMask;
+                float2 rippleOffset = FlowDir * (n1 * 0.05 + n2 * 0.025) * waterMask;
                 half4 rippleColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + rippleOffset) * _Color;
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
                 // Downstream current bands driven by the same streak field for cohesion.
-                half currentBand = saturate(n1 * 1.6 + 0.5);
-                currentBand = pow(currentBand, 3.0);
-                flowing.rgb += currentBand * waterMask * 0.28;
+                // smoothstep instead of a steep pow() keeps a wide visible band instead of
+                // crushing most of the signal down to near-zero between rare bright peaks.
+                half currentBand = smoothstep(0.15, 0.55, n1 + 0.5);
+                flowing.rgb += currentBand * waterMask * 0.55;
 
                 // Fast, tight glints - also streak-shaped and flow-aligned - for a
                 // "sparkling water" look without reading as a regular grid.
-                float2 glintUv = float2(across * 0.22, along * 0.03 - t * 2.6);
+                float2 glintUv = float2(across * 0.22, along * 0.03 - t * 7.0);
                 float n3 = wmNoise(glintUv);
-                half glint = pow(saturate(n3), 6.0);
-                flowing.rgb += glint * waterMask * 0.22;
+                half glint = pow(saturate(n3), 4.0);
+                flowing.rgb += glint * waterMask * 0.4;
 
                 // Reference note (VDB waterfall breakdown): real falling water reads almost
                 // white up top with cyan/blue only showing near the base, and the white
@@ -205,12 +209,12 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // Approximate both cheaply: two noise octaves at different scale/speed
                 // "tear up" the painted foam into moving clumps instead of a smooth pulse,
                 // and calm (non-foam) water gets a small push toward cyan for richer color.
-                float foamNoiseA = wmNoise(worldPos * 0.09 - FlowDir * (t * 2.4));
-                float foamNoiseB = wmNoise(worldPos * 0.22 - FlowDir * (t * 3.4));
+                float foamNoiseA = wmNoise(worldPos * 0.09 - FlowDir * (t * 5.0));
+                float foamNoiseB = wmNoise(worldPos * 0.22 - FlowDir * (t * 8.0));
                 half foamTurbulence = saturate(foamNoiseA * 0.6 + foamNoiseB * 0.4);
-                half foam = whiteFoamCandidate * saturate(pow(foamTurbulence, 1.4) * 1.35);
-                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.55);
-                flowing.rgb += foam * 0.12;
+                half foam = whiteFoamCandidate * saturate(pow(foamTurbulence, 1.2) * 1.5);
+                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.6);
+                flowing.rgb += foam * 0.15;
 
                 half cyanPush = waterMask * (1.0 - whiteFoamCandidate) * 0.14;
                 flowing.rgb = lerp(flowing.rgb, flowing.rgb * half3(0.86, 1.0, 1.18), cyanPush);
