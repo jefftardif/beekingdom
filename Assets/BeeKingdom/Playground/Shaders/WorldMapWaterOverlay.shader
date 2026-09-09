@@ -59,6 +59,25 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 return o;
             }
 
+            // Cheap value noise (no texture) - used instead of pure sine so the current
+            // reads as choppy/organic rather than a visibly regular sine grid.
+            float wmHash(float2 p)
+            {
+                return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+            }
+
+            float wmNoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                float a = wmHash(i);
+                float b = wmHash(i + float2(1, 0));
+                float c = wmHash(i + float2(0, 1));
+                float d = wmHash(i + float2(1, 1));
+                float2 u = f * f * (3.0 - 2.0 * f);
+                return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+            }
+
             half4 frag(Varyings input) : SV_Target
             {
                 half4 baseColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color;
@@ -68,7 +87,16 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half whiteFoamCandidate = step(0.78, brightness) * step(-0.03, blueDominance);
                 half waterMask = saturate(blueDominance * 6.0 - 0.05);
                 waterMask = max(waterMask, whiteFoamCandidate * 0.85);
-                if (waterMask <= 0.001)
+
+                // Shore/bank foam: computed from the mask's own screen-space rate of change
+                // (fwidth), so a bright animated foam line hugs the water/land boundary the
+                // way a typical 2D water shader does, instead of only relying on whatever
+                // white pixels happen to already be painted in the art. Must be evaluated
+                // before any branch/return so the derivative isn't taken across a divergent
+                // "if" (that would produce garbage at the exact edge we need it for).
+                half shoreEdge = saturate(fwidth(waterMask) * 6.0);
+
+                if (waterMask <= 0.001 && shoreEdge <= 0.001)
                 {
                     return baseColor;
                 }
@@ -85,30 +113,37 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
                 float t = _Time.y;
 
-                // Two ripple octaves (different scale/speed) read as choppier, more natural
-                // water than a single sine - a single octave looked flat and "not realistic".
-                float2 rippleOffset =
-                    float2(sin(worldPos.y * 0.05 + t * 1.8), cos(worldPos.x * 0.05 + t * 1.5)) * 0.010
-                    + float2(sin(worldPos.x * 0.14 - t * 2.6), cos(worldPos.y * 0.14 - t * 2.1)) * 0.004;
-                rippleOffset *= waterMask;
+                // Two noise octaves scrolling downstream (+worldPos.y, see comment above)
+                // read as choppy/organic water instead of a visibly regular sine grid.
+                float2 flowUv1 = worldPos * 0.02 + float2(t * 0.35, t * 0.55);
+                float2 flowUv2 = worldPos * 0.06 - float2(t * 0.22, t * 0.4);
+                float n1 = wmNoise(flowUv1) - 0.5;
+                float n2 = wmNoise(flowUv2) - 0.5;
+                float2 rippleOffset = (float2(n1, n1) * 0.016 + float2(n2, n2) * 0.008) * waterMask;
                 half4 rippleColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + rippleOffset) * _Color;
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
-                // Downstream current bands: worldPos.y now correctly increases downhill, so
-                // "- t" here travels toward +worldPos.y (downstream) instead of upstream.
-                half currentBand = pow(0.5 + 0.5 * sin(worldPos.x * 0.05 + worldPos.y * 0.11 - t * 2.6), 4.0);
-                flowing.rgb += currentBand * waterMask * 0.26;
+                // Downstream current bands driven by the same noise field for cohesion.
+                half currentBand = saturate(n1 * 1.6 + 0.5);
+                currentBand = pow(currentBand, 3.0);
+                flowing.rgb += currentBand * waterMask * 0.28;
 
-                // Fast, tight glints on top of the current for a more "sparkling water" look.
+                // Fast, tight glints on top of the current for a "sparkling water" look.
                 half glint = pow(0.5 + 0.5 * sin(worldPos.x * 0.6 + worldPos.y * 0.6 - t * 6.0), 10.0);
                 flowing.rgb += glint * waterMask * 0.22;
 
-                // Foam: falling streaks travel down (+worldPos.y) at the waterfall, plus a
-                // brightening pulse. Stronger and whiter than before per CEO feedback.
+                // Painted-foam pulse (waterfall base already painted white in the art).
                 half foamStreak = pow(0.5 + 0.5 * sin(worldPos.x * 0.4 - worldPos.y * 0.9 + t * 5.0), 3.0);
                 half foamPulse = 0.5 + 0.5 * sin(worldPos.x * 0.35 + t * 4.5);
-                half foam = whiteFoamCandidate * saturate(foamStreak * 0.6 + foamPulse * 0.4);
-                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.35);
+                half paintedFoam = whiteFoamCandidate * saturate(foamStreak * 0.6 + foamPulse * 0.4);
+
+                // Animated shore-line foam: a bright band that laps along the water/bank
+                // boundary, scrolling lengthwise so it visibly moves rather than sitting static.
+                half shoreLap = 0.55 + 0.45 * sin(worldPos.x * 0.25 + worldPos.y * 0.25 - t * 3.2);
+                half shoreFoam = shoreEdge * shoreLap;
+
+                half foam = saturate(paintedFoam + shoreFoam);
+                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.4);
 
                 flowing.a = baseColor.a;
                 return flowing;
