@@ -42,6 +42,12 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ## Jalon courant — M075-CX : catalogue réutilisable des chutes (2026-09-09)
 
+Correction après retour CEO : les entrées secondaires utilisaient d'abord des
+coordonnées pixel au lieu du repère monde. Les quatre rects du catalogue ont
+été convertis ; validation Play Mode sur une zone secondaire confirmée, avec
+texture animée visible et aucune erreur console. L'alignement fin de chaque
+zone reste une passe visuelle distincte.
+
 La chute validée reste la référence visuelle. Le placement est maintenant
 décrit par des données `WaterfallDefinition` (identifiant, rect monde,
 échelle, orientation, direction de flux, opacité) et un catalogue JSON dans

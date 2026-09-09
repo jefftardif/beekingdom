@@ -56,10 +56,10 @@ namespace BeeKingdom.Playground
                 opacity = opacity
             });
             // Catalog entries for the other visible falls in the canonical map.
-            definitions.Add(new WaterfallDefinition { id = "north-west-r01c08", worldRect = new Rect(4400f, 1200f, 420f, 330f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
-            definitions.Add(new WaterfallDefinition { id = "west-r03c04", worldRect = new Rect(2350f, 7100f, 520f, 360f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
-            definitions.Add(new WaterfallDefinition { id = "central-r04c10", worldRect = new Rect(10400f, 9000f, 400f, 340f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
-            definitions.Add(new WaterfallDefinition { id = "south-east-r06c12", worldRect = new Rect(13000f, 15000f, 460f, 380f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "north-west-r01c08", worldRect = new Rect(7500f, 3370f, 875f, 690f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "west-r03c04", worldRect = new Rect(4650f, 6280f, 1080f, 750f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "central-r04c10", worldRect = new Rect(6750f, 7000f, 835f, 710f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "south-east-r06c12", worldRect = new Rect(8400f, 8320f, 960f, 790f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
         }
 
         private bool CreateSurface()

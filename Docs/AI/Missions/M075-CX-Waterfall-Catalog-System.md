@@ -9,8 +9,8 @@ Le composant expose maintenant des `WaterfallDefinition` sérialisées : identif
 ## Vérification
 Unity Play Mode : compilation sans erreur, shader sans erreur, chute de référence inchangée visuellement, 1 renderer runtime, aucun sommet hors caméra et aucun pixel opaque sur le bord de RenderTexture. Console Unity : aucune erreur. Vérification visuelle effectuée au zoom de référence.
 
-## Limites
-Les quatre coordonnées secondaires sont les premières entrées du catalogue et devront recevoir une validation CEO zone par zone avant déploiement production. Aucun gameplay ni terrain n'a été modifié.
+## Ajustement secondaire
+Les coordonnées secondaires ont été corrigées dans le repère monde de la carte. Une zone secondaire a été testée en Play Mode : l'effet partagé est désormais visible et animé sur une autre chute. Les quatre zones restent à affiner visuellement une par une avant production.
 
 ## Acceptation
 - [x] Référence visuelle conservée.
