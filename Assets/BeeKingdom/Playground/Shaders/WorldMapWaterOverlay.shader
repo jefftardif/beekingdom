@@ -91,6 +91,20 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 return f;
             }
 
+            // Flow-aligned streak field for calm river current. Unlike wmFbm above (which
+            // just shrinks the same aspect-ratio cell every octave - still visibly "blocky
+            // rectangles" once the base cell is long and thin), this deliberately shrinks
+            // the ALONG axis much faster than the ACROSS axis per octave: the base octave
+            // keeps the long "streak" character, but the higher octaves are almost square/
+            // isotropic fine detail that breaks up its edges instead of just rescaling them.
+            float wmStreakField(float across, float along, float acrossFreq, float alongFreq, float speed, float t)
+            {
+                float2 uvA = float2(across * acrossFreq, along * alongFreq - t * speed);
+                float2 uvB = float2(across * acrossFreq * 2.6, along * alongFreq * 9.0 - t * speed * 1.7);
+                float2 uvC = float2(across * acrossFreq * 5.5, along * alongFreq * 22.0 - t * speed * 2.4);
+                return wmNoise(uvA) * 0.5 + wmNoise(uvB) * 0.3 + wmNoise(uvC) * 0.2;
+            }
+
             // Same water-color heuristic as the main mask below, isolated so the local
             // flow-direction probe further down can reuse it at neighboring UVs.
             half wmWaterMaskAt(float2 uv)
@@ -192,29 +206,27 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 float along = dot(worldPos, FlowDir);
                 float across = dot(worldPos, FlowPerp);
 
-                // CEO: previous pass was too subtle to read as motion even zoomed in.
-                // Scroll speeds and contrast below are deliberately bold - clearly moving
-                // takes priority over photorealistic restraint for this prototype.
-                float2 streakUv1 = float2(across * 0.05, along * 0.006 - t * 3.2);
-                float2 streakUv2 = float2(across * 0.12, along * 0.014 - t * 5.4);
-                float n1 = wmNoise(streakUv1) - 0.5;
-                float n2 = wmNoise(streakUv2) - 0.5;
-                float2 rippleOffset = FlowDir * (n1 * 0.05 + n2 * 0.025) * waterMask;
+                // CEO: previous pass was too subtle to read as motion even zoomed in, then
+                // (after boosting it) looked blocky/pixelated on calm river stretches - a
+                // single anisotropic octave stretched into "streaks" still reads as visible
+                // rectangular blocks once thresholded hard. wmStreakField below fixes that
+                // by shrinking the along-flow axis much faster than the across axis per
+                // octave, so the fine octaves are near-isotropic detail that breaks up the
+                // base streak's edges instead of just rescaling the same rectangle.
+                float field1 = wmStreakField(across, along, 0.05, 0.006, 3.2, t) - 0.5;
+                float field2 = wmStreakField(across, along, 0.12, 0.014, 5.4, t) - 0.5;
+                float2 rippleOffset = FlowDir * (field1 * 0.05 + field2 * 0.025) * waterMask;
                 half4 rippleColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + rippleOffset) * _Color;
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
                 // Downstream current bands driven by the same streak field for cohesion.
-                // wmFbm (three overlapping octaves) instead of raw n1, and smoothstep
-                // instead of a steep pow(): a single hard-thresholded octave showed its own
-                // grid cells as blocky "1980s TV static" once amplified for visibility.
-                half currentBand = smoothstep(0.15, 0.55, wmFbm(streakUv1) + 0.35);
+                half currentBand = smoothstep(0.35, 0.65, field1 + 0.5);
                 flowing.rgb += currentBand * waterMask * 0.55;
 
                 // Fast, tight glints - also streak-shaped and flow-aligned - for a
-                // "sparkling water" look. Same fbm + smoothstep treatment as the current
-                // band, for the same blockiness reason.
-                float2 glintUv = float2(across * 0.22, along * 0.03 - t * 7.0);
-                half glint = smoothstep(0.55, 0.82, wmFbm(glintUv));
+                // "sparkling water" look. Same streak-field treatment as the current band.
+                half glintField = wmStreakField(across, along, 0.22, 0.03, 7.0, t);
+                half glint = smoothstep(0.55, 0.82, glintField);
                 flowing.rgb += glint * waterMask * 0.4;
 
                 // Reference note (VDB waterfall breakdown): real falling water reads almost
