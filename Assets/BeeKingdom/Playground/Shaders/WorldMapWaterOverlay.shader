@@ -1,13 +1,29 @@
 Shader "BeeKingdom/WorldMapWaterOverlay"
 {
-    // M073-CL prototype: animates water on the existing World Map terrain art
-    // without any new art asset. The water mask is derived per-pixel from the
-    // painted texture's own colors (blue-dominant = water) so it automatically
-    // follows the river/waterfall shapes already baked into the background.
+    // M073-CL prototype: animates water on the existing World Map terrain art.
+    // The water mask is derived per-pixel from the painted texture's own colors
+    // (blue-dominant = water) so it automatically follows the river/waterfall
+    // shapes already baked into the background - the frozen terrain package
+    // itself is never modified or resampled-and-distorted (see revision note
+    // below on why resampling was dropped).
+    //
+    // Revision note: earlier versions distorted (rippleOffset) and resampled
+    // the terrain art itself to fake surface ripples. The painted art has its
+    // own baked-in grain (confirmed by the CEO: visible even on dry rock with
+    // zero water effect running there) which is fine sitting still, but
+    // resampling it at a shifting offset every frame made that grain look
+    // like it was "swimming" ("television de 1980"). Fixed at the root by
+    // adding a small generated (procedural, tileable, grain-free) noise
+    // texture - _WmWaterNoise - and driving all animated color contributions
+    // from IT instead of from redistorted terrain pixels. baseColor (the
+    // terrain pixel) is now sampled exactly once, undistorted, and animation
+    // is purely additive color on top - CEO approved adding this one small
+    // generated asset for exactly this purpose.
     // URP unlit, mirrors Assets/Experiments/Environment2D5D/Shaders/ArtworkUnlit.shader.
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
+        _WmWaterNoise ("Water Noise (generated, tileable)", 2D) = "grey" {}
         _Color ("Tint", Color) = (1, 1, 1, 1)
         _WmWaterSrcRect ("Source UV Rect (xMin,yMin,w,h)", Vector) = (0, 0, 1, 1)
         _WmWaterWorldRect ("World Rect (xMin,yMin,w,h)", Vector) = (0, 0, 512, 512)
@@ -43,6 +59,8 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            TEXTURE2D(_WmWaterNoise);
+            SAMPLER(sampler_WmWaterNoise);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
@@ -59,8 +77,9 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 return o;
             }
 
-            // Cheap value noise (no texture) - used instead of pure sine so the current
-            // reads as choppy/organic rather than a visibly regular sine grid.
+            // Cheap value noise (no texture) - only used now for the low-frequency
+            // per-region time-offset below (desyncing calm-water animation phase),
+            // not for any visible color pattern - that all comes from _WmWaterNoise.
             float wmHash(float2 p)
             {
                 return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
@@ -76,51 +95,6 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 float d = wmHash(i + float2(1, 1));
                 float2 u = f * f * (3.0 - 2.0 * f);
                 return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-            }
-
-            // Three octaves at unrelated frequencies/offsets so their grid cells never line
-            // up. A single octave of wmNoise, once pushed through a hard threshold/pow (as
-            // the current band and glints do to read as bold motion), shows its own square
-            // interpolation cells as blocky "1980s TV static" - this breaks that alignment
-            // up into something organic instead.
-            float wmFbm(float2 p)
-            {
-                float f = wmNoise(p) * 0.55;
-                f += wmNoise(p * 2.37 + float2(11.7, 3.1)) * 0.30;
-                f += wmNoise(p * 4.81 + float2(-5.3, 8.9)) * 0.15;
-                return f;
-            }
-
-            // Flow-aligned streak field for calm river current. Unlike wmFbm above (which
-            // just shrinks the same aspect-ratio cell every octave - still visibly "blocky
-            // rectangles" once the base cell is long and thin), this shrinks the ALONG axis
-            // faster than the ACROSS axis: the base octave keeps the long "streak"
-            // character, the second is milder detail that softens its edges. Deliberately
-            // only two octaves and no very-fine third one - an earlier revision's finest
-            // octave had a sub-world-unit cell size, which read as per-pixel static/grain
-            // ("television de 1980") once zoomed in rather than as water texture.
-            float wmStreakField(float across, float along, float acrossFreq, float alongFreq, float speed, float t)
-            {
-                float2 uvA = float2(across * acrossFreq, along * alongFreq - t * speed);
-                float2 uvB = float2(across * acrossFreq * 2.2, along * alongFreq * 6.0 - t * speed * 1.5);
-                return wmNoise(uvA) * 0.65 + wmNoise(uvB) * 0.35;
-            }
-
-            // Cheap 5-tap box blur. CEO confirmed (screenshot + a direct check on dry
-            // rock/snow with no water effect running there) that the "TV static" grain is
-            // baked into the painted art itself at this zoom level, not generated by this
-            // shader - but our own resampling (rippleOffset distortion, glints) still reads
-            // those same grainy texels and can make the baked grain look like it's
-            // "swimming". This softens it for water pixels only (never touches the actual
-            // terrain asset - it's a runtime sample average, gated by waterMask below).
-            half4 wmBlur5(float2 uv, float2 texel)
-            {
-                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * 2.0;
-                c += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(texel.x, 0.0));
-                c += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv - float2(texel.x, 0.0));
-                c += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(0.0, texel.y));
-                c += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv - float2(0.0, texel.y));
-                return c * (1.0 / 6.0);
             }
 
             // Same water-color heuristic as the main mask below, isolated so the local
@@ -221,69 +195,55 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 float2 FlowPerp = float2(-FlowDir.y, FlowDir.x);
 
                 // Real flowing water shows streaks/reflections elongated ALONG the current,
-                // not round blobs - isotropic noise (equal frequency on both axes) was
-                // reading as flat, static-looking mottling on calm stretches (CEO: "il
-                // manque encore quelque chose"). Sample noise in a flow-aligned frame -
-                // low frequency along the flow, higher frequency across it - so the noise
-                // itself is stretched into long bands running the same way as the current,
-                // then scroll that frame along the flow direction over time.
+                // not round blobs. Sample the generated water-noise texture in a flow-aligned
+                // frame - low frequency along the flow, higher frequency across it - so the
+                // pattern itself is stretched into long bands running the same way as the
+                // current, then scroll that frame along the flow direction over time. Because
+                // this is a real filtered texture (not raw per-pixel hash math), it has no
+                // blocky grid cells and no grain of its own.
                 float along = dot(worldPos, FlowDir);
                 float across = dot(worldPos, FlowPerp);
 
                 // Per-region time offset for calm water only (Catlike Coding's flow/texture-
                 // distortion tutorial: without this, every part of the water animates on the
                 // exact same clock and the whole surface pulses in visible unison, which
-                // reads as artificial. A slow, large-scale spatial noise desyncs the phase
+                // reads as artificial). A slow, large-scale spatial noise desyncs the phase
                 // from one stretch of river to the next - not applied to the foam turbulence
                 // below, which already reads fine on its own.
                 float tCalm = t + wmNoise(worldPos * 0.006) * 6.0;
 
-                // CEO: previous pass was too subtle to read as motion even zoomed in, then
-                // (after boosting it) looked blocky/pixelated on calm river stretches - a
-                // single anisotropic octave stretched into "streaks" still reads as visible
-                // rectangular blocks once thresholded hard. wmStreakField below fixes that
-                // by shrinking the along-flow axis much faster than the across axis per
-                // octave, so the fine octaves are near-isotropic detail that breaks up the
-                // base streak's edges instead of just rescaling the same rectangle.
-                float field1 = wmStreakField(across, along, 0.05, 0.006, 3.2, tCalm) - 0.5;
-                float field2 = wmStreakField(across, along, 0.12, 0.014, 5.4, tCalm) - 0.5;
-                float2 rippleOffset = FlowDir * (field1 * 0.05 + field2 * 0.025) * waterMask;
+                half4 flowing = baseColor;
 
-                // Blur radius ~1.5 world units, converted through the same world<->UV scale
-                // used for the flow-direction probe above.
-                float2 blurTexel = worldPerTexelUv * 1.5;
-                half4 softBase = wmBlur5(input.uv, blurTexel);
-                half4 rippleColor = wmBlur5(input.uv + rippleOffset, blurTexel) * _Color;
-                half4 flowing = lerp(softBase * _Color, rippleColor, waterMask);
-
-                // Downstream current bands driven by the same streak field for cohesion.
-                // Wide smoothstep range = a soft continuous gradient, not a near-binary
-                // on/off per noise cell - a tight threshold is what turned fine noise
-                // detail into visible "TV static" grain once zoomed in. Scaled down by
-                // (1-foamWeight): this "calm river" look must not stack with the foam
-                // turbulence below on cascading water, which is what made a waterfall look
-                // worse once both were active on the same pixels.
+                // Downstream current bands: the noise texture's R channel, sampled in the
+                // flow-aligned frame above. Wide smoothstep range = a soft continuous
+                // gradient rather than a near-binary on/off, for a gentle drifting-brightness
+                // look. Scaled by (1-foamWeight) so this "calm river" look never stacks with
+                // the foam turbulence below on cascading water - stacking both is what made a
+                // waterfall look worse in an earlier revision.
                 half calmWater = 1.0 - foamWeight;
-                half currentBand = smoothstep(0.2, 0.8, field1 + 0.5);
+                float2 currentUv = float2(across * 0.05, along * 0.006 - tCalm * 0.35);
+                half currentRaw = SAMPLE_TEXTURE2D(_WmWaterNoise, sampler_WmWaterNoise, currentUv).r;
+                half currentBand = smoothstep(0.35, 0.65, currentRaw);
                 flowing.rgb += currentBand * waterMask * calmWater * 0.5;
 
-                // Soft, broad glints - large cells (not tight sparkle dots, which is what
-                // produced the grainy look) and a wide threshold so they read as gentle
-                // sheen drifting across the water rather than per-pixel static. Same
-                // calm-water-only scaling as the current band.
-                half glintField = wmStreakField(across, along, 0.035, 0.008, 2.4, tCalm);
-                half glint = smoothstep(0.45, 0.85, glintField);
+                // Soft, broad glints: the noise texture's G channel (decorrelated from R via
+                // a different generation seed) at a finer scale/faster scroll.
+                float2 glintUv = float2(across * 0.09, along * 0.018 - tCalm * 0.6);
+                half glintRaw = SAMPLE_TEXTURE2D(_WmWaterNoise, sampler_WmWaterNoise, glintUv).g;
+                half glint = smoothstep(0.5, 0.82, glintRaw);
                 flowing.rgb += glint * waterMask * calmWater * 0.22;
 
                 // Reference note (VDB waterfall breakdown): real falling water reads almost
                 // white up top with cyan/blue only showing near the base, and the white
                 // breaks up into patches via turbulence rather than sitting in smooth bands.
-                // Approximate both cheaply: two noise octaves at different scale/speed
-                // "tear up" the painted foam into moving clumps instead of a smooth pulse.
-                // Driven by the continuous foamWeight now (not a hard brightness step) so
-                // this covers the WHOLE cascade instead of only its purest-white pixels.
-                half foamTurbulence = wmFbm(worldPos * 0.1 - FlowDir * (t * 6.0));
-                half foam = foamWeight * smoothstep(0.3, 0.7, foamTurbulence);
+                // The noise texture's B channel (isotropic sampling - a waterfall doesn't
+                // have a "flow-aligned" surface the way a calm river does) approximates the
+                // turbulent break-up. Driven by the continuous foamWeight (not a hard
+                // brightness step) so this covers the WHOLE cascade, not just its whitest
+                // pixels.
+                float2 foamUv = worldPos * 0.02 - FlowDir * (t * 0.5);
+                half foamRaw = SAMPLE_TEXTURE2D(_WmWaterNoise, sampler_WmWaterNoise, foamUv).b;
+                half foam = foamWeight * smoothstep(0.35, 0.65, foamRaw);
                 flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.6);
                 flowing.rgb += foam * 0.15;
 
