@@ -40,6 +40,50 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M073-CL (suite 3, meme nuit) : CEO demande de tout retirer, repart de zero (2026-09-09)
+
+Apres la serie de correctifs de classification foam/eau-calme (voir
+entree juste en dessous), le probleme persistait a chaque nouvelle
+capture CEO (patchwork visible entre les deux traitements sur une meme
+chute). Le CEO a demande de retirer TOUS les effets shader sur l'eau et
+la chute, pour repartir de zero.
+
+**Action prise** : `WorldMapMmoFullscreenFoundationBootstrap.
+DrawWave6WorldTerrain` revert a son unique chemin de dessin d'origine
+(`GUI.DrawTextureWithTexCoords`), le branchement du material
+`WorldMapWaterOverlay` (champs `waterOverlayMaterial`/
+`waterOverlayMaterialLoadAttempted`, methode
+`ResolveWaterOverlayMaterial`, constantes associees) entierement
+retire. La World Map rend maintenant exactement comme avant M073-CL —
+aucun effet d'eau anime. Compile verifie sans erreur, commit local
+`fff1242`.
+
+**Mise a jour** : le CEO a ensuite demande de supprimer ces fichiers
+plutot que de les laisser trainer inutilises. Fait (commit `aaec952`) :
+`WorldMapWaterOverlay.shader`, `WorldMapWaterOverlay.mat` et la texture
+generee `WaterNoiseTileable.png` (+ tous les `.meta`) supprimes. Le
+dossier `Assets/BeeKingdom/Playground/Shaders/` (cree pour ce shader,
+maintenant vide) a aussi ete retire. Tout reste recuperable via
+l'historique git (~16 commits M073-CL cette nuit, du premier prototype
+jusqu'a la suppression) si une future session veut repartir de l'un des
+essais precedents plutot que de zero absolu.
+
+Prochain test utilisateur : confirmer en Play Mode que la World Map
+(riviere/chute comprises) est bien redevenue visuellement identique a
+l'etat pre-M073-CL.
+
+Ouvert / a faire ensuite : attendre la direction du CEO pour la
+prochaine tentative d'eau animee — piste principale identifiee cette
+nuit si on repart de l'avant : une classification par couleur seule
+(meme moyennee/par turbulence locale) ne peut pas distinguer de facon
+fiable "chute" vs "eau calme" quand les deux se cotoient dans la meme
+feature d'eau avec une transition de couleur naturelle (blanc en haut,
+bleu en bas, cf. reference VDB). Une vraie carte de flux/masque dessinee
+ou generee UNE FOIS pour cette riviere/chute specifique (plutot que
+deduite en temps reel par pixel) eviterait ce probleme a la racine.
+
+---
+
 ## Jalon courant — M073-CL (suite 2, meme nuit) : texture d'eau generee + CEO leve la contrainte "aucun nouvel asset" (2026-09-08 tard le soir)
 
 Apres la serie de correctifs procedure-seulement documentee juste en dessous,
