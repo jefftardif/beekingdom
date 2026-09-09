@@ -124,9 +124,15 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
                 half blueDominance = baseColor.b - max(baseColor.r, baseColor.g);
                 half brightness = dot(baseColor.rgb, half3(0.333, 0.333, 0.334));
-                half whiteFoamCandidate = step(0.78, brightness) * step(-0.03, blueDominance);
+                // Continuous foam weight (0 = calm blue water, 1 = bright cascading foam)
+                // instead of a hard brightness>=0.78 step. That step only caught the
+                // purest-white pixels of a waterfall, leaving the rest of the cascade (the
+                // much more common mid-tone grey/blue falling water) getting the calm-river
+                // glint/current treatment instead - CEO: the good foam look only showed in
+                // "small windows" of a waterfall rather than covering the whole thing.
+                half foamWeight = smoothstep(0.42, 0.7, brightness) * step(-0.03, blueDominance);
                 half waterMask = saturate(blueDominance * 6.0 - 0.05);
-                waterMask = max(waterMask, whiteFoamCandidate * 0.85);
+                waterMask = max(waterMask, foamWeight * 0.85);
 
                 // NOTE: an earlier revision added a fwidth(waterMask)-based "shoreline foam"
                 // here. It was pulled - fwidth on a mask derived from the painted texture's
@@ -223,29 +229,36 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // Downstream current bands driven by the same streak field for cohesion.
                 // Wide smoothstep range = a soft continuous gradient, not a near-binary
                 // on/off per noise cell - a tight threshold is what turned fine noise
-                // detail into visible "TV static" grain once zoomed in.
+                // detail into visible "TV static" grain once zoomed in. Scaled down by
+                // (1-foamWeight): this "calm river" look must not stack with the foam
+                // turbulence below on cascading water, which is what made a waterfall look
+                // worse once both were active on the same pixels.
+                half calmWater = 1.0 - foamWeight;
                 half currentBand = smoothstep(0.2, 0.8, field1 + 0.5);
-                flowing.rgb += currentBand * waterMask * 0.5;
+                flowing.rgb += currentBand * waterMask * calmWater * 0.5;
 
                 // Soft, broad glints - large cells (not tight sparkle dots, which is what
                 // produced the grainy look) and a wide threshold so they read as gentle
-                // sheen drifting across the water rather than per-pixel static.
+                // sheen drifting across the water rather than per-pixel static. Same
+                // calm-water-only scaling as the current band.
                 half glintField = wmStreakField(across, along, 0.035, 0.008, 2.4, t);
                 half glint = smoothstep(0.45, 0.85, glintField);
-                flowing.rgb += glint * waterMask * 0.22;
+                flowing.rgb += glint * waterMask * calmWater * 0.22;
 
                 // Reference note (VDB waterfall breakdown): real falling water reads almost
                 // white up top with cyan/blue only showing near the base, and the white
                 // breaks up into patches via turbulence rather than sitting in smooth bands.
                 // Approximate both cheaply: two noise octaves at different scale/speed
-                // "tear up" the painted foam into moving clumps instead of a smooth pulse,
-                // and calm (non-foam) water gets a small push toward cyan for richer color.
+                // "tear up" the painted foam into moving clumps instead of a smooth pulse.
+                // Driven by the continuous foamWeight now (not a hard brightness step) so
+                // this covers the WHOLE cascade instead of only its purest-white pixels.
                 half foamTurbulence = wmFbm(worldPos * 0.1 - FlowDir * (t * 6.0));
-                half foam = whiteFoamCandidate * smoothstep(0.3, 0.7, foamTurbulence);
+                half foam = foamWeight * smoothstep(0.3, 0.7, foamTurbulence);
                 flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.6);
                 flowing.rgb += foam * 0.15;
 
-                half cyanPush = waterMask * (1.0 - whiteFoamCandidate) * 0.14;
+                // Calm (non-foam) water gets a small push toward cyan for richer color.
+                half cyanPush = waterMask * calmWater * 0.14;
                 flowing.rgb = lerp(flowing.rgb, flowing.rgb * half3(0.86, 1.0, 1.18), cyanPush);
 
                 flowing.a = baseColor.a;
