@@ -40,6 +40,112 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M073-CL (suite, session nocturne) : eau animee, iterations avec le CEO (2026-09-08 soir)
+
+Longue serie d'allers-retours en direct avec le CEO sur
+`WorldMapWaterOverlay.shader` (le prototype de base est documente dans
+l'entree M073-CL juste en dessous). Chronologie des retours et
+correctifs, du plus recent au plus ancien :
+
+- **Sens des vagues incorrect** : la riviere/chute donnait l'impression
+  de couler a l'envers. Cause : l'axe V de la texture est invonverse par
+  rapport a l'axe Y du monde (Unity affiche l'image a l'endroit, mais
+  `WorldMapMmoFullscreenFoundationBootstrap.WorldToScreen` fait
+  augmenter Y vers le bas). Corrige en reconstruisant `worldPos.y` avec
+  le bon signe.
+- **Direction unique insuffisante** : le CEO a montre qu'un coude de
+  riviere ne suit pas une direction fixe sud-est. Ajout d'un detecteur
+  de direction LOCAL : sonde le masque d'eau a une distance fixe EN
+  UNITES MONDE (pas en pixels ecran — sinon on retombe dans le meme
+  piege que ci-dessous) de part et d'autre du pixel, prend le gradient
+  perpendiculaire (= tangente de la riviere), et retombe sur le sud-est
+  par defaut si le gradient est trop faible (eau calme/etendue).
+- **Hachurage diagonal plein ecran (bug reel, pas un style)** : une
+  premiere tentative d'ecume de berge utilisait `fwidth()` sur le masque
+  d'eau (couleurs du terrain peint) — ca reagit a n'importe quelle
+  texture de rocher/mousse, pas seulement aux vraies bordures d'eau, et
+  a produit un hachurage diagonal sur TOUTE la carte (confirme par
+  capture CEO). Retire completement. **Ne jamais reintroduire de
+  detection de bord basee sur des derivees ecran (`ddx`/`ddy`/`fwidth`)
+  sur ce masque couleur par pixel** — utiliser uniquement des sondes a
+  distance fixe EN UNITES MONDE (comme le detecteur de direction
+  ci-dessus).
+- **"Television des annees 1980" (grain/pixelisation)** : plusieurs
+  causes distinctes trouvees et corrigees une a une :
+  1. Un seul octave de bruit (fonction bruit-valeur maison) pousse dans
+     un seuil dur montre sa propre grille carree d'interpolation.
+     Corrige avec 2-3 octaves a frequences non alignees (`wmFbm`,
+     `wmStreakField`) et des `smoothstep` a large plage au lieu de
+     `pow()` a exposant eleve.
+  2. Les scintillements (`glint`) avaient un octave le plus fin avec des
+     cellules de MOINS D'UNE UNITE MONDE — a fort zoom ca lit comme du
+     bruit par pixel. Elargi les cellules et le seuil.
+  3. **Le grain restant est en partie BAKE DANS L'ART LUI-MEME** —
+     confirme par le CEO en zoomant sur de la roche/neige sans aucune
+     eau a proximite (masque d'eau = 0, donc shader inactif sur ces
+     pixels) : le grain y est visible aussi. Ce n'est PAS un bug du
+     shader et NE DOIT PAS etre "corrige" en touchant la texture terrain
+     (fondation protegee, voir `CLAUDE.md`). Ce que le shader PEUT
+     corriger : sa propre redistorsion (`rippleOffset`) qui
+     rééchantillonne ce grain existant a un offset qui bouge dans le
+     temps, ce qui le fait "nager" et parait anime. Ajout d'un flou
+     5-tap (`wmBlur5`, uniquement sur les pixels d'eau, moyenne de
+     texels a l'execution — ne touche jamais l'asset terrain) applique
+     a l'echantillon de base ET a l'echantillon distordu.
+- **Ecume de chute limitee a de "petites fenetres"** : l'effet ecume
+  (le seul qui a fait dire "wow" au CEO) n'etait declenche que sur les
+  pixels les plus blancs (`brightness >= 0.78`, seuil dur), laissant le
+  reste de la cascade (tons gris-bleu, la majorite de la surface d'une
+  chute) recevoir le traitement "riviere calme" (courant/scintillements)
+  a la place — ce qui empirait visuellement la chute en cumulant les
+  deux effets. Remplace par un poids continu `foamWeight` (`smoothstep`
+  0.42-0.7 sur la luminosite) ; les effets riviere calme sont maintenant
+  multiplies par `(1 - foamWeight)` pour ne plus se cumuler.
+- **Reference technique fournie par le CEO en cours de route** :
+  https://jettelly.com/blog/seamlessly-looping-vdb-waterfall-for-unreal-engine
+  — pipeline de simulation volumetrique (VDB/EmberGen) totalement hors
+  de portee pour ce shader IMGUI 2D top-down (explique au CEO). Seul
+  l'enseignement retenu et applique : l'eau qui tombe lit presque
+  blanche en haut avec du cyan/bleu seulement pres de la base, et la
+  turbulence casse le blanc en patchs plutot qu'en bandes lisses.
+
+**Piege environnement decouvert cette session** : les outils MCP Unity
+`editor-application-get-state` / `editor-application-set-state` /
+`screenshot-game-view` sont lister par `unity-tool-list` comme
+enregistres cote Unity, mais renvoient "No such tool available" quand
+on les appelle directement dans cette session Claude Code (contrairement
+aux autres outils `ai-game-developer` utilises sans probleme :
+`assets-refresh`, `console-get-logs`, `scene-list-opened`, etc.). Cause
+non investiguee (possiblement desactives via `tool-set-enabled-state`).
+**Consequence : impossible de declencher le Play Mode ou de prendre une
+capture Game View par soi-meme dans cette session** — toute verification
+visuelle du shader depend d'une capture fournie par l'utilisateur. A
+verifier en debut de prochaine session si une reprise necessite un test
+visuel autonome.
+
+Preuves : chaque etape ci-dessus verifiee par `assets-refresh` +
+`console-get-logs` (aucune erreur CS/Shader liee au fichier), puis
+commit local individuel (voir `git log -- Assets/BeeKingdom/Playground/
+Shaders/WorldMapWaterOverlay.shader` pour l'historique complet, environ
+10 commits cette session).
+
+Prochain test utilisateur : rouvrir
+`Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity` en Play Mode,
+revisiter les memes zones que les captures precedentes (le coude de
+riviere, la chute pres de "Rucher du Pollen d'Or") et confirmer que (1)
+le grain/scintillement residuel est acceptable, (2) la chute couvre
+toute la cascade sans regression par rapport au moment "wow", (3) le
+sens du courant suit bien les coudes de la riviere.
+
+Ouvert / a faire ensuite : si le grain reste genant meme apres le flou,
+le seul levier restant cote shader est d'augmenter le rayon de flou
+(`wmBlur5`, actuellement ~1.5 unites monde) — au-dela, la seule vraie
+solution serait un nouvel asset visuel dedie a l'eau (hors du perimetre
+"prototype, aucun nouvel asset" de la mission de depart), a discuter
+avec le CEO si le rendu shader-seul plafonne.
+
+---
+
 ## Jalon courant — M073-CL : prototype eau animee sur la World Map (2026-09-08)
 
 Demande CEO (capture de la World Map wave5method_12288_preview) : faire
