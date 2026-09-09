@@ -3,6 +3,57 @@
 Date : 2026-09-09
 Scène modifiée : `Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity`
 
+## Addendum — passe de polish visuel (même session, 2026-09-09)
+
+READY FOR CEO WATERFALL VISUAL RETEST.
+
+Objectif : rendre les 3 segments illisibles comme meshes séparés et fondre la
+chute dans le décor peint. Fait sans toucher au gameplay ni à la World Map :
+
+- **Coutures inter-segments éliminées** : espacement resserré (1.7 → 1.2
+  unités) pour que les 3 maillages se chevauchent physiquement, plus un
+  offset UV horizontal par instance (`_UvOffsetX`, appliqué via
+  `MaterialPropertyBlock` dans `WorldMapWaterfallFxBootstrap.
+  ApplySegmentBlending()`) pour que le motif d'eau semble continuer d'un
+  segment à l'autre au lieu de se répéter identique. Résultat : la forme se
+  lit comme une seule chute continue, plus comme 3 rectangles côte à côte.
+- **Bords fondus** : les 2 shaders mesh (`TazoWaterfallMeshAlphaBlendedURP`,
+  `TazoWaterfallMeshAdditiveURP`) ont un feathering alpha/luminosité
+  progressif sur les 4 bords (`_EdgeFeatherUV`, réglé à 0.38 en UV). Seuls
+  les 2 bords **extérieurs** du groupe (gauche du segment le plus à gauche,
+  droite du segment le plus à droite) sont fondus vers le décor — les
+  jonctions internes entre segments restent pleines pour ne pas créer de
+  trou transparent, et s'appuient sur le chevauchement + la continuité UV à
+  la place. Piège technique rencontré : les propriétés `_FeatherLeft`/
+  `_FeatherRight`/`_UvOffsetX` doivent vivre **hors** du bloc
+  `CBUFFER_START(UnityPerMaterial)` - le SRP Batcher d'URP ignore
+  silencieusement tout override par-instance (`MaterialPropertyBlock`) sur
+  une propriété qui vit dans ce buffer, car il est mis en cache par
+  matériau, pas par renderer.
+- **Chute moins saturée/opaque que le fond peint** (demande explicite : ne
+  pas la rendre plus bleue/brillante) : exposition (`_Exposure`, remplace le
+  `*2.0` fixe des shaders d'origine) abaissée à 0.9 sur les 4 matériaux mesh.
+- Jonction haut (rivière → chute) et bas (chute → bassin) : le même
+  `_EdgeFeatherUV` fond aussi ces bords, la transition vers l'écume peinte
+  au bas de la chute est particulièrement convaincante ; le haut reste
+  perceptible mais nettement adouci par le brouillard peint existant.
+
+Vérifié en Play Mode avec la vraie caméra de jeu (pas seulement Scene View),
+zoom rapproché sur la chute : plus de coutures visibles, plus de bord
+rectangulaire net, teinte cohérente avec le fond. Aucune erreur console,
+aucun matériau rose, `AssetDatabase.Refresh()` propre après les derniers
+changements.
+
+Fichiers touchés en plus du premier passage : les 2 shaders mesh, les 4
+matériaux mesh (`fulid_01_urp`, `fulid_alpha_01_urp`, `caustics_1_urp`,
+`foam_1_urp`), `WorldMapWaterfallFxBootstrap.cs` (nouvelle méthode
+`ApplySegmentBlending()`), et la scène (espacement des 3 instances resserré
+à ±1.2).
+
+Limitations restantes : le bord supérieur (jonction avec la rivière) est
+adouci mais reste le point le moins fondu des quatre ; performance mobile
+toujours non mesurée.
+
 ## Résumé
 
 Intégration d'une chute d'eau 3D animée (asset acheté `Assets/Tazo_fx`,

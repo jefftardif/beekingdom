@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BeeKingdom.Playground
@@ -47,6 +48,7 @@ namespace BeeKingdom.Playground
             if (waterfallRoot == null) waterfallRoot = transform;
             SetLayerRecursive(waterfallRoot.gameObject, WaterfallLayer);
             EnsureRenderCamera();
+            ApplySegmentBlending();
             Debug.Log("[WaterfallFX] Awake() done. camera=" + (renderCamera != null) + " texture=" + (renderTexture != null) + " camWorldPos=" + (renderCamera != null ? renderCamera.transform.position.ToString() : "n/a"));
         }
 
@@ -106,6 +108,48 @@ namespace BeeKingdom.Playground
             };
             renderTexture.Create();
             renderCamera.targetTexture = renderTexture;
+        }
+
+        // M073B-CL visual polish pass (2026-09-09): the CEO asked for the 3
+        // side-by-side waterfall instances to stop reading as an obvious
+        // tiled repeat ("le joueur ne doit jamais deviner qu'il existe
+        // plusieurs meshes"). Only the two outer edges of the combined group
+        // should feather into the painted background - the touching inner
+        // joins between segments must stay full-opacity (a feather there
+        // would just carve a visible transparent gap) and instead rely on
+        // this per-instance UV offset so the flow pattern reads as
+        // continuing across the join rather than restarting identically on
+        // each copy. Uses MaterialPropertyBlock (not material asset edits)
+        // so the 8 shared *_urp.mat assets stay untouched and this adapts
+        // automatically to however many segments are parented under
+        // waterfallRoot's direct children.
+        private void ApplySegmentBlending()
+        {
+            var segments = new List<Transform>();
+            foreach (Transform child in waterfallRoot)
+            {
+                if (child.GetComponentsInChildren<MeshRenderer>().Length > 0) segments.Add(child);
+            }
+            if (segments.Count == 0) return;
+            segments.Sort((a, b) => a.localPosition.x.CompareTo(b.localPosition.x));
+
+            const float uvOffsetStep = 0.37f;
+            var block = new MaterialPropertyBlock();
+            for (int i = 0; i < segments.Count; i++)
+            {
+                bool isLeftmost = i == 0;
+                bool isRightmost = i == segments.Count - 1;
+                float uvOffsetX = i * uvOffsetStep;
+
+                foreach (var renderer in segments[i].GetComponentsInChildren<MeshRenderer>())
+                {
+                    renderer.GetPropertyBlock(block);
+                    block.SetFloat("_FeatherLeft", isLeftmost ? 1f : 0f);
+                    block.SetFloat("_FeatherRight", isRightmost ? 1f : 0f);
+                    block.SetFloat("_UvOffsetX", uvOffsetX);
+                    renderer.SetPropertyBlock(block);
+                }
+            }
         }
 
         private static void SetLayerRecursive(GameObject go, int layer)
