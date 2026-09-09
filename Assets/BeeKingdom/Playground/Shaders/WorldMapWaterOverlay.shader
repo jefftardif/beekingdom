@@ -88,15 +88,14 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half waterMask = saturate(blueDominance * 6.0 - 0.05);
                 waterMask = max(waterMask, whiteFoamCandidate * 0.85);
 
-                // Shore/bank foam: computed from the mask's own screen-space rate of change
-                // (fwidth), so a bright animated foam line hugs the water/land boundary the
-                // way a typical 2D water shader does, instead of only relying on whatever
-                // white pixels happen to already be painted in the art. Must be evaluated
-                // before any branch/return so the derivative isn't taken across a divergent
-                // "if" (that would produce garbage at the exact edge we need it for).
-                half shoreEdge = saturate(fwidth(waterMask) * 6.0);
-
-                if (waterMask <= 0.001 && shoreEdge <= 0.001)
+                // NOTE: an earlier revision added a fwidth(waterMask)-based "shoreline foam"
+                // here. It was pulled - fwidth on a mask derived from the painted texture's
+                // own noisy colors reacts to ordinary rock/moss shading detail everywhere,
+                // not just real water edges, and produced a full-screen diagonal hatch over
+                // the whole map (confirmed from a CEO screenshot). Do not reintroduce edge
+                // detection driven by this per-pixel color mask without a much stricter,
+                // neighborhood-averaged gate.
+                if (waterMask <= 0.001)
                 {
                     return baseColor;
                 }
@@ -128,21 +127,16 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 currentBand = pow(currentBand, 3.0);
                 flowing.rgb += currentBand * waterMask * 0.28;
 
-                // Fast, tight glints on top of the current for a "sparkling water" look.
-                half glint = pow(0.5 + 0.5 * sin(worldPos.x * 0.6 + worldPos.y * 0.6 - t * 6.0), 10.0);
+                // Fast, tight glints on top of the current for a "sparkling water" look -
+                // driven by noise (not a pure sine) so it doesn't read as a regular grid.
+                float n3 = wmNoise(worldPos * 0.25 - float2(t * 0.9, t * 0.7));
+                half glint = pow(saturate(n3), 6.0);
                 flowing.rgb += glint * waterMask * 0.22;
 
                 // Painted-foam pulse (waterfall base already painted white in the art).
                 half foamStreak = pow(0.5 + 0.5 * sin(worldPos.x * 0.4 - worldPos.y * 0.9 + t * 5.0), 3.0);
                 half foamPulse = 0.5 + 0.5 * sin(worldPos.x * 0.35 + t * 4.5);
-                half paintedFoam = whiteFoamCandidate * saturate(foamStreak * 0.6 + foamPulse * 0.4);
-
-                // Animated shore-line foam: a bright band that laps along the water/bank
-                // boundary, scrolling lengthwise so it visibly moves rather than sitting static.
-                half shoreLap = 0.55 + 0.45 * sin(worldPos.x * 0.25 + worldPos.y * 0.25 - t * 3.2);
-                half shoreFoam = shoreEdge * shoreLap;
-
-                half foam = saturate(paintedFoam + shoreFoam);
+                half foam = whiteFoamCandidate * saturate(foamStreak * 0.6 + foamPulse * 0.4);
                 flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.4);
 
                 flowing.a = baseColor.a;
