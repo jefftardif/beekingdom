@@ -60,6 +60,8 @@ namespace BeeKingdom.Playground
 
         private Wave3RuntimeGutterTileProvider wave3Provider;
         private WorldMapWave6StreamingTileProvider wave6Provider;
+        private WorldMapWaterfallFxBootstrap waterfallFx;
+        private bool waterfallFxLookupAttempted;
         private WorldMapBearDenLandmark bearDenLandmark;
         private WorldMapLocalLabRuntime localLab;
         private Texture2D pixel;
@@ -233,6 +235,7 @@ namespace BeeKingdom.Playground
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
             DrawActiveChunks();
+            DrawWaterfallFxOverlay();
             DrawBiomeOverlay();
             if (debugChunkOverlay) DrawChunkDebugOverlay();
             if (mapFilterBearDen) DrawBearDenLandmark();
@@ -3884,6 +3887,32 @@ namespace BeeKingdom.Playground
                 Rect labelRect = new Rect(screenPoint.x - 160f, screenPoint.y - 16f, 320f, 32f);
                 GUI.Label(labelRect, regions[i].Label.ToUpperInvariant(), style);
             }
+        }
+
+        // M073B-CL: composites the Tazo_fx waterfall's offscreen render (see
+        // WorldMapWaterfallFxBootstrap - the terrain above is drawn via OnGUI,
+        // which always paints on top of any ordinary 3D scene content, so the
+        // waterfall is rendered to a texture off to the side and blitted in
+        // here instead) at the screen rect matching its painted location on the
+        // map, using the same WorldToScreen conversion as the terrain tiles so
+        // it stays locked in place while panning/zooming. Falls back silently
+        // (no draw) if the bootstrap or its texture isn't present/ready yet.
+        private void DrawWaterfallFxOverlay()
+        {
+            if (!waterfallFxLookupAttempted)
+            {
+                waterfallFxLookupAttempted = true;
+                waterfallFx = FindAnyObjectByType<WorldMapWaterfallFxBootstrap>();
+            }
+
+            if (waterfallFx == null || waterfallFx.Texture == null) return;
+            if (Event.current == null || Event.current.type != EventType.Repaint) return;
+
+            Rect projected = WorldRectToScreenRect(WorldMapWaterfallFxBootstrap.WorldRect);
+            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            if (!projected.Overlaps(screen)) return;
+
+            GUI.DrawTexture(projected, waterfallFx.Texture, ScaleMode.StretchToFill, true);
         }
 
         private void DrawWave6WorldTerrain()
