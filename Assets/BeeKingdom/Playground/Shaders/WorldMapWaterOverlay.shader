@@ -112,13 +112,21 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
                 float t = _Time.y;
 
-                // Two noise octaves scrolling downstream (+worldPos.y, see comment above)
-                // read as choppy/organic water instead of a visibly regular sine grid.
-                float2 flowUv1 = worldPos * 0.02 + float2(t * 0.35, t * 0.55);
-                float2 flowUv2 = worldPos * 0.06 - float2(t * 0.22, t * 0.4);
+                // CEO: every river/waterfall on this map runs southeast. worldPos.x
+                // increases east and worldPos.y increases south (see the V-flip note
+                // above), so southeast is the single fixed direction float2(1, 1)
+                // normalized. All scrolling noise below is advected along this one
+                // direction so every effect drifts the same way instead of each
+                // picking its own diagonal.
+                float2 FlowDir = float2(0.7071068, 0.7071068);
+
+                // Two noise octaves advected along FlowDir read as choppy/organic water
+                // instead of a visibly regular sine grid, while staying on-direction.
+                float2 flowUv1 = worldPos * 0.02 - FlowDir * (t * 0.45);
+                float2 flowUv2 = worldPos * 0.06 - FlowDir * (t * 0.85);
                 float n1 = wmNoise(flowUv1) - 0.5;
                 float n2 = wmNoise(flowUv2) - 0.5;
-                float2 rippleOffset = (float2(n1, n1) * 0.016 + float2(n2, n2) * 0.008) * waterMask;
+                float2 rippleOffset = FlowDir * (n1 * 0.016 + n2 * 0.008) * waterMask;
                 half4 rippleColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + rippleOffset) * _Color;
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
@@ -129,7 +137,7 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
                 // Fast, tight glints on top of the current for a "sparkling water" look -
                 // driven by noise (not a pure sine) so it doesn't read as a regular grid.
-                float n3 = wmNoise(worldPos * 0.25 - float2(t * 0.9, t * 0.7));
+                float n3 = wmNoise(worldPos * 0.25 - FlowDir * (t * 1.3));
                 half glint = pow(saturate(n3), 6.0);
                 flowing.rgb += glint * waterMask * 0.22;
 
@@ -139,8 +147,8 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 // Approximate both cheaply: two noise octaves at different scale/speed
                 // "tear up" the painted foam into moving clumps instead of a smooth pulse,
                 // and calm (non-foam) water gets a small push toward cyan for richer color.
-                float foamNoiseA = wmNoise(worldPos * 0.09 - float2(0.0, t * 2.0));
-                float foamNoiseB = wmNoise(worldPos * 0.22 - float2(t * 0.7, t * 2.6));
+                float foamNoiseA = wmNoise(worldPos * 0.09 - FlowDir * (t * 2.4));
+                float foamNoiseB = wmNoise(worldPos * 0.22 - FlowDir * (t * 3.4));
                 half foamTurbulence = saturate(foamNoiseA * 0.6 + foamNoiseB * 0.4);
                 half foam = whiteFoamCandidate * saturate(pow(foamTurbulence, 1.4) * 1.35);
                 flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.55);
