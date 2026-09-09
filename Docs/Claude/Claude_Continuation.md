@@ -40,6 +40,68 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M073-CL (suite 2, meme nuit) : texture d'eau generee + CEO leve la contrainte "aucun nouvel asset" (2026-09-08 tard le soir)
+
+Apres la serie de correctifs procedure-seulement documentee juste en dessous,
+le CEO a lui-meme trouve un tutoriel serieux
+(https://catlikecoding.com/unity/tutorials/flow/texture-distortion/) et a
+demande si lever la contrainte "aucun nouvel asset" aiderait. Reponse donnee :
+oui, precisement pour une texture d'eau propre (le vrai probleme de grain
+vient du fait qu'on redistord/reechantillonne l'image du terrain peinte,
+jamais concue pour ca). Le CEO a dit "Asset" puis "Vas y a fond... mais
+prends attention de ne pas briser la carte originale" — accord donne, avec le
+rappel explicite de ne jamais toucher a la carte terrain elle-meme.
+
+**Ce qui a change** : generation d'une texture de bruit tuilable
+256x256 (`Assets/BeeKingdom/Playground/Resources/WorldMapWaterOverlay/
+WaterNoiseTileable.png`) via `script-execute`, PAS peinte a la main —
+c'est notre propre schema de bruit-valeur mais avec les cellules de grille
+entiere repliees modulo le nombre de cellules par octave, ce qui la rend
+exactement tuilable sans astuce de raccord de bord. Trois canaux R/G/B
+independants (seeds differents), chacun un FBM 3-octaves (cellules 4/9/23).
+Reglages d'import : `wrapMode=Repeat`, `filterMode=Bilinear`, non compresse,
+mipmaps actives, `sRGBTexture=false`.
+
+Le shader `WorldMapWaterOverlay.shader` a ete reecrit pour NE PLUS
+redistordre/reechantillonner `_MainTex` (le terrain) du tout — `baseColor`
+est maintenant echantillonne une seule fois, non deforme. Toutes les
+contributions animees (bandes de courant, scintillements, turbulence
+d'ecume) viennent desormais d'echantillons de la nouvelle texture
+`_WmWaterNoise` (canal R = courant, G = scintillements, B = ecume),
+ajoutees en additif par-dessus le pixel terrain intact. Ca elimine a la
+racine le probleme de grain "television 1980" : le terrain n'est plus
+jamais reechantillonne a un offset qui bouge dans le temps, donc son
+grain bake ne peut plus "nager".
+
+**Regenerer la texture si manquante** (politique du depot : les PNG ne
+sont jamais commites, seul le `.meta` l'est — voir `WaterNoiseTileable.
+png.meta` present dans le commit mais pas le PNG) : rejouer le script
+`script-execute` (mode corps de methode) documente dans le commit
+`c6e3785` — chercher "GenerateWaterNoise" dans l'historique git de ce
+fichier, ou redemander a Claude de le regenerer (le code est deterministe,
+memes seeds = meme texture).
+
+Preuves : `assets-refresh` + `console-get-logs` sans erreur apres la
+reecriture complete du shader (propriete `_WmWaterNoise` ajoutee, toute la
+logique d'echantillonnage changee). Texture assignee au material via
+`assets-modify` (confirme par le retour `[Success] Property
+'_WmWaterNoise' modified`).
+
+Prochain test utilisateur : Play Mode sur les memes zones (coude de
+riviere, chute pres du "Rucher du Pollen d'Or") — le grain/scintillement
+devrait avoir disparu ou etre tres fortement reduit, la chute devrait
+garder son effet "wow", et le courant devrait toujours suivre les coudes
+de la riviere (la detection de direction locale n'a pas ete touchee).
+
+Ouvert / a faire ensuite : si le rendu est encore insuffisant meme avec
+la texture generee, l'etape suivante serait une vraie carte de flux
+(direction de courant peinte/generee une fois pour cette riviere
+specifique, comme dans le tuto Catlike Coding) plutot que la detection
+en temps reel par gradient de couleur — plus de travail, a proposer si
+necessaire.
+
+---
+
 ## Jalon courant — M073-CL (suite, session nocturne) : eau animee, iterations avec le CEO (2026-09-08 soir)
 
 Longue serie d'allers-retours en direct avec le CEO sur
