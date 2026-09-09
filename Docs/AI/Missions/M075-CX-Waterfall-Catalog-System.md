@@ -12,6 +12,8 @@ Unity Play Mode : compilation sans erreur, shader sans erreur, chute de référe
 ## Ajustement secondaire
 Les captures CEO annotées ont montré huit chutes supplémentaires. Les entrées ont été recalées dans le repère monde 25 600 unités à partir du repère source 12 288 pixels, puis ajoutées au catalogue. Play Mode compile sans erreur et la console reste propre. L'effet est maintenant projeté sur les zones annotées.
 
+Après la vidéo de contrôle, un décalage horizontal résiduel a été mesuré : les effets secondaires étaient à gauche des chutes. Un offset commun de +160 unités monde en X et +20 en Y a été appliqué aux huit entrées secondaires ; la chute de référence reste inchangée.
+
 ## Acceptation
 - [x] Référence visuelle conservée.
 - [x] Configuration des chutes externalisée en données.
