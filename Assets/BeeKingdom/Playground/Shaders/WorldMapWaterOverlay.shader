@@ -93,16 +93,17 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
 
             // Flow-aligned streak field for calm river current. Unlike wmFbm above (which
             // just shrinks the same aspect-ratio cell every octave - still visibly "blocky
-            // rectangles" once the base cell is long and thin), this deliberately shrinks
-            // the ALONG axis much faster than the ACROSS axis per octave: the base octave
-            // keeps the long "streak" character, but the higher octaves are almost square/
-            // isotropic fine detail that breaks up its edges instead of just rescaling them.
+            // rectangles" once the base cell is long and thin), this shrinks the ALONG axis
+            // faster than the ACROSS axis: the base octave keeps the long "streak"
+            // character, the second is milder detail that softens its edges. Deliberately
+            // only two octaves and no very-fine third one - an earlier revision's finest
+            // octave had a sub-world-unit cell size, which read as per-pixel static/grain
+            // ("television de 1980") once zoomed in rather than as water texture.
             float wmStreakField(float across, float along, float acrossFreq, float alongFreq, float speed, float t)
             {
                 float2 uvA = float2(across * acrossFreq, along * alongFreq - t * speed);
-                float2 uvB = float2(across * acrossFreq * 2.6, along * alongFreq * 9.0 - t * speed * 1.7);
-                float2 uvC = float2(across * acrossFreq * 5.5, along * alongFreq * 22.0 - t * speed * 2.4);
-                return wmNoise(uvA) * 0.5 + wmNoise(uvB) * 0.3 + wmNoise(uvC) * 0.2;
+                float2 uvB = float2(across * acrossFreq * 2.2, along * alongFreq * 6.0 - t * speed * 1.5);
+                return wmNoise(uvA) * 0.65 + wmNoise(uvB) * 0.35;
             }
 
             // Same water-color heuristic as the main mask below, isolated so the local
@@ -220,14 +221,18 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
                 // Downstream current bands driven by the same streak field for cohesion.
-                half currentBand = smoothstep(0.35, 0.65, field1 + 0.5);
-                flowing.rgb += currentBand * waterMask * 0.55;
+                // Wide smoothstep range = a soft continuous gradient, not a near-binary
+                // on/off per noise cell - a tight threshold is what turned fine noise
+                // detail into visible "TV static" grain once zoomed in.
+                half currentBand = smoothstep(0.2, 0.8, field1 + 0.5);
+                flowing.rgb += currentBand * waterMask * 0.5;
 
-                // Fast, tight glints - also streak-shaped and flow-aligned - for a
-                // "sparkling water" look. Same streak-field treatment as the current band.
-                half glintField = wmStreakField(across, along, 0.22, 0.03, 7.0, t);
-                half glint = smoothstep(0.55, 0.82, glintField);
-                flowing.rgb += glint * waterMask * 0.4;
+                // Soft, broad glints - large cells (not tight sparkle dots, which is what
+                // produced the grainy look) and a wide threshold so they read as gentle
+                // sheen drifting across the water rather than per-pixel static.
+                half glintField = wmStreakField(across, along, 0.035, 0.008, 2.4, t);
+                half glint = smoothstep(0.45, 0.85, glintField);
+                flowing.rgb += glint * waterMask * 0.22;
 
                 // Reference note (VDB waterfall breakdown): real falling water reads almost
                 // white up top with cyan/blue only showing near the base, and the white
