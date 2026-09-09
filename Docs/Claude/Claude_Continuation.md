@@ -40,6 +40,50 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M075-CX : catalogue réutilisable des chutes (2026-09-09)
+
+La chute validée reste la référence visuelle. Le placement est maintenant
+décrit par des données `WaterfallDefinition` (identifiant, rect monde,
+échelle, orientation, direction de flux, opacité) et un catalogue JSON dans
+`Resources/WaterfallFX/WaterfallCatalog.json`; le composant commun conserve la
+caméra orthographique, RenderTexture, shader, animation, feathering et rendu
+OnGUI. Quatre entrées secondaires sont présentes pour préparer l'application
+aux autres chutes et le transfert vers la World Map de production sans
+reconstruction manuelle.
+
+Preuves : Play Mode compilé, shader sans erreur, console sans erreur, chute de
+référence visuellement inchangée, aucun sommet hors frustum et aucun pixel
+opaque sur le bord de la capture. Rapport :
+`Docs/AI/Missions/M075-CX-Waterfall-Catalog-System.md`. Les positions
+secondaires demandent la validation visuelle CEO avant déploiement production.
+
+---
+
+## Jalon courant — M074-CX : cascade continue adaptée au décor (2026-09-09)
+
+Ajustement supplémentaire demandé par Jeff : opacité de scène portée à 0,92
+(au lieu de 0,82), appliquée et vérifiée également sur le matériau en Play Mode.
+Contour supérieur corrigé conservé ; aucune modification C#/shader pour ce réglage.
+
+Reprise autorisée par Jeff après vidéo montrant les bandes rectangulaires.
+`WorldMapWaterfallFxBootstrap` génère désormais un maillage runtime unique
+suivant les deux bras réels, réutilise les textures Tazo via
+`Resources/WaterfallFX/WaterfallMapSurface.shader`, et capture en orthographique.
+Les instances originales restent dans la scène, désactivées seulement en Play.
+Terrain et pack acheté inchangés. Retour CEO « trop discret » : opacité 0,82
+enregistrée dans la scène, contraste renforcé. Retour cercle rouge : lèvre du
+bras droit abaissée pour ne plus animer la rivière au-dessus.
+
+Preuves : rapport `Docs/AI/Missions/M074-CX-Waterfall-Map-Integration.md` et
+clip `Docs/AI/Missions/M074-CX-Waterfall/cascade.mp4`. Unity compile, shader
+sans erreur ; 169 sommets/264 triangles, 1 renderer, aucun sommet tronqué,
+bord de RenderTexture transparent. Zoom/déplacement inspectés en Play Mode.
+Validation esthétique finale CEO et performance Android restent ouvertes.
+Un rechargement C# en Play casse temporairement le streaming terrain existant :
+arrêter Play avant modification C#, puis relancer pour tester. Aucun commit/push.
+
+---
+
 ## Jalon courant — M073B-CL : debug live waterfall FX (computer-use) (2026-09-09)
 
 Suite directe du jalon M073B-CL ci-dessous. Le CEO a teste en Play Mode et

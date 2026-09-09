@@ -3914,16 +3914,19 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            Rect projected = WorldRectToScreenRect(WorldMapWaterfallFxBootstrap.WorldRect);
             Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
-            bool overlaps = projected.Overlaps(screen);
-            if (Time.frameCount % 120 == 0)
+            IReadOnlyList<WaterfallDefinition> definitions = waterfallFx.Definitions;
+            for (int i = 0; i < definitions.Count; i++)
             {
-                Debug.Log("[WaterfallFX] Overlay: projectedRect=" + projected + " screen=" + screen + " overlaps=" + overlaps + " worldCenter=" + currentWorldCenter + " zoom=" + currentZoom);
+                WaterfallDefinition definition = definitions[i];
+                Rect projected = WorldRectToScreenRect(definition.worldRect);
+                if (!projected.Overlaps(screen)) continue;
+                GUI.color = new Color(1f, 1f, 1f, Mathf.Clamp01(definition.opacity));
+                GUIUtility.RotateAroundPivot(definition.rotationDegrees, projected.center);
+                GUI.DrawTexture(projected, waterfallFx.Texture, ScaleMode.StretchToFill, true);
+                GUIUtility.RotateAroundPivot(-definition.rotationDegrees, projected.center);
+                GUI.color = Color.white;
             }
-            if (!overlaps) return;
-
-            GUI.DrawTexture(projected, waterfallFx.Texture, ScaleMode.StretchToFill, true);
         }
 
         private void DrawWave6WorldTerrain()

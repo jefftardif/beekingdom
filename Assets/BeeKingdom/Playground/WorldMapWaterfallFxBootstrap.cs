@@ -3,169 +3,173 @@ using UnityEngine;
 
 namespace BeeKingdom.Playground
 {
-    // M073B-CL: hosts the Tazo_fx "Realistic Waterfall Prefab" instance(s) and
-    // their dedicated render camera. The World Map's terrain
-    // (WorldMapMmoFullscreenFoundationBootstrap) is drawn every frame via
-    // OnGUI, which always paints on top of anything the Main Camera renders in
-    // 3D - a 3D prefab placed directly in the scene would otherwise be fully
-    // hidden behind the terrain blit every frame. Instead, this waterfall lives
-    // on its own culling-mask layer and is captured to an offscreen
-    // RenderTexture by a dedicated camera; WorldMapMmoFullscreenFoundationBootstrap
-    // composites that texture into its own OnGUI draw sequence at the screen
-    // rect matching WorldRect below, using the same WorldToScreen conversion as
-    // the terrain tiles so the waterfall pans/zooms in perfect sync with the map.
+    [System.Serializable]
+    public struct WaterfallDefinition
+    {
+        public string id;
+        public Rect worldRect;
+        public float rotationDegrees;
+        public Vector2 scale;
+        public Vector2 flowDirection;
+        [Range(0f, 1f)] public float opacity;
+    }
+
+    // Capture separately because IMGUI paints the terrain over the main camera.
     public sealed class WorldMapWaterfallFxBootstrap : MonoBehaviour
     {
         public const int WaterfallLayer = 10;
-
-        // World-space rect of the painted waterfall on the wave5method_12288
-        // preview terrain package, in the same world-unit coordinate system as
-        // WorldMapWave6StreamingTileProvider (TileSize=512, OriginChunk=(7,7)).
-        //
-        // CORRECTED (M073B-CL live Play Mode debugging, 2026-09-09): the first
-        // pass located tiles R02C20/R02C21 via an unconstrained full-map scan -
-        // a real waterfall, but NOT the one near the CEO's own hive/play area.
-        // Cross-checked against the CEO's actual live worldCenter while
-        // standing on the waterfall (~7741, 6326) against a rescan restricted
-        // to the observed play region: tiles R05C07/R05C08 (chunkX 14-15,
-        // chunkY 12) match almost exactly. worldRect (7168, 6144, 1024, 512).
-        public static readonly Rect WorldRect = new Rect(7168f, 6144f, 1024f, 512f);
+        // Measured on R04/05 C07/08, excluding their two-pixel gutters.
+        public static readonly Rect WorldRect = new Rect(7168f, 5962f, 940f, 630f);
 
         [SerializeField] private Transform waterfallRoot;
         [SerializeField] private int renderTextureWidth = 640;
-        [SerializeField] private int renderTextureHeight = 320;
-        [SerializeField] private float cameraDistance = 3.2f;
-        [SerializeField] private float cameraFieldOfView = 60f;
+        [SerializeField] private int renderTextureHeight = 376;
+        [SerializeField, Range(0f, 1f)] private float opacity = 0.82f;
+        [SerializeField] private List<WaterfallDefinition> definitions = new List<WaterfallDefinition>();
 
         private Camera renderCamera;
         private RenderTexture renderTexture;
+        private Material surfaceMaterial;
+        private Mesh surfaceMesh;
+        private GameObject surfaceObject;
 
         public RenderTexture Texture => renderTexture;
+        public IReadOnlyList<WaterfallDefinition> Definitions => definitions;
 
         private void Awake()
         {
-            Debug.Log("[WaterfallFX] Awake() running on " + gameObject.name);
             if (waterfallRoot == null) waterfallRoot = transform;
-            SetLayerRecursive(waterfallRoot.gameObject, WaterfallLayer);
-            EnsureRenderCamera();
-            ApplySegmentBlending();
-            Debug.Log("[WaterfallFX] Awake() done. camera=" + (renderCamera != null) + " texture=" + (renderTexture != null) + " camWorldPos=" + (renderCamera != null ? renderCamera.transform.position.ToString() : "n/a"));
+            EnsureDefinitions();
+            if (CreateSurface()) EnsureRenderCamera();
         }
 
-        private void EnsureRenderCamera()
+        private void EnsureDefinitions()
         {
-            Transform existing = transform.Find("WaterfallRenderCamera");
-            GameObject camGo = existing != null ? existing.gameObject : new GameObject("WaterfallRenderCamera");
-            camGo.transform.SetParent(transform, false);
-
-            // CORRECTED (M073B-CL live Play Mode debugging, 2026-09-09): a fixed
-            // local Y of 0.05 assumed the waterfall mesh's pivot sat at its
-            // vertical center, but sold3_waterfall_high's pivot is at its base -
-            // the mesh actually spans roughly Y=[0.02, 2.84]. With the camera
-            // aimed at Y=0.05 the mesh's upper ~95% fell outside the frustum,
-            // leaving only a tiny sliver in the render texture (measured via
-            // RT pixel inspection: ~5% non-transparent coverage in a small
-            // off-center bbox) that then got stretched across the full screen
-            // rect - the "flat grey blob, no visible detail" the CEO reported.
-            // Framing is now computed from the actual combined renderer bounds
-            // under waterfallRoot instead of a hardcoded offset, so it self-
-            // adjusts if the hosted prefab/instance changes.
-            // Only MeshRenderers (the stable "waterfall_meash*" curtain geometry)
-            // feed the framing bounds. ParticleSystemRenderers (fog/splash) can
-            // report degenerate/zero bounds at their emitter origin before their
-            // first simulation tick, which skewed the computed center wildly
-            // off from the actual waterfall mesh on the very first Awake() frame.
-            Vector3 centerLocal = Vector3.zero;
-            MeshRenderer[] renderers = waterfallRoot.GetComponentsInChildren<MeshRenderer>();
-            if (renderers.Length > 0)
+            if (definitions.Count > 0) return;
+            definitions.Add(new WaterfallDefinition
             {
-                Bounds combined = renderers[0].bounds;
-                for (int i = 1; i < renderers.Length; i++) combined.Encapsulate(renderers[i].bounds);
-                centerLocal = transform.InverseTransformPoint(combined.center);
-            }
-
-            camGo.transform.localPosition = new Vector3(centerLocal.x, centerLocal.y, centerLocal.z - cameraDistance);
-            camGo.transform.localRotation = Quaternion.identity;
-
-            renderCamera = camGo.GetComponent<Camera>();
-            if (renderCamera == null) renderCamera = camGo.AddComponent<Camera>();
-            renderCamera.clearFlags = CameraClearFlags.SolidColor;
-            renderCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            renderCamera.cullingMask = 1 << WaterfallLayer;
-            renderCamera.fieldOfView = cameraFieldOfView;
-            renderCamera.nearClipPlane = 0.05f;
-            renderCamera.farClipPlane = cameraDistance + 10f;
-            renderCamera.orthographic = false;
-            renderCamera.depth = -10f;
-            renderCamera.allowHDR = false;
-            renderCamera.allowMSAA = false;
-
-            if (renderTexture != null) renderTexture.Release();
-            renderTexture = new RenderTexture(renderTextureWidth, renderTextureHeight, 16, RenderTextureFormat.ARGB32)
-            {
-                name = "WaterfallFX_RT",
-                antiAliasing = 1,
-            };
-            renderTexture.Create();
-            renderCamera.targetTexture = renderTexture;
+                id = "reference-r05c07-c08",
+                worldRect = new Rect(7168f, 5962f, 940f, 630f),
+                rotationDegrees = 0f,
+                scale = Vector2.one,
+                flowDirection = Vector2.down,
+                opacity = opacity
+            });
+            // Catalog entries for the other visible falls in the canonical map.
+            definitions.Add(new WaterfallDefinition { id = "north-west-r01c08", worldRect = new Rect(4400f, 1200f, 420f, 330f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "west-r03c04", worldRect = new Rect(2350f, 7100f, 520f, 360f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "central-r04c10", worldRect = new Rect(10400f, 9000f, 400f, 340f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
+            definitions.Add(new WaterfallDefinition { id = "south-east-r06c12", worldRect = new Rect(13000f, 15000f, 460f, 380f), rotationDegrees = 0f, scale = Vector2.one, flowDirection = Vector2.down, opacity = opacity });
         }
 
-        // M073B-CL visual polish pass (2026-09-09): the CEO asked for the 3
-        // side-by-side waterfall instances to stop reading as an obvious
-        // tiled repeat ("le joueur ne doit jamais deviner qu'il existe
-        // plusieurs meshes"). Only the two outer edges of the combined group
-        // should feather into the painted background - the touching inner
-        // joins between segments must stay full-opacity (a feather there
-        // would just carve a visible transparent gap) and instead rely on
-        // this per-instance UV offset so the flow pattern reads as
-        // continuing across the join rather than restarting identically on
-        // each copy. Uses MaterialPropertyBlock (not material asset edits)
-        // so the 8 shared *_urp.mat assets stay untouched and this adapts
-        // automatically to however many segments are parented under
-        // waterfallRoot's direct children.
-        private void ApplySegmentBlending()
+        private bool CreateSurface()
         {
-            var segments = new List<Transform>();
-            foreach (Transform child in waterfallRoot)
+            Shader shader = Resources.Load<Shader>("WaterfallFX/WaterfallMapSurface");
+            Material source = Resources.Load<Material>("WaterfallFX/Materials/fulid_01_urp");
+            Material foam = Resources.Load<Material>("WaterfallFX/Materials/fulid_alpha_01_urp");
+            if (shader == null || !shader.isSupported || source == null || foam == null)
             {
-                if (child.GetComponentsInChildren<MeshRenderer>().Length > 0) segments.Add(child);
+                Debug.LogError("[WaterfallFX] Missing supported map shader or waterfall materials.", this);
+                return false;
             }
-            if (segments.Count == 0) return;
-            segments.Sort((a, b) => a.localPosition.x.CompareTo(b.localPosition.x));
+            // Preserve authored prefab instances in Edit Mode. Their rectangular
+            // curtains and duplicate emitters do not follow this painted cliff.
+            foreach (Transform child in waterfallRoot) child.gameObject.SetActive(false);
+            surfaceMaterial = new Material(shader) { name = "WaterfallMapSurface_Runtime" };
+            surfaceMaterial.SetTexture("_MainTex", source.mainTexture);
+            surfaceMaterial.SetTexture("_FoamTex", foam.mainTexture);
+            surfaceMaterial.SetFloat("_Opacity", opacity);
+            var vertices = new List<Vector3>();
+            var uv = new List<Vector2>();
+            var triangles = new List<int>();
+            // Continuous UVs per natural arm, separated only by the real rock.
+            AddRibbon(vertices, uv, triangles,
+                new[] { new Vector2(20, 526), new Vector2(90, 520), new Vector2(165, 510), new Vector2(245, 470), new Vector2(285, 462), new Vector2(322, 515) },
+                new[] { new Vector2(115, 926), new Vector2(195, 945), new Vector2(272, 930), new Vector2(330, 920), new Vector2(365, 891), new Vector2(398, 865) });
+            AddRibbon(vertices, uv, triangles,
+                new[] { new Vector2(382, 424), new Vector2(460, 430), new Vector2(550, 445), new Vector2(632, 432), new Vector2(719, 414), new Vector2(786, 423), new Vector2(823, 450) },
+                new[] { new Vector2(434, 875), new Vector2(510, 871), new Vector2(603, 850), new Vector2(702, 829), new Vector2(794, 800), new Vector2(865, 767), new Vector2(908, 717) });
+            surfaceMesh = new Mesh { name = "WaterfallMapSurface_Runtime" };
+            surfaceMesh.SetVertices(vertices);
+            surfaceMesh.SetUVs(0, uv);
+            surfaceMesh.SetTriangles(triangles, 0);
+            surfaceMesh.RecalculateBounds();
+            surfaceObject = new GameObject("WaterfallMapSurface", typeof(MeshFilter), typeof(MeshRenderer));
+            surfaceObject.layer = WaterfallLayer;
+            surfaceObject.transform.SetParent(transform, false);
+            surfaceObject.GetComponent<MeshFilter>().sharedMesh = surfaceMesh;
+            MeshRenderer renderer = surfaceObject.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = surfaceMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            return true;
+        }
 
-            const float uvOffsetStep = 0.37f;
-            var block = new MaterialPropertyBlock();
-            for (int i = 0; i < segments.Count; i++)
+        private static void AddRibbon(List<Vector3> vertices, List<Vector2> uv, List<int> triangles, Vector2[] top, Vector2[] bottom)
+        {
+            const int rows = 12;
+            int start = vertices.Count;
+            for (int column = 0; column < top.Length; column++)
             {
-                bool isLeftmost = i == 0;
-                bool isRightmost = i == segments.Count - 1;
-                float uvOffsetX = i * uvOffsetStep;
-
-                foreach (var renderer in segments[i].GetComponentsInChildren<MeshRenderer>())
+                for (int row = 0; row <= rows; row++)
                 {
-                    renderer.GetPropertyBlock(block);
-                    block.SetFloat("_FeatherLeft", isLeftmost ? 1f : 0f);
-                    block.SetFloat("_FeatherRight", isRightmost ? 1f : 0f);
-                    block.SetFloat("_UvOffsetX", uvOffsetX);
-                    renderer.SetPropertyBlock(block);
+                    float t = row / (float)rows;
+                    Vector2 point = Vector2.Lerp(top[column], bottom[column], t);
+                    // World map Y points down; capture camera Y points up.
+                    vertices.Add(new Vector3(point.x / 100f, -(point.y - 330f) / 100f, 0f));
+                    uv.Add(new Vector2(column / (float)(top.Length - 1), 1f - t));
+                    if (column == 0 || row == 0) continue;
+                    int d = start + column * (rows + 1) + row;
+                    int a = d - rows - 2;
+                    triangles.Add(a); triangles.Add(d - 1); triangles.Add(d);
+                    triangles.Add(a); triangles.Add(d); triangles.Add(a + 1);
                 }
             }
         }
 
-        private static void SetLayerRecursive(GameObject go, int layer)
+        private void EnsureRenderCamera()
         {
-            go.layer = layer;
-            foreach (Transform child in go.transform) SetLayerRecursive(child.gameObject, layer);
+            var camGo = new GameObject("WaterfallRenderCamera", typeof(Camera));
+            camGo.transform.SetParent(transform, false);
+            camGo.transform.localPosition = new Vector3(WorldRect.width / 200f, -WorldRect.height / 200f, -10f);
+            renderCamera = camGo.GetComponent<Camera>();
+            renderCamera.clearFlags = CameraClearFlags.SolidColor;
+            renderCamera.backgroundColor = Color.clear;
+            renderCamera.cullingMask = 1 << WaterfallLayer;
+            renderCamera.nearClipPlane = 0.1f;
+            renderCamera.farClipPlane = 20f;
+            renderCamera.orthographic = true;
+            renderCamera.orthographicSize = WorldRect.height / 200f;
+            renderCamera.depth = -10f;
+            renderCamera.allowHDR = false;
+            renderCamera.allowMSAA = false;
+            // Match the map rect exactly, without perspective or cropped bounds.
+            int width = Mathf.Max(64, renderTextureWidth);
+            int height = Mathf.Max(Mathf.Max(64, renderTextureHeight), Mathf.RoundToInt(width * WorldRect.height / WorldRect.width));
+            renderTexture = new RenderTexture(width, height, 16, RenderTextureFormat.ARGB32)
+            {
+                name = "WaterfallFX_RT", antiAliasing = 1, wrapMode = TextureWrapMode.Clamp
+            };
+            renderTexture.Create();
+            renderCamera.targetTexture = renderTexture;
+            renderCamera.aspect = WorldRect.width / WorldRect.height;
         }
 
         private void OnDestroy()
         {
-            if (renderCamera != null) renderCamera.targetTexture = null;
+            if (renderCamera != null)
+            {
+                renderCamera.targetTexture = null;
+                Destroy(renderCamera.gameObject);
+            }
             if (renderTexture != null)
             {
                 renderTexture.Release();
-                renderTexture = null;
+                Destroy(renderTexture);
             }
+            if (surfaceObject != null) Destroy(surfaceObject);
+            if (surfaceMesh != null) Destroy(surfaceMesh);
+            if (surfaceMaterial != null) Destroy(surfaceMaterial);
         }
     }
 }
