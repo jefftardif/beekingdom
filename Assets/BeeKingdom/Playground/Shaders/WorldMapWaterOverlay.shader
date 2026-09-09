@@ -133,11 +133,21 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half glint = pow(saturate(n3), 6.0);
                 flowing.rgb += glint * waterMask * 0.22;
 
-                // Painted-foam pulse (waterfall base already painted white in the art).
-                half foamStreak = pow(0.5 + 0.5 * sin(worldPos.x * 0.4 - worldPos.y * 0.9 + t * 5.0), 3.0);
-                half foamPulse = 0.5 + 0.5 * sin(worldPos.x * 0.35 + t * 4.5);
-                half foam = whiteFoamCandidate * saturate(foamStreak * 0.6 + foamPulse * 0.4);
-                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.4);
+                // Reference note (VDB waterfall breakdown): real falling water reads almost
+                // white up top with cyan/blue only showing near the base, and the white
+                // breaks up into patches via turbulence rather than sitting in smooth bands.
+                // Approximate both cheaply: two noise octaves at different scale/speed
+                // "tear up" the painted foam into moving clumps instead of a smooth pulse,
+                // and calm (non-foam) water gets a small push toward cyan for richer color.
+                float foamNoiseA = wmNoise(worldPos * 0.09 - float2(0.0, t * 2.0));
+                float foamNoiseB = wmNoise(worldPos * 0.22 - float2(t * 0.7, t * 2.6));
+                half foamTurbulence = saturate(foamNoiseA * 0.6 + foamNoiseB * 0.4);
+                half foam = whiteFoamCandidate * saturate(pow(foamTurbulence, 1.4) * 1.35);
+                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.55);
+                flowing.rgb += foam * 0.12;
+
+                half cyanPush = waterMask * (1.0 - whiteFoamCandidate) * 0.14;
+                flowing.rgb = lerp(flowing.rgb, flowing.rgb * half3(0.86, 1.0, 1.18), cyanPush);
 
                 flowing.a = baseColor.a;
                 return flowing;
