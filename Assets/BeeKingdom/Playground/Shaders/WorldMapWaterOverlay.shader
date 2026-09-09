@@ -73,21 +73,42 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                     return baseColor;
                 }
 
+                // input.uv's V axis runs opposite to on-screen "down" (Unity flips V so the
+                // image renders right-side-up), but world Y increases downward on screen
+                // (see WorldMapMmoFullscreenFoundationBootstrap.WorldToScreen). Un-flip V
+                // here so worldPos.y actually increases going down the screen/world - without
+                // this the current/foam motion reads as flowing backwards.
                 float2 local01 = saturate((input.uv - _WmWaterSrcRect.xy) / max(_WmWaterSrcRect.zw, 0.0001));
-                float2 worldPos = _WmWaterWorldRect.xy + local01 * _WmWaterWorldRect.zw;
+                float2 worldPos = float2(
+                    _WmWaterWorldRect.x + local01.x * _WmWaterWorldRect.z,
+                    _WmWaterWorldRect.y + (1.0 - local01.y) * _WmWaterWorldRect.w);
 
                 float t = _Time.y;
-                float2 rippleOffset = float2(
-                    sin(worldPos.y * 0.045 + t * 1.6),
-                    cos(worldPos.x * 0.045 + t * 1.3)) * 0.0035 * waterMask;
+
+                // Two ripple octaves (different scale/speed) read as choppier, more natural
+                // water than a single sine - a single octave looked flat and "not realistic".
+                float2 rippleOffset =
+                    float2(sin(worldPos.y * 0.05 + t * 1.8), cos(worldPos.x * 0.05 + t * 1.5)) * 0.010
+                    + float2(sin(worldPos.x * 0.14 - t * 2.6), cos(worldPos.y * 0.14 - t * 2.1)) * 0.004;
+                rippleOffset *= waterMask;
                 half4 rippleColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + rippleOffset) * _Color;
                 half4 flowing = lerp(baseColor, rippleColor, waterMask);
 
-                half currentBand = pow(0.5 + 0.5 * sin(worldPos.x * 0.06 + worldPos.y * 0.09 - t * 2.2), 5.0);
-                flowing.rgb += currentBand * waterMask * 0.14;
+                // Downstream current bands: worldPos.y now correctly increases downhill, so
+                // "- t" here travels toward +worldPos.y (downstream) instead of upstream.
+                half currentBand = pow(0.5 + 0.5 * sin(worldPos.x * 0.05 + worldPos.y * 0.11 - t * 2.6), 4.0);
+                flowing.rgb += currentBand * waterMask * 0.26;
 
-                half foamPulse = 0.5 + 0.5 * sin(worldPos.x * 0.35 - t * 4.5);
-                flowing.rgb += whiteFoamCandidate * foamPulse * 0.06;
+                // Fast, tight glints on top of the current for a more "sparkling water" look.
+                half glint = pow(0.5 + 0.5 * sin(worldPos.x * 0.6 + worldPos.y * 0.6 - t * 6.0), 10.0);
+                flowing.rgb += glint * waterMask * 0.22;
+
+                // Foam: falling streaks travel down (+worldPos.y) at the waterfall, plus a
+                // brightening pulse. Stronger and whiter than before per CEO feedback.
+                half foamStreak = pow(0.5 + 0.5 * sin(worldPos.x * 0.4 - worldPos.y * 0.9 + t * 5.0), 3.0);
+                half foamPulse = 0.5 + 0.5 * sin(worldPos.x * 0.35 + t * 4.5);
+                half foam = whiteFoamCandidate * saturate(foamStreak * 0.6 + foamPulse * 0.4);
+                flowing.rgb = lerp(flowing.rgb, half3(1.0, 1.0, 1.0), foam * 0.35);
 
                 flowing.a = baseColor.a;
                 return flowing;
