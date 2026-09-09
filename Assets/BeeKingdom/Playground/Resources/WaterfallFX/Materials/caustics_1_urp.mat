@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: caustics_1_urp
-  m_Shader: {fileID: 4800000, guid: 072a356259f485745b63fa19d54db4a4, type: 3}
+  m_Shader: {fileID: 4800000, guid: 148bd1489f008f34e9835416ed87a511, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []

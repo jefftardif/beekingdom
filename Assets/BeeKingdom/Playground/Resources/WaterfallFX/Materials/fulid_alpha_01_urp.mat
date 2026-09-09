@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: fulid_alpha_01_urp
-  m_Shader: {fileID: 4800000, guid: 234a869654cac0e4d80c96e32bada742, type: 3}
+  m_Shader: {fileID: 4800000, guid: e1ef1b4789b1ff14a93dd5cd720a2382, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
