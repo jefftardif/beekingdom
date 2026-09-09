@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c209e55fe8ed4b84a954304c5d1c2897
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 12385, guid: 0000000000000000e000000000000000, type: 0}
+  disableValidation: 0
+AssetOrigin:
+  serializedVersion: 1
+  productId: 317597
+  packageName: ESSW EASY SETUP STYLIZED WATER 2.0
+  packageVersion: 3.0.0
+  assetPath: Assets/Houidisoft technology/ESSW EASY SETUP STYLIZED WATER 2.0/Scripts/Editor/WaterShaderControllerInspector.uss
+  uploadId: 866592

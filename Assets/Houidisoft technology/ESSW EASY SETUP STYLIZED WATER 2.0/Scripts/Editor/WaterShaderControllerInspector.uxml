@@ -1,0 +1,53 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="project://database/Assets/Houidisoft%20technology/ESSW%20EASY%20SETUP%20STYLIZED%20WATER%202.0/Scripts/Editor/WaterShaderControllerInspector.uss?fileID=7433441132597879392&amp;guid=c209e55fe8ed4b84a954304c5d1c2897&amp;type=3#WaterShaderControllerInspector" />
+    <ui:Label text="Stylized Water Controller" enable-rich-text="true" triple-click-selects-line="false" double-click-selects-word="false" style="margin-top: 9px; margin-right: 9px; margin-bottom: 9px; margin-left: 9px; background-color: rgba(26, 26, 26, 0); font-size: 30px; -unity-font-style: bold; padding-top: 1px; padding-right: 1px; padding-bottom: 1px; padding-left: 1px; -unity-text-align: middle-center; -unity-text-outline-width: 0; text-shadow: 2px 1px 1px rgba(0, 0, 0, 0.65); letter-spacing: 9px; word-spacing: 0; color: rgb(255, 255, 255); height: 26px; border-left-color: rgba(0, 0, 0, 0); border-right-color: rgba(0, 0, 0, 0); border-top-color: rgba(0, 0, 0, 0); border-bottom-color: rgba(0, 0, 0, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; -unity-text-outline-color: rgba(0, 0, 0, 0); visibility: visible; overflow: visible; flex-shrink: 1; flex-direction: column; align-items: stretch; opacity: 1;" />
+    <ui:VisualElement style="flex-grow: 1; margin-bottom: 5px; font-size: 13px; background-color: rgba(0, 0, 0, 0.24); border-left-color: rgb(34, 34, 34); border-right-color: rgb(34, 34, 34); border-top-color: rgb(34, 34, 34); border-bottom-color: rgb(34, 34, 34); border-top-width: 5px; border-right-width: 5px; border-bottom-width: 5px; border-left-width: 5px; border-top-left-radius: 5px; border-top-right-radius: 5px; border-bottom-right-radius: 5px; border-bottom-left-radius: 5px; margin-top: 10px; padding-bottom: 6px; padding-left: 10px;">
+        <uie:PropertyField binding-path="waterMaterial" label="WaterMaterial" name="PropertyField" style="font-size: 15px; -unity-font-style: bold; margin-top: 29px; margin-right: 30px; margin-bottom: 10px;" />
+        <ui:Button text="Open help window" name="btnOpenWelcome" selectable="false" style="padding-right: 5px; margin-left: 10px; margin-bottom: 2px; padding-bottom: 5px; padding-top: 5px; font-size: 15px; -unity-font-style: bold; margin-right: 10px; padding-left: 5px; margin-top: 2px; border-bottom-width: 1px; border-top-width: 1px; border-right-width: 1px; border-left-width: 1px;" />
+        <uie:PropertyField binding-path="EnablePlanarRef" label="Planar Reflections" name="PropertyField" style="font-size: 15px; -unity-font-style: bold; margin-bottom: 10px;" />
+        <uie:PropertyField binding-path="enableRefraction" label="Enable Refraction" />
+        <uie:PropertyField binding-path="enableFoam" name="Foamkeyword" tooltip="Enable Foam keyword" />
+        <uie:PropertyField binding-path="enableWaves" name="Waveskeyword" tooltip="Enable Foam keyword" />
+    </ui:VisualElement>
+    <ui:Foldout text="Water Colors" name="General" style="align-items: stretch; justify-content: space-between; flex-direction: column; opacity: 1; visibility: visible; overflow: visible; flex-grow: 0; flex-wrap: nowrap; align-content: auto;">
+        <uie:PropertyField binding-path="refractionGradient" label="Gradient Texture" style="transform-origin: 4px; margin-bottom: 10px;" />
+        <ui:Label text="Gradient changes are not applied automatically" style="border-left-color: rgb(21, 231, 77); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 10px; border-right-color: rgb(21, 231, 77); border-top-color: rgb(21, 231, 77); border-bottom-color: rgb(21, 231, 77); background-color: rgba(0, 0, 0, 0.52); border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; padding-left: 8px; padding-bottom: 5px; padding-top: 5px; margin-right: 0; padding-right: 0; -unity-font-style: italic; font-size: 13px; margin-top: 1px; margin-bottom: 1px; margin-left: 5px;" />
+        <ui:Button text="Generate Gradient Texture" name="btnGenerateGradient" double-click-selects-word="true" style="opacity: 1; margin-left: 10px; padding-left: 10px; padding-top: 10px; padding-right: 10px; padding-bottom: 10px; margin-top: 10px; margin-right: 10px; margin-bottom: 10px; font-size: 14px; -unity-font-style: bold; text-shadow: 0 0 0 rgba(0, 0, 0, 0); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-left-color: rgb(99, 99, 99); border-right-color: rgb(99, 99, 99); border-top-color: rgb(99, 99, 99); border-bottom-color: rgb(99, 99, 99);" />
+        <ui:Slider label="Refraction Power" value="0.01" high-value="0.06" binding-path="Refraction_power" low-value="0.001" fill="true" show-input-field="true" />
+        <ui:Slider label="Darkness" value="42" high-value="4" binding-path="Darkness" show-input-field="true" fill="true" low-value="1" page-size="0" inverted="false" />
+        <ui:Slider label="Depth Fade" value="2" high-value="10" binding-path="DepthFade" fill="true" show-input-field="true" low-value="0.5" />
+        <ui:Slider label="Smoothness" value="42" high-value="1" binding-path="Smoothness" fill="true" show-input-field="true" />
+        <ui:Slider label="Metallic" value="42" high-value="1" binding-path="Metallic" fill="true" show-input-field="true" />
+        <ui:Slider label="Water Depth" value="42" high-value="20" low-value="0" binding-path="WaterDepth" enabled="true" name="waterDepth" show-input-field="true" fill="true" style="background-color: rgba(0, 0, 0, 0); background-position-x: center 0;" />
+    </ui:Foldout>
+    <ui:Foldout text="Normals" name="Normals">
+        <uie:PropertyField binding-path="NormalTextureScale">
+            <uie:PropertyField binding-path="DepthFade" name="DepthFade" />
+        </uie:PropertyField>
+        <ui:SliderInt label="Texture Speed" value="42" high-value="12" binding-path="TextureSpeed" low-value="0" show-input-field="true" fill="true" />
+        <uie:PropertyField binding-path="FirstNormalTexture" name="FNormalTex" />
+        <uie:PropertyField binding-path="SecondNormalTexture" name="SNormalTex" />
+        <ui:Slider label="Normal Power" value="0.15" high-value="0.55" binding-path="NormalsPower" show-input-field="true" fill="true" />
+    </ui:Foldout>
+    <ui:Foldout text="Foam&#10;">
+        <uie:PropertyField name="PropertyField" />
+        <ui:EnumField label="Foam style" value="Center" type="UnityEngine.TextAlignment, UnityEngine.TextRenderingModule" binding-path="foamStyle" name="foamStyleField" style="margin-bottom: 11px; padding-left: 0; margin-top: 11px; margin-right: 0; padding-right: 0; height: 20px; width: 344px;" />
+        <uie:PropertyField binding-path="Foam_Texture" label="Foam Texture" />
+        <ui:Slider label="Foam Scale" value="42" high-value="2" binding-path="FoamScale" low-value="0.01" fill="true" show-input-field="true" />
+        <ui:Slider label="Foam Speed" value="42" high-value="1" binding-path="FoamSpeed" fill="true" show-input-field="true" />
+        <ui:Slider label="Foam Intensity" value="42" high-value="7" binding-path="FoamIntensity" low-value="1" show-input-field="true" fill="true" />
+        <ui:Slider label="Foam Cutoff" value="42" high-value="2" fill="true" show-input-field="true" binding-path="foamCutoff" low-value="0.01" />
+    </ui:Foldout>
+    <ui:Foldout text="Planar Reflections">
+        <ui:Label text="Works only Planar reflections attached" style="height: 31px; width: 307px; -unity-text-align: upper-center; padding-top: 6px; padding-right: 24px; margin-bottom: 14px; margin-top: 8px; margin-left: 10px; padding-left: 0; padding-bottom: 0; border-left-color: rgb(33, 229, 88); border-left-width: 10px; background-color: rgba(0, 0, 0, 0.36); -unity-background-scale-mode: stretch-to-fill; background-position-x: center 0; background-size: 100% 100%; -unity-font-style: italic; white-space: normal; text-overflow: clip; flex-shrink: 0; flex-grow: 0; flex-basis: auto;" />
+        <ui:Slider label="Reflection Power" value="42" high-value="3" binding-path="ReflectionPower" low-value="0.1" show-input-field="true" fill="true" />
+        <ui:Slider label="Reflection Distance" value="42" high-value="20" binding-path="ReflectionDistance" show-input-field="true" fill="true" />
+        <ui:Slider label="Distortion Power" value="42" high-value="0.1" binding-path="DistortionPower" fill="true" show-input-field="true" />
+    </ui:Foldout>
+    <ui:Foldout text="Waves" name="Waves" value="true">
+        <ui:Slider label="Wave Height" value="42" high-value="4" binding-path="WaveHeight" low-value="0.11" show-input-field="true" fill="true" />
+        <ui:Slider label="Peak Sharpness" value="42" high-value="1.1" binding-path="PeakSharpness" show-input-field="true" fill="true" />
+        <ui:Slider label="Wave Speed" value="0.05" high-value="0.9" binding-path="WaveSpeed" show-input-field="true" fill="true" />
+        <ui:Slider label="Wave Length" value="0" high-value="5" binding-path="WaveLength" low-value="0.1" fill="true" show-input-field="true" />
+    </ui:Foldout>
+</ui:UXML>
