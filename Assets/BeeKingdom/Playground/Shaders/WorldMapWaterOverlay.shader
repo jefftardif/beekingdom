@@ -138,15 +138,23 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half brightness = dot(baseColor.rgb, half3(0.333, 0.333, 0.334));
 
                 // CEO: a genuine waterfall has huge PER-PIXEL brightness/color swings (bright
-                // foam streaks right next to darker shadowed ribbons, in the same cascade).
-                // Classifying "is this pixel foam or calm water" per-pixel made the two
-                // different-looking treatments interleave at texel scale within one
-                // continuous waterfall - a hard visible patchwork ("l'effet... trop
-                // fenetre"), worse than either look on its own. Average brightness/blue over
-                // a wide WORLD-space neighborhood (same technique as the flow-direction probe
-                // below - never screen-space derivatives, see that comment for why) before
-                // classifying, so the WHOLE cascade reads as one consistent region instead of
-                // flickering between two treatments pixel to pixel.
+                // foam streaks right next to darker shadowed ribbons, in the same cascade),
+                // AND (per the VDB waterfall reference the CEO found earlier) real falling
+                // water is legitimately near-white at the top and shifts to cyan/blue near
+                // the base - that blue is normal waterfall color, not evidence of "this is
+                // actually calm water". Classifying by absolute brightness/blue alone kept
+                // splitting one continuous cascade into a white "foam" region and a blue
+                // "calm water" region, each getting a different visual treatment - a hard,
+                // "trop fenetre" patchwork, worse than either look applied uniformly.
+                //
+                // Fix: classify primarily by LOCAL TURBULENCE (how much brightness varies
+                // across a neighborhood) rather than absolute color. A churning waterfall -
+                // white top or blue base alike - has high local contrast (streaks/shadows
+                // next to bright foam); a genuinely calm pond or river stretch is smooth and
+                // low-contrast even though it may average a similar color. This is computed
+                // over the same wide WORLD-space neighborhood as the flow-direction probe
+                // below (never screen-space derivatives - see that comment for why), so the
+                // whole cascade reads as one consistent turbulent region.
                 const float FoamClassifyWorldRadius = 34.0;
                 float2 classifyUv = worldPerTexelUv * FoamClassifyWorldRadius;
                 half2 bbCenter = half2(brightness, blueDominance);
@@ -160,10 +168,18 @@ Shader "BeeKingdom/WorldMapWaterOverlay"
                 half2 bbSE = wmBrightBlueAt(input.uv + float2(classifyUv.x, -classifyUv.y));
                 half2 bbAvg = (bbCenter + bbE + bbW + bbN + bbS + bbNE + bbSW + bbNW + bbSE) * (1.0 / 9.0);
 
-                // Continuous foam weight (0 = calm blue water, 1 = bright cascading foam),
-                // driven by the NEIGHBORHOOD-AVERAGED brightness/blue above rather than this
-                // single pixel's own color, for the spatial-coherence reason above.
-                half foamWeight = smoothstep(0.24, 0.55, bbAvg.x) * smoothstep(-0.16, 0.0, bbAvg.y);
+                half brightMin = min(bbCenter.x, min(min(bbE.x, bbW.x), min(bbN.x, bbS.x)));
+                brightMin = min(brightMin, min(min(bbNE.x, bbSW.x), min(bbNW.x, bbSE.x)));
+                half brightMax = max(bbCenter.x, max(max(bbE.x, bbW.x), max(bbN.x, bbS.x)));
+                brightMax = max(brightMax, max(max(bbNE.x, bbSW.x), max(bbNW.x, bbSE.x)));
+                half turbulence = smoothstep(0.06, 0.18, brightMax - brightMin);
+
+                // Loose "is this even water-colored" gate (excludes brown/green rock) - much
+                // looser than the brightness/blue classification it used to be, since that
+                // job now belongs to turbulence above.
+                half waterish = smoothstep(0.15, 0.35, bbAvg.x) * smoothstep(-0.28, -0.05, bbAvg.y);
+                half brightFoam = smoothstep(0.24, 0.55, bbAvg.x) * smoothstep(-0.16, 0.0, bbAvg.y);
+                half foamWeight = waterish * max(brightFoam, turbulence);
                 half waterMask = saturate(blueDominance * 6.0 - 0.05);
                 waterMask = max(waterMask, foamWeight * 0.85);
 
