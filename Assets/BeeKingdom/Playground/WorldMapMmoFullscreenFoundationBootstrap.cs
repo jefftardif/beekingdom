@@ -267,6 +267,19 @@ namespace BeeKingdom.Playground
             if (spawnDiagnosticOverlayEnabled) DrawSpawnDiagnosticOverlay();
             if (localLab != null) localLab.DrawHud();
             DrawGuidedWorldTransitionTutorial();
+            // M076J-CL : la World Map est chargee en LoadSceneMode.Single (scene separee de
+            // Environment2D5D_HiveMap_Test) - TickCourierAlertsForExternalHost() (qui transforme un
+            // receipt de combat resolu en courrier reel) ne tournait jusqu'ici que dans
+            // LivingHiveChatBridgeBootstrap.OnGUI, jamais appele tant qu'on reste sur cette scene.
+            // Or c'est ICI, sur la World Map, qu'un combat se resout et se reclame (manuellement ou
+            // automatiquement) - combatPatrolController.RecentClaimReceipts n'est qu'un cache en
+            // memoire de session (16 entrees max), reconstruit a vide au prochain chargement de
+            // Environment2D5D (OnSceneLoaded -> TryConfigureGameplayForActiveSession recree le
+            // controleur) : un receipt jamais consomme ICI etait donc definitivement perdu avant
+            // meme de rentrer a la Ruche (rapporte par Jeff : "j'ai attaque une araignee et le
+            // rapport n'est pas la dans les mails", persistant apres le premier correctif M076G-CL
+            // qui ne couvrait que la scene Ruche).
+            HiveViewProductUiPresenter.TickCourierAlertsForExternalHost();
             HiveViewProductUiPresenter.DrawChatOverlayForWorldMap();
             HiveViewProductUiPresenter.DrawCombatPatrolOverlayForWorldMap();
         }
