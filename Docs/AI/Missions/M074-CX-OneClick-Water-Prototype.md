@@ -10,7 +10,7 @@ L’asset contient un Shader Graph URP, `Resources/water.mat`, normales, foam, r
 
 ## Validation
 
-Le projet compile et le matériau Pro est trouvé/instancié en Play Mode. Le rendu Editor a signalé des erreurs `Screen position out of view frustum` dans `ESSW.Editorcontroller.PlanarReflections` ; elles viennent du module de réflexions de l’asset et doivent être vérifiées pendant le retest avec la carte chargée. Aucune généralisation aux autres eaux n’a été faite.
+Le projet compile et le matériau Pro est trouvé/instancié en Play Mode. Le composant désactive les réflexions planaires ESSW pour ce prototype OnGUI : elles généraient des erreurs `Screen position out of view frustum` et mettaient Unity en pause automatique, bloquant pan et clics. Aucune généralisation aux autres eaux n’a été faite.
 
 ## Limitation
 

@@ -128,6 +128,10 @@ namespace BeeKingdom.Playground
 
         private void Awake()
         {
+            // The Pro water reflection probe targets a 3D camera and pauses the
+            // OnGUI map on frustum errors; this map is a painted 2D surface.
+            foreach (ESSW.Editorcontroller.PlanarReflections reflection in FindObjectsByType<ESSW.Editorcontroller.PlanarReflections>(FindObjectsSortMode.None))
+                reflection.enabled = false;
             MusicManager.EnsureInstance().Play(MusicTrack.World);
             pixel = new Texture2D(1, 1, TextureFormat.RGBA32, false);
             pixel.SetPixel(0, 0, Color.white);

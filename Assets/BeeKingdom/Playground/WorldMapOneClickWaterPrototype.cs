@@ -28,6 +28,8 @@ namespace BeeKingdom.Playground
 
         private void Awake()
         {
+            foreach (ESSW.Editorcontroller.PlanarReflections reflection in FindObjectsByType<ESSW.Editorcontroller.PlanarReflections>(FindObjectsSortMode.None))
+                reflection.enabled = false;
             sourceMaterial = Resources.Load<Material>("water");
             if (sourceMaterial == null) { Debug.LogError("[OneClickWater] Resources/water.mat was not found.", this); enabled = false; return; }
             captures = new Capture[Zones.Length];
