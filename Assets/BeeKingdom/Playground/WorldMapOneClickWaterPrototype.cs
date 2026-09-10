@@ -7,8 +7,8 @@ namespace BeeKingdom.Playground
         private const int WaterLayer = 11;
         private static readonly Zone[] Zones =
         {
-            new Zone("River", new Rect(6900f, 5700f, 1280f, 260f), new Vector2(.92f, .16f), .10f, .13f),
-            new Zone("Basin", new Rect(7480f, 6070f, 620f, 300f), new Vector2(.18f, .04f), .035f, .045f)
+            new Zone("River", new Rect(6900f, 5700f, 1280f, 260f), new Vector2(.92f, .16f), .10f, .035f),
+            new Zone("Basin", new Rect(7480f, 6070f, 620f, 300f), new Vector2(.18f, .04f), .035f, .012f)
         };
         private Capture[] captures;
         private Material sourceMaterial;
