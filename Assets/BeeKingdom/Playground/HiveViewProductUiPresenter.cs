@@ -36241,12 +36241,33 @@ if (leftNavigationTexture == null)
 				AudioManager.Instance?.PlayUIClick();
 				OpenChatSettings();
 			}
+			// M076B-CL: regression fix - ces deux rects etaient dessines (M070-CL) avec
+			// DrawPremiumPanel+GUI.Label uniquement, sans jamais etre enveloppes dans un
+			// GUI.Button ni recolores selon l'etat actif/inactif, contrairement a gearButton/
+			// closeButton juste a cote qui ont bien un vrai clic. Resultat : cette rangee "CHAT /
+			// MAIL / Parametres / Fermer" (reference CEO) est celle visible et cliquee en jeu,
+			// mais MAIL etait purement decoratif - seule l'ancienne paire d'onglets au centre du
+			// bandeau (DrawCommunicationTabBarForExternalHost, sous ce bandeau, facilement
+			// manquee) reagissait reellement. Cable ici le meme comportement reel que cette
+			// derniere (OpenMailOverlayForExternalHost / SwitchToChatFromMailForExternalHost),
+			// sans y toucher, pour ne pas risquer une double regression.
+			bool onMailTopBar = courierScreenOpen;
 			Rect mailTab = new Rect(gearButton.x - 128f - 6f, 12f, 128f, 38f);
-			DrawPremiumPanel(mailTab, new Color(0.05f, 0.04f, 0.025f, 0.94f), new Color(0.66f, 0.46f, 0.16f, 0.76f));
+			DrawPremiumPanel(mailTab, onMailTopBar ? new Color(0.34f, 0.22f, 0.06f, 0.96f) : new Color(0.05f, 0.04f, 0.025f, 0.94f), onMailTopBar ? new Color(1f, 0.70f, 0.18f, 0.94f) : new Color(0.66f, 0.46f, 0.16f, 0.76f));
 			GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
+			if (GUI.Button(mailTab, string.Empty, GUIStyle.none) && !onMailTopBar)
+			{
+				AudioManager.Instance?.PlayUIClick();
+				OpenMailOverlayForExternalHost();
+			}
 			Rect chatTab = new Rect(mailTab.x - 128f - 6f, 12f, 128f, 38f);
-			DrawPremiumPanel(chatTab, new Color(0.34f, 0.22f, 0.06f, 0.96f), new Color(1f, 0.70f, 0.18f, 0.94f));
+			DrawPremiumPanel(chatTab, onMailTopBar ? new Color(0.05f, 0.04f, 0.025f, 0.94f) : new Color(0.34f, 0.22f, 0.06f, 0.96f), onMailTopBar ? new Color(0.66f, 0.46f, 0.16f, 0.76f) : new Color(1f, 0.70f, 0.18f, 0.94f));
 			GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
+			if (GUI.Button(chatTab, string.Empty, GUIStyle.none) && onMailTopBar)
+			{
+				AudioManager.Instance?.PlayUIClick();
+				SwitchToChatFromMailForExternalHost();
+			}
 			Rect badge = new Rect(chatTab.x - 106f - 8f, 9f, 106f, 30f);
 			DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
 			int unread = ChatUnreadTotal();
