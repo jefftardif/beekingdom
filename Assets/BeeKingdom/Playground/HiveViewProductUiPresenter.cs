@@ -34991,6 +34991,7 @@ if (leftNavigationTexture == null)
             GUI.color = previous;
         }
 
+        [Serializable]
         private sealed class CourierRewardData
         {
             public string Type;
@@ -34999,6 +35000,7 @@ if (leftNavigationTexture == null)
             public bool Collected;
         }
 
+        [Serializable]
         private sealed class CourierMessageData
         {
             public int Id;
@@ -35012,7 +35014,59 @@ if (leftNavigationTexture == null)
             public List<CourierRewardData> Rewards = new List<CourierRewardData>();
         }
 
-        private static readonly List<CourierMessageData> courierMessages = BuildCourierMessages();
+        private static readonly List<CourierMessageData> courierMessages = new List<CourierMessageData>();
+
+        // M076H-CL : courierMessages n'etait jamais que de la memoire de processus - un rapport
+        // de combat inséré via CheckForNewCombatReportAlerts disparaissait au premier rechargement
+        // de domaine/redemarrage (rapporte par Jeff : "je n'ai plus le rapport de combat dans
+        // mails. Il faut que ce soit persistant"). Meme idiome que
+        // LocalPreviewQueueJournalCodec/PlayerPrefsLocalPreviewQueueJournalStore (JsonUtility +
+        // PlayerPrefs), partitionne par localPreviewAccountPartitionId comme le reste de l'etat
+        // local par compte (voir SetLocalPreviewAccountPartitionForRuntime) pour qu'un second
+        // compte sur le meme appareil ne voie jamais le courrier du premier. Les receipts sources
+        // (combatPatrolController.RecentClaimReceipts, invitations Alliance) sont eux deja
+        // re-derives du serveur a chaque session - seul le COURRIER DEJA CREE (rendu lu/favori/
+        // recompenses deja recuperees inclus) a besoin d'etre persiste ici, jamais les receipts
+        // eux-memes.
+        [Serializable]
+        private sealed class CourierMailboxJournal
+        {
+            public int version = 1;
+            public List<CourierMessageData> messages = new List<CourierMessageData>();
+        }
+
+        private const string CourierMailboxPrefsKeyPrefix = "BeeKingdom_Courier_Mailbox_v1_";
+        private static bool courierMailboxLoaded;
+        private static string courierMailboxLoadedForPartition = string.Empty;
+
+        private static void EnsureCourierMailboxLoaded()
+        {
+            if (courierMailboxLoaded && string.Equals(courierMailboxLoadedForPartition, localPreviewAccountPartitionId, StringComparison.Ordinal)) return;
+            courierMailboxLoaded = true;
+            courierMailboxLoadedForPartition = localPreviewAccountPartitionId;
+            courierMessages.Clear();
+            combatReportAlertsShown.Clear();
+            allianceInvitationAlertsShown.Clear();
+
+            string json = PlayerPrefs.GetString(CourierMailboxPrefsKeyPrefix + localPreviewAccountPartitionId, string.Empty);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                try
+                {
+                    CourierMailboxJournal journal = JsonUtility.FromJson<CourierMailboxJournal>(json);
+                    if (journal?.messages != null) courierMessages.AddRange(journal.messages);
+                }
+                catch { /* courrier corrompu - repart d'une boite vide plutot que de planter */ }
+            }
+            if (courierMessages.Count == 0) courierMessages.AddRange(BuildCourierMessages());
+        }
+
+        private static void SaveCourierMailboxToDisk()
+        {
+            CourierMailboxJournal journal = new CourierMailboxJournal { messages = courierMessages };
+            PlayerPrefs.SetString(CourierMailboxPrefsKeyPrefix + localPreviewAccountPartitionId, JsonUtility.ToJson(journal));
+            PlayerPrefs.Save();
+        }
 
         // M043T-CL: a real pending Alliance invitation used to be invisible unless the player
         // explicitly opened Alliance Center -> Invitations. Reuses two systems that already exist
@@ -35024,6 +35078,7 @@ if (leftNavigationTexture == null)
 
         private static void CheckForNewAllianceInvitationAlerts()
         {
+            EnsureCourierMailboxLoaded();
             AllianceCenterScreenModel model = allianceCenterController.Model;
             if (model?.MyInvitations == null) return;
             for (int i = 0; i < model.MyInvitations.Count; i++)
@@ -35049,6 +35104,7 @@ if (leftNavigationTexture == null)
                     Read = false,
                     Favorite = false
                 });
+                SaveCourierMailboxToDisk();
             }
         }
 
@@ -35065,6 +35121,7 @@ if (leftNavigationTexture == null)
 
         private static void CheckForNewCombatReportAlerts()
         {
+            EnsureCourierMailboxLoaded();
             IReadOnlyList<RemoteCombatPatrolClaimReceipt> receipts = combatPatrolController?.RecentClaimReceipts;
             if (receipts == null) return;
             for (int i = 0; i < receipts.Count; i++)
@@ -35110,6 +35167,7 @@ if (leftNavigationTexture == null)
                     }
                 }
                 courierMessages.Insert(0, reportMessage);
+                SaveCourierMailboxToDisk();
             }
         }
 
@@ -35445,17 +35503,20 @@ if (leftNavigationTexture == null)
                         for (int m = 0; m < courierMessages.Count; m++)
                             for (int r = 0; r < courierMessages[m].Rewards.Count; r++) courierMessages[m].Rewards[r].Collected = true;
                         ShowCourierToast("Toutes les récompenses disponibles ont été récupérées.");
+                        SaveCourierMailboxToDisk();
                     }
                     else if (ids[i] == "read")
                     {
                         for (int m = 0; m < courierMessages.Count; m++) courierMessages[m].Read = true;
                         ShowCourierToast("Tous les courriers sont marqués comme lus.");
+                        SaveCourierMailboxToDisk();
                     }
                     else if (ids[i] == "favorite") courierTab = "favorite";
                     else if (ids[i] == "delete")
                     {
                         courierMessages.RemoveAll(message => message.Read && !message.Favorite);
                         ShowCourierToast("Les courriers lus ont été supprimés.");
+                        SaveCourierMailboxToDisk();
                     }
                     else courierSearchQuery = string.Empty;
                 }
@@ -35577,10 +35638,12 @@ if (leftNavigationTexture == null)
             if (CourierHasUncollectedReward(message)) DrawGameIcon(new Rect(rect.xMax - 42f, rect.yMax - 22f, 16f, 16f), "gift", new Color(1f, 0.72f, 0.18f, 1f));
             if (GUI.Button(rect, string.Empty, GUIStyle.none))
             {
+                bool wasUnread = !message.Read;
                 message.Read = true;
                 courierSelectedId = message.Id;
                 courierReaderOpen = true;
                 AudioManager.Instance?.PlayUIClick();
+                if (wasUnread) SaveCourierMailboxToDisk();
             }
         }
 
@@ -35622,7 +35685,7 @@ if (leftNavigationTexture == null)
             if (message.Favorite) DrawFlatRoundedRect(new Rect(favorite.x - 2f, favorite.y - 2f, favorite.width + 4f, favorite.height + 4f), new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
             if (message.Favorite) DrawFlatRoundedRect(favorite, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
             DrawGameIcon(new Rect(favorite.x + 6f, favorite.y + 6f, 22f, 22f), "star", Color.white);
-            if (GUI.Button(favorite, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); message.Favorite = !message.Favorite; }
+            if (GUI.Button(favorite, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); message.Favorite = !message.Favorite; SaveCourierMailboxToDisk(); }
             Rect viewport = new Rect(area.x + 14f, area.y + top + 54f, area.width - 28f, area.height - top - 62f);
             courierReaderScroll = GUI.BeginScrollView(viewport, courierReaderScroll, new Rect(0f, 0f, viewport.width - 16f, Mathf.Max(viewport.height, 330f)), false, true);
             GUI.Label(new Rect(0f, 0f, viewport.width - 16f, 72f), message.Body, new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, wordWrap = true });
@@ -35648,7 +35711,7 @@ if (leftNavigationTexture == null)
                         Rect collect = new Rect(rewardRect.xMax - 102f, rewardRect.y + 14f, 92f, 30f);
                         DrawFlatRoundedRect(collect, new Color(0.40f, 0.28f, 0.10f, 0.97f), 8f);
                         GUI.Label(collect, "Récupérer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
-                        if (GUI.Button(collect, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); reward.Collected = true; ShowCourierToast("Récompense récupérée."); }
+                        if (GUI.Button(collect, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); reward.Collected = true; ShowCourierToast("Récompense récupérée."); SaveCourierMailboxToDisk(); }
                     }
                     else GUI.Label(new Rect(rewardRect.xMax - 104f, rewardRect.y + 18f, 94f, 20f), "Récupérée", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleRight });
                     y += 66f;
