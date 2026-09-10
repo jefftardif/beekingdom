@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Serialization;
+using UnityEngine.SceneManagement;
 
 namespace ESSW.Editorcontroller
 {
@@ -148,6 +149,7 @@ namespace ESSW.Editorcontroller
 
         private void PreRender(ScriptableRenderContext context, Camera cam)
         {
+            if (Application.isPlaying && SceneManager.GetActiveScene().name.Contains("WorldMap")) return;
             if (ShouldSkipCamera(cam)) return;
             if (_probe0 == null) InitializeProbe();
 
