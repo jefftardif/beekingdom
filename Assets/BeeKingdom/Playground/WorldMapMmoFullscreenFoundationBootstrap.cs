@@ -62,7 +62,6 @@ namespace BeeKingdom.Playground
         private WorldMapWave6StreamingTileProvider wave6Provider;
         private WorldMapWaterfallFxBootstrap waterfallFx;
         private bool waterfallFxLookupAttempted;
-        private WorldMapOneClickWaterPrototype oneClickWaterPrototype;
         private WorldMapBearDenLandmark bearDenLandmark;
         private WorldMapLocalLabRuntime localLab;
         private Texture2D pixel;
@@ -128,10 +127,6 @@ namespace BeeKingdom.Playground
 
         private void Awake()
         {
-            // The Pro water reflection probe targets a 3D camera and pauses the
-            // OnGUI map on frustum errors; this map is a painted 2D surface.
-            foreach (ESSW.Editorcontroller.PlanarReflections reflection in FindObjectsByType<ESSW.Editorcontroller.PlanarReflections>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                reflection.enabled = false;
             MusicManager.EnsureInstance().Play(MusicTrack.World);
             pixel = new Texture2D(1, 1, TextureFormat.RGBA32, false);
             pixel.SetPixel(0, 0, Color.white);
@@ -241,7 +236,6 @@ namespace BeeKingdom.Playground
             DrawBackground();
             DrawActiveChunks();
             DrawWaterfallFxOverlay();
-            DrawOneClickWaterPrototype();
             DrawBiomeOverlay();
             if (debugChunkOverlay) DrawChunkDebugOverlay();
             if (mapFilterBearDen) DrawBearDenLandmark();
@@ -3915,17 +3909,6 @@ namespace BeeKingdom.Playground
             if (waterfallFx == null) return;
             if (Event.current == null || Event.current.type != EventType.Repaint) return;
             waterfallFx.DrawOverlay(currentWorldCenter, currentZoom, new Rect(0f, 0f, Screen.width, Screen.height));
-        }
-
-        private void DrawOneClickWaterPrototype()
-        {
-            if (oneClickWaterPrototype == null)
-            {
-                oneClickWaterPrototype = FindAnyObjectByType<WorldMapOneClickWaterPrototype>();
-                if (oneClickWaterPrototype == null)
-                    oneClickWaterPrototype = new GameObject("OneClickWater_Prototype").AddComponent<WorldMapOneClickWaterPrototype>();
-            }
-            oneClickWaterPrototype.DrawOverlay(currentWorldCenter, currentZoom, new Rect(0f, 0f, Screen.width, Screen.height));
         }
 
         private void DrawWave6WorldTerrain()
