@@ -130,6 +130,13 @@ namespace BeeKingdom.Playground
         // recu au lieu de le conserver. Sert uniquement a la marche de retour sur la carte du
         // monde (composition de survivants) - ne rejoue jamais la resolution de combat.
         bool TryGetRecentClaimReceipt(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt);
+        // M076D-CL: read-only enumeration of the same receipts TryGetRecentClaimReceipt already
+        // looks up one at a time (manual AND auto-claim, see the comment above) - Courrier needs
+        // to notice a new one exists without already knowing its EncounterId in advance, exactly
+        // like it already does for real Alliance invitations. Never mutates anything, never
+        // replays combat resolution - purely a read surface over state this controller already
+        // remembers.
+        IReadOnlyList<RemoteCombatPatrolClaimReceipt> RecentClaimReceipts { get; }
     }
 
     public sealed class UnavailableCombatPatrolPanelController : ICombatPatrolPanelController
@@ -149,6 +156,7 @@ namespace BeeKingdom.Playground
         public void GrantPremiumSlot() { }
         public void DismissDebrief() { }
         public bool TryGetRecentClaimReceipt(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt) { receipt = null; return false; }
+        public IReadOnlyList<RemoteCombatPatrolClaimReceipt> RecentClaimReceipts { get; } = Array.Empty<RemoteCombatPatrolClaimReceipt>();
     }
 
     public sealed class CombatPatrolPanelController : ICombatPatrolPanelController, IDisposable
@@ -233,6 +241,9 @@ namespace BeeKingdom.Playground
 
         public bool TryGetRecentClaimReceipt(Guid encounterId, out RemoteCombatPatrolClaimReceipt receipt)
             => recentClaimReceipts.TryGetValue(encounterId, out receipt);
+
+        public IReadOnlyList<RemoteCombatPatrolClaimReceipt> RecentClaimReceipts
+            => recentClaimReceiptOrder.Select(id => recentClaimReceipts[id]).ToList();
 
         private void RememberClaimReceipt(RemoteCombatPatrolClaimReceipt receipt)
         {

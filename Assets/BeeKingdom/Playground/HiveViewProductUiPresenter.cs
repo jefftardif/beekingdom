@@ -4808,6 +4808,7 @@ private static string courierToast = string.Empty;
             UIFeedbackSystem.Tick(Time.unscaledDeltaTime);
             RewardClaimView.Draw(compact);
             CheckForNewAllianceInvitationAlerts();
+            CheckForNewCombatReportAlerts();
 
             // Les arrivées simulées continuent pendant les autres écrans : le bouton Chat doit
             // rester une notification fiable même quand le joueur consulte Alliance, Amis ou Mail.
@@ -35072,38 +35073,107 @@ if (leftNavigationTexture == null)
             }
         }
 
+        // M076D-CL: meme patron exactement que CheckForNewAllianceInvitationAlerts juste au-dessus
+        // (demande CEO : "j'ai lance un combat et je ne vois pas le rapport dans la categorie de
+        // rapports de combat") - jusqu'ici rien n'alimentait jamais courierMessages avec un vrai
+        // combat, la liste n'etait que 240 entrees fictives cycliques (voir BuildCourierMessages
+        // ci-dessous, desormais reduit a un seul message d'accueil). Un vrai courrier "Rapport de
+        // combat" est cree pour CHAQUE reclamation reelle (manuelle ou automatique -
+        // RecentClaimReceipts couvre les deux, voir ICombatPatrolPanelController), une seule fois
+        // par EncounterId. Aucune donnee inventee : Band/pertes/recompenses viennent tels quels du
+        // recu deja renvoye par le serveur.
+        private static readonly HashSet<Guid> combatReportAlertsShown = new HashSet<Guid>();
+
+        private static void CheckForNewCombatReportAlerts()
+        {
+            IReadOnlyList<RemoteCombatPatrolClaimReceipt> receipts = combatPatrolController?.RecentClaimReceipts;
+            if (receipts == null) return;
+            for (int i = 0; i < receipts.Count; i++)
+            {
+                RemoteCombatPatrolClaimReceipt receipt = receipts[i];
+                if (receipt == null || !combatReportAlertsShown.Add(receipt.EncounterId)) continue;
+
+                bool victory = string.Equals(receipt.Band, "Victory", StringComparison.Ordinal) || string.Equals(receipt.Band, "DecisiveVictory", StringComparison.Ordinal);
+                UIFeedbackSystem.ShowFloatingText(
+                    (victory ? "Victoire" : "Combat résolu") + " · Tier " + receipt.Tier.ToString(CultureInfo.InvariantCulture) + " — voir Courrier",
+                    new Vector2(Screen.width * 0.5f, Screen.height * 0.16f),
+                    victory ? new Color(0.55f, 0.95f, 0.55f, 1f) : new Color(0.92f, 0.62f, 0.42f, 1f),
+                    5f);
+
+                courierMessages.Insert(0, new CourierMessageData
+                {
+                    Id = -Math.Abs(receipt.EncounterId.GetHashCode()),
+                    Category = "report",
+                    Title = "Rapport de combat — Tier " + receipt.Tier.ToString(CultureInfo.InvariantCulture),
+                    Preview = CourierCombatBandLabel(receipt.Band) + " · " + CourierCombatLossesSummary(receipt),
+                    Body = CourierCombatReportBody(receipt),
+                    DateLabel = "à l'instant",
+                    Read = false,
+                    Favorite = false
+                });
+            }
+        }
+
+        private static string CourierCombatBandLabel(string band)
+        {
+            switch (band)
+            {
+                case "DecisiveVictory": return "Victoire écrasante";
+                case "Victory": return "Victoire";
+                case "HardWon": return "Victoire chèrement acquise";
+                default: return band ?? "Combat résolu";
+            }
+        }
+
+        private static string CourierCombatLossesSummary(RemoteCombatPatrolClaimReceipt receipt)
+        {
+            long permanent = receipt.PermanentLosses?.Values.Sum() ?? 0L;
+            long wounded = receipt.WoundedLosses?.Values.Sum() ?? 0L;
+            if (permanent == 0 && wounded == 0) return "aucune perte";
+            return permanent + " perte(s) définitive(s), " + wounded + " blessée(s)";
+        }
+
+        private static string CourierCombatReportBody(RemoteCombatPatrolClaimReceipt receipt)
+        {
+            System.Text.StringBuilder body = new System.Text.StringBuilder();
+            body.Append("Issue : ").Append(CourierCombatBandLabel(receipt.Band)).Append('\n');
+            body.Append("Puissance : ").Append(receipt.AvailablePower).Append(" / ").Append(receipt.RequiredPower).Append('\n');
+            if (receipt.CreditedByResource != null && receipt.CreditedByResource.Count > 0)
+            {
+                body.Append("Butin : ");
+                body.Append(string.Join(", ", receipt.CreditedByResource.Select(kv => kv.Value + " " + kv.Key)));
+                body.Append('\n');
+            }
+            if (receipt.WoundedLosses != null)
+                foreach (KeyValuePair<string, long> loss in receipt.WoundedLosses)
+                    if (loss.Value > 0) body.Append(loss.Key).Append(" : ").Append(loss.Value).Append(" blessée(s), en convalescence\n");
+            if (receipt.PermanentLosses != null)
+                foreach (KeyValuePair<string, long> loss in receipt.PermanentLosses)
+                    if (loss.Value > 0) body.Append(loss.Key).Append(" : ").Append(loss.Value).Append(" perte(s) définitive(s)\n");
+            return body.ToString();
+        }
+
+        // M076D-CL : l'ancien generateur (240 entrees, seulement 6 modeles repetes en boucle -
+        // "les categories se repetent", rapporte par Jeff) a ete retire. Un seul message
+        // d'accueil reste comme point de depart honnete ; le reste du courrier se remplit
+        // desormais d'evenements reels (invitations d'Alliance deja branchees plus haut, rapports
+        // de combat via CheckForNewCombatReportAlerts ci-dessus), jamais de contenu invente.
         private static List<CourierMessageData> BuildCourierMessages()
         {
-            List<CourierMessageData> messages = new List<CourierMessageData>(240);
-            string[] categories = { "system", "reward", "report", "alliance", "system", "reward" };
-            string[] titles = { "Bienvenue dans BeeKingdom", "Récompense de récolte", "Rapport de combat", "Message de l'Alliance", "Maintenance du royaume", "Cadeau reçu" };
-            string[] previews = { "Votre ruche poursuit sa progression.", "Une récompense attend votre collecte.", "Votre dernier affrontement est terminé.", "Votre Alliance vous transmet une nouvelle.", "Une amélioration du royaume est disponible.", "Un joueur vous a envoyé un cadeau." };
-            for (int i = 0; i < 240; i++)
+            return new List<CourierMessageData>
             {
-                int typeIndex = i % categories.Length;
-                CourierMessageData message = new CourierMessageData
+                new CourierMessageData
                 {
-                    Id = i,
-                    Category = categories[typeIndex],
-                    Title = titles[typeIndex],
-                    Preview = previews[typeIndex],
-                    Body = previews[typeIndex] + " Cette notification simulée prépare le futur courrier serveur et conservera son historique, son état de lecture et ses récompenses.",
-                    DateLabel = i < 2 ? "à l'instant" : i < 60 ? "il y a " + (i + 1).ToString() + " min" : "06 août 2026",
-                    Read = i % 7 != 0,
-                    Favorite = i % 31 == 0
-                };
-                if (message.Category == "reward" || i % 23 == 0)
-                {
-                    message.Rewards.Add(new CourierRewardData
-                    {
-                        Type = i % 2 == 0 ? "resource" : "item",
-                        ItemId = i % 2 == 0 ? "honey" : "event_chest",
-                        Amount = i % 2 == 0 ? 250 + i : 1
-                    });
+                    Id = 0,
+                    Category = "system",
+                    Title = "Bienvenue dans BeeKingdom",
+                    Preview = "Votre ruche poursuit sa progression.",
+                    Body = "Votre courrier rassemblera ici vos vraies notifications : invitations d'Alliance, rapports de combat et récompenses.",
+                    DateLabel = "à l'instant",
+                    Read = false,
+                    Favorite = false
                 }
-                messages.Add(message);
-            }
-            return messages;
+            };
         }
 
         private static string CourierCategoryLabel(string category)
@@ -35279,27 +35349,65 @@ if (leftNavigationTexture == null)
 				courierScreenOpen = false;
 				return;
 			}
-            GUI.Label(new Rect(54f, 12f, Screen.width - 218f, 24f), "BOÎTE DE RÉCEPTION", new GUIStyle(badgeStyle) { fontSize = 11 });
-            Rect badge = new Rect(Screen.width - 158f, 10f, 96f, 28f);
-            DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
-            GUI.Label(badge, CourierNotificationCount().ToString(CultureInfo.InvariantCulture) + " À TRAITER", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+            GUI.Label(new Rect(54f, 12f, Screen.width - 420f, 24f), "BOÎTE DE RÉCEPTION", new GUIStyle(badgeStyle) { fontSize = 11 });
+            // M076C-CL : meme rangee CHAT/MAIL que DrawChatTopBar (reference CEO), pour naviguer
+            // symetriquement entre les deux ecrans de Communication depuis l'un ou l'autre - avant
+            // ce lot, seul l'ecran Chat exposait cette paire d'onglets.
+            Rect closeButton = new Rect(Screen.width - 38f - 12f, 12f, 38f, 38f);
+            DrawFlatRoundedRect(closeButton, new Color(0.30f, 0.08f, 0.06f, 0.94f), 10f);
+            GUI.Label(closeButton, "✕", new GUIStyle(centeredTinyLabelStyle) { fontSize = 16 });
+            if (GUI.Button(closeButton, string.Empty, GUIStyle.none))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                AudioManager.Instance?.PlayMenuClose();
+                courierScreenOpen = false;
+                return;
+            }
+            Rect mailTab = new Rect(closeButton.x - 128f - 6f, 12f, 128f, 38f);
+            DrawFlatRoundedRect(mailTab, new Color(0.34f, 0.22f, 0.06f, 0.96f), 10f);
+            GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = 13 });
+            Rect chatTab = new Rect(mailTab.x - 128f - 6f, 12f, 128f, 38f);
+            DrawFlatRoundedRect(chatTab, new Color(0.05f, 0.04f, 0.025f, 0.94f), 10f);
+            GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = 13 });
+            if (GUI.Button(chatTab, string.Empty, GUIStyle.none))
+            {
+                AudioManager.Instance?.PlayUIClick();
+                SwitchToChatFromMailForExternalHost();
+            }
+            Rect badge = new Rect(chatTab.x - 106f - 8f, 15f, 106f, 30f);
+            DrawFlatRoundedRect(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), 10f);
+            GUI.Label(badge, CourierNotificationCount().ToString(CultureInfo.InvariantCulture) + " À TRAITER", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
 		}
 
+        // M076C-CL : refonte au meme patron que DrawChatActionBar (M082-CL) - boutons plats
+        // arrondis (DrawFlatRoundedRect) avec etat "actif" surligne d'un contour dore, au lieu du
+        // panneau texture/grain herite de l'ancien Courrier. "Favoris" est desormais mis en
+        // evidence quand ce filtre est actif, exactement comme "Recherche"/"Favoris" dans Chat.
         private static void DrawCourierQuickActions(Rect rect, bool compact)
         {
             string[] ids = { "collect", "read", "favorite", "delete", "search" };
             string[] labels = { "Tout récupérer", "Tout lire", "Favoris", "Supprimer lus", "Rechercher" };
             string[] icons = { "gift", "messages", "star", "locked", "search" };
-            float gap = 6f;
-            float itemWidth = compact ? 122f : Mathf.Max(122f, (rect.width - gap * 4f) / 5f);
-            DrawPremiumPanel(rect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
-            courierQuickActionsScroll = GUI.BeginScrollView(rect, courierQuickActionsScroll, new Rect(0f, 0f, itemWidth * 5f + gap * 4f + 8f, rect.height - 2f), false, false);
+            float gap = 8f;
+            float itemWidth = compact ? 168f : Mathf.Max(168f, (rect.width - gap * 4f) / 5f);
+            DrawFlatRoundedRect(rect, new Color(0.05f, 0.043f, 0.032f, 0.97f), 12f);
+            courierQuickActionsScroll = GUI.BeginScrollView(rect, courierQuickActionsScroll, new Rect(0f, 0f, itemWidth * 5f + gap * 4f + 10f, rect.height - 2f), false, false);
+            float iconSize = compact ? 40f : 44f;
             for (int i = 0; i < ids.Length; i++)
             {
-                Rect button = new Rect(4f + i * (itemWidth + gap), 6f, itemWidth, rect.height - 12f);
-                DrawPremiumPanel(button, new Color(0.06f, 0.045f, 0.025f, 0.94f), new Color(0.64f, 0.44f, 0.14f, 0.64f));
-                DrawGameIcon(new Rect(button.x + 8f, button.y + 8f, 24f, 24f), icons[i], Color.white);
-                GUI.Label(new Rect(button.x + 38f, button.y + 7f, button.width - 44f, 28f), labels[i], new GUIStyle(smallStyle) { fontSize = compact ? 8 : 9, alignment = TextAnchor.MiddleLeft });
+                Rect button = new Rect(5f + i * (itemWidth + gap), 5f, itemWidth, rect.height - 10f);
+                bool on = string.Equals(ids[i], "favorite", StringComparison.Ordinal) && courierTab == "favorite";
+                DrawFlatRoundedRect(button, on ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
+                if (on)
+                {
+                    Rect border = new Rect(button.x - 2f, button.y - 2f, button.width + 4f, button.height + 4f);
+                    DrawFlatRoundedRect(border, new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
+                    DrawFlatRoundedRect(button, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
+                }
+                Rect iconRect = new Rect(button.x + 10f, button.y + (button.height - iconSize) * 0.5f, iconSize, iconSize);
+                DrawGameIcon(iconRect, icons[i], Color.white);
+                GUI.Label(new Rect(iconRect.xMax + 10f, button.y, button.width - iconSize - 30f, button.height),
+                    labels[i], new GUIStyle(badgeStyle) { fontSize = compact ? 13 : 15, alignment = TextAnchor.MiddleLeft, wordWrap = true });
                 if (GUI.Button(button, string.Empty, GUIStyle.none))
                 {
                     AudioManager.Instance?.PlayUIClick();
@@ -35326,23 +35434,37 @@ if (leftNavigationTexture == null)
             GUI.EndScrollView();
         }
 
+        // M076C-CL : meme patron que la barre de canaux de Chat (bordure/fond dore plat +
+        // remplissage brun sur l'onglet actif, DrawFlatRoundedRect) plutot que le panneau
+        // texture/grain herite - chaque categorie porte desormais son icone, comme un onglet
+        // CANAUX de Chat.
         private static void DrawCourierTabs(float y, bool compact)
         {
             string[] ids = { "all", "reward", "report", "alliance", "system", "favorite" };
             string[] labels = { "Tous", "Récompenses", "Rapports", "Alliance", "Système", "Favoris" };
+            string[] icons = { "inbox", "gift", "sword", "members", "preview", "star" };
             float inset = 10f;
-            float gap = 5f;
-            float width = compact ? 104f : (Screen.width - inset * 2f - gap * 5f) / 6f;
-            DrawPremiumPanel(new Rect(0f, y, Screen.width, 38f), new Color(0.018f, 0.016f, 0.013f, 0.98f), new Color(0.70f, 0.46f, 0.13f, 0.68f));
-            courierTabsScroll = GUI.BeginScrollView(new Rect(0f, y, Screen.width, 38f), courierTabsScroll, new Rect(0f, 0f, inset * 2f + ids.Length * width + gap * 5f, 36f), false, false);
+            float gap = 6f;
+            float width = compact ? 118f : (Screen.width - inset * 2f - gap * 5f) / 6f;
+            DrawFlatRoundedRect(new Rect(0f, y, Screen.width, 40f), new Color(0.05f, 0.043f, 0.032f, 0.97f), 12f);
+            courierTabsScroll = GUI.BeginScrollView(new Rect(0f, y, Screen.width, 40f), courierTabsScroll, new Rect(0f, 0f, inset * 2f + ids.Length * width + gap * 5f, 38f), false, false);
             for (int i = 0; i < ids.Length; i++)
             {
-                Rect tab = new Rect(inset + i * (width + gap), 2f, width, 32f);
+                Rect tab = new Rect(inset + i * (width + gap), 3f, width, 32f);
                 bool selected = courierTab == ids[i];
-                DrawPremiumPanel(tab, selected ? new Color(0.38f, 0.22f, 0.05f, 0.98f) : new Color(0.04f, 0.032f, 0.022f, 0.90f), selected ? new Color(1f, 0.72f, 0.18f, 0.96f) : new Color(0.54f, 0.38f, 0.14f, 0.60f));
-                GUI.Label(tab, labels[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 8 : 9, fontStyle = selected ? FontStyle.Bold : FontStyle.Normal });
+                DrawFlatRoundedRect(tab, selected ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 9f);
+                if (selected)
+                {
+                    Rect border = new Rect(tab.x - 2f, tab.y - 2f, tab.width + 4f, tab.height + 4f);
+                    DrawFlatRoundedRect(border, new Color(1f, 0.82f, 0.32f, 0.9f), 11f);
+                    DrawFlatRoundedRect(tab, new Color(0.40f, 0.28f, 0.10f, 0.97f), 9f);
+                }
+                float tabIconSize = 20f;
+                DrawGameIcon(new Rect(tab.x + 6f, tab.y + (tab.height - tabIconSize) * 0.5f, tabIconSize, tabIconSize), icons[i], Color.white);
+                GUI.Label(new Rect(tab.x + tabIconSize + 8f, tab.y, tab.width - tabIconSize - 10f, tab.height), labels[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 8 : 9, fontStyle = selected ? FontStyle.Bold : FontStyle.Normal, alignment = TextAnchor.MiddleLeft });
                 if (GUI.Button(tab, string.Empty, GUIStyle.none))
                 {
+                    AudioManager.Instance?.PlayUIClick();
                     courierTab = ids[i];
                     courierTabChangedAt = NowForUi();
                     courierReaderOpen = false;
@@ -35400,14 +35522,21 @@ if (leftNavigationTexture == null)
             GUI.EndScrollView();
         }
 
+        // M076C-CL : meme patron que DrawChatConversationsPane - avatar rond (DrawRoundAvatarBase,
+        // comme les "photos de profil" de Chat) a la place du carre d'icone texture, et surlignage
+        // dore (DrawSelectedRowHighlight) sur le courrier actuellement ouvert dans le lecteur, ce
+        // qui n'existait pas du tout avant (aucune distinction visuelle du courrier selectionne en
+        // vue bureau deux volets, contrairement a la conversation selectionnee dans Chat).
         private static void DrawCourierRow(Rect rect, CourierMessageData message, bool compact)
         {
             Color accent = CourierCategoryColor(message.Category);
-            DrawPremiumPanel(rect, message.Read ? new Color(0.040f, 0.033f, 0.022f, 0.90f) : new Color(0.095f, 0.060f, 0.020f, 0.98f), new Color(accent.r, accent.g, accent.b, message.Read ? 0.45f : 0.90f));
-            Rect icon = new Rect(rect.x + 8f, rect.y + (rect.height - 38f) * 0.5f, 38f, 38f);
-            DrawPremiumPanel(icon, new Color(accent.r * 0.16f, accent.g * 0.16f, accent.b * 0.16f, 0.96f), new Color(accent.r, accent.g, accent.b, 0.80f));
-            DrawGameIcon(new Rect(icon.x + 6f, icon.y + 6f, 26f, 26f), CourierCategoryIcon(message.Category), Color.white);
-            float textX = icon.xMax + 10f;
+            bool selected = !compact && courierReaderOpen && message.Id == courierSelectedId;
+            if (selected) DrawSelectedRowHighlight(rect);
+            else DrawFlatRoundedRect(rect, message.Read ? new Color(0.05f, 0.040f, 0.026f, 0.90f) : new Color(0.12f, 0.075f, 0.025f, 0.95f), 10f);
+            float avatarSize = compact ? 44f : 42f;
+            Rect avatarRect = new Rect(rect.x + 8f, rect.y + (rect.height - avatarSize) * 0.5f, avatarSize, avatarSize);
+            CourierDrawAvatar(avatarRect, message);
+            float textX = avatarRect.xMax + 10f;
             float textW = rect.width - textX - 72f;
             GUI.Label(new Rect(textX, rect.y + 7f, textW, 18f), message.Title, new GUIStyle(badgeStyle) { fontSize = compact ? 10 : 12, normal = { textColor = accent } });
             GUI.Label(new Rect(textX, rect.y + 27f, textW, 28f), message.Preview, new GUIStyle(smallStyle) { fontSize = compact ? 8 : 10, wordWrap = true });
@@ -35421,6 +35550,17 @@ if (leftNavigationTexture == null)
                 courierReaderOpen = true;
                 AudioManager.Instance?.PlayUIClick();
             }
+        }
+
+        // M076C-CL : avatar rond par categorie (meme base que DrawChatAvatar - anneau or +
+        // pastille sombre) avec l'icone de categorie au centre au lieu des initiales, puisqu'un
+        // courrier n'a pas d'interlocuteur nomme comme une conversation Chat.
+        private static void CourierDrawAvatar(Rect rect, CourierMessageData message)
+        {
+            DrawRoundAvatarBase(rect);
+            Color accent = CourierCategoryColor(message.Category);
+            float iconSize = rect.width * 0.56f;
+            DrawGameIcon(new Rect(rect.x + (rect.width - iconSize) * 0.5f, rect.y + (rect.height - iconSize) * 0.5f, iconSize, iconSize), CourierCategoryIcon(message.Category), accent);
         }
 
         private static void DrawCourierReader(Rect area, bool compact)
@@ -35440,13 +35580,17 @@ if (leftNavigationTexture == null)
             }
             float top = compact ? 46f : 14f;
             Color accent = CourierCategoryColor(message.Category);
-            DrawGameIcon(new Rect(area.x + 14f, area.y + top, 34f, 34f), CourierCategoryIcon(message.Category), Color.white);
-            GUI.Label(new Rect(area.x + 58f, area.y + top, area.width - 150f, 24f), message.Title, new GUIStyle(titleStyle) { fontSize = compact ? 17 : 22 });
-            GUI.Label(new Rect(area.x + 58f, area.y + top + 27f, area.width - 80f, 16f), CourierCategoryLabel(message.Category) + "  ·  " + message.DateLabel, new GUIStyle(tinyLabelStyle) { fontSize = 9, normal = { textColor = accent } });
-            Rect favorite = new Rect(area.xMax - 54f, area.y + top, 34f, 34f);
-            DrawPremiumPanel(favorite, message.Favorite ? new Color(0.35f, 0.22f, 0.05f, 0.98f) : new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(1f, 0.72f, 0.18f, 0.85f));
+            // M076C-CL : meme avatar rond que la liste/Chat au lieu du carre d'icone.
+            Rect readerAvatar = new Rect(area.x + 14f, area.y + top, 40f, 40f);
+            CourierDrawAvatar(readerAvatar, message);
+            GUI.Label(new Rect(readerAvatar.xMax + 12f, area.y + top, area.width - readerAvatar.width - 168f, 24f), message.Title, new GUIStyle(titleStyle) { fontSize = compact ? 17 : 22 });
+            GUI.Label(new Rect(readerAvatar.xMax + 12f, area.y + top + 27f, area.width - readerAvatar.width - 96f, 16f), CourierCategoryLabel(message.Category) + "  ·  " + message.DateLabel, new GUIStyle(tinyLabelStyle) { fontSize = 9, normal = { textColor = accent } });
+            Rect favorite = new Rect(area.xMax - 54f, area.y + top + 3f, 34f, 34f);
+            DrawFlatRoundedRect(favorite, message.Favorite ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
+            if (message.Favorite) DrawFlatRoundedRect(new Rect(favorite.x - 2f, favorite.y - 2f, favorite.width + 4f, favorite.height + 4f), new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
+            if (message.Favorite) DrawFlatRoundedRect(favorite, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
             DrawGameIcon(new Rect(favorite.x + 6f, favorite.y + 6f, 22f, 22f), "star", Color.white);
-            if (GUI.Button(favorite, string.Empty, GUIStyle.none)) message.Favorite = !message.Favorite;
+            if (GUI.Button(favorite, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); message.Favorite = !message.Favorite; }
             Rect viewport = new Rect(area.x + 14f, area.y + top + 54f, area.width - 28f, area.height - top - 62f);
             courierReaderScroll = GUI.BeginScrollView(viewport, courierReaderScroll, new Rect(0f, 0f, viewport.width - 16f, Mathf.Max(viewport.height, 330f)), false, true);
             GUI.Label(new Rect(0f, 0f, viewport.width - 16f, 72f), message.Body, new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, wordWrap = true });
@@ -35457,16 +35601,19 @@ if (leftNavigationTexture == null)
                 y += 28f;
                 for (int i = 0; i < message.Rewards.Count; i++)
                 {
+                    // M076C-CL : carte de recompense plate arrondie (meme technique que les bulles
+                    // de message Chat, DrawFlatRoundedRect) au lieu du panneau texture/grain.
                     CourierRewardData reward = message.Rewards[i];
                     Rect rewardRect = new Rect(0f, y, viewport.width - 16f, 58f);
-                    DrawPremiumPanel(rewardRect, new Color(0.06f, 0.045f, 0.025f, 0.96f), new Color(1f, 0.72f, 0.18f, 0.72f));
+                    DrawFlatRoundedRect(rewardRect, new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
                     DrawGameIcon(new Rect(rewardRect.x + 10f, rewardRect.y + 10f, 34f, 34f), reward.ItemId == "honey" ? "honey" : "gift", Color.white);
                     GUI.Label(new Rect(rewardRect.x + 54f, rewardRect.y + 18f, rewardRect.width - 170f, 20f), reward.ItemId == "honey" ? "Miel" : "Coffre événement", new GUIStyle(badgeStyle) { fontSize = 11 });
                     if (!reward.Collected)
                     {
                         Rect collect = new Rect(rewardRect.xMax - 102f, rewardRect.y + 14f, 92f, 30f);
+                        DrawFlatRoundedRect(collect, new Color(0.40f, 0.28f, 0.10f, 0.97f), 8f);
                         GUI.Label(collect, "Récupérer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
-                        if (GUI.Button(collect, string.Empty, GUIStyle.none)) { reward.Collected = true; ShowCourierToast("Récompense récupérée."); }
+                        if (GUI.Button(collect, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); reward.Collected = true; ShowCourierToast("Récompense récupérée."); }
                     }
                     else GUI.Label(new Rect(rewardRect.xMax - 104f, rewardRect.y + 18f, 94f, 20f), "Récupérée", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleRight });
                     y += 66f;
