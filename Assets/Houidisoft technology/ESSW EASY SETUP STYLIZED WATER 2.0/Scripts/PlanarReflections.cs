@@ -149,7 +149,7 @@ namespace ESSW.Editorcontroller
 
         private void PreRender(ScriptableRenderContext context, Camera cam)
         {
-            if (Application.isPlaying && SceneManager.GetActiveScene().name.Contains("WorldMap")) return;
+            if (SceneManager.GetActiveScene().name.Contains("WorldMap")) return;
             if (ShouldSkipCamera(cam)) return;
             if (_probe0 == null) InitializeProbe();
 
