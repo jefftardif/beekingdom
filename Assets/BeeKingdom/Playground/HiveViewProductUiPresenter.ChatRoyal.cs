@@ -316,6 +316,23 @@ namespace BeeKingdom.Playground
 
         private static bool ChatHasPendingInvitation() => ChatFirstPendingInvitation() != null;
 
+        // M076G-CL : CheckForNewAllianceInvitationAlerts()/CheckForNewCombatReportAlerts()
+        // (qui alimentent courierMessages avec de vrais courriers) ne vivent que dans
+        // DrawInternal(), jamais appelee dans la vraie scene CEO (Environment2D5D_HiveMap_Test -
+        // LivingHiveChatBridgeBootstrap.OnGUI n'appelle que DrawCommunicationOverlayForExternalHost
+        // et DrawChatInvitationAlert, deliberement PAS DrawInternal - voir son commentaire). Aucun
+        // rapport de combat ni invitation d'alliance ne pouvait donc jamais apparaitre dans
+        // Courrier en jeu reel (rapporte par Jeff : "j'ai attaque une araignee et je ne vois pas
+        // le rapport dans mes mails"), meme si la logique elle-meme avait ete validee dans les
+        // bootstraps IMGUI historiques (Sandbox/LivingHiveDemo) qui appellent Draw()/DrawInternal.
+        // Entree publique dediee pour que la scene reelle puisse les invoquer sans tirer les ~15
+        // autres systemes que TryConfigureGameplayForActiveSession() cable.
+        public static void TickCourierAlertsForExternalHost()
+        {
+            CheckForNewAllianceInvitationAlerts();
+            CheckForNewCombatReportAlerts();
+        }
+
         // Alerte GLOBALE : dessinee a la racine de la boucle de dessin, donc visible meme quand le
         // joueur n'est pas dans l'ecran Communication (exigence explicite du CEO).
         public static void DrawChatInvitationAlert()

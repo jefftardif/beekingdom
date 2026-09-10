@@ -103,6 +103,10 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            // M076G-CL : sans cet appel, aucun rapport de combat ni invitation d'alliance ne
+            // pouvait jamais alimenter Courrier dans cette scene (voir TickCourierAlertsForExternalHost) -
+            // DrawInternal() n'est jamais appelee ici, deliberement (cf. commentaire dans Start()).
+            HiveViewProductUiPresenter.TickCourierAlertsForExternalHost();
             HiveViewProductUiPresenter.DrawCommunicationOverlayForExternalHost(Screen.width < 900);
             // RAP-OPTIONNEL-COMMUNICATIONS_01 : l'alerte d'invitation de groupe est dessinee ICI,
             // apres l'overlay Communication et hors de sa condition d'ouverture, parce que le CEO
