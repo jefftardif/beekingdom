@@ -3412,7 +3412,11 @@ private static string courierToast = string.Empty;
                 if (courierScreenOpen) DrawCourierScreen(compact);
                 else if (chatScreenOpen) DrawChatScreen(compact);
                 else DrawMiniChatFloating(compact, false);
-                if (chatScreenOpen || courierScreenOpen) DrawCommunicationTabBarForExternalHost(compact);
+                // M076F-CL : l'ancienne paire d'onglets CHAT/MAIL centree en haut
+                // (DrawCommunicationTabBarForExternalHost) faisait doublon avec la rangee
+                // MAIL/CHAT en haut a droite (DrawChatTopBar/DrawCourierTopBar), desormais
+                // seule paire fonctionnelle et alignee entre les deux ecrans (rapporte par
+                // Jeff : "il faut enlever les anciens boutons CHAT MAIL en haut au centre").
             }
             finally
             {
@@ -3447,31 +3451,6 @@ private static string courierToast = string.Empty;
             finally
             {
                 GUI.depth = previousDepth;
-            }
-        }
-
-        private static void DrawCommunicationTabBarForExternalHost(bool compact)
-        {
-            bool onMail = courierScreenOpen;
-            float tabWidth = compact ? 84f : 100f;
-            float tabHeight = 30f;
-            Rect chatTab = new Rect((Screen.width - tabWidth * 2f) / 2f, 44f, tabWidth, tabHeight);
-            Rect mailTab = new Rect(chatTab.x + tabWidth, chatTab.y, tabWidth, tabHeight);
-
-            DrawPremiumPanel(chatTab, onMail ? new Color(0.05f, 0.04f, 0.025f, 0.90f) : new Color(1f, 0.60f, 0.14f, 0.95f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
-            GUI.Label(chatTab, "CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, fontStyle = FontStyle.Bold });
-            if (GUI.Button(chatTab, string.Empty, GUIStyle.none) && onMail)
-            {
-                AudioManager.Instance?.PlayUIClick();
-                SwitchToChatFromMailForExternalHost();
-            }
-
-            DrawPremiumPanel(mailTab, onMail ? new Color(1f, 0.60f, 0.14f, 0.95f) : new Color(0.05f, 0.04f, 0.025f, 0.90f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
-            GUI.Label(mailTab, "MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10, fontStyle = FontStyle.Bold });
-            if (GUI.Button(mailTab, string.Empty, GUIStyle.none) && !onMail)
-            {
-                AudioManager.Instance?.PlayUIClick();
-                OpenMailOverlayForExternalHost();
             }
         }
 
@@ -35100,7 +35079,7 @@ if (leftNavigationTexture == null)
                     victory ? new Color(0.55f, 0.95f, 0.55f, 1f) : new Color(0.92f, 0.62f, 0.42f, 1f),
                     5f);
 
-                courierMessages.Insert(0, new CourierMessageData
+                CourierMessageData reportMessage = new CourierMessageData
                 {
                     Id = -Math.Abs(receipt.EncounterId.GetHashCode()),
                     Category = "report",
@@ -35110,7 +35089,51 @@ if (leftNavigationTexture == null)
                     DateLabel = "à l'instant",
                     Read = false,
                     Favorite = false
-                });
+                };
+                // M076E-CL : demande CEO - "ajouter dans le rapport de combat les ressources
+                // gagnees". CreditedByResource vient deja credite automatiquement par le serveur
+                // (pas de bouton "Recuperer" a offrir, contrairement aux recompenses des autres
+                // courriers) - chaque ressource devient une carte RÉCOMPENSES deja marquee
+                // Collected, avec son montant reel affiche (jusqu'ici jamais montre du tout).
+                if (receipt.CreditedByResource != null)
+                {
+                    foreach (KeyValuePair<string, long> credit in receipt.CreditedByResource)
+                    {
+                        if (credit.Value <= 0) continue;
+                        reportMessage.Rewards.Add(new CourierRewardData
+                        {
+                            Type = "resource",
+                            ItemId = credit.Key,
+                            Amount = (int)Math.Min(int.MaxValue, credit.Value),
+                            Collected = true
+                        });
+                    }
+                }
+                courierMessages.Insert(0, reportMessage);
+            }
+        }
+
+        private static string CourierRewardLabel(CourierRewardData reward)
+        {
+            string name = reward.ItemId switch
+            {
+                "honey" => "Miel",
+                "wax" => "Cire",
+                "pollen" => "Pollen",
+                "event_chest" => "Coffre événement",
+                _ => reward.ItemId
+            };
+            return reward.Amount > 0 ? "+" + reward.Amount.ToString(CultureInfo.InvariantCulture) + " " + name : name;
+        }
+
+        private static string CourierRewardIcon(CourierRewardData reward)
+        {
+            switch (reward.ItemId)
+            {
+                case "honey": return "honey";
+                case "wax": return "wax";
+                case "pollen": return "pollen";
+                default: return "gift";
             }
         }
 
@@ -35363,7 +35386,13 @@ if (leftNavigationTexture == null)
                 courierScreenOpen = false;
                 return;
             }
-            Rect mailTab = new Rect(closeButton.x - 128f - 6f, 12f, 128f, 38f);
+            // M076F-CL : Chat reserve un bouton Parametres (gearW 38 + intervalle 6 = 44px) entre
+            // Fermer et MAIL que Courrier n'a pas - sans ce meme decalage ici, les deux onglets
+            // MAIL/CHAT atterrissaient 44px trop a droite par rapport a Chat (rapporte par Jeff :
+            // "les boutons des onglets ne sont pas au meme endroit"). Aucun bouton Parametres n'a
+            // sa place ici (Courrier n'a pas d'ecran de reglages) - seul l'espacement est reproduit.
+            float gearSlotReserve = 44f;
+            Rect mailTab = new Rect(closeButton.x - gearSlotReserve - 128f - 6f, 12f, 128f, 38f);
             DrawFlatRoundedRect(mailTab, new Color(0.34f, 0.22f, 0.06f, 0.96f), 10f);
             GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = 13 });
             Rect chatTab = new Rect(mailTab.x - 128f - 6f, 12f, 128f, 38f);
@@ -35461,7 +35490,10 @@ if (leftNavigationTexture == null)
                 }
                 float tabIconSize = 20f;
                 DrawGameIcon(new Rect(tab.x + 6f, tab.y + (tab.height - tabIconSize) * 0.5f, tabIconSize, tabIconSize), icons[i], Color.white);
-                GUI.Label(new Rect(tab.x + tabIconSize + 8f, tab.y, tab.width - tabIconSize - 10f, tab.height), labels[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 8 : 9, fontStyle = selected ? FontStyle.Bold : FontStyle.Normal, alignment = TextAnchor.MiddleLeft });
+                // M076F-CL : 8/9px illisible en jeu (rapporte par Jeff : "c'est ecrit tellement
+                // petit que je ne vois rien") - meme taille que les autres libelles d'onglets
+                // (MAIL/CHAT, quick actions) plutot qu'une police miniature dediee a cette rangee.
+                GUI.Label(new Rect(tab.x + tabIconSize + 8f, tab.y, tab.width - tabIconSize - 10f, tab.height), labels[i], new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 11 : 13, fontStyle = selected ? FontStyle.Bold : FontStyle.Normal, alignment = TextAnchor.MiddleLeft });
                 if (GUI.Button(tab, string.Empty, GUIStyle.none))
                 {
                     AudioManager.Instance?.PlayUIClick();
@@ -35606,8 +35638,11 @@ if (leftNavigationTexture == null)
                     CourierRewardData reward = message.Rewards[i];
                     Rect rewardRect = new Rect(0f, y, viewport.width - 16f, 58f);
                     DrawFlatRoundedRect(rewardRect, new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
-                    DrawGameIcon(new Rect(rewardRect.x + 10f, rewardRect.y + 10f, 34f, 34f), reward.ItemId == "honey" ? "honey" : "gift", Color.white);
-                    GUI.Label(new Rect(rewardRect.x + 54f, rewardRect.y + 18f, rewardRect.width - 170f, 20f), reward.ItemId == "honey" ? "Miel" : "Coffre événement", new GUIStyle(badgeStyle) { fontSize = 11 });
+                    DrawGameIcon(new Rect(rewardRect.x + 10f, rewardRect.y + 10f, 34f, 34f), CourierRewardIcon(reward), Color.white);
+                    // M076E-CL : la quantite (Amount) n'etait jamais affichee - seul le type de
+                    // recompense l'etait ("Miel" sans dire combien). Demande CEO : "ajouter les
+                    // ressources gagnees" dans le rapport de combat.
+                    GUI.Label(new Rect(rewardRect.x + 54f, rewardRect.y + 18f, rewardRect.width - 170f, 20f), CourierRewardLabel(reward), new GUIStyle(badgeStyle) { fontSize = 11 });
                     if (!reward.Collected)
                     {
                         Rect collect = new Rect(rewardRect.xMax - 102f, rewardRect.y + 14f, 92f, 30f);
@@ -36398,9 +36433,13 @@ if (leftNavigationTexture == null)
 			// manquee) reagissait reellement. Cable ici le meme comportement reel que cette
 			// derniere (OpenMailOverlayForExternalHost / SwitchToChatFromMailForExternalHost),
 			// sans y toucher, pour ne pas risquer une double regression.
+			// M076F-CL : DrawPremiumPanel (texture/grain) rendait la couleur de remplissage trop
+			// attenuee pour qu'un etat "actif" se voie clairement (rapporte par Jeff : "quand je
+			// suis dans CHAT, CHAT n'est pas surligne") - meme technique plate que Courrier
+			// desormais (DrawFlatRoundedRect), un remplissage franc au lieu d'un panneau texture.
 			bool onMailTopBar = courierScreenOpen;
 			Rect mailTab = new Rect(gearButton.x - 128f - 6f, 12f, 128f, 38f);
-			DrawPremiumPanel(mailTab, onMailTopBar ? new Color(0.34f, 0.22f, 0.06f, 0.96f) : new Color(0.05f, 0.04f, 0.025f, 0.94f), onMailTopBar ? new Color(1f, 0.70f, 0.18f, 0.94f) : new Color(0.66f, 0.46f, 0.16f, 0.76f));
+			DrawFlatRoundedRect(mailTab, onMailTopBar ? new Color(0.34f, 0.22f, 0.06f, 0.96f) : new Color(0.05f, 0.04f, 0.025f, 0.94f), 10f);
 			GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
 			if (GUI.Button(mailTab, string.Empty, GUIStyle.none) && !onMailTopBar)
 			{
@@ -36408,7 +36447,7 @@ if (leftNavigationTexture == null)
 				OpenMailOverlayForExternalHost();
 			}
 			Rect chatTab = new Rect(mailTab.x - 128f - 6f, 12f, 128f, 38f);
-			DrawPremiumPanel(chatTab, onMailTopBar ? new Color(0.05f, 0.04f, 0.025f, 0.94f) : new Color(0.34f, 0.22f, 0.06f, 0.96f), onMailTopBar ? new Color(0.66f, 0.46f, 0.16f, 0.76f) : new Color(1f, 0.70f, 0.18f, 0.94f));
+			DrawFlatRoundedRect(chatTab, onMailTopBar ? new Color(0.05f, 0.04f, 0.025f, 0.94f) : new Color(0.34f, 0.22f, 0.06f, 0.96f), 10f);
 			GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
 			if (GUI.Button(chatTab, string.Empty, GUIStyle.none) && onMailTopBar)
 			{
