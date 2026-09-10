@@ -193,6 +193,7 @@ builder.Services.AddOptions<WorldResourceCollectionOptions>()
     .ValidateOnStart();
 builder.Services.AddOptions<HiveMilestoneEventOptions>().Bind(builder.Configuration.GetSection(HiveMilestoneEventOptions.SectionName));
 builder.Services.AddOptions<QuestChainOptions>().Bind(builder.Configuration.GetSection(QuestChainOptions.SectionName));
+builder.Services.AddOptions<CourierMailboxOptions>().Bind(builder.Configuration.GetSection(CourierMailboxOptions.SectionName));
 builder.Services.AddOptions<CombatPatrolOptions>().Bind(builder.Configuration.GetSection("CombatPatrol"));
 builder.Services.AddOptions<WorldMapContentManifestOptions>().Bind(builder.Configuration.GetSection(WorldMapContentManifestOptions.SectionName));
 
@@ -1325,6 +1326,80 @@ app.MapPost("/game/v1/hives/{hiveId}/quest-chain/{objectiveKey}/claim", async (H
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null || string.IsNullOrWhiteSpace(objectiveKey)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
     try { var result = await new QuestChainService(repository, clock, configured.Value).ClaimAsync(auth.PlayerId!.Value, parsed, objectiveKey, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+
+// M076I-CL: boite de reception Courrier persistee cote serveur (demande CEO explicite : "il faut
+// que ce soit sauvegarde sur le serveur, nous ne conservons rien localement" - un premier
+// correctif PlayerPrefs local a ete juge insuffisant). Le client reste seul a DERIVER le contenu
+// de chaque message (Combat Patrol, invitations d'Alliance restent la seule source de verite
+// pour leur propre contenu) ; ces endpoints ne font que persister la boite deja construite.
+app.MapGet("/game/v1/hives/{hiveId}/courier", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).ReadAsync(auth.PlayerId!.Value, parsed, ct)); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+    catch (InvalidOperationException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/courier/append", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, AppendCourierMessageRequest request, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).AppendAsync(auth.PlayerId!.Value, parsed, request, ct)); }
+    catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/courier/{messageId}/read", async (HttpContext context, string hiveId, string messageId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, SetCourierFlagRequest request, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).SetReadAsync(auth.PlayerId!.Value, parsed, messageId, request.Value, ct)); }
+    catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/courier/{messageId}/favorite", async (HttpContext context, string hiveId, string messageId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, SetCourierFlagRequest request, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).SetFavoriteAsync(auth.PlayerId!.Value, parsed, messageId, request.Value, ct)); }
+    catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/courier/{messageId}/collect", async (HttpContext context, string hiveId, string messageId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).CollectRewardsAsync(auth.PlayerId!.Value, parsed, messageId, ct)); }
+    catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/courier/mark-all-read", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).MarkAllReadAsync(auth.PlayerId!.Value, parsed, ct)); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/courier/delete-read", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<CourierMailboxOptions> configured, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new CourierMailboxService(repository, clock, configured.Value).DeleteReadAsync(auth.PlayerId!.Value, parsed, ct)); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 

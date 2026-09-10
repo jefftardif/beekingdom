@@ -1248,7 +1248,7 @@ private static float resourceInventoryOpenedAt = -10f;
 
 		private static string courierSearchQuery = string.Empty;
 
-		private static int courierSelectedId = -1;
+		private static string courierSelectedId = string.Empty;
 
 		private static bool courierReaderOpen;
 
@@ -34991,82 +34991,15 @@ if (leftNavigationTexture == null)
             GUI.color = previous;
         }
 
-        [Serializable]
-        private sealed class CourierRewardData
-        {
-            public string Type;
-            public string ItemId;
-            public int Amount;
-            public bool Collected;
-        }
-
-        [Serializable]
-        private sealed class CourierMessageData
-        {
-            public int Id;
-            public string Category;
-            public string Title;
-            public string Preview;
-            public string Body;
-            public string DateLabel;
-            public bool Read;
-            public bool Favorite;
-            public List<CourierRewardData> Rewards = new List<CourierRewardData>();
-        }
-
-        private static readonly List<CourierMessageData> courierMessages = new List<CourierMessageData>();
-
-        // M076H-CL : courierMessages n'etait jamais que de la memoire de processus - un rapport
-        // de combat inséré via CheckForNewCombatReportAlerts disparaissait au premier rechargement
-        // de domaine/redemarrage (rapporte par Jeff : "je n'ai plus le rapport de combat dans
-        // mails. Il faut que ce soit persistant"). Meme idiome que
-        // LocalPreviewQueueJournalCodec/PlayerPrefsLocalPreviewQueueJournalStore (JsonUtility +
-        // PlayerPrefs), partitionne par localPreviewAccountPartitionId comme le reste de l'etat
-        // local par compte (voir SetLocalPreviewAccountPartitionForRuntime) pour qu'un second
-        // compte sur le meme appareil ne voie jamais le courrier du premier. Les receipts sources
-        // (combatPatrolController.RecentClaimReceipts, invitations Alliance) sont eux deja
-        // re-derives du serveur a chaque session - seul le COURRIER DEJA CREE (rendu lu/favori/
-        // recompenses deja recuperees inclus) a besoin d'etre persiste ici, jamais les receipts
-        // eux-memes.
-        [Serializable]
-        private sealed class CourierMailboxJournal
-        {
-            public int version = 1;
-            public List<CourierMessageData> messages = new List<CourierMessageData>();
-        }
-
-        private const string CourierMailboxPrefsKeyPrefix = "BeeKingdom_Courier_Mailbox_v1_";
-        private static bool courierMailboxLoaded;
-        private static string courierMailboxLoadedForPartition = string.Empty;
-
-        private static void EnsureCourierMailboxLoaded()
-        {
-            if (courierMailboxLoaded && string.Equals(courierMailboxLoadedForPartition, localPreviewAccountPartitionId, StringComparison.Ordinal)) return;
-            courierMailboxLoaded = true;
-            courierMailboxLoadedForPartition = localPreviewAccountPartitionId;
-            courierMessages.Clear();
-            combatReportAlertsShown.Clear();
-            allianceInvitationAlertsShown.Clear();
-
-            string json = PlayerPrefs.GetString(CourierMailboxPrefsKeyPrefix + localPreviewAccountPartitionId, string.Empty);
-            if (!string.IsNullOrWhiteSpace(json))
-            {
-                try
-                {
-                    CourierMailboxJournal journal = JsonUtility.FromJson<CourierMailboxJournal>(json);
-                    if (journal?.messages != null) courierMessages.AddRange(journal.messages);
-                }
-                catch { /* courrier corrompu - repart d'une boite vide plutot que de planter */ }
-            }
-            if (courierMessages.Count == 0) courierMessages.AddRange(BuildCourierMessages());
-        }
-
-        private static void SaveCourierMailboxToDisk()
-        {
-            CourierMailboxJournal journal = new CourierMailboxJournal { messages = courierMessages };
-            PlayerPrefs.SetString(CourierMailboxPrefsKeyPrefix + localPreviewAccountPartitionId, JsonUtility.ToJson(journal));
-            PlayerPrefs.Save();
-        }
+        // M076I-CL : courrier persiste cote SERVEUR (voir CourierMailboxPresentation.cs /
+        // CourierMailboxClient) - demande CEO explicite apres un premier correctif PlayerPrefs
+        // local juge insuffisant : "il faut que ce soit sauvegarde sur le serveur, nous ne
+        // conservons rien localement". Le client ne detient plus aucune copie locale du
+        // courrier : chaque ecran lit directement courierMailboxController.Model.Messages.
+        // Dedoublonnage cote client (ces deux HashSet) : purement une optimisation pour ne pas
+        // rappeler Append() a chaque frame pour un receipt/invitation deja envoye CETTE session -
+        // Append() est de toute facon idempotent cote serveur (par Id deterministe), donc aucun
+        // risque de doublon meme si ce garde-fou etait absent.
 
         // M043T-CL: a real pending Alliance invitation used to be invisible unless the player
         // explicitly opened Alliance Center -> Invitations. Reuses two systems that already exist
@@ -35078,7 +35011,6 @@ if (leftNavigationTexture == null)
 
         private static void CheckForNewAllianceInvitationAlerts()
         {
-            EnsureCourierMailboxLoaded();
             AllianceCenterScreenModel model = allianceCenterController.Model;
             if (model?.MyInvitations == null) return;
             for (int i = 0; i < model.MyInvitations.Count; i++)
@@ -35093,35 +35025,28 @@ if (leftNavigationTexture == null)
                     new Color(0.82f, 0.60f, 0.95f, 1f),
                     5f);
 
-                courierMessages.Insert(0, new CourierMessageData
+                courierMailboxController.Append(new AppendCourierMessageMutationRequest
                 {
-                    Id = -Math.Abs(invite.InvitationId.GetHashCode()),
+                    Id = "alliance:" + invite.InvitationId.ToString("D"),
                     Category = "alliance",
                     Title = "Invitation d'Alliance",
                     Preview = "Vous avez reçu une invitation à rejoindre une alliance.",
-                    Body = "Ouvrez Alliance Center pour accepter ou refuser cette invitation.",
-                    DateLabel = "à l'instant",
-                    Read = false,
-                    Favorite = false
+                    Body = "Ouvrez Alliance Center pour accepter ou refuser cette invitation."
                 });
-                SaveCourierMailboxToDisk();
             }
         }
 
         // M076D-CL: meme patron exactement que CheckForNewAllianceInvitationAlerts juste au-dessus
         // (demande CEO : "j'ai lance un combat et je ne vois pas le rapport dans la categorie de
-        // rapports de combat") - jusqu'ici rien n'alimentait jamais courierMessages avec un vrai
-        // combat, la liste n'etait que 240 entrees fictives cycliques (voir BuildCourierMessages
-        // ci-dessous, desormais reduit a un seul message d'accueil). Un vrai courrier "Rapport de
-        // combat" est cree pour CHAQUE reclamation reelle (manuelle ou automatique -
-        // RecentClaimReceipts couvre les deux, voir ICombatPatrolPanelController), une seule fois
-        // par EncounterId. Aucune donnee inventee : Band/pertes/recompenses viennent tels quels du
-        // recu deja renvoye par le serveur.
+        // rapports de combat") - jusqu'ici rien n'alimentait jamais le courrier avec un vrai
+        // combat. Un vrai courrier "Rapport de combat" est cree pour CHAQUE reclamation reelle
+        // (manuelle ou automatique - RecentClaimReceipts couvre les deux, voir
+        // ICombatPatrolPanelController), une seule fois par EncounterId. Aucune donnee inventee :
+        // Band/pertes/recompenses viennent tels quels du recu deja renvoye par le serveur.
         private static readonly HashSet<Guid> combatReportAlertsShown = new HashSet<Guid>();
 
         private static void CheckForNewCombatReportAlerts()
         {
-            EnsureCourierMailboxLoaded();
             IReadOnlyList<RemoteCombatPatrolClaimReceipt> receipts = combatPatrolController?.RecentClaimReceipts;
             if (receipts == null) return;
             for (int i = 0; i < receipts.Count; i++)
@@ -35136,42 +35061,38 @@ if (leftNavigationTexture == null)
                     victory ? new Color(0.55f, 0.95f, 0.55f, 1f) : new Color(0.92f, 0.62f, 0.42f, 1f),
                     5f);
 
-                CourierMessageData reportMessage = new CourierMessageData
-                {
-                    Id = -Math.Abs(receipt.EncounterId.GetHashCode()),
-                    Category = "report",
-                    Title = "Rapport de combat — Tier " + receipt.Tier.ToString(CultureInfo.InvariantCulture),
-                    Preview = CourierCombatBandLabel(receipt.Band) + " · " + CourierCombatLossesSummary(receipt),
-                    Body = CourierCombatReportBody(receipt),
-                    DateLabel = "à l'instant",
-                    Read = false,
-                    Favorite = false
-                };
                 // M076E-CL : demande CEO - "ajouter dans le rapport de combat les ressources
                 // gagnees". CreditedByResource vient deja credite automatiquement par le serveur
                 // (pas de bouton "Recuperer" a offrir, contrairement aux recompenses des autres
                 // courriers) - chaque ressource devient une carte RÉCOMPENSES deja marquee
                 // Collected, avec son montant reel affiche (jusqu'ici jamais montre du tout).
+                List<RemoteCourierReward> rewards = new List<RemoteCourierReward>();
                 if (receipt.CreditedByResource != null)
                 {
                     foreach (KeyValuePair<string, long> credit in receipt.CreditedByResource)
                     {
                         if (credit.Value <= 0) continue;
-                        reportMessage.Rewards.Add(new CourierRewardData
+                        rewards.Add(new RemoteCourierReward
                         {
-                            Type = "resource",
                             ItemId = credit.Key,
                             Amount = (int)Math.Min(int.MaxValue, credit.Value),
                             Collected = true
                         });
                     }
                 }
-                courierMessages.Insert(0, reportMessage);
-                SaveCourierMailboxToDisk();
+                courierMailboxController.Append(new AppendCourierMessageMutationRequest
+                {
+                    Id = "combat:" + receipt.EncounterId.ToString("D"),
+                    Category = "report",
+                    Title = "Rapport de combat — Tier " + receipt.Tier.ToString(CultureInfo.InvariantCulture),
+                    Preview = CourierCombatBandLabel(receipt.Band) + " · " + CourierCombatLossesSummary(receipt),
+                    Body = CourierCombatReportBody(receipt),
+                    Rewards = rewards
+                });
             }
         }
 
-        private static string CourierRewardLabel(CourierRewardData reward)
+        private static string CourierRewardLabel(RemoteCourierReward reward)
         {
             string name = reward.ItemId switch
             {
@@ -35184,7 +35105,7 @@ if (leftNavigationTexture == null)
             return reward.Amount > 0 ? "+" + reward.Amount.ToString(CultureInfo.InvariantCulture) + " " + name : name;
         }
 
-        private static string CourierRewardIcon(CourierRewardData reward)
+        private static string CourierRewardIcon(RemoteCourierReward reward)
         {
             switch (reward.ItemId)
             {
@@ -35234,29 +35155,6 @@ if (leftNavigationTexture == null)
             return body.ToString();
         }
 
-        // M076D-CL : l'ancien generateur (240 entrees, seulement 6 modeles repetes en boucle -
-        // "les categories se repetent", rapporte par Jeff) a ete retire. Un seul message
-        // d'accueil reste comme point de depart honnete ; le reste du courrier se remplit
-        // desormais d'evenements reels (invitations d'Alliance deja branchees plus haut, rapports
-        // de combat via CheckForNewCombatReportAlerts ci-dessus), jamais de contenu invente.
-        private static List<CourierMessageData> BuildCourierMessages()
-        {
-            return new List<CourierMessageData>
-            {
-                new CourierMessageData
-                {
-                    Id = 0,
-                    Category = "system",
-                    Title = "Bienvenue dans BeeKingdom",
-                    Preview = "Votre ruche poursuit sa progression.",
-                    Body = "Votre courrier rassemblera ici vos vraies notifications : invitations d'Alliance, rapports de combat et récompenses.",
-                    DateLabel = "à l'instant",
-                    Read = false,
-                    Favorite = false
-                }
-            };
-        }
-
         private static string CourierCategoryLabel(string category)
         {
             switch (category)
@@ -35293,8 +35191,18 @@ if (leftNavigationTexture == null)
             }
         }
 
-        private static bool CourierHasUncollectedReward(CourierMessageData message)
+        // M076I-CL : le courrier vient maintenant du serveur avec un vrai CreatedAtUtc (au lieu
+        // d'un DateLabel local fige a "a l'instant" a la creation) - meme formatage relatif que
+        // AllianceActivityTimeLabel juste au-dessus, pour rester coherent visuellement.
+        private static string CourierDateLabel(DateTimeOffset createdAtUtc)
         {
+            float ageSeconds = Mathf.Max(0f, (float)(DateTimeOffset.UtcNow - createdAtUtc).TotalSeconds);
+            return AllianceActivityTimeLabel(ageSeconds);
+        }
+
+        private static bool CourierHasUncollectedReward(RemoteCourierMessage message)
+        {
+            if (message.Rewards == null) return false;
             for (int i = 0; i < message.Rewards.Count; i++)
                 if (!message.Rewards[i].Collected) return true;
             return false;
@@ -35302,18 +35210,20 @@ if (leftNavigationTexture == null)
 
         private static int CourierNotificationCount()
         {
+            IReadOnlyList<RemoteCourierMessage> messages = courierMailboxController.Model.Messages;
             int count = 0;
-            for (int i = 0; i < courierMessages.Count; i++)
+            for (int i = 0; i < messages.Count; i++)
             {
-                if (!courierMessages[i].Read || CourierHasUncollectedReward(courierMessages[i])) count++;
+                if (!messages[i].Read || CourierHasUncollectedReward(messages[i])) count++;
             }
             return count;
         }
 
-        private static CourierMessageData CourierSelectedMessage()
+        private static RemoteCourierMessage CourierSelectedMessage()
         {
-            for (int i = 0; i < courierMessages.Count; i++)
-                if (courierMessages[i].Id == courierSelectedId) return courierMessages[i];
+            IReadOnlyList<RemoteCourierMessage> messages = courierMailboxController.Model.Messages;
+            for (int i = 0; i < messages.Count; i++)
+                if (string.Equals(messages[i].Id, courierSelectedId, StringComparison.Ordinal)) return messages[i];
             return null;
         }
 
@@ -35325,6 +35235,7 @@ if (leftNavigationTexture == null)
             courierToast = string.Empty;
             courierToastAt = -10f;
             AudioManager.Instance?.PlayMenuOpen();
+            courierMailboxController.Refresh();
         }
 
         // Closes ONLY the member profile overlay - returns to whatever Alliance Center screen was
@@ -35500,23 +35411,21 @@ if (leftNavigationTexture == null)
                     AudioManager.Instance?.PlayUIClick();
                     if (ids[i] == "collect")
                     {
-                        for (int m = 0; m < courierMessages.Count; m++)
-                            for (int r = 0; r < courierMessages[m].Rewards.Count; r++) courierMessages[m].Rewards[r].Collected = true;
+                        IReadOnlyList<RemoteCourierMessage> messages = courierMailboxController.Model.Messages;
+                        for (int m = 0; m < messages.Count; m++)
+                            if (CourierHasUncollectedReward(messages[m])) courierMailboxController.CollectRewards(messages[m].Id);
                         ShowCourierToast("Toutes les récompenses disponibles ont été récupérées.");
-                        SaveCourierMailboxToDisk();
                     }
                     else if (ids[i] == "read")
                     {
-                        for (int m = 0; m < courierMessages.Count; m++) courierMessages[m].Read = true;
+                        courierMailboxController.MarkAllRead();
                         ShowCourierToast("Tous les courriers sont marqués comme lus.");
-                        SaveCourierMailboxToDisk();
                     }
                     else if (ids[i] == "favorite") courierTab = "favorite";
                     else if (ids[i] == "delete")
                     {
-                        courierMessages.RemoveAll(message => message.Read && !message.Favorite);
+                        courierMailboxController.DeleteRead();
                         ShowCourierToast("Les courriers lus ont été supprimés.");
-                        SaveCourierMailboxToDisk();
                     }
                     else courierSearchQuery = string.Empty;
                 }
@@ -35566,7 +35475,7 @@ if (leftNavigationTexture == null)
             GUI.EndScrollView();
         }
 
-        private static bool CourierMatches(CourierMessageData message)
+        private static bool CourierMatches(RemoteCourierMessage message)
         {
             if (courierTab == "favorite" && !message.Favorite) return false;
             if (courierTab != "all" && courierTab != "favorite" && message.Category != courierTab) return false;
@@ -35605,8 +35514,9 @@ if (leftNavigationTexture == null)
             searchStyle.focused = searchStyle.normal;
             courierSearchQuery = GUI.TextField(new Rect(search.x + 4f, search.y + 3f, search.width - 8f, search.height - 6f), courierSearchQuery, searchStyle);
             Rect viewport = new Rect(area.x + inset, search.yMax + 6f, area.width - inset * 2f, area.height - search.height - inset * 2f - 6f);
-            List<CourierMessageData> visible = new List<CourierMessageData>(courierMessages.Count);
-            for (int i = 0; i < courierMessages.Count; i++) if (CourierMatches(courierMessages[i])) visible.Add(courierMessages[i]);
+            IReadOnlyList<RemoteCourierMessage> allMessages = courierMailboxController.Model.Messages;
+            List<RemoteCourierMessage> visible = new List<RemoteCourierMessage>(allMessages.Count);
+            for (int i = 0; i < allMessages.Count; i++) if (CourierMatches(allMessages[i])) visible.Add(allMessages[i]);
             float rowH = compact ? 68f : 76f;
             float gap = 5f;
             courierListScroll = GUI.BeginScrollView(viewport, courierListScroll, new Rect(0f, 0f, viewport.width, Mathf.Max(viewport.height, visible.Count * (rowH + gap))), false, true);
@@ -35620,10 +35530,10 @@ if (leftNavigationTexture == null)
         // dore (DrawSelectedRowHighlight) sur le courrier actuellement ouvert dans le lecteur, ce
         // qui n'existait pas du tout avant (aucune distinction visuelle du courrier selectionne en
         // vue bureau deux volets, contrairement a la conversation selectionnee dans Chat).
-        private static void DrawCourierRow(Rect rect, CourierMessageData message, bool compact)
+        private static void DrawCourierRow(Rect rect, RemoteCourierMessage message, bool compact)
         {
             Color accent = CourierCategoryColor(message.Category);
-            bool selected = !compact && courierReaderOpen && message.Id == courierSelectedId;
+            bool selected = !compact && courierReaderOpen && string.Equals(message.Id, courierSelectedId, StringComparison.Ordinal);
             if (selected) DrawSelectedRowHighlight(rect);
             else DrawFlatRoundedRect(rect, message.Read ? new Color(0.05f, 0.040f, 0.026f, 0.90f) : new Color(0.12f, 0.075f, 0.025f, 0.95f), 10f);
             float avatarSize = compact ? 44f : 42f;
@@ -35633,24 +35543,23 @@ if (leftNavigationTexture == null)
             float textW = rect.width - textX - 72f;
             GUI.Label(new Rect(textX, rect.y + 7f, textW, 18f), message.Title, new GUIStyle(badgeStyle) { fontSize = compact ? 10 : 12, normal = { textColor = accent } });
             GUI.Label(new Rect(textX, rect.y + 27f, textW, 28f), message.Preview, new GUIStyle(smallStyle) { fontSize = compact ? 8 : 10, wordWrap = true });
-            GUI.Label(new Rect(rect.xMax - 66f, rect.y + 7f, 58f, 16f), message.DateLabel, new GUIStyle(tinyLabelStyle) { fontSize = 8, alignment = TextAnchor.MiddleRight });
+            GUI.Label(new Rect(rect.xMax - 66f, rect.y + 7f, 58f, 16f), CourierDateLabel(message.CreatedAtUtc), new GUIStyle(tinyLabelStyle) { fontSize = 8, alignment = TextAnchor.MiddleRight });
             if (!message.Read) GUI.Label(new Rect(rect.xMax - 18f, rect.yMax - 22f, 12f, 12f), "•", new GUIStyle(centeredTinyLabelStyle) { fontSize = 16, normal = { textColor = new Color(1f, 0.72f, 0.18f, 1f) } });
             if (CourierHasUncollectedReward(message)) DrawGameIcon(new Rect(rect.xMax - 42f, rect.yMax - 22f, 16f, 16f), "gift", new Color(1f, 0.72f, 0.18f, 1f));
             if (GUI.Button(rect, string.Empty, GUIStyle.none))
             {
                 bool wasUnread = !message.Read;
-                message.Read = true;
                 courierSelectedId = message.Id;
                 courierReaderOpen = true;
                 AudioManager.Instance?.PlayUIClick();
-                if (wasUnread) SaveCourierMailboxToDisk();
+                if (wasUnread) courierMailboxController.SetRead(message.Id, true);
             }
         }
 
         // M076C-CL : avatar rond par categorie (meme base que DrawChatAvatar - anneau or +
         // pastille sombre) avec l'icone de categorie au centre au lieu des initiales, puisqu'un
         // courrier n'a pas d'interlocuteur nomme comme une conversation Chat.
-        private static void CourierDrawAvatar(Rect rect, CourierMessageData message)
+        private static void CourierDrawAvatar(Rect rect, RemoteCourierMessage message)
         {
             DrawRoundAvatarBase(rect);
             Color accent = CourierCategoryColor(message.Category);
@@ -35660,7 +35569,7 @@ if (leftNavigationTexture == null)
 
         private static void DrawCourierReader(Rect area, bool compact)
         {
-            CourierMessageData message = CourierSelectedMessage();
+            RemoteCourierMessage message = CourierSelectedMessage();
             DrawPremiumPanel(area, new Color(0.030f, 0.025f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.76f));
             if (message == null)
             {
@@ -35679,18 +35588,18 @@ if (leftNavigationTexture == null)
             Rect readerAvatar = new Rect(area.x + 14f, area.y + top, 40f, 40f);
             CourierDrawAvatar(readerAvatar, message);
             GUI.Label(new Rect(readerAvatar.xMax + 12f, area.y + top, area.width - readerAvatar.width - 168f, 24f), message.Title, new GUIStyle(titleStyle) { fontSize = compact ? 17 : 22 });
-            GUI.Label(new Rect(readerAvatar.xMax + 12f, area.y + top + 27f, area.width - readerAvatar.width - 96f, 16f), CourierCategoryLabel(message.Category) + "  ·  " + message.DateLabel, new GUIStyle(tinyLabelStyle) { fontSize = 9, normal = { textColor = accent } });
+            GUI.Label(new Rect(readerAvatar.xMax + 12f, area.y + top + 27f, area.width - readerAvatar.width - 96f, 16f), CourierCategoryLabel(message.Category) + "  ·  " + CourierDateLabel(message.CreatedAtUtc), new GUIStyle(tinyLabelStyle) { fontSize = 9, normal = { textColor = accent } });
             Rect favorite = new Rect(area.xMax - 54f, area.y + top + 3f, 34f, 34f);
             DrawFlatRoundedRect(favorite, message.Favorite ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
             if (message.Favorite) DrawFlatRoundedRect(new Rect(favorite.x - 2f, favorite.y - 2f, favorite.width + 4f, favorite.height + 4f), new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
             if (message.Favorite) DrawFlatRoundedRect(favorite, new Color(0.40f, 0.28f, 0.10f, 0.97f), 10f);
             DrawGameIcon(new Rect(favorite.x + 6f, favorite.y + 6f, 22f, 22f), "star", Color.white);
-            if (GUI.Button(favorite, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); message.Favorite = !message.Favorite; SaveCourierMailboxToDisk(); }
+            if (GUI.Button(favorite, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); courierMailboxController.SetFavorite(message.Id, !message.Favorite); }
             Rect viewport = new Rect(area.x + 14f, area.y + top + 54f, area.width - 28f, area.height - top - 62f);
             courierReaderScroll = GUI.BeginScrollView(viewport, courierReaderScroll, new Rect(0f, 0f, viewport.width - 16f, Mathf.Max(viewport.height, 330f)), false, true);
             GUI.Label(new Rect(0f, 0f, viewport.width - 16f, 72f), message.Body, new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, wordWrap = true });
             float y = 88f;
-            if (message.Rewards.Count > 0)
+            if (message.Rewards != null && message.Rewards.Count > 0)
             {
                 GUI.Label(new Rect(0f, y, viewport.width - 16f, 22f), "RÉCOMPENSES", new GUIStyle(badgeStyle) { fontSize = 11 });
                 y += 28f;
@@ -35698,7 +35607,7 @@ if (leftNavigationTexture == null)
                 {
                     // M076C-CL : carte de recompense plate arrondie (meme technique que les bulles
                     // de message Chat, DrawFlatRoundedRect) au lieu du panneau texture/grain.
-                    CourierRewardData reward = message.Rewards[i];
+                    RemoteCourierReward reward = message.Rewards[i];
                     Rect rewardRect = new Rect(0f, y, viewport.width - 16f, 58f);
                     DrawFlatRoundedRect(rewardRect, new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
                     DrawGameIcon(new Rect(rewardRect.x + 10f, rewardRect.y + 10f, 34f, 34f), CourierRewardIcon(reward), Color.white);
@@ -35711,7 +35620,7 @@ if (leftNavigationTexture == null)
                         Rect collect = new Rect(rewardRect.xMax - 102f, rewardRect.y + 14f, 92f, 30f);
                         DrawFlatRoundedRect(collect, new Color(0.40f, 0.28f, 0.10f, 0.97f), 8f);
                         GUI.Label(collect, "Récupérer", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
-                        if (GUI.Button(collect, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); reward.Collected = true; ShowCourierToast("Récompense récupérée."); SaveCourierMailboxToDisk(); }
+                        if (GUI.Button(collect, string.Empty, GUIStyle.none)) { AudioManager.Instance?.PlayUIClick(); courierMailboxController.CollectRewards(message.Id); ShowCourierToast("Récompense récupérée."); }
                     }
                     else GUI.Label(new Rect(rewardRect.xMax - 104f, rewardRect.y + 18f, 94f, 20f), "Récupérée", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleRight });
                     y += 66f;
@@ -39157,6 +39066,20 @@ float bestiaryModalWidth = Mathf.Min(460f, Screen.width - 24f);
         }
 
         private static bool OfficialQuestChainConfigured() => questChainController != null && questChainController.IsConfigured;
+
+        // M076I-CL: Courrier persiste cote serveur (voir CourierMailboxPresentation.cs) - meme
+        // patron Configure/Reset que le controleur juste au-dessus.
+        private static ICourierMailboxPanelController courierMailboxController = new UnavailableCourierMailboxPanelController();
+
+        public static void ConfigureCourierMailboxControllerForRuntime(ICourierMailboxPanelController controller)
+        {
+            courierMailboxController = controller ?? new UnavailableCourierMailboxPanelController();
+        }
+
+        public static void ResetCourierMailboxControllerForRuntime()
+        {
+            courierMailboxController = new UnavailableCourierMailboxPanelController();
+        }
 
         internal static bool ShouldShowQuestChainEntryButton() => OfficialQuestChainConfigured();
 

@@ -49,6 +49,11 @@ public sealed record PlayerHiveState(
      // reste de PlayerHiveState : un sous-modele dedie nullable, pas de compartiment generique
      // (aucun n'existe ailleurs dans ce modele).
      QuestChainState? QuestChain = null,
+     // M076I-CL: boite de reception Courrier persistee cote serveur (voir CourierMailboxService.cs)
+     // - le client derive toujours le contenu de chaque message depuis les systemes deja
+     // authoritatifs (Combat Patrol, invitations d'Alliance), ce sous-modele ne fait que
+     // conserver la liste des messages deja construits (lu/favori/recompenses recuperees inclus).
+     CourierMailboxState? CourierMailbox = null,
      // M054-CL: the player's own persistent "Sceaux Royaux" (Royal Seals) wallet balance - see
      // BeeKingdom.HiveOperations.RoyalSealsWallet for the canonical read/credit surface. Lives here
      // (not in any Alliance-owned or Alliance-membership-scoped state) because PlayerHiveState is

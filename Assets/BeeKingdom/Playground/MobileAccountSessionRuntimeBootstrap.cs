@@ -35,6 +35,7 @@ namespace BeeKingdom.Playground
         private static BestiaryCodexPanelController bestiaryCodexController;
         private static HiveMilestoneEventPanelController milestoneEventController;
         private static QuestChainPanelController questChainController;
+        private static CourierMailboxPanelController courierMailboxController;
         private static BeeKingdom.Networking.ITutorialClient tutorialClient;
         private static Guid tutorialHiveId;
         private static ProtectedGameMutationOutbox gameplayMutationOutbox;
@@ -371,6 +372,11 @@ namespace BeeKingdom.Playground
                 client,
                 gameTransport);
             questChainController = new QuestChainPanelController(questChainClient, hiveId);
+            var courierMailboxClient = new CourierMailboxClient(
+                client.Gate,
+                client,
+                gameTransport);
+            courierMailboxController = new CourierMailboxPanelController(courierMailboxClient, hiveId);
             var productionClient = new HiveOfflineProductionClient(
                 client.Gate,
                 client,
@@ -470,6 +476,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ConfigureBestiaryCodexControllerForRuntime(bestiaryCodexController);
             HiveViewProductUiPresenter.ConfigureMilestoneEventControllerForRuntime(milestoneEventController);
             HiveViewProductUiPresenter.ConfigureQuestChainControllerForRuntime(questChainController);
+            HiveViewProductUiPresenter.ConfigureCourierMailboxControllerForRuntime(courierMailboxController);
             HiveViewProductUiPresenter.ConfigureOfflineProductionControllerForRuntime(offlineProductionController);
             HiveViewProductUiPresenter.ConfigureBuildingUpgradeControllerForRuntime(buildingUpgradeController);
             HiveViewProductUiPresenter.ConfigureResearchControllerForRuntime(researchController);
@@ -499,6 +506,7 @@ namespace BeeKingdom.Playground
             bestiaryCodexController.Refresh();
             milestoneEventController.Refresh();
             questChainController.Refresh();
+            courierMailboxController.Refresh();
             speedUpController.Refresh();
             rewardLedgerController.Refresh();
             gameplayController.Refresh();
@@ -687,6 +695,7 @@ namespace BeeKingdom.Playground
             BestiaryCodexPanelController previousBestiaryCodex = bestiaryCodexController;
             HiveMilestoneEventPanelController previousMilestoneEvent = milestoneEventController;
             QuestChainPanelController previousQuestChain = questChainController;
+            CourierMailboxPanelController previousCourierMailbox = courierMailboxController;
             combatPatrolController = null;
             strategicPathController = null;
             worldResourceCollectionController = null;
@@ -694,6 +703,7 @@ namespace BeeKingdom.Playground
             bestiaryCodexController = null;
             milestoneEventController = null;
             questChainController = null;
+            courierMailboxController = null;
             gameplayController = null;
             offlineProductionController = null;
             buildingUpgradeController = null;
@@ -749,6 +759,8 @@ namespace BeeKingdom.Playground
                 previousMilestoneEvent.Dispose();
             if (previousQuestChain != null)
                 previousQuestChain.Dispose();
+            if (previousCourierMailbox != null)
+                previousCourierMailbox.Dispose();
             if (previousSpeedUp != null)
                 previousSpeedUp.Dispose();
             if (previousRewardLedger != null)
@@ -772,6 +784,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ResetBestiaryCodexControllerForRuntime();
             HiveViewProductUiPresenter.ResetMilestoneEventControllerForRuntime();
             HiveViewProductUiPresenter.ResetQuestChainControllerForRuntime();
+            HiveViewProductUiPresenter.ResetCourierMailboxControllerForRuntime();
             HiveViewProductUiPresenter.ResetSpeedUpControllerForRuntime();
             HiveViewProductUiPresenter.ResetRewardLedgerControllerForRuntime();
             tutorialClient = null;

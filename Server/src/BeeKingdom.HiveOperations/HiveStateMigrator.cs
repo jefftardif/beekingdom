@@ -2,7 +2,7 @@ namespace BeeKingdom.HiveOperations;
 
 public static class HiveStateMigrator
 {
-    public const int CurrentModelVersion = 11;
+    public const int CurrentModelVersion = 12;
 
     public static PlayerHiveState ToCurrent(PlayerHiveState state)
     {
@@ -96,6 +96,19 @@ public static class HiveStateMigrator
         {
             if (quest.Revision < 0 || quest.ClaimedObjectiveKeys is null || quest.ClaimedObjectiveKeys.Count > 5 || quest.Receipts is null || quest.Receipts.Count > 16 || quest.Receipts.Any(x => string.IsNullOrWhiteSpace(x.Key) || x.Key.Length > 256 || string.IsNullOrWhiteSpace(x.Value.PayloadHash)))
                 throw new InvalidDataException("Invalid quest chain state.");
+        }
+        if (state.CourierMailbox is { } mailbox)
+        {
+            if (mailbox.Messages is null || mailbox.Messages.Count > CourierMailboxService.MaxMessages
+                || mailbox.Messages.Any(m => m is null || string.IsNullOrWhiteSpace(m.Id) || m.Id.Length > 128
+                    || string.IsNullOrWhiteSpace(m.Category) || m.Category.Length > 32
+                    || string.IsNullOrWhiteSpace(m.Title) || m.Title.Length > 256
+                    || m.Preview is null || m.Preview.Length > 512 || m.Body is null || m.Body.Length > 4096
+                    || m.CreatedAtUtc.Offset != TimeSpan.Zero
+                    || m.Rewards is null || m.Rewards.Count > CourierMailboxService.MaxRewardsPerMessage
+                    || m.Rewards.Any(r => r is null || string.IsNullOrWhiteSpace(r.ItemId) || r.ItemId.Length > 64 || r.Amount < 0))
+                || mailbox.Messages.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != mailbox.Messages.Count)
+                throw new InvalidDataException("Invalid courier mailbox state.");
         }
         if (state.AdminAudit is { } audit)
         {
