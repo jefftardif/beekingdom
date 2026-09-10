@@ -13,6 +13,13 @@ namespace BeeKingdom.Playground
         private Capture[] captures;
         private Material sourceMaterial;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void DisableIncompatiblePlanarReflections()
+        {
+            foreach (ESSW.Editorcontroller.PlanarReflections reflection in Object.FindObjectsByType<ESSW.Editorcontroller.PlanarReflections>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                reflection.enabled = false;
+        }
+
         private readonly struct Zone
         {
             public readonly string Name; public readonly Rect WorldRect; public readonly Vector2 Direction;
@@ -28,7 +35,7 @@ namespace BeeKingdom.Playground
 
         private void Awake()
         {
-            foreach (ESSW.Editorcontroller.PlanarReflections reflection in FindObjectsByType<ESSW.Editorcontroller.PlanarReflections>(FindObjectsSortMode.None))
+            foreach (ESSW.Editorcontroller.PlanarReflections reflection in FindObjectsByType<ESSW.Editorcontroller.PlanarReflections>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 reflection.enabled = false;
             sourceMaterial = Resources.Load<Material>("water");
             if (sourceMaterial == null) { Debug.LogError("[OneClickWater] Resources/water.mat was not found.", this); enabled = false; return; }
