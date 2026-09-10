@@ -362,6 +362,9 @@ namespace BeeKingdom.Playground
                 }
                 ApplySnapshot(response.Snapshot);
                 if (Model.Debrief != null) Model.State = CombatPatrolScreenState.Debrief;
+                // M076-CL: loot from this claim already sits in ResultingBalances server-side —
+                // don't wait for the stock panel's own poll to notice it.
+                if (response.ClaimReceipt != null) HiveViewProductUiPresenter.NotifyStockMightHaveChanged();
             }
             catch (CombatPatrolClientException error) { if (!disposed) SetError(StableError(error)); }
             catch (Exception) { if (!disposed) SetError("unexpected"); }
@@ -392,6 +395,7 @@ namespace BeeKingdom.Playground
                     if (disposed) return;
                     RememberClaimReceipt(response.ClaimReceipt);
                     ApplySnapshot(response.Snapshot);
+                    if (response.ClaimReceipt != null) HiveViewProductUiPresenter.NotifyStockMightHaveChanged();
                 }
                 catch (CombatPatrolClientException) { return; }
                 catch (Exception) { return; }

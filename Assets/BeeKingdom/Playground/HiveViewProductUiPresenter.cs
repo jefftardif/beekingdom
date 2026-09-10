@@ -29961,6 +29961,17 @@ if (leftNavigationTexture == null)
             hiveStockController = controller ?? new UnavailableHiveStockPanelController();
         }
 
+        // M076-CL: a Combat Patrol claim (manual or auto) credits resources server-side via
+        // CombatPatrolClaimReceipt.ResultingBalances, but the stock cache only updates on its own
+        // independent poll — meaning "conséquences réelles" (loot) could lag visibly behind the
+        // debrief that already announces it. Nudge the existing stock controller to refresh right
+        // away instead of waiting for its own timer; no new plumbing, reuses the same Refresh()
+        // the manual "Actualiser" button already calls.
+        internal static void NotifyStockMightHaveChanged()
+        {
+            if (hiveStockController != null && !hiveStockController.IsBusy) hiveStockController.Refresh();
+        }
+
         public static void ConfigureDailyRoundControllerForRuntime(
             IHiveDailyRoundPanelController controller)
         {
@@ -39259,6 +39270,28 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
 
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 22f), BeeLocalization.Text("combat.patrol.slots", "Emplacements") + ": " + model.UsedSlots + " / " + model.TotalSlots, tinyLabelStyle);
             y += 22f;
+            // M076-CL: les blessees d'un combat precedent (WoundedLosses du debrief) atterrissent
+            // ici cote serveur (RemoteCombatPatrolSnapshot.Recovering) mais rien ne les affichait
+            // jamais en dehors du debrief immediat - aucune "Infirmerie" dediee n'existe encore,
+            // donc ce bloc rend visible cette convalescence deja reelle plutot que d'en batir une
+            // nouvelle. Regroupe par famille : mult batches peuvent coexister a des heures de
+            // retour differentes.
+            if (model.Recovering != null && model.Recovering.Count > 0)
+            {
+                GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), BeeLocalization.Text("combat.patrol.recovering_title", "En convalescence"), tinyLabelStyle);
+                y += 20f;
+                foreach (RemoteCombatPatrolRecoveringBatch batch in model.Recovering)
+                {
+                    if (batch.Count <= 0) continue;
+                    TimeSpan eta = batch.ReadyAtUtc - DateTimeOffset.UtcNow;
+                    string etaText = eta > TimeSpan.Zero ? eta.ToString(@"mm\:ss") : BeeLocalization.Text("combat.patrol.ready", "Pret");
+                    GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 18f),
+                        "  " + batch.Family + ": " + batch.Count + " — " + etaText,
+                        tinyLabelStyle);
+                    y += 18f;
+                }
+                y += 6f;
+            }
             if (model.CanPurchaseResourceSlot)
             {
                 string cost = model.NextResourceSlotCost.Honey + " " + BeeLocalization.Text("resource.honey", "miel") + " / " + model.NextResourceSlotCost.Pollen + " " + BeeLocalization.Text("resource.pollen", "pollen");
