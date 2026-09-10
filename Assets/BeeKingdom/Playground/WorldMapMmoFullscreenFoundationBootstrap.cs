@@ -159,6 +159,12 @@ namespace BeeKingdom.Playground
             // Les deux vols d'exemple fabriques ("Vol allie demo"/"Retour neutre demo") ont ete
             // retires : le journal des vols doit refleter uniquement de vraies expeditions lancees
             // par le joueur, jamais des entrees inventees au chargement (PREMIUM_PLAYTEST_REPORT.md).
+
+            // M077-CL: seul objectif de la chaine sans signal serveur naturel ("le joueur a ouvert
+            // la World Map") - auto-declare ici, une fois par chargement de cette scene.
+            // Idempotent cote serveur (ReportWorldMapVisited ne fait rien si deja vrai), donc sans
+            // risque meme si cette scene est rechargee plusieurs fois par session.
+            MobileAccountSessionRuntimeBootstrap.QuestChainControllerForHiveMap?.ReportWorldMapVisited();
         }
 
         private bool FocusGuidedPlayerHiveIfNeeded()

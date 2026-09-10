@@ -76,6 +76,8 @@ namespace BeeKingdom.Playground
             DrawDailyRoundSection();
             GUILayout.Space(10f);
             DrawMilestoneEventSection();
+            GUILayout.Space(10f);
+            DrawQuestChainSection();
             GUILayout.Space(8f);
             GUILayout.Label(
                 Text(
@@ -92,6 +94,7 @@ namespace BeeKingdom.Playground
             MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
             MobileAccountSessionRuntimeBootstrap.DailyRoundControllerForHiveMap.Refresh();
             MobileAccountSessionRuntimeBootstrap.MilestoneEventControllerForHiveMap.Refresh();
+            MobileAccountSessionRuntimeBootstrap.QuestChainControllerForHiveMap.Refresh();
         }
 
         private static void DrawDailyRoundSection()
@@ -205,6 +208,106 @@ namespace BeeKingdom.Playground
             GUILayout.EndVertical();
         }
 
+        // M077-CL: petite chaine d'objectifs Alpha - meme emplacement reel que la Ronde
+        // quotidienne et l'Evenement jalon ci-dessus (le seul endroit ou la scene officielle
+        // Environment2D5D expose deja ce type de contenu), mais reclamation individuelle par
+        // objectif plutot qu'un seul bouton pour tout le lot.
+        private static void DrawQuestChainSection()
+        {
+            IQuestChainPanelController controller =
+                MobileAccountSessionRuntimeBootstrap.QuestChainControllerForHiveMap;
+            QuestChainScreenModel model = controller.Model;
+
+            GUILayout.BeginVertical(GUI.skin.box);
+            DrawSectionHeader(
+                Text("OBJECTIFS DU ROYAUME", "KINGDOM OBJECTIVES"),
+                QuestChainStateLabel(model),
+                controller.IsBusy);
+
+            if (model.State == QuestChainScreenState.NotConfigured)
+            {
+                DrawWrapped(Text(
+                    "Aucune chaine d'objectifs officielle n'est configurée pour cette session.",
+                    "No official objective chain is configured for this session."));
+            }
+            else
+            {
+                DrawWrapped(Text(
+                    "Progression : " + model.CompletedCount.ToString(CultureInfo.InvariantCulture) + " / " + (model.Objectives?.Count ?? 0).ToString(CultureInfo.InvariantCulture),
+                    "Progress: " + model.CompletedCount.ToString(CultureInfo.InvariantCulture) + " / " + (model.Objectives?.Count ?? 0).ToString(CultureInfo.InvariantCulture)));
+
+                IReadOnlyList<RemoteQuestChainObjective> objectives =
+                    model.Objectives ?? Array.Empty<RemoteQuestChainObjective>();
+                if (objectives.Count == 0)
+                {
+                    DrawWrapped(Text("Aucun objectif reçu du serveur.", "No objective received from the server."));
+                }
+                else
+                {
+                    for (int i = 0; i < objectives.Count; i++)
+                    {
+                        RemoteQuestChainObjective objective = objectives[i];
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label(QuestChainStatusMark(objective) + " " + QuestChainObjectiveLabel(objective.ObjectiveKey), new GUIStyle(GUI.skin.label) { wordWrap = true });
+                        GUILayout.FlexibleSpace();
+                        if (objective.Claimed)
+                        {
+                            GUILayout.Label(Text("Réclamé", "Claimed"), GUI.skin.label);
+                        }
+                        else
+                        {
+                            bool previousEnabled = GUI.enabled;
+                            GUI.enabled = objective.CanClaim && !controller.IsBusy;
+                            string buttonLabel = objective.CanClaim
+                                ? Text("Réclamer", "Claim")
+                                : "+" + objective.RewardAmount.ToString(CultureInfo.InvariantCulture) + " " + objective.RewardResourceKey;
+                            if (GUILayout.Button(buttonLabel)) controller.Claim(objective.ObjectiveKey);
+                            GUI.enabled = previousEnabled;
+                        }
+                        GUILayout.EndHorizontal();
+                    }
+                }
+
+                if (model.State == QuestChainScreenState.Error)
+                    DrawWrapped(Text("Erreur : ", "Error: ") + model.ErrorCode);
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(Text("Rafraîchir", "Refresh"))) controller.Refresh();
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+        }
+
+        private static string QuestChainStateLabel(QuestChainScreenModel model)
+        {
+            switch (model.State)
+            {
+                case QuestChainScreenState.Loading: return Text("Chargement", "Loading");
+                case QuestChainScreenState.Ready: return model.AnyClaimable ? Text("Récompense prête", "Reward ready") : Text("En cours", "In progress");
+                case QuestChainScreenState.Mutating: return Text("Réclamation", "Claiming");
+                case QuestChainScreenState.Error: return Text("Erreur", "Error");
+                default: return Text("Non configuré", "Not configured");
+            }
+        }
+
+        private static string QuestChainStatusMark(RemoteQuestChainObjective objective)
+        {
+            return objective.Claimed ? "[x]" : objective.Done ? "[o]" : "[ ]";
+        }
+
+        private static string QuestChainObjectiveLabel(string objectiveKey)
+        {
+            switch (objectiveKey)
+            {
+                case "q1_building_upgrade": return Text("Royaume en croissance : améliore un bâtiment", "Growing kingdom: upgrade a building");
+                case "q2_troop_recruit": return Text("Préparer la garde : entraîne des troupes", "Prepare the guard: train troops");
+                case "q3_research_complete": return Text("Le savoir du royaume : termine une recherche", "Kingdom knowledge: finish a research");
+                case "q4_world_map_visit": return Text("Explorer le royaume : ouvre la World Map", "Explore the kingdom: open the World Map");
+                case "q5_world_resource_collect": return Text("Richesses sauvages : collecte une ressource sur la World Map", "Wild riches: collect a World Map resource");
+                default: return objectiveKey;
+            }
+        }
+
         private static void DrawFullscreenBackground()
         {
             Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
@@ -243,6 +346,7 @@ namespace BeeKingdom.Playground
             {
                 MobileAccountSessionRuntimeBootstrap.DailyRoundControllerForHiveMap.Refresh();
                 MobileAccountSessionRuntimeBootstrap.MilestoneEventControllerForHiveMap.Refresh();
+                MobileAccountSessionRuntimeBootstrap.QuestChainControllerForHiveMap.Refresh();
             }
 
             GUI.color = new Color(1f, 0.60f, 0.14f, 0.95f);

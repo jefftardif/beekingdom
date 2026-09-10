@@ -2,7 +2,7 @@ namespace BeeKingdom.HiveOperations;
 
 public static class HiveStateMigrator
 {
-    public const int CurrentModelVersion = 10;
+    public const int CurrentModelVersion = 11;
 
     public static PlayerHiveState ToCurrent(PlayerHiveState state)
     {
@@ -91,6 +91,11 @@ public static class HiveStateMigrator
         {
             if (milestone.Revision < 0 || milestone.WindowStartedAtUtc.Offset != TimeSpan.Zero || milestone.WindowEndsAtUtc.Offset != TimeSpan.Zero || milestone.WindowEndsAtUtc < milestone.WindowStartedAtUtc || milestone.Receipts is null || milestone.Receipts.Count > 16 || milestone.Receipts.Any(x => string.IsNullOrWhiteSpace(x.Key) || x.Key.Length > 256 || string.IsNullOrWhiteSpace(x.Value.PayloadHash)))
                 throw new InvalidDataException("Invalid hive milestone event state.");
+        }
+        if (state.QuestChain is { } quest)
+        {
+            if (quest.Revision < 0 || quest.ClaimedObjectiveKeys is null || quest.ClaimedObjectiveKeys.Count > 5 || quest.Receipts is null || quest.Receipts.Count > 16 || quest.Receipts.Any(x => string.IsNullOrWhiteSpace(x.Key) || x.Key.Length > 256 || string.IsNullOrWhiteSpace(x.Value.PayloadHash)))
+                throw new InvalidDataException("Invalid quest chain state.");
         }
         if (state.AdminAudit is { } audit)
         {

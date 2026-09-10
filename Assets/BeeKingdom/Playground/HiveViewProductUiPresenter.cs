@@ -4871,6 +4871,7 @@ private static string courierToast = string.Empty;
 			DrawTopLevelMenuToggleRailIfOpen();
 			GUI.enabled = previousGuiEnabled;
 			DrawMilestoneEventOverlay();
+            DrawQuestChainOverlay();
             DrawBestiaryCodexOverlay();
             DrawTopHudOverlays();
 DrawFriendsScreen(compact);
@@ -5035,6 +5036,7 @@ BuildCells();
             // dans ce chemin). Le clic changeait bien l'etat interne, mais rien ne s'affichait
             // jamais (PREMIUM_PLAYTEST_REPORT.md, PB-012).
             DrawMilestoneEventOverlay();
+            DrawQuestChainOverlay();
             DrawBestiaryCodexOverlay();
 
 DrawFriendsScreen(portrait);
@@ -38274,6 +38276,7 @@ if (leftNavigationTexture == null)
                 Rail("Quests", "Quetes", "quests"),
                 Rail("Champions", BeeLocalization.Text("champion_bees.entry_button_short", "Championnes"), "queen"),
                 Rail("MilestoneEvent", MilestoneEventRailLabel(), "quests"),
+                Rail("QuestChain", QuestChainRailLabel(), "quests"),
                 Rail("Bestiary", BeeLocalization.Text("bestiary_codex.entry_button_short", "Bestiaire"), "quests"),
                 Rail("Bag", "Sac", "inventory"),
                 Rail("Mail", "Mail", "inbox"),
@@ -38326,6 +38329,13 @@ if (leftNavigationTexture == null)
                     {
                         activeMainMenuId = string.Empty;
                         OpenMilestoneEventOverlay();
+                        continue;
+                    }
+
+                    if (entry.ItemId == "QuestChain")
+                    {
+                        activeMainMenuId = string.Empty;
+                        OpenQuestChainOverlay();
                         continue;
                     }
 
@@ -38857,6 +38867,132 @@ float bestiaryModalWidth = Mathf.Min(460f, Screen.width - 24f);
         }
 
         private static bool OfficialMilestoneEventConfigured() => milestoneEventController != null && milestoneEventController.IsConfigured;
+
+        // M077-CL: petite chaine d'objectifs Alpha ("QU'EST-CE QUE JE DEVRAIS FAIRE MAINTENANT ?").
+        // Meme patron d'ecran que le "Defi" (HiveMilestoneEvent) juste au-dessus, dont ceci est un
+        // frere structurel deliberement separe (systeme different, jamais d'expiration, une
+        // reclamation par objectif) - ne pas fusionner les deux menus.
+        private static IQuestChainPanelController questChainController = new UnavailableQuestChainPanelController();
+        private static bool questChainOverlayOpen;
+
+        public static void ConfigureQuestChainControllerForRuntime(IQuestChainPanelController controller)
+        {
+            questChainController = controller ?? new UnavailableQuestChainPanelController();
+        }
+
+        public static void ResetQuestChainControllerForRuntime()
+        {
+            questChainController = new UnavailableQuestChainPanelController();
+            questChainOverlayOpen = false;
+        }
+
+        private static bool OfficialQuestChainConfigured() => questChainController != null && questChainController.IsConfigured;
+
+        internal static bool ShouldShowQuestChainEntryButton() => OfficialQuestChainConfigured();
+
+        internal static string QuestChainEntryBadgeText()
+        {
+            if (!OfficialQuestChainConfigured()) return string.Empty;
+            QuestChainScreenModel model = questChainController.Model;
+            if (model.AnyClaimable) return "!";
+            return model.ClaimedCount + "/" + (model.Objectives?.Count ?? 0);
+        }
+
+        internal static void OpenQuestChainOverlay()
+        {
+            questChainOverlayOpen = true;
+            questChainController.Refresh();
+            AudioManager.Instance?.PlayMenuOpen();
+        }
+
+        private static void DrawQuestChainOverlay()
+        {
+            if (!questChainOverlayOpen || !OfficialQuestChainConfigured()) return;
+            EnsureStyles();
+            DrawPremiumModalBackdrop();
+            QuestChainScreenModel model = questChainController.Model;
+            float modalWidth = Mathf.Min(460f, Screen.width - 24f);
+            float modalHeight = IsPortraitLayout()
+                ? Mathf.Min(760f, Screen.height - 40f)
+                : Mathf.Min(480f, Screen.height - 40f);
+            Rect panel = new Rect(Screen.width * 0.5f - modalWidth * 0.5f, Screen.height * 0.5f - modalHeight * 0.5f, modalWidth, modalHeight);
+            DrawPremiumPanel(panel, new Color(0.026f, 0.024f, 0.020f, 0.95f), new Color(0.98f, 0.78f, 0.20f, 0.86f));
+            DrawPremiumHeaderBand(new Rect(panel.x + 8f, panel.y + 8f, panel.width - 16f, 46f));
+            if (DrawPremiumBackButton(new Rect(panel.x + 10f, panel.y + 9f, 44f, 44f))) { AudioManager.Instance?.PlayUIClick(); AudioManager.Instance?.PlayMenuClose(); questChainOverlayOpen = false; return; }
+            GUI.Label(new Rect(panel.x + 58f, panel.y + 15f, panel.width - 70f, 28f), BeeLocalization.Text("quest_chain.title", "Objectifs du royaume"), titleStyle);
+
+            float y = panel.y + 62f;
+            if (model.State == QuestChainScreenState.Error)
+            {
+                GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 40f), BeeLocalization.Text("quest_chain.error", "Erreur") + " : " + model.ErrorCode, smallStyle);
+                return;
+            }
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 32f),
+                string.Format(CultureInfo.CurrentCulture, BeeLocalization.Text("quest_chain.intro", "{0} / {1} accomplis"), model.CompletedCount, model.Objectives.Count),
+                smallStyle);
+            y += 36f;
+
+            bool mutating = model.State == QuestChainScreenState.Mutating;
+            for (int i = 0; i < model.Objectives.Count; i++)
+            {
+                RemoteQuestChainObjective objective = model.Objectives[i];
+                float rowHeight = 54f;
+                Rect row = new Rect(panel.x + 12f, y, panel.width - 24f, rowHeight);
+                GUI.DrawTexture(row, SolidTexture(new Color(0.08f, 0.07f, 0.045f, 0.6f)));
+                string check = objective.Claimed ? "✓" : objective.Done ? "●" : "…";
+                Color stateColor = objective.Claimed ? new Color(0.55f, 0.75f, 0.95f, 1f) : objective.Done ? new Color(0.55f, 0.95f, 0.55f, 1f) : Color.white;
+                GUI.Label(new Rect(row.x + 8f, row.y + 4f, row.width - 116f, 22f), check + "  " + QuestChainObjectiveTitle(objective.ObjectiveKey), new GUIStyle(smallStyle) { normal = { textColor = stateColor } });
+                GUI.Label(new Rect(row.x + 8f, row.y + 26f, row.width - 116f, 20f), QuestChainObjectiveDescription(objective.ObjectiveKey), tinyLabelStyle);
+                string rewardText = "+" + objective.RewardAmount + " " + QuestChainResourceLabel(objective.RewardResourceKey);
+                if (objective.Claimed)
+                {
+                    GUI.Label(new Rect(row.xMax - 104f, row.y + (rowHeight - 20f) * 0.5f, 96f, 20f), BeeLocalization.Text("quest_chain.claimed", "Réclamé"), new GUIStyle(badgeStyle) { alignment = TextAnchor.MiddleRight });
+                }
+                else
+                {
+                    GUI.enabled = objective.CanClaim && questChainController.IsConfigured && !mutating;
+                    if (GUI.Button(new Rect(row.xMax - 104f, row.y + (rowHeight - 32f) * 0.5f, 96f, 32f), objective.CanClaim ? BeeLocalization.Text("quest_chain.claim", "Réclamer") : rewardText))
+                        questChainController.Claim(objective.ObjectiveKey);
+                    GUI.enabled = true;
+                }
+                y += rowHeight + 8f;
+            }
+        }
+
+        private static string QuestChainRailLabel()
+        {
+            string badge = QuestChainEntryBadgeText();
+            string label = BeeLocalization.Text("quest_chain.entry_button_short", "Objectifs");
+            return string.IsNullOrEmpty(badge) ? label : label + " " + badge;
+        }
+
+        private static string QuestChainObjectiveTitle(string objectiveKey) => objectiveKey switch
+        {
+            "q1_building_upgrade" => BeeLocalization.Text("quest_chain.q1.title", "Royaume en croissance"),
+            "q2_troop_recruit" => BeeLocalization.Text("quest_chain.q2.title", "Préparer la garde"),
+            "q3_research_complete" => BeeLocalization.Text("quest_chain.q3.title", "Le savoir du royaume"),
+            "q4_world_map_visit" => BeeLocalization.Text("quest_chain.q4.title", "Explorer le royaume"),
+            "q5_world_resource_collect" => BeeLocalization.Text("quest_chain.q5.title", "Richesses sauvages"),
+            _ => objectiveKey
+        };
+
+        private static string QuestChainObjectiveDescription(string objectiveKey) => objectiveKey switch
+        {
+            "q1_building_upgrade" => BeeLocalization.Text("quest_chain.q1.desc", "Améliore un bâtiment."),
+            "q2_troop_recruit" => BeeLocalization.Text("quest_chain.q2.desc", "Entraîne des troupes à la Caserne."),
+            "q3_research_complete" => BeeLocalization.Text("quest_chain.q3.desc", "Termine une recherche."),
+            "q4_world_map_visit" => BeeLocalization.Text("quest_chain.q4.desc", "Ouvre la World Map."),
+            "q5_world_resource_collect" => BeeLocalization.Text("quest_chain.q5.desc", "Effectue une collecte sur la World Map."),
+            _ => string.Empty
+        };
+
+        private static string QuestChainResourceLabel(string resourceKey) => resourceKey switch
+        {
+            "honey" => BeeLocalization.Text("resource.honey", "miel"),
+            "wax" => BeeLocalization.Text("resource.wax", "cire"),
+            "pollen" => BeeLocalization.Text("resource.pollen", "pollen"),
+            _ => resourceKey
+        };
 
         private static IHiveSpeedUpPanelController speedUpController = new UnavailableHiveSpeedUpPanelController();
         private static IHiveRewardLedgerPanelController rewardLedgerController = new UnavailableHiveRewardLedgerPanelController();
@@ -40834,6 +40970,7 @@ public static void ResetMissionsStateForProof()
                 friendsLabel,
                 BeeLocalization.Text("bestiary_codex.entry_button_short", "Bestiaire"),
                 MilestoneEventRailLabel(),
+                QuestChainRailLabel(),
                 BeeLocalization.Text("champion_bees.entry_button_short", "Championnes"),
                 BeeLocalization.Text("ledger.title", "Sac & stocks"),
                 researchLabel,
@@ -40876,33 +41013,36 @@ public static void ResetMissionsStateForProof()
                             OpenMilestoneEventOverlay();
                             break;
                         case 4:
+                            OpenQuestChainOverlay();
+                            break;
+                        case 5:
                             activeMainMenuId = string.Empty;
                             championBeesPanelOpen = true;
                             championBeesPanelAnimationStartedAt = NowForUi();
                             AudioManager.Instance?.PlayMenuOpen();
                             break;
-                        case 5:
+                        case 6:
                             activeMainMenuId = "Bag";
                             localPreviewLoopMessage = BeeLocalization.Text("ledger.opened", "Sac & stocks ouvert");
                             localPreviewLastActionStatus = BeeLocalization.Text("ledger.title", "Sac & stocks");
                             BeginReferenceFeedbackPulse("preview");
                             break;
-                        case 6:
+                        case 7:
                             activeMainMenuId = string.Empty;
                             ActivateHiveMenu(HiveMenuMode.Research, BeeLocalization.Text("research.menu.title", "Recherche"));
                             AudioManager.Instance?.PlayMenuOpen();
                             break;
-                        case 7:
+                        case 8:
                             OpenMissionsCenter();
                             AudioManager.Instance?.PlayMenuOpen();
                             break;
-                        case 8:
+                        case 9:
                             ToggleSettingsPanel();
                             localPreviewLoopMessage = BeeLocalization.Text("settings.mobile.opened", "Réglages de confort ouverts");
                             BeginReferenceFeedbackPulse("preview");
                             AudioManager.Instance?.PlayMenuOpen();
                             break;
-                        case 9:
+                        case 10:
                             OpenSpeedUpDialog(SpeedUpCategory.Universal, string.Empty, 0L);
                             AudioManager.Instance?.PlayMenuOpen();
                             break;

@@ -34,6 +34,7 @@ namespace BeeKingdom.Playground
         private static WorldPresencePanelController worldPresenceController;
         private static BestiaryCodexPanelController bestiaryCodexController;
         private static HiveMilestoneEventPanelController milestoneEventController;
+        private static QuestChainPanelController questChainController;
         private static BeeKingdom.Networking.ITutorialClient tutorialClient;
         private static Guid tutorialHiveId;
         private static ProtectedGameMutationOutbox gameplayMutationOutbox;
@@ -81,6 +82,8 @@ namespace BeeKingdom.Playground
             new UnavailableHiveDailyRoundPanelController();
         private static readonly IHiveMilestoneEventPanelController UnavailableMilestoneEventController =
             new UnavailableHiveMilestoneEventPanelController();
+        private static readonly IQuestChainPanelController UnavailableQuestChainController =
+            new UnavailableQuestChainPanelController();
         private static readonly IHiveResearchPanelController UnavailableResearchController =
             new UnavailableHiveResearchPanelController();
         private static readonly IAllianceCenterPanelController UnavailableAllianceCenterController =
@@ -105,6 +108,11 @@ namespace BeeKingdom.Playground
             milestoneEventController != null
                 ? (IHiveMilestoneEventPanelController)milestoneEventController
                 : UnavailableMilestoneEventController;
+
+        public static IQuestChainPanelController QuestChainControllerForHiveMap =>
+            questChainController != null
+                ? (IQuestChainPanelController)questChainController
+                : UnavailableQuestChainController;
 
         public static bool IsResearchControllerAvailableForExternalHost()
         {
@@ -358,6 +366,11 @@ namespace BeeKingdom.Playground
                 client,
                 gameTransport);
             milestoneEventController = new HiveMilestoneEventPanelController(milestoneEventClient, hiveId);
+            var questChainClient = new QuestChainClient(
+                client.Gate,
+                client,
+                gameTransport);
+            questChainController = new QuestChainPanelController(questChainClient, hiveId);
             var productionClient = new HiveOfflineProductionClient(
                 client.Gate,
                 client,
@@ -456,6 +469,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ConfigureWorldPresenceControllerForRuntime(worldPresenceController);
             HiveViewProductUiPresenter.ConfigureBestiaryCodexControllerForRuntime(bestiaryCodexController);
             HiveViewProductUiPresenter.ConfigureMilestoneEventControllerForRuntime(milestoneEventController);
+            HiveViewProductUiPresenter.ConfigureQuestChainControllerForRuntime(questChainController);
             HiveViewProductUiPresenter.ConfigureOfflineProductionControllerForRuntime(offlineProductionController);
             HiveViewProductUiPresenter.ConfigureBuildingUpgradeControllerForRuntime(buildingUpgradeController);
             HiveViewProductUiPresenter.ConfigureResearchControllerForRuntime(researchController);
@@ -484,6 +498,7 @@ namespace BeeKingdom.Playground
             worldPresenceController.Refresh();
             bestiaryCodexController.Refresh();
             milestoneEventController.Refresh();
+            questChainController.Refresh();
             speedUpController.Refresh();
             rewardLedgerController.Refresh();
             gameplayController.Refresh();
@@ -671,12 +686,14 @@ namespace BeeKingdom.Playground
             WorldPresencePanelController previousWorldPresence = worldPresenceController;
             BestiaryCodexPanelController previousBestiaryCodex = bestiaryCodexController;
             HiveMilestoneEventPanelController previousMilestoneEvent = milestoneEventController;
+            QuestChainPanelController previousQuestChain = questChainController;
             combatPatrolController = null;
             strategicPathController = null;
             worldResourceCollectionController = null;
             worldPresenceController = null;
             bestiaryCodexController = null;
             milestoneEventController = null;
+            questChainController = null;
             gameplayController = null;
             offlineProductionController = null;
             buildingUpgradeController = null;
@@ -730,6 +747,8 @@ namespace BeeKingdom.Playground
                 previousBestiaryCodex.Dispose();
             if (previousMilestoneEvent != null)
                 previousMilestoneEvent.Dispose();
+            if (previousQuestChain != null)
+                previousQuestChain.Dispose();
             if (previousSpeedUp != null)
                 previousSpeedUp.Dispose();
             if (previousRewardLedger != null)
@@ -752,6 +771,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ResetWorldPresenceControllerForRuntime();
             HiveViewProductUiPresenter.ResetBestiaryCodexControllerForRuntime();
             HiveViewProductUiPresenter.ResetMilestoneEventControllerForRuntime();
+            HiveViewProductUiPresenter.ResetQuestChainControllerForRuntime();
             HiveViewProductUiPresenter.ResetSpeedUpControllerForRuntime();
             HiveViewProductUiPresenter.ResetRewardLedgerControllerForRuntime();
             tutorialClient = null;

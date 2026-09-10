@@ -192,6 +192,7 @@ builder.Services.AddOptions<WorldResourceCollectionOptions>()
     .Validate(options => { options.Validate(); return true; }, "Invalid world resource collection options")
     .ValidateOnStart();
 builder.Services.AddOptions<HiveMilestoneEventOptions>().Bind(builder.Configuration.GetSection(HiveMilestoneEventOptions.SectionName));
+builder.Services.AddOptions<QuestChainOptions>().Bind(builder.Configuration.GetSection(QuestChainOptions.SectionName));
 builder.Services.AddOptions<CombatPatrolOptions>().Bind(builder.Configuration.GetSection("CombatPatrol"));
 builder.Services.AddOptions<WorldMapContentManifestOptions>().Bind(builder.Configuration.GetSection(WorldMapContentManifestOptions.SectionName));
 
@@ -1291,6 +1292,39 @@ app.MapPost("/game/v1/hives/{hiveId}/milestone-event/claim", async (HttpContext 
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
     try { var result = await new HiveMilestoneEventService(repository, clock, configured.Value).ClaimAsync(auth.PlayerId!.Value, parsed, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+
+// M077-CL: petite chaine d'objectifs Alpha persistante (5 objectifs, reclamation individuelle
+// par objectif, jamais d'expiration) - meme forme d'endpoints que milestone-event ci-dessus,
+// plus un endpoint dedie pour l'unique objectif sans signal serveur naturel (avoir ouvert la
+// World Map).
+app.MapGet("/game/v1/hives/{hiveId}/quest-chain", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<QuestChainOptions> configured, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new QuestChainService(repository, clock, configured.Value).ReadAsync(auth.PlayerId!.Value, parsed, ct)); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+    catch (InvalidOperationException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/quest-chain/world-map-visited", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<QuestChainOptions> configured, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { return Results.Ok(await new QuestChainService(repository, clock, configured.Value).ReportWorldMapVisitedAsync(auth.PlayerId!.Value, parsed, ct)); }
+    catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/quest-chain/{objectiveKey}/claim", async (HttpContext context, string hiveId, string objectiveKey, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<QuestChainOptions> configured, ClaimQuestChainObjectiveRequest request, CancellationToken ct) =>
+{
+    if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null || string.IsNullOrWhiteSpace(objectiveKey)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try { var result = await new QuestChainService(repository, clock, configured.Value).ClaimAsync(auth.PlayerId!.Value, parsed, objectiveKey, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 
