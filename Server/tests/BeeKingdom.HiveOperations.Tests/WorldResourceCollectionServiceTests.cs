@@ -291,6 +291,45 @@ public sealed class WorldResourceCollectionServiceTests
         Assert.Equal("game.world_resource_insufficient_troops", launch.Code);
     }
 
+    // M078B-CL: la Ronde quotidienne remplace "Stocks lus" (lecture automatique et purement
+    // technique du Sac) par "En mission" - une vraie expedition envoyee sur la World Map.
+    [Fact]
+    public async Task LaunchMarksDailyRoundSnapshotReadFactWhenDailyRoundEnabled()
+    {
+        (Guid p, Guid h, var repo) = NewRepo();
+        var service = new WorldResourceCollectionService(repo, new Clock(0), Options(), dailyRoundEnabled: true);
+        WorldResourceCollectionResult launch = await service.LaunchAsync(p, h, "res_pollen_core", new(1, 0, 0, 0, "k1"));
+        Assert.True(launch.Succeeded, launch.Code);
+        PlayerHiveState? state = await repo.ReadAsync(p, h);
+        Assert.True(state!.DailyRound?.SnapshotRead);
+    }
+
+    [Fact]
+    public async Task LaunchDoesNotMarkDailyRoundFactWhenDailyRoundDisabled()
+    {
+        (Guid p, Guid h, var repo) = NewRepo();
+        var service = new WorldResourceCollectionService(repo, new Clock(0), Options());
+        WorldResourceCollectionResult launch = await service.LaunchAsync(p, h, "res_pollen_core", new(1, 0, 0, 0, "k1"));
+        Assert.True(launch.Succeeded, launch.Code);
+        PlayerHiveState? state = await repo.ReadAsync(p, h);
+        Assert.Null(state!.DailyRound);
+    }
+
+    // M078B-CL: "Recolteur du royaume" - une ressource reellement recoltee sur la World Map.
+    [Fact]
+    public async Task ClaimMarksDailyRoundCollectionReceivedFactWhenDailyRoundEnabled()
+    {
+        (Guid p, Guid h, var repo) = NewRepo();
+        var clock = new Clock(0);
+        var service = new WorldResourceCollectionService(repo, clock, Options(), dailyRoundEnabled: true);
+        WorldResourceCollectionResult launch = await service.LaunchAsync(p, h, "res_pollen_core", new(1, 0, 0, 0, "k1"));
+        clock.AdvanceSeconds(90);
+        WorldResourceCollectionResult claim = await service.ClaimAsync(p, h, launch.Snapshot.Active!.FlightId, new(launch.Snapshot.Revision, "k2"));
+        Assert.True(claim.Succeeded, claim.Code);
+        PlayerHiveState? state = await repo.ReadAsync(p, h);
+        Assert.True(state!.DailyRound?.CollectionReceived);
+    }
+
     private sealed class Clock(double startSeconds) : IServerClock
     {
         private DateTimeOffset current = DateTimeOffset.Parse("2026-07-31T12:00:00Z").AddSeconds(startSeconds);

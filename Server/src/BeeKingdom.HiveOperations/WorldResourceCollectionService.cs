@@ -65,7 +65,12 @@ public sealed record WorldResourceCollectionResult(bool Succeeded, string Code, 
 // ressource existe deja dans l'economie du serveur (miel/pollen/cire) ; les autres types visibles
 // sur la carte (nectar/eau/propolis/gelee royale) restent volontairement demo pour l'instant (pas
 // de nouvelle monnaie inventee sans besoin reel - voir Claude_Continuation.md).
-public sealed class WorldResourceCollectionService(IHiveStateRepository repository, IServerClock clock, WorldResourceCollectionOptions options)
+// M078B-CL: dailyRoundEnabled (meme convention que HiveOfflineProductionService/BuildingUpgradeContracts)
+// alimente la Ronde quotidienne avec de vraies actions World Map - "En mission" (Launch, une
+// expedition envoyee) et "Recolteur du royaume" (Claim, une ressource recoltee), remplacant deux
+// des trois anciens signaux purement techniques ("Stocks lus" lu automatiquement a chaque
+// ouverture du Sac, et une collecte comptee meme depuis le stockage de la ruche).
+public sealed class WorldResourceCollectionService(IHiveStateRepository repository, IServerClock clock, WorldResourceCollectionOptions options, bool dailyRoundEnabled = false)
 {
     public const string ContractVersion = "living-hive-world-resource-collection-v1";
     private readonly WorldResourceCollectionOptions o = options ?? throw new ArgumentNullException(nameof(options));
@@ -124,6 +129,8 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             WorldResourceActiveFlight flight = new(Guid.NewGuid(), nodeId, now, now + node.Duration, requestedTroops, collection.Revision + 1, request.IdempotencyKey, hash);
             WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = flight };
             PlayerHiveState updated = state with { WorldResourceCollection = updatedCollection };
+            // M078B-CL: "En mission" - envoyer une expedition reelle sur la World Map.
+            if (dailyRoundEnabled) updated = HiveDailyRoundFacts.ApplyFreshFact(updated, now, HiveDailyRoundFact.SnapshotRead, false);
             result = Success(updated, now, flight, request.IdempotencyKey, "game.world_resource_launched", null);
             return Receipt(updated, updatedCollection, request.IdempotencyKey, hash, result);
         }, ct);
@@ -176,6 +183,8 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             Dictionary<string, WorldResourceClaimReceipt> claimReceipts = new(collection.ClaimReceipts ?? new(StringComparer.Ordinal), StringComparer.Ordinal) { [request.IdempotencyKey] = claim };
             WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = null, NodeReadyAtUtc = readyAt, ClaimReceipts = claimReceipts };
             PlayerHiveState updated = state with { Resources = resources, WorldResourceCollection = updatedCollection };
+            // M078B-CL: "Recolteur du royaume" - une ressource reellement recoltee sur la World Map.
+            if (dailyRoundEnabled) updated = HiveDailyRoundFacts.ApplyFreshFact(updated, now, HiveDailyRoundFact.CollectionReceived, false);
             result = Success(updated, now, null, request.IdempotencyKey, "game.world_resource_claimed", claim);
             return Receipt(updated, updatedCollection, request.IdempotencyKey, hash, result);
         }, ct);

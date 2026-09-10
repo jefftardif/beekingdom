@@ -118,11 +118,24 @@ namespace BeeKingdom.Playground
             else
             {
                 DrawWrapped(Text(
-                    "Progression officielle : " + model.CompletedCount.ToString(CultureInfo.InvariantCulture) + " / 3",
-                    "Official progress: " + model.CompletedCount.ToString(CultureInfo.InvariantCulture) + " / 3"));
-                DrawFact(HiveDailyRoundClient.CollectionFact, model.CollectionReceived);
-                DrawFact(HiveDailyRoundClient.OperationFact, model.OperationLaunched);
-                DrawFact(HiveDailyRoundClient.SnapshotFact, model.SnapshotRead);
+                    "Progression : " + model.CompletedCount.ToString(CultureInfo.InvariantCulture) + " / 3",
+                    "Progress: " + model.CompletedCount.ToString(CultureInfo.InvariantCulture) + " / 3"));
+                // M078B-CL: 3 vraies missions comprehensibles au lieu de signaux techniques
+                // ("Collecte reçue"/"Opération lancée"/"Stocks lus") - voir
+                // M078B-CL-Daily-Round-Player-Friendly-Objectives.md pour ce que signifiait
+                // reellement chaque ancien signal et ce qui a change cote serveur.
+                DrawDailyRoundObjective(
+                    Text("Récolteur du royaume", "Kingdom Harvester"),
+                    Text("Collecter une ressource (Sac de la ruche ou World Map)", "Collect a resource (hive storage or World Map)"),
+                    model.CollectionReceived);
+                DrawDailyRoundObjective(
+                    Text("Développement de la ruche", "Hive Development"),
+                    Text("Lancer une opération (amélioration, recherche, entraînement...)", "Start an operation (upgrade, research, training...)"),
+                    model.OperationLaunched);
+                DrawDailyRoundObjective(
+                    Text("En mission", "On a Mission"),
+                    Text("Envoyer une expédition sur la World Map", "Send an expedition on the World Map"),
+                    model.SnapshotRead);
                 DrawWrapped(Text(
                     "Récompense : " + model.HoneyReward.ToString(CultureInfo.InvariantCulture) + " miel, " + model.PollenReward.ToString(CultureInfo.InvariantCulture) + " pollen",
                     "Reward: " + model.HoneyReward.ToString(CultureInfo.InvariantCulture) + " honey, " + model.PollenReward.ToString(CultureInfo.InvariantCulture) + " pollen"));
@@ -368,18 +381,20 @@ namespace BeeKingdom.Playground
             GUILayout.Label(text ?? string.Empty, new GUIStyle(GUI.skin.label) { wordWrap = true });
         }
 
-        private static void DrawFact(string fact, bool done)
+        // M078B-CL: titre + description en langage joueur, progression numerique (0/1 -> 1/1)
+        // au lieu de la case a cocher [ ]/[x] partagee avec l'Evenement jalon (StatusMark) -
+        // demande explicite du CEO ("afficher une vraie progression"). Usage local a la Ronde
+        // quotidienne uniquement ; StatusMark reste inchange pour l'Evenement jalon.
+        private static void DrawDailyRoundObjective(string title, string description, bool done)
         {
-            string label;
-            if (string.Equals(fact, HiveDailyRoundClient.CollectionFact, StringComparison.Ordinal))
-                label = Text("Collecte reçue", "Collection received");
-            else if (string.Equals(fact, HiveDailyRoundClient.OperationFact, StringComparison.Ordinal))
-                label = Text("Opération lancée", "Operation launched");
-            else if (string.Equals(fact, HiveDailyRoundClient.SnapshotFact, StringComparison.Ordinal))
-                label = Text("Stocks lus", "Stock read");
-            else
-                label = fact;
-            DrawWrapped(StatusMark(done) + " " + label);
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical();
+            GUILayout.Label(title, new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
+            GUILayout.Label(description, new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 11 });
+            GUILayout.EndVertical();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label((done ? "1" : "0") + " / 1", new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
+            GUILayout.EndHorizontal();
         }
 
         private static string DailyStateLabel(HiveDailyRoundScreenModel model)

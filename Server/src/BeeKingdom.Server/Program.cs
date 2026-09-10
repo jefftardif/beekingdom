@@ -581,14 +581,18 @@ app.MapGet("/runtime/world-identity-readiness", (IOptions<BeeKingdomServerOption
 
 app.MapGet("/runtime/chat-readiness", (ChatManager chat) => Results.Ok(chat.GetReadiness()));
 
-app.MapGet("/game/v1/hives/{hiveId}/hive-stock", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveStockSnapshotOptions> configured, IOptions<HiveDailyRoundOptions> daily, CancellationToken ct) =>
+app.MapGet("/game/v1/hives/{hiveId}/hive-stock", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveStockSnapshotOptions> configured, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     try { configured.Value.Validate(); } catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication); if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed)) return GameError(400, "game.invalid_request", "game.error.invalid_request");
     var state = await repository.ReadAsync(auth.PlayerId!.Value, parsed, ct); if (state is null) return GameError(404, "game.hive_not_found", "game.error.not_found");
-    try { if (daily.Value.Enabled) { var mark = await new HiveOperationService(repository, clock, Array.Empty<BuildingOperationDefinition>()).RecordSnapshotReadAsync(auth.PlayerId.Value, parsed, ct); if (!mark.Succeeded) return GameError(503, "game.unavailable", "game.error.unavailable"); state = mark.State; } var snapshot = HiveStockSnapshotFactory.FromAuthoritativeState(state, configured.Value.CatalogVersion, clock.UtcNow); return Results.Ok(snapshot); }
+    // M078B-CL: lire le Sac ne compte plus comme une action de la Ronde quotidienne ("Stocks lus"
+    // etait un signal purement technique, jamais une vraie action de jeu - voir
+    // M078B-CL-Daily-Round-Player-Friendly-Objectives.md). Ce meme role revient desormais a
+    // WorldResourceCollectionService.LaunchAsync ("En mission").
+    try { var snapshot = HiveStockSnapshotFactory.FromAuthoritativeState(state, configured.Value.CatalogVersion, clock.UtcNow); return Results.Ok(snapshot); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 
@@ -1228,22 +1232,22 @@ app.MapGet("/game/v1/hives/{hiveId}/world-resources", async (HttpContext context
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
     catch (InvalidOperationException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
-app.MapPost("/game/v1/hives/{hiveId}/world-resources/{nodeId}/launch", async (HttpContext context, string hiveId, string nodeId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<WorldResourceCollectionOptions> configured, LaunchWorldResourceCollectionRequest request, CancellationToken ct) =>
+app.MapPost("/game/v1/hives/{hiveId}/world-resources/{nodeId}/launch", async (HttpContext context, string hiveId, string nodeId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<WorldResourceCollectionOptions> configured, IOptions<HiveDailyRoundOptions> daily, LaunchWorldResourceCollectionRequest request, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed) || string.IsNullOrWhiteSpace(nodeId) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
-    try { var result = await new WorldResourceCollectionService(repository, clock, configured.Value).LaunchAsync(auth.PlayerId!.Value, parsed, nodeId, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
+    try { var result = await new WorldResourceCollectionService(repository, clock, configured.Value, daily.Value.Enabled).LaunchAsync(auth.PlayerId!.Value, parsed, nodeId, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
-app.MapPost("/game/v1/hives/{hiveId}/world-resources/{flightId:guid}/claim", async (HttpContext context, string hiveId, Guid flightId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<WorldResourceCollectionOptions> configured, ClaimWorldResourceCollectionRequest request, CancellationToken ct) =>
+app.MapPost("/game/v1/hives/{hiveId}/world-resources/{flightId:guid}/claim", async (HttpContext context, string hiveId, Guid flightId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<WorldResourceCollectionOptions> configured, IOptions<HiveDailyRoundOptions> daily, ClaimWorldResourceCollectionRequest request, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
     if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null) return GameError(400, "game.invalid_request", "game.error.invalid_request");
-    try { var result = await new WorldResourceCollectionService(repository, clock, configured.Value).ClaimAsync(auth.PlayerId!.Value, parsed, flightId, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
+    try { var result = await new WorldResourceCollectionService(repository, clock, configured.Value, daily.Value.Enabled).ClaimAsync(auth.PlayerId!.Value, parsed, flightId, request, ct); return result.Succeeded ? Results.Ok(result.Snapshot) : GameError(result.Code == "game.invalid_request" ? 400 : 409, result.Code, "game.error.conflict"); }
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 app.MapPost("/game/v1/hives/{hiveId}/world-resources/{flightId:guid}/recall", async (HttpContext context, string hiveId, Guid flightId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<WorldResourceCollectionOptions> configured, RecallWorldResourceCollectionRequest request, CancellationToken ct) =>
