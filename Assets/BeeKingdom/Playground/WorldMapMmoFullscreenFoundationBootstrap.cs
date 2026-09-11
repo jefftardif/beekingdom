@@ -4690,7 +4690,7 @@ namespace BeeKingdom.Playground
                 // rappel (demande de Jeff, 2026-08-26). DrawCombatPatrolMarch ne dessine QUE les
                 // marches du joueur local (voir commentaire sur la methode) donc tout hotspot ici
                 // est necessairement sa propre troupe - aucune verification de proprietaire requise.
-                const float hotspotSize = 64f;
+                float hotspotSize = WorldSizeToScreen(64f);
                 Rect hotspot = new Rect(marker.x - hotspotSize * 0.5f, marker.y - hotspotSize * 0.5f, hotspotSize, hotspotSize);
                 if (GUI.Button(hotspot, GUIContent.none, GUIStyle.none))
                 {
@@ -4790,9 +4790,9 @@ namespace BeeKingdom.Playground
         private void DrawStyledMarchPath(Vector2 a, Vector2 control, Vector2 b, float marchProgress, MarchPalette palette)
         {
             float pulse = 0.5f + 0.5f * Mathf.Sin(animatedTime * 2.2f);
-            DrawBezier(a, control, b, new Color(palette.Halo.r, palette.Halo.g, palette.Halo.b, palette.Halo.a + pulse * 0.06f), 11f, 40);
-            DrawBezier(a, control, b, palette.Core, 4f, 40);
-            DrawBezier(a, control, b, new Color(palette.Filament.r, palette.Filament.g, palette.Filament.b, palette.Filament.a + pulse * 0.35f), 1.4f, 40);
+            DrawBezier(a, control, b, new Color(palette.Halo.r, palette.Halo.g, palette.Halo.b, palette.Halo.a + pulse * 0.06f), WorldStrokeToScreen(11f), 40);
+            DrawBezier(a, control, b, palette.Core, WorldStrokeToScreen(4f), 40);
+            DrawBezier(a, control, b, new Color(palette.Filament.r, palette.Filament.g, palette.Filament.b, palette.Filament.a + pulse * 0.35f), WorldStrokeToScreen(1.4f), 40);
 
             const int swarmCount = 10;
             // Les etincelles filent en boucle continue le long de TOUTE la route, a une vitesse
@@ -4806,13 +4806,13 @@ namespace BeeKingdom.Playground
                 Vector2 p = Bezier(a, control, b, st);
                 Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, st + 0.02f)) - p;
                 Vector2 side = tangent.sqrMagnitude > 0.01f ? new Vector2(-tangent.y, tangent.x).normalized : Vector2.up;
-                p += side * Mathf.Sin(animatedTime * 7f + i) * 4f;
+                p += side * Mathf.Sin(animatedTime * 7f + i) * WorldSizeToScreen(4f);
                 bool spark = i % 3 == 0;
                 float flicker = 0.55f + 0.45f * Mathf.Sin(animatedTime * 9f + i * 1.7f);
                 Color emberColor = spark
                     ? new Color(palette.SparkColor.r, palette.SparkColor.g, palette.SparkColor.b, palette.SparkColor.a * flicker)
                     : new Color(palette.EmberColor.r, palette.EmberColor.g, palette.EmberColor.b, palette.EmberColor.a * flicker);
-                DrawCircle(p, spark ? 3.2f : 4.6f, emberColor, 10);
+                DrawCircle(p, WorldSizeToScreen(spark ? 3.2f : 4.6f), emberColor, 10);
             }
         }
 
@@ -4822,22 +4822,19 @@ namespace BeeKingdom.Playground
         private void DrawAttackTargetPulse(Vector2 targetScreenPos)
         {
             float basePulse = Time.time * 1.8f;
-            // 3 anneaux qui respirent en déphasage — même technique que DrawChampionMarchUnit halo
+            // 3 anneaux qui respirent en déphasage — même technique que DrawChampionMarchUnit halo, zoom-aware via WorldSizeToScreen
             for (int i = 0; i < 3; i++)
             {
                 float phase = basePulse + i * 1.1f;
                 float pulse = 0.35f + 0.35f * Mathf.Sin(phase);
-                float radius = 18f + i * 14f + Mathf.Sin(phase * 0.7f) * 4f;
+                float radius = WorldSizeToScreen(18f + i * 14f + Mathf.Sin(phase * 0.7f) * 4f);
                 Color c = new Color(1f, 0.18f, 0.14f, 0.22f + pulse * 0.28f);
-                // anneau creux : on dessine un cercle puis on efface le centre en overlayant le fond
-                // Pour rester IMGUI simple, on dessine un cercle plein semi-transparent + un cercle intérieur opaque masqué
                 DrawCircle(targetScreenPos, radius, c, 24);
-                // second cercle intérieur plus petit pour effet d'anneau
                 Color inner = new Color(1f, 0.18f, 0.14f, 0.12f + pulse * 0.15f);
                 DrawCircle(targetScreenPos, radius * 0.72f, inner, 20);
             }
-            // coeur rouge fixe
-            DrawCircle(targetScreenPos, 6f, new Color(1f, 0.12f, 0.08f, 0.95f), 14);
+            // coeur rouge fixe — zoom-aware
+            DrawCircle(targetScreenPos, WorldSizeToScreen(6f), new Color(1f, 0.12f, 0.08f, 0.95f), 14);
         }
 
         // Mission M021 (2026-08-26) : composition proportionnelle + formation + champion meneur.
@@ -4961,18 +4958,18 @@ namespace BeeKingdom.Playground
         // plus proeminent" que les troupes normales, comme demande.
         private void DrawChampionMarchUnit(Vector2 position, string championBeeId)
         {
-            const float haloRadius = 22f;
+            float haloRadius = WorldSizeToScreen(22f);
             Color haloColor = new Color(1f, 0.84f, 0.35f, 0.35f + 0.15f * Mathf.Sin(animatedTime * 2.4f));
             DrawCircle(position, haloRadius, haloColor, 16);
 
             Texture2D portrait = RuntimeEntityTexture("PremiumBeeReference/ChampionBees/" + championBeeId);
             if (portrait == null)
             {
-                DrawCircle(position, 12f, new Color(1f, 0.84f, 0.35f, 0.95f), 14);
+                DrawCircle(position, WorldSizeToScreen(12f), new Color(1f, 0.84f, 0.35f, 0.95f), 14);
                 return;
             }
 
-            const float size = 40f;
+            float size = WorldSizeToScreen(40f);
             Rect rect = new Rect(position.x - size * 0.5f, position.y - size * 0.5f, size, size);
             Color previousColor = GUI.color;
             GUI.color = Color.white;
@@ -4988,13 +4985,13 @@ namespace BeeKingdom.Playground
         private void DrawMarchFormation(Vector2 marker, Vector2 tangent, IReadOnlyList<(string Family, int Count)> sample, string leaderChampionId)
         {
             Vector2 forward = tangent.sqrMagnitude > 0.0001f ? tangent.normalized : Vector2.up;
-            if (!string.IsNullOrEmpty(leaderChampionId)) DrawChampionMarchUnit(marker + forward * 26f, leaderChampionId);
+            if (!string.IsNullOrEmpty(leaderChampionId)) DrawChampionMarchUnit(marker + forward * WorldSizeToScreen(26f), leaderChampionId);
 
             int totalUnits = 0;
             if (sample != null) foreach ((string _, int count) in sample) totalUnits += count;
             if (totalUnits <= 0) { DrawCombatMarchBee(marker); return; }
 
-            const float formationSpread = 24f;
+            float formationSpread = WorldSizeToScreen(24f);
             int index = 0;
             for (int s = 0; s < sample.Count; s++)
             {
@@ -5028,11 +5025,11 @@ namespace BeeKingdom.Playground
             Texture2D wings = RuntimeEntityTexture(CombatMarchBeeWingsResource);
             if (body == null)
             {
-                DrawCircle(position, 7f, new Color(tint.r, tint.g, tint.b, 0.95f), 12);
+                DrawCircle(position, WorldSizeToScreen(7f), new Color(tint.r, tint.g, tint.b, 0.95f), 12);
                 return;
             }
 
-            const float bodyWidth = 46f;
+            float bodyWidth = WorldSizeToScreen(46f);
             float bodyHeight = bodyWidth * body.height / (float)body.width;
             Vector2 bodyCenter = position + new Vector2(0f, -bodyHeight * 0.18f);
             Rect bodyRect = new Rect(bodyCenter.x - bodyWidth * 0.5f, bodyCenter.y - bodyHeight * 0.5f, bodyWidth, bodyHeight);
