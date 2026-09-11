@@ -54,11 +54,42 @@ namespace BeeKingdom.Playground
         [SerializeField] private bool useV2ISelectedHdLocalRepairReviewRuntimePackageForPlayMode;
         [SerializeField] private bool useInitialAuditViewForPlayMode;
         [SerializeField] private int initialAuditChunkX = 16;
-        [SerializeField] private int initialAuditChunkY = 19;
-        [SerializeField] private float initialAuditZoom = 0.58f;
-        [SerializeField] private string initialAuditViewLabel = "Audit jonction montagne/foret";
+    [SerializeField] private int initialAuditChunkY = 19;
+    [SerializeField] private float initialAuditZoom = 0.58f;
+    [SerializeField] private string initialAuditViewLabel = "Audit jonction montagne/foret";
 
-        private Wave3RuntimeGutterTileProvider wave3Provider;
+    // M079E — Auto-bootstrap like other Environment2D5D runtime bootstraps
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void AutoStart()
+    {
+        if (!Application.isPlaying) return;
+        Scene active = SceneManager.GetActiveScene();
+        if (!IsEnvironmentScene(active)) return;
+        if (FindAnyObjectByType<WorldMapMmoFullscreenFoundationBootstrap>() != null) return;
+
+        GameObject root = new GameObject("WorldMap MMO Foundation Runtime");
+        SceneManager.MoveGameObjectToScene(root, active);
+        root.AddComponent<WorldMapMmoFullscreenFoundationBootstrap>();
+    }
+
+    private static bool IsEnvironmentScene(Scene scene)
+    {
+        if (!scene.IsValid() || !scene.isLoaded) return false;
+        return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
+    }
+
+    public static void InitializeForScene(Scene scene)
+    {
+        if (!Application.isPlaying) return;
+        if (!IsEnvironmentScene(scene)) return;
+        if (FindAnyObjectByType<WorldMapMmoFullscreenFoundationBootstrap>() != null) return;
+
+        GameObject root = new GameObject("WorldMap MMO Foundation Runtime");
+        SceneManager.MoveGameObjectToScene(root, scene);
+        root.AddComponent<WorldMapMmoFullscreenFoundationBootstrap>();
+    }
+
+    private Wave3RuntimeGutterTileProvider wave3Provider;
         private WorldMapWave6StreamingTileProvider wave6Provider;
         private WorldMapWaterfallFxBootstrap waterfallFx;
         private bool waterfallFxLookupAttempted;
