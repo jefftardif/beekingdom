@@ -4526,6 +4526,7 @@ namespace BeeKingdom.Playground
             DrawStyledMarchPath(a, control, b, travelT, CollectionMarchPalette);
             List<(string Family, int Count)> sample = ComputeMarchVisualSample(active.CommittedTroops);
             DrawMarchFormation(marker, tangent, sample, ResolveMarchLeaderChampionId());
+            DrawCollectionTargetPulse(b);
         }
 
         // Client-side-only correlation between an active encounter and the map coordinate the
@@ -4543,6 +4544,8 @@ namespace BeeKingdom.Playground
         // combat/resolution n'est touchee, uniquement cette correlation visuelle cote client.
         private static readonly Dictionary<Guid, Vector2> combatPatrolTargetWorldCoordByEncounterId = new Dictionary<Guid, Vector2>();
         private static Vector2? pendingCombatPatrolLaunchTarget;
+        // M079C — Boucle collecte : garde anti-spam pour l'envoi d'une marche de collecte officielle
+        private static float lastOfficialWorldResourceLaunchUnscaledTime = -100f;
         // Tracks which encounters were drawn last frame so a disappearance (auto-claimed by
         // CombatPatrolPanelController.AutoClaimFinishedEncountersAsync) can be turned into a
         // visible return trip below, instead of the bee just vanishing at wherever it was.
@@ -4613,6 +4616,24 @@ namespace BeeKingdom.Playground
             WorldHiveNode from = SelectedHive();
             if (from == null) { combatPatrolReturnTrips.Clear(); return; }
             Vector2 a = WorldToScreen(from.WorldCoord);
+            // M079C — Fantôme : si plus d'encounter actif, purger les retours fantômes restés à la ruche (évite abeilles collées)
+            if (encounters.Count == 0 && combatPatrolReturnTrips.Count > 0)
+            {
+                // Si plus aucune marche active, les retours doivent avoir fini — purger tout ce qui est à la ruche depuis >1s
+                var ghostKeys = new System.Collections.Generic.List<Guid>();
+                foreach (var kv in combatPatrolReturnTrips)
+                {
+                    float rt = Mathf.Clamp01((Time.unscaledTime - kv.Value.StartedAtUnscaledTime) / kv.Value.Duration);
+                    if (rt >= 0.98f) ghostKeys.Add(kv.Key);
+                }
+                foreach (var k in ghostKeys)
+                {
+                    combatPatrolReturnTrips.Remove(k);
+                    combatPatrolTargetWorldCoordByEncounterId.Remove(k);
+                    combatPatrolCommittedTroopsByEncounterId.Remove(k);
+                    combatPatrolOutboundVisualSampleCache.Remove(k);
+                }
+            }
 
             foreach (Guid knownId in lastKnownCombatPatrolEncounterIds)
             {
@@ -4837,6 +4858,23 @@ namespace BeeKingdom.Playground
             DrawCircle(targetScreenPos, WorldSizeToScreen(6f), new Color(1f, 0.12f, 0.08f, 0.95f), 14);
         }
 
+        // M079C — Boucle collecte + pulse jaune : même principe que l'attaque mais palette collecte
+        private void DrawCollectionTargetPulse(Vector2 targetScreenPos)
+        {
+            float basePulse = Time.time * 1.8f;
+            for (int i = 0; i < 3; i++)
+            {
+                float phase = basePulse + i * 1.1f;
+                float pulse = 0.35f + 0.35f * Mathf.Sin(phase);
+                float radius = WorldSizeToScreen(18f + i * 14f + Mathf.Sin(phase * 0.7f) * 4f);
+                Color c = new Color(0.98f, 0.84f, 0.18f, 0.22f + pulse * 0.28f); // jaune collecte
+                DrawCircle(targetScreenPos, radius, c, 24);
+                Color inner = new Color(0.98f, 0.84f, 0.18f, 0.12f + pulse * 0.15f);
+                DrawCircle(targetScreenPos, radius * 0.72f, inner, 20);
+            }
+            DrawCircle(targetScreenPos, WorldSizeToScreen(6f), new Color(0.98f, 0.78f, 0.12f, 0.95f), 14); // coeur jaune
+        }
+
         // Mission M021 (2026-08-26) : composition proportionnelle + formation + champion meneur.
         // Ordre canonique des 3 familles de combat (guardians/wingrunners/darters) - partage par
         // le calcul d'echantillon visuel et la deduction de survivants au retour.
@@ -4962,6 +5000,50 @@ namespace BeeKingdom.Playground
             Color haloColor = new Color(1f, 0.84f, 0.35f, 0.35f + 0.15f * Mathf.Sin(animatedTime * 2.4f));
             DrawCircle(position, haloRadius, haloColor, 16);
 
+            // M079C — Bug 1 : utiliser l'asset animé dédié si disponible, pas l'image maître
+            string lowerId = championBeeId != null ? championBeeId.ToLowerInvariant() : string.Empty;
+            Texture2D body = RuntimeEntityTexture("WorldMapWave6Runtime/CombatMarch/ChampionMarchBody_" + lowerId);
+            // Fallback : certains IDs ont un suffixe _0 (sprite sheet) — essayer aussi avec _0
+            if (body == null) body = RuntimeEntityTexture("WorldMapWave6Runtime/CombatMarch/ChampionMarchBody_" + lowerId + "_0");
+            Texture2D wings0 = RuntimeEntityTexture("WorldMapWave6Runtime/CombatMarch/ChampionMarchWings_" + lowerId);
+            if (wings0 == null) wings0 = RuntimeEntityTexture("WorldMapWave6Runtime/CombatMarch/ChampionMarchWings_" + lowerId + "_0");
+            Texture2D wings1 = RuntimeEntityTexture("WorldMapWave6Runtime/CombatMarch/ChampionMarchWings_" + lowerId + "_1");
+
+            if (body != null)
+            {
+                float size = WorldSizeToScreen(44f);
+                float bodyHeight = size * body.height / (float)body.width;
+                Vector2 bodyCenter = position + new Vector2(0f, -bodyHeight * 0.15f);
+                Rect bodyRect = new Rect(bodyCenter.x - size * 0.5f, bodyCenter.y - size * 0.5f, size, size);
+
+                // ailes animées si disponibles, sinon statique
+                Texture2D wings = wings0;
+                if (wings0 != null && wings1 != null)
+                {
+                    // alternance 2 frames à haute fréquence, comme DrawTroopMarchUnit
+                    float flap = Mathf.Abs(Mathf.Sin(animatedTime * 28f));
+                    wings = flap > 0.5f ? wings1 : wings0;
+                }
+                if (wings != null)
+                {
+                    float wingWidth = size * 1.35f;
+                    float wingHeight = wingWidth * wings.height / (float)wings.width;
+                    Vector2 wingPivot = bodyCenter + new Vector2(0f, -size * 0.08f);
+                    Rect wingRect = new Rect(wingPivot.x - wingWidth * 0.5f, wingPivot.y - wingHeight * 0.5f, wingWidth, wingHeight);
+                    float wingAlpha = 0.75f + 0.20f * Mathf.Sin(animatedTime * 28f);
+                    Color prev = GUI.color;
+                    GUI.color = new Color(1f, 1f, 1f, wingAlpha);
+                    GUI.DrawTexture(wingRect, wings, ScaleMode.ScaleToFit, true);
+                    GUI.color = prev;
+                }
+                Color prevBody = GUI.color;
+                GUI.color = Color.white;
+                GUI.DrawTexture(bodyRect, body, ScaleMode.ScaleToFit, true);
+                GUI.color = prevBody;
+                return;
+            }
+
+            // Fallback maître si aucun asset animé (ex: aurelia, ambra, nectaria)
             Texture2D portrait = RuntimeEntityTexture("PremiumBeeReference/ChampionBees/" + championBeeId);
             if (portrait == null)
             {
@@ -4969,8 +5051,8 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            float size = WorldSizeToScreen(40f);
-            Rect rect = new Rect(position.x - size * 0.5f, position.y - size * 0.5f, size, size);
+            float fallbackSize = WorldSizeToScreen(40f);
+            Rect rect = new Rect(position.x - fallbackSize * 0.5f, position.y - fallbackSize * 0.5f, fallbackSize, fallbackSize);
             Color previousColor = GUI.color;
             GUI.color = Color.white;
             GUI.DrawTexture(rect, portrait, ScaleMode.ScaleToFit, true);
@@ -5748,6 +5830,8 @@ namespace BeeKingdom.Playground
         {
             if (hive == null || resource == null) return;
             if (!IsOfficialResource(resource)) { StartLocalCollectionFlight(); return; }
+            // M079C — Boucle collecte : une action = une marche, pas de spam si le serveur n'a pas encore répondu
+            if (Time.unscaledTime - lastOfficialWorldResourceLaunchUnscaledTime < 3f) { status = "Envoi déjà en cours..."; return; }
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
             if (IsOfficialFlightReadyToClaim(model, resource.Id))
@@ -5768,6 +5852,7 @@ namespace BeeKingdom.Playground
             // sembler ne rien faire.
             if (model.AvailableRoster == null || model.AvailableRoster.Values.All(v => v <= 0))
             { status = "Aucune troupe disponible pour escorter la collecte"; return; }
+            lastOfficialWorldResourceLaunchUnscaledTime = Time.unscaledTime;
             HiveViewProductUiPresenter.LaunchOfficialWorldResourceCollectionForWorldMap(resource.Id);
             status = "Vol officiel lance vers " + resource.Label + " (" + hive.Label + ")";
         }
