@@ -55,6 +55,8 @@
     { "key": "ui.colony_overview.level_pending", "value": "—" },
     { "key": "ui.colony_overview.source.server", "value": "Server data · your hive" },
     { "key": "ui.colony_overview.source.local", "value": "Local demo preview · not your hive" },
+    { "key": "building_upgrade.progress.levels", "value": "Level {0} → Level {1}" },
+    { "key": "building_upgrade.progress.remaining", "value": "{0} remaining" },
     { "key": "ui.colony_overview.section.progress", "value": "Progress" },
     { "key": "ui.colony_overview.act_one", "value": "Act I - chapters completed" },
     { "key": "ui.colony_overview.stability", "value": "Brood stability" },

@@ -143,6 +143,8 @@ namespace BeeKingdom.Playground
         private string collectionVisualTargetNodeId;
         private List<(string Family, int Count)> collectionVisualSample;
         private string collectionVisualChampionId;
+        private float collectionVisualCooldown; // M080: prevent re-sync loop after cycle completes
+        private string collectionVisualLastCompletedNodeId; // M080: don't re-sync a claimed flight
         private const float CollectionOutboundDuration = 3f;
         private const float CollectionReturningDuration = 3f;
         private const float CollectionDuration = 10f; // Alpha: time on resource before claim
@@ -314,6 +316,7 @@ namespace BeeKingdom.Playground
             // simplement miroitee cote client) - aucun nouvel appel reseau, aucune nouvelle donnee.
             DrawWorldEventAmbiance();
             DrawFixedHud();
+            DrawCenterCoordinates();
             DrawActionPanel();
             DrawFlightJournal();
             DrawMiniMap();
@@ -4554,10 +4557,11 @@ namespace BeeKingdom.Playground
             // M080 — Sync visual state with server on scene reload
             // Only sync if server flight is genuinely in-progress (not already completed/claimable).
             // If the flight is done (t >= 1f), do NOT sync — the player must Claim via UI.
-            if (collectionVisualState == CollectionVisualState.Idle)
+            if (collectionVisualCooldown > 0f) collectionVisualCooldown -= Time.deltaTime;
+            if (collectionVisualState == CollectionVisualState.Idle && collectionVisualCooldown <= 0f)
             {
                 WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-                if (model?.Active != null)
+                if (model?.Active != null && !string.Equals(model.Active.NodeId, collectionVisualLastCompletedNodeId, System.StringComparison.Ordinal))
                 {
                     double totalSeconds = (model.Active.EndsAtUtc - model.Active.StartedAtUtc).TotalSeconds;
                     double elapsedSeconds = (DateTimeOffset.UtcNow - model.Active.StartedAtUtc).TotalSeconds;
@@ -4576,16 +4580,9 @@ namespace BeeKingdom.Playground
                 }
             }
 
-            // M080 — If in Collecting state but server flight is done, transition to Returning
-            if (collectionVisualState == CollectionVisualState.Collecting)
-            {
-                WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-                if (model?.Active == null || DateTimeOffset.UtcNow >= model.Active.EndsAtUtc)
-                {
-                    collectionVisualState = CollectionVisualState.Returning;
-                    collectionVisualTimer = 0f;
-                }
-            }
+            // M080 — Visual timer in DrawCollectingFormation drives the transition to Returning.
+            // Do NOT force-return based on server state; the server is authoritative for Claim
+            // validation but the visual timer controls when troops leave the resource.
 
             switch (collectionVisualState)
             {
@@ -4633,15 +4630,6 @@ namespace BeeKingdom.Playground
         {
             WorldResourceNode resource = ResourceById(collectionVisualTargetNodeId);
             if (resource == null) { collectionVisualState = CollectionVisualState.Idle; return; }
-
-            // M080 — If server flight is already gone, go to Returning immediately
-            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-            if (model?.Active == null)
-            {
-                collectionVisualState = CollectionVisualState.Returning;
-                collectionVisualTimer = 0f;
-                return;
-            }
 
             collectionVisualTimer += Time.deltaTime;
 
@@ -4691,6 +4679,8 @@ namespace BeeKingdom.Playground
 
                 // Reset to idle after brief completion display
                 collectionVisualState = CollectionVisualState.Idle;
+                collectionVisualCooldown = 5f; // prevent re-sync loop until server claim clears Active
+                collectionVisualLastCompletedNodeId = collectionVisualTargetNodeId;
                 collectionVisualTargetNodeId = null;
                 collectionVisualSample = null;
                 collectionVisualChampionId = null;
@@ -5495,6 +5485,19 @@ namespace BeeKingdom.Playground
             DrawBearDenToggle();
         }
 
+        private void DrawCenterCoordinates()
+        {
+            int x = Mathf.RoundToInt(currentWorldCenter.x);
+            int y = Mathf.RoundToInt(currentWorldCenter.y);
+            string label = "X: " + x + "  Y: " + y;
+            GUIStyle style = MiniLabel(new Color(1f, 1f, 1f, 0.7f), 11, TextAnchor.UpperLeft);
+            float w = 160f;
+            float h = 20f;
+            Rect rect = new Rect(Screen.width * 0.5f - w * 0.5f, 4f, w, h);
+            DrawSolid(rect, new Color(0f, 0f, 0f, 0.45f));
+            GUI.Label(rect, label, style);
+        }
+
         private void DrawBearDenToggle()
         {
             Rect rect = BearDenToggleRect();
@@ -6120,6 +6123,14 @@ namespace BeeKingdom.Playground
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
 
+            // M080 — Auto-claim any stale expired flight (on any node) to unblock new launches
+            if (model.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc)
+            {
+                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
+                status = "Recolte expiree recuperee automatiquement";
+                return;
+            }
+
             // If flight ready to claim, claim it
             if (IsOfficialFlightReadyToClaim(model, resource.Id))
             {
@@ -6171,6 +6182,8 @@ namespace BeeKingdom.Playground
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null || model.State == WorldResourceCollectionScreenState.Mutating) return false;
             RemoteWorldResourceNode node = OfficialNodeState(resource);
+            // M080 — Allow click if stale expired flight (will auto-claim on click)
+            if (model.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc) return true;
             return IsOfficialFlightReadyToClaim(model, resource.Id) ||
                 IsOfficialFlightActiveHere(model, resource.Id) ||
                 (model.Active == null && node != null && node.CanLaunch);
@@ -6196,6 +6209,7 @@ namespace BeeKingdom.Playground
                 return "Retour en cours...";
 
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+            if (model?.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc) return "Recuperer la recolte";
             if (IsOfficialFlightReadyToClaim(model, resource.Id)) return "Recolter (officiel)";
             if (IsOfficialFlightActiveHere(model, resource.Id)) return "Rappeler l'escouade";
             return "Envoyer les abeilles (officiel)";

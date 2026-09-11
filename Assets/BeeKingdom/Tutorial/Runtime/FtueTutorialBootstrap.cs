@@ -338,32 +338,32 @@ namespace BeeKingdom.Tutorial
                     break;
                 case FtueStepKind.HighlightBuilding:
                     _dialogue.Show(step.ChampionId, step.TextKey, () => _engine.NotifyEvent(FtueEventKind.DialogueContinue), step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     break;
                 case FtueStepKind.RequireBuildingTap:
                     _dialogue.Show(step.ChampionId, step.TextKey, null, step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     _blocker.SetActive(true);
                     RegisterBuildingHook(step);
                     break;
                 case FtueStepKind.RequireWindowOpened:
                     _dialogue.Show(step.ChampionId, step.TextKey, null, step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     _blocker.SetActive(step.InteractionMode == FtueInteractionMode.RequiredTarget);
                     break;
                 case FtueStepKind.HighlightUpgradeButton:
                     _dialogue.Show(step.ChampionId, step.TextKey, () => _engine.NotifyEvent(FtueEventKind.DialogueContinue), step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     break;
                 case FtueStepKind.RequireUpgradeStarted:
                     _dialogue.Show(step.ChampionId, step.TextKey, null, step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     _blocker.SetActive(true);
                     break;
                 // M038-CL — PART2: same shapes as the upgrade-button pair above, per-feature target/copy only.
                 case FtueStepKind.HighlightActionButton:
                     _dialogue.Show(step.ChampionId, step.TextKey, () => _engine.NotifyEvent(FtueEventKind.DialogueContinue), step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     break;
                 case FtueStepKind.RequireResearchStarted:
                 case FtueStepKind.RequireTrainingStarted:
@@ -371,7 +371,7 @@ namespace BeeKingdom.Tutorial
                 case FtueStepKind.RequireProductionCollected:
                 case FtueStepKind.RequireUpgradeCompleted:
                     _dialogue.Show(step.ChampionId, step.TextKey, null, step.StepId);
-                    _arrow.Show(step.TargetId);
+                    _arrow.Show(step.TargetId, step.CompletionEventParam);
                     _blocker.SetActive(true);
                     break;
             }

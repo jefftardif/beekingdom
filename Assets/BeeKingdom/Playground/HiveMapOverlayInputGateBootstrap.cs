@@ -77,6 +77,8 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.PlayerSummaryOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.PlayerProfileOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.SettingsOverlayOpenForExternalHost
                 || LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost
                 || HiveMapActivitiesBootstrap.ModalOpenForExternalHost

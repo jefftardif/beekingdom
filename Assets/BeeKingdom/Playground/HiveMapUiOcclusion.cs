@@ -74,6 +74,16 @@ namespace BeeKingdom.Playground
             }
 
             bool portrait = LivingHiveMenuSpec.IsPortrait(Screen.width, Screen.height);
+            if (HiveViewProductUiPresenter.PlayerSummaryOverlayOpenForExternalHost)
+            {
+                results.Add(HiveViewProductUiPresenter.PlayerSummaryPanelRectForProof(portrait, Screen.width, Screen.height));
+            }
+
+            if (HiveViewProductUiPresenter.PlayerProfileOverlayOpenForExternalHost)
+            {
+                results.Add(HiveViewProductUiPresenter.PlayerProfilePanelRectForProof(portrait, Screen.width, Screen.height));
+            }
+
             results.Add(LivingHiveMenuSpec.RailRectForProof(portrait, Screen.width, Screen.height));
             results.Add(portrait
                 ? LivingHiveMenuHeaderData.PortraitHeaderRect(Screen.width, Screen.height)

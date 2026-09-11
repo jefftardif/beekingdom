@@ -57,6 +57,29 @@ namespace BeeKingdom.Playground
             root.AddComponent<HiveMapResourceHudBootstrap>();
         }
 
+        private static bool OpenPlayerSummaryFromHeader()
+        {
+            HiveViewProductUiPresenter.OpenPlayerSummaryForExternalHost();
+            return true;
+        }
+
+        private void OnEnable()
+        {
+            LivingHiveMenuCanvas.HeaderQueenClickOverride = OpenPlayerSummaryFromHeader;
+        }
+
+        private void OnDisable()
+        {
+            if (LivingHiveMenuCanvas.HeaderQueenClickOverride == OpenPlayerSummaryFromHeader)
+                LivingHiveMenuCanvas.HeaderQueenClickOverride = null;
+        }
+
+        private void OnGUI()
+        {
+            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            HiveViewProductUiPresenter.DrawPlayerIdentityOverlaysForExternalHost(Screen.width < 900);
+        }
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;

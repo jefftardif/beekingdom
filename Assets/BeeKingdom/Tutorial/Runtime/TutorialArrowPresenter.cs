@@ -5,6 +5,7 @@ namespace BeeKingdom.Tutorial
     public sealed class TutorialArrowPresenter : MonoBehaviour
     {
         private string _targetId;
+        private string _buildingContext;
         private Camera _cam;
         private RectTransform _uiTarget;
         private float _anim;
@@ -34,9 +35,13 @@ namespace BeeKingdom.Tutorial
             }
         }
 
-        public void Show(string targetId)
+        // M096-CL : buildingContext (optionnel) permet a TutorialTargetRegistry de retomber sur
+        // la position reelle du batiment concerne quand le vrai bouton IMGUI n'est pas visible
+        // a l'ecran (fenetre fermee), au lieu d'un point fixe qui ignore la camera.
+        public void Show(string targetId, string buildingContext = null)
         {
             _targetId = targetId;
+            _buildingContext = buildingContext;
             _visible = !string.IsNullOrEmpty(targetId);
             _cam = Camera.main;
             if (_cam == null) _cam = FindAnyObjectByType<Camera>();
@@ -46,6 +51,7 @@ namespace BeeKingdom.Tutorial
         {
             _visible = false;
             _targetId = null;
+            _buildingContext = null;
         }
 
         private void Update()
@@ -57,7 +63,7 @@ namespace BeeKingdom.Tutorial
         private void OnGUI()
         {
             if (!_visible || string.IsNullOrEmpty(_targetId)) return;
-            if (!TutorialTargetRegistry.Instance.TryGetTargetPosition(_targetId, _cam, out Vector2 screenPos, out RectTransform uiRect))
+            if (!TutorialTargetRegistry.Instance.TryGetTargetPosition(_targetId, _cam, out Vector2 screenPos, out RectTransform uiRect, _buildingContext))
             {
                 // fallback: if we have ui rect directly, use it
                 if (TutorialTargetRegistry.Instance.TryResolveUi(_targetId, out var rt) && rt != null)

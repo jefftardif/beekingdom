@@ -55,6 +55,8 @@
     { "key": "ui.colony_overview.level_pending", "value": "—" },
     { "key": "ui.colony_overview.source.server", "value": "Données serveur · ta ruche" },
     { "key": "ui.colony_overview.source.local", "value": "Aperçu local de démonstration · pas ta ruche" },
+    { "key": "building_upgrade.progress.levels", "value": "Niveau {0} → Niveau {1}" },
+    { "key": "building_upgrade.progress.remaining", "value": "{0} restantes" },
     { "key": "ui.colony_overview.section.progress", "value": "Progression" },
     { "key": "ui.colony_overview.act_one", "value": "Acte I - chapitres terminés" },
     { "key": "ui.colony_overview.stability", "value": "Stabilité du couvain" },

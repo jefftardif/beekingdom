@@ -99,32 +99,54 @@ namespace BeeKingdom.Experiments.Environment2D5D
             // pas etre desactive par le type de build.
             if (DebugHotkeyGuard.TextInputHasFocus) return;
 
-            Keyboard kb = Keyboard.current;
-            if (kb == null) return;
-
             float dt = Time.deltaTime;
 
+            // M096-CL : Jeff ("je ne peux ni zoomer ni me deplacer" en build Windows standalone).
+            // Deux correctifs distincts sur ce meme bloc :
+            //   1. Le zoom (molette) etait auparavant lu APRES un "if (kb == null) return;" - si
+            //      le peripherique clavier du nouvel Input System n'est pas encore pret (ou
+            //      absent), le zoom souris etait coupe aussi, alors qu'il ne depend pas du
+            //      clavier. Chaque source d'input (clavier / souris) est maintenant lue
+            //      independamment, chacune tolerant que son propre "current" soit null.
+            //   2. Repli sur l'ancien Input Manager (UnityEngine.Input) en plus du nouvel Input
+            //      System : le projet est configure en "Both" (ProjectSettings.activeInputHandler
+            //      = 2), donc les deux API sont valides en build ; additionner les deux ne casse
+            //      rien (au pire l'ancien renvoie 0/false) et couvre le cas ou les devices du
+            //      nouvel Input System ne s'enregistrent pas dans ce build standalone precis.
             Vector2 pan = Vector2.zero;
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) pan.x -= 1;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) pan.x += 1;
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) pan.y += 1;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) pan.y -= 1;
+            Keyboard kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) pan.x -= 1;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) pan.x += 1;
+                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) pan.y += 1;
+                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) pan.y -= 1;
+                if (kb.rKey.isPressed) _pitch -= pitchSpeed * dt;
+                if (kb.fKey.isPressed) _pitch += pitchSpeed * dt;
+                if (kb.digit1Key.wasPressedThisFrame) MoveToPreset(lowPitch, lowAnchorY);
+                if (kb.digit2Key.wasPressedThisFrame) MoveToPreset(mediumPitch, mediumAnchorY);
+                if (kb.digit3Key.wasPressedThisFrame) MoveToPreset(highPitch, highAnchorY);
+                if (kb.digit0Key.wasPressedThisFrame) ResetView();
+            }
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) pan.x -= 1;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) pan.x += 1;
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) pan.y += 1;
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) pan.y -= 1;
+            if (Input.GetKey(KeyCode.R)) _pitch -= pitchSpeed * dt;
+            if (Input.GetKey(KeyCode.F)) _pitch += pitchSpeed * dt;
+            if (Input.GetKeyDown(KeyCode.Alpha1)) MoveToPreset(lowPitch, lowAnchorY);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) MoveToPreset(mediumPitch, mediumAnchorY);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) MoveToPreset(highPitch, highAnchorY);
+            if (Input.GetKeyDown(KeyCode.Alpha0)) ResetView();
+            pan.x = Mathf.Clamp(pan.x, -1f, 1f);
+            pan.y = Mathf.Clamp(pan.y, -1f, 1f);
             if (pan != Vector2.zero) _anchor += pan * panSpeed * dt;
 
-            if (kb.rKey.isPressed) _pitch -= pitchSpeed * dt;
-            if (kb.fKey.isPressed) _pitch += pitchSpeed * dt;
-
+            float scroll = 0f;
             Mouse mouse = Mouse.current;
-            if (mouse != null)
-            {
-                float scroll = mouse.scroll.ReadValue().y;
-                if (Mathf.Abs(scroll) > 0.01f) _distance += Mathf.Sign(scroll) * zoomStep;
-            }
-
-            if (kb.digit1Key.wasPressedThisFrame) MoveToPreset(lowPitch, lowAnchorY);
-            if (kb.digit2Key.wasPressedThisFrame) MoveToPreset(mediumPitch, mediumAnchorY);
-            if (kb.digit3Key.wasPressedThisFrame) MoveToPreset(highPitch, highAnchorY);
-            if (kb.digit0Key.wasPressedThisFrame) ResetView();
+            if (mouse != null) scroll = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) < 0.01f) scroll = Input.GetAxis("Mouse ScrollWheel") * 100f;
+            if (Mathf.Abs(scroll) > 0.01f) _distance += Mathf.Sign(scroll) * zoomStep;
         }
 
         public void MoveToPreset(float presetPitch, float presetAnchorY)

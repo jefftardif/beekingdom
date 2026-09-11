@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BeeKingdom.Core.Integration;
 using TMPro;
@@ -59,6 +60,8 @@ namespace BeeKingdom.LivingHiveMenu
         // ID logiques des ressources (3 portrait / 5 paysage).
         private static readonly string[] PortraitResourceIds = { "honey", "wax", "pollen" };
         private static readonly string[] LandscapeResourceIds = { "honey", "wax", "pollen", "bees", "capacity" };
+
+        public static Func<bool> HeaderQueenClickOverride { get; set; }
 
         private sealed class HeaderChipVisual
         {
@@ -294,8 +297,8 @@ namespace BeeKingdom.LivingHiveMenu
                     || child.name.StartsWith("Divider", System.StringComparison.Ordinal)
                     || child.name.StartsWith("Button_", System.StringComparison.Ordinal))
                 {
-                    if (Application.isPlaying) Object.Destroy(child);
-                    else Object.DestroyImmediate(child);
+                    if (Application.isPlaying) UnityEngine.Object.Destroy(child);
+                    else UnityEngine.Object.DestroyImmediate(child);
                 }
             }
             railButtons.Clear();
@@ -511,6 +514,13 @@ namespace BeeKingdom.LivingHiveMenu
         {
             if (elementId == HeaderQueenElementId)
             {
+                if (HeaderQueenClickOverride != null && HeaderQueenClickOverride())
+                {
+                    queenProfileOpen = false;
+                    RefreshAll();
+                    return;
+                }
+
                 queenProfileOpen = !queenProfileOpen;
             }
             else if (elementId == HeaderShopElementId)
@@ -535,8 +545,8 @@ namespace BeeKingdom.LivingHiveMenu
                     || child.name.StartsWith("QueenProfilePanel", System.StringComparison.Ordinal)
                     || child.name.StartsWith("ShopPanel", System.StringComparison.Ordinal))
                 {
-                    if (Application.isPlaying) Object.Destroy(child);
-                    else Object.DestroyImmediate(child);
+                    if (Application.isPlaying) UnityEngine.Object.Destroy(child);
+                    else UnityEngine.Object.DestroyImmediate(child);
                 }
             }
             headerRoot = null;

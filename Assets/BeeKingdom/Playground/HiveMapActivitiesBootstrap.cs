@@ -132,9 +132,14 @@ namespace BeeKingdom.Playground
                     Text("Développement de la ruche", "Hive Development"),
                     Text("Lancer une opération (amélioration, recherche, entraînement...)", "Start an operation (upgrade, research, training...)"),
                     model.OperationLaunched);
+                // M078C-CL : "Envoyer une expedition" pretait a confusion avec ATTAQUER (Combat
+                // Patrol, une action totalement differente qui ne compte pas ici) - Jeff a
+                // attaque sans jamais utiliser "Envoyer les abeilles" (collecte World Map), donc
+                // cette mission ne se marquait jamais. Le libelle nomme desormais le bouton reel
+                // et exclut explicitement l'attaque, pour eviter la meme confusion.
                 DrawDailyRoundObjective(
                     Text("En mission", "On a Mission"),
-                    Text("Envoyer une expédition sur la World Map", "Send an expedition on the World Map"),
+                    Text("Envoyer les abeilles récolter sur la World Map (pas une attaque)", "Send the bees to gather on the World Map (not an attack)"),
                     model.SnapshotRead);
                 DrawWrapped(Text(
                     "Récompense : " + model.HoneyReward.ToString(CultureInfo.InvariantCulture) + " miel, " + model.PollenReward.ToString(CultureInfo.InvariantCulture) + " pollen",
@@ -296,7 +301,14 @@ namespace BeeKingdom.Playground
             switch (model.State)
             {
                 case QuestChainScreenState.Loading: return Text("Chargement", "Loading");
-                case QuestChainScreenState.Ready: return model.AnyClaimable ? Text("Récompense prête", "Reward ready") : Text("En cours", "In progress");
+                case QuestChainScreenState.Ready:
+                    if (model.AnyClaimable) return Text("Récompense prête", "Reward ready");
+                    // Bug rapporte par Jeff : les 5 objectifs reussis/reclames affichaient encore
+                    // "En cours" - AnyClaimable est false une fois tout reclame (rien à reclamer),
+                    // pas seulement quand rien n'est encore termine. Distinguer les deux cas.
+                    int objectiveCount = model.Objectives?.Count ?? 0;
+                    bool allObjectivesDone = objectiveCount > 0 && model.CompletedCount >= objectiveCount;
+                    return allObjectivesDone ? Text("Terminé", "Completed") : Text("En cours", "In progress");
                 case QuestChainScreenState.Mutating: return Text("Réclamation", "Claiming");
                 case QuestChainScreenState.Error: return Text("Erreur", "Error");
                 default: return Text("Non configuré", "Not configured");

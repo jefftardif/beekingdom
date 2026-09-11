@@ -76,7 +76,7 @@ namespace BeeKingdom.Tutorial
             return false;
         }
 
-        public bool TryGetTargetPosition(string targetId, Camera cam, out Vector2 screenPos, out RectTransform uiRect)
+        public bool TryGetTargetPosition(string targetId, Camera cam, out Vector2 screenPos, out RectTransform uiRect, string buildingContext = null)
         {
             screenPos = default;
             uiRect = null;
@@ -120,24 +120,21 @@ namespace BeeKingdom.Tutorial
             if (targetId.StartsWith("building.", StringComparison.Ordinal))
             {
                 string buildingKey = targetId.Substring("building.".Length);
-                var all = UnityEngine.Object.FindObjectsByType<BeeKingdom.Buildings.Interaction.BuildingInteractionComponent>(FindObjectsInactive.Include);
-                for (int i = 0; i < all.Length; i++)
-                {
-                    var c = all[i];
-                    if (c == null || string.IsNullOrEmpty(c.BuildingType)) continue;
-                    if (!BeeKingdom.Buildings.Interaction.BuildingMappingTable.TryGetByBuildingType(c.BuildingType, out var mapped)) continue;
-                    if (!string.Equals(mapped.LegacyKey, buildingKey, StringComparison.Ordinal)) continue;
-                    Vector3 fallbackWpos = c.transform.position + Vector3.up * 0.7f;
-                    if (cam != null)
-                    {
-                        Vector3 sp = cam.WorldToScreenPoint(fallbackWpos);
-                        screenPos = new Vector2(sp.x, Screen.height - sp.y);
-                        return sp.z > 0;
-                    }
-                }
+                if (TryGetBuildingScreenPosition(buildingKey, cam, out screenPos)) return true;
             }
+            // M096-CL : Jeff ("la fleche devrait etre attachee au batiment de la tache a
+            // accomplir") - avant, un bouton "ui.button.upgrade"/research/training non visible
+            // (fenetre fermee, ou joueur ayant navigue ailleurs pendant que la vraie caserne
+            // maintenant pannable/zoomable est hors champ) retombait sur un point ecran FIXE
+            // (50%, 75%), qui semble "suivre la camera" puisqu'il ne bouge jamais avec le monde -
+            // exactement l'inverse de l'effet voulu. On tente d'abord d'ancrer sur le batiment
+            // reel concerne (buildingContext, deja porte par FtueStepDefinition.CompletionEventParam
+            // pour les etapes upgrade) via la meme resolution que "building.*" ci-dessus ; le
+            // point ecran fixe reste l'ultime repli si aucun batiment ne correspond (ex.:
+            // buildingContext vaut parfois un id de recherche/unite, pas une cle de batiment).
             if (targetId == FtueTutorialRegistry.TargetUpgradeButton)
             {
+                if (!string.IsNullOrEmpty(buildingContext) && TryGetBuildingScreenPosition(buildingContext, cam, out screenPos)) return true;
                 // Fallback for IMGUI upgrade button — bottom center, resolution independent
                 screenPos = new Vector2(Screen.width * 0.5f, Screen.height * 0.75f);
                 return true;
@@ -146,12 +143,35 @@ namespace BeeKingdom.Tutorial
             // GUILayout/OnGUI, not uGUI RectTransform, so there is no RectTransform to register.
             if (targetId == FtueTutorialRegistry.TargetResearchStartButton || targetId == FtueTutorialRegistry.TargetTrainingStartButton)
             {
+                if (!string.IsNullOrEmpty(buildingContext) && TryGetBuildingScreenPosition(buildingContext, cam, out screenPos)) return true;
                 screenPos = new Vector2(Screen.width * 0.5f, Screen.height * 0.75f);
                 return true;
             }
             if (targetId == FtueTutorialRegistry.TargetArmyMenu)
             {
                 screenPos = new Vector2(Screen.width * 0.5f, Screen.height * 0.92f);
+                return true;
+            }
+            return false;
+        }
+
+        // M096-CL : extrait du bloc "building.*" ci-dessus (inchange) pour etre reutilisable
+        // par les repli des cibles bouton (upgrade/research/training).
+        private static bool TryGetBuildingScreenPosition(string buildingKey, Camera cam, out Vector2 screenPos)
+        {
+            screenPos = default;
+            if (cam == null) return false;
+            var all = UnityEngine.Object.FindObjectsByType<BeeKingdom.Buildings.Interaction.BuildingInteractionComponent>(FindObjectsInactive.Include);
+            for (int i = 0; i < all.Length; i++)
+            {
+                var c = all[i];
+                if (c == null || string.IsNullOrEmpty(c.BuildingType)) continue;
+                if (!BeeKingdom.Buildings.Interaction.BuildingMappingTable.TryGetByBuildingType(c.BuildingType, out var mapped)) continue;
+                if (!string.Equals(mapped.LegacyKey, buildingKey, StringComparison.Ordinal)) continue;
+                Vector3 fallbackWpos = c.transform.position + Vector3.up * 0.7f;
+                Vector3 sp = cam.WorldToScreenPoint(fallbackWpos);
+                if (sp.z <= 0f) return false;
+                screenPos = new Vector2(sp.x, Screen.height - sp.y);
                 return true;
             }
             return false;

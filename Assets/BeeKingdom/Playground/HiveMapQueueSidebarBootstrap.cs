@@ -48,6 +48,26 @@ namespace BeeKingdom.Playground
             root.AddComponent<HiveMapQueueSidebarBootstrap>();
         }
 
+        public static bool ShouldRenderQueueSidebarForProof()
+        {
+            return HiveViewProductUiPresenter.HasEnteredHiveForExternalHost && !IsBlockedByOverlay();
+        }
+
+        private static bool IsBlockedByOverlay()
+        {
+            bool researchOpen = HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost;
+            return HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
+                || LivingHiveResearchRuntime.IsModalOpen || researchOpen
+                || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
+                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
+                || HiveViewProductUiPresenter.PlayerSummaryOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.PlayerProfileOverlayOpenForExternalHost
+                || HiveMapArmyBootstrap.ModalOpenForExternalHost;
+        }
+
         // M016E-CL freeze probe (temporary): once, catches the exact moment the queue sidebar
         // draws (and periodically refreshes researchController) while an official Research
         // session is configured, to rule in/out whether ResearchOverlayOpenForExternalHost is
@@ -58,15 +78,7 @@ namespace BeeKingdom.Playground
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
             bool researchOpen = HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost;
-            bool anyOverlayOpen = HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
-                || LivingHiveResearchRuntime.IsModalOpen || researchOpen
-                || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
-                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
-                || HiveMapArmyBootstrap.ModalOpenForExternalHost;
-            if (anyOverlayOpen)
+            if (IsBlockedByOverlay())
             {
                 loggedSidebarDrawWhileResearchConfiguredOnce = false;
                 return;
