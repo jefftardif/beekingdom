@@ -4549,6 +4549,43 @@ namespace BeeKingdom.Playground
             Vector2 a = WorldToScreen(from.WorldCoord);
             string marchLeaderChampionId = ResolveMarchLeaderChampionId();
 
+            // M080 — Sync visual state with server on scene reload
+            // If server has active flight but client visual state is Idle, sync to Collecting
+            if (collectionVisualState == CollectionVisualState.Idle)
+            {
+                WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+                if (model?.Active != null)
+                {
+                    double totalSeconds = (model.Active.EndsAtUtc - model.Active.StartedAtUtc).TotalSeconds;
+                    double elapsedSeconds = (DateTimeOffset.UtcNow - model.Active.StartedAtUtc).TotalSeconds;
+                    float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
+
+                    collectionVisualState = CollectionVisualState.Collecting;
+                    collectionVisualTimer = 0f;
+                    collectionVisualTargetNodeId = model.Active.NodeId;
+                    collectionVisualSample = ComputeMarchVisualSample(model.Active.CommittedTroops);
+                    collectionVisualChampionId = marchLeaderChampionId;
+
+                    // If flight already completed (elapsed >= total), skip to Returning immediately
+                    if (t >= 1f)
+                    {
+                        collectionVisualState = CollectionVisualState.Returning;
+                        collectionVisualTimer = 0f;
+                    }
+                }
+            }
+
+            // M080 — If in Collecting state but server flight is done, transition to Returning
+            if (collectionVisualState == CollectionVisualState.Collecting)
+            {
+                WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+                if (model?.Active == null || DateTimeOffset.UtcNow >= model.Active.EndsAtUtc)
+                {
+                    collectionVisualState = CollectionVisualState.Returning;
+                    collectionVisualTimer = 0f;
+                }
+            }
+
             switch (collectionVisualState)
             {
                 case CollectionVisualState.Outbound:
@@ -4595,6 +4632,15 @@ namespace BeeKingdom.Playground
         {
             WorldResourceNode resource = ResourceById(collectionVisualTargetNodeId);
             if (resource == null) { collectionVisualState = CollectionVisualState.Idle; return; }
+
+            // M080 — If server flight is already gone, go to Returning immediately
+            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+            if (model?.Active == null)
+            {
+                collectionVisualState = CollectionVisualState.Returning;
+                collectionVisualTimer = 0f;
+                return;
+            }
 
             collectionVisualTimer += Time.deltaTime;
 
