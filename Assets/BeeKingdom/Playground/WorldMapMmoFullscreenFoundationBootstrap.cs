@@ -89,6 +89,15 @@ namespace BeeKingdom.Playground
         private string bestiaryCombatText = "Aucun combat bestiaire";
         private CollectionFlightState collectionState = CollectionFlightState.Idle;
         private float collectionTimer;
+        // M078F-CL : duree temporairement allongee a la demande de Jeff (3.2+1.15+3.0=7.35s de
+        // base, trop court pour observer/tester la marche et sa persistance) - vol
+        // local/demo uniquement (ressources non officielles : nectar/eau/propolis/gelee royale),
+        // aucun impact sur la collecte officielle server-side (WorldResourceCollectionService).
+        // A REVERTIR apres validation - Jeff a aussi evoque, pour plus tard seulement ("eventuellement"),
+        // une duree proportionnelle au nombre de troupes envoyees : pas implemente ici.
+        private const float LocalCollectionFlyingDuration = 5f;
+        private const float LocalCollectionGatheringDuration = 1.5f;
+        private const float LocalCollectionReturningDuration = 3.5f;
         private float officialWorldResourceRefreshTimer;
         private float worldPresenceRefreshTimer;
         private float combatPatrolRefreshTimer;
@@ -3385,20 +3394,20 @@ namespace BeeKingdom.Playground
             if (collectionState == CollectionFlightState.Idle || collectionState == CollectionFlightState.Completed) return;
 
             collectionTimer += Time.deltaTime;
-            if (collectionState == CollectionFlightState.FlyingToResource && collectionTimer >= 3.2f)
+            if (collectionState == CollectionFlightState.FlyingToResource && collectionTimer >= LocalCollectionFlyingDuration)
             {
                 collectionState = CollectionFlightState.Collecting;
                 collectionTimer = 0f;
                 WorldResourceNode resource = SelectedResource();
                 status = "Collecte locale/demo en cours: " + (resource != null ? resource.Label : "ressource");
             }
-            else if (collectionState == CollectionFlightState.Collecting && collectionTimer >= 1.15f)
+            else if (collectionState == CollectionFlightState.Collecting && collectionTimer >= LocalCollectionGatheringDuration)
             {
                 collectionState = CollectionFlightState.Returning;
                 collectionTimer = 0f;
                 status = "Retour aerien vers la ruche - aucune route au sol";
             }
-            else if (collectionState == CollectionFlightState.Returning && collectionTimer >= 3.0f)
+            else if (collectionState == CollectionFlightState.Returning && collectionTimer >= LocalCollectionReturningDuration)
             {
                 CompleteSelectedResourceCollection();
             }
@@ -4435,9 +4444,38 @@ namespace BeeKingdom.Playground
             // L'arc de vol local/demo ne s'applique qu'aux ressources sans contrepartie serveur -
             // les ressources officielles ont desormais leur propre escouade reelle sur la carte
             // (DrawWorldResourceCollectionMarch), pour ne jamais superposer les deux visuels.
-            if (from != null && to != null && !IsOfficialResource(to))
+            // M078E-CL : cette condition ne verifiait jamais collectionState - simplement
+            // SELECTIONNER une ressource demo (sans cliquer "Collecter") affichait deja le
+            // panneau "<Ressource> / En vol" et la marche, comme si un vol etait en cours
+            // (rapporte par Jeff : "j'ai simplement clique sur le nectar sans cliquer sur
+            // collecte et on voit une marche et ce panneau"). Le renommage PREVIEW -> nom reel
+            // de la ressource rendait ce bug preexistant bien plus visible (un vrai nom au lieu
+            // d'un tag manifestement technique). DrawWorldResourceCollectionMarch (l'equivalent
+            // officiel juste en dessous) ne dessine deja que si model.Active != null - meme regle
+            // appliquee ici via collectionState != Idle.
+            if (from != null && to != null && !IsOfficialResource(to) && collectionState != CollectionFlightState.Idle)
             {
-                DrawFlightArc(from.WorldCoord, to.WorldCoord, collectionState, CurrentFlightArcProgress(), "PREVIEW", true);
+                // M078H-CL : le vol local/demo (nectar/eau/propolis/gelee royale) utilisait encore
+                // l'ancien DrawFlightArc (simples cercles + gros panneau texte "<Ressource> / En
+                // vol" flottant) - jamais mis a niveau vers les vraies abeilles/championne
+                // (DrawMarchFormation) comme Combat Patrol et la collecte officielle
+                // (DrawWorldResourceCollectionMarch juste en dessous). Rapporte par Jeff :
+                // "aucune abeille ou championne et il y a encore ce gros panneau EN VOL". Aucune
+                // composition de troupes reelle n'existe pour ce vol demo (jamais d'escouade
+                // engagee ici) - DrawMarchFormation retombe alors sur une seule abeille generique
+                // (DrawCombatMarchBee), la meme reserve de secours deja utilisee par Combat Patrol
+                // quand un echantillon est vide.
+                Vector2 demoA = WorldToScreen(from.WorldCoord);
+                Vector2 demoB = WorldToScreen(to.WorldCoord);
+                if (IsOnScreen(demoA, 420f) || IsOnScreen(demoB, 420f))
+                {
+                    Vector2 demoControl = (demoA + demoB) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(demoA, demoB) * 0.38f));
+                    float demoProgress = CurrentFlightArcProgress();
+                    Vector2 demoMarker = Bezier(demoA, demoControl, demoB, demoProgress);
+                    Vector2 demoTangent = Bezier(demoA, demoControl, demoB, Mathf.Min(1f, demoProgress + 0.02f)) - demoMarker;
+                    DrawStyledMarchPath(demoA, demoControl, demoB, demoProgress, CollectionMarchPalette);
+                    DrawMarchFormation(demoMarker, demoTangent, null, ResolveMarchLeaderChampionId());
+                }
             }
 
             DrawCombatPatrolMarch();
@@ -4451,6 +4489,14 @@ namespace BeeKingdom.Playground
         // combat (cible arbitraire, associee via pendingCombatPatrolLaunchTarget), un noeud de
         // ressource a un identifiant stable qu'on peut retrouver directement, pas besoin de
         // dictionnaire de correlation.
+        // M078G-CL : demande CEO - "nous l'avions fait avec OC" (retrouver les vraies abeilles/
+        // troupes en marche pour la collecte, pas seulement un cercle) + code couleur explicite :
+        // rouge = attaque (CombatMarchPalette, deja en place), jaune = collecte
+        // (CollectionMarchPalette ci-dessous), bleu = transfert de ressources/troupes aux allies
+        // (TransferMarchPalette, reserve comme RaidMarchPalette - aucun systeme de transfert
+        // n'existe encore, palette definie pour coherence future uniquement). Reutilise tel quel
+        // DrawStyledMarchPath/DrawMarchFormation/ComputeMarchVisualSample deja construits pour
+        // Combat Patrol, appliques ici a active.CommittedTroops (meme forme de donnees).
         private void DrawWorldResourceCollectionMarch()
         {
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
@@ -4463,7 +4509,7 @@ namespace BeeKingdom.Playground
             Vector2 b = WorldToScreen(to.WorldCoord);
             if (!IsOnScreen(a, 420f) && !IsOnScreen(b, 420f)) return;
 
-            DrawLine(a, b, new Color(0.30f, 0.85f, 0.55f, 0.85f), 3f);
+            Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
             double totalSeconds = (active.EndsAtUtc - active.StartedAtUtc).TotalSeconds;
             double elapsedSeconds = (DateTimeOffset.UtcNow - active.StartedAtUtc).TotalSeconds;
             float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
@@ -4474,9 +4520,12 @@ namespace BeeKingdom.Playground
             // (DrawResourceLifeIndicators, demande de Jeff, 2026-08-01) - ce marqueur ne
             // represente plus que la position physique de l'escouade en transit.
             float travelT = Mathf.Clamp01(t * 3f);
-            bool onSite = travelT >= 1f;
-            Vector2 marker = onSite ? b : Vector2.Lerp(a, b, travelT);
-            DrawCircle(marker, 8f, new Color(0.30f, 0.95f, 0.55f, 0.95f), 12);
+            Vector2 marker = Bezier(a, control, b, travelT);
+            Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, travelT + 0.02f)) - marker;
+
+            DrawStyledMarchPath(a, control, b, travelT, CollectionMarchPalette);
+            List<(string Family, int Count)> sample = ComputeMarchVisualSample(active.CommittedTroops);
+            DrawMarchFormation(marker, tangent, sample, ResolveMarchLeaderChampionId());
         }
 
         // Client-side-only correlation between an active encounter and the map coordinate the
@@ -4484,22 +4533,30 @@ namespace BeeKingdom.Playground
         // so this is a cosmetic best-effort association, never a source of truth. Populated when
         // a newly-appeared active encounter is first observed here; purged once the encounter is
         // gone (claimed/recalled).
-        private readonly Dictionary<Guid, Vector2> combatPatrolTargetWorldCoordByEncounterId = new Dictionary<Guid, Vector2>();
-        private Vector2? pendingCombatPatrolLaunchTarget;
+        // M078E-CL : ces champs etaient par INSTANCE - la World Map se charge en
+        // LoadSceneMode.Single (scene separee de la Ruche), donc chaque aller-retour
+        // Ruche->WorldMap detruit puis recree ce MonoBehaviour, effacant la correlation meme si
+        // l'encounter reste actif cote serveur : la marche disparaissait purement visuellement
+        // (rapporte par Jeff : "la marche disparait quand je retourne dans la ruche puis que je
+        // reviens sur la carte"). Statiques : survivent au rechargement de scene (pas un
+        // rechargement de domaine), tant que la session Play Mode continue - aucune donnee de
+        // combat/resolution n'est touchee, uniquement cette correlation visuelle cote client.
+        private static readonly Dictionary<Guid, Vector2> combatPatrolTargetWorldCoordByEncounterId = new Dictionary<Guid, Vector2>();
+        private static Vector2? pendingCombatPatrolLaunchTarget;
         // Tracks which encounters were drawn last frame so a disappearance (auto-claimed by
         // CombatPatrolPanelController.AutoClaimFinishedEncountersAsync) can be turned into a
         // visible return trip below, instead of the bee just vanishing at wherever it was.
-        private readonly HashSet<Guid> lastKnownCombatPatrolEncounterIds = new HashSet<Guid>();
-        private readonly Dictionary<Guid, CombatPatrolReturnTrip> combatPatrolReturnTrips = new Dictionary<Guid, CombatPatrolReturnTrip>();
+        private static readonly HashSet<Guid> lastKnownCombatPatrolEncounterIds = new HashSet<Guid>();
+        private static readonly Dictionary<Guid, CombatPatrolReturnTrip> combatPatrolReturnTrips = new Dictionary<Guid, CombatPatrolReturnTrip>();
         // Mission M021 (2026-08-26) : composition reelle engagee (CommittedTroops), conservee par
         // EncounterId meme apres la disparition de la rencontre des ActiveEncounters - necessaire
         // pour que la marche de retour connaisse la composition d'avant-combat une fois la
         // rencontre reclamee. Purgee en meme temps que combatPatrolTargetWorldCoordByEncounterId.
-        private readonly Dictionary<Guid, Dictionary<string, long>> combatPatrolCommittedTroopsByEncounterId = new Dictionary<Guid, Dictionary<string, long>>();
+        private static readonly Dictionary<Guid, Dictionary<string, long>> combatPatrolCommittedTroopsByEncounterId = new Dictionary<Guid, Dictionary<string, long>>();
         // Echantillon visuel (familie -> nombre de sprites a afficher) calcule une seule fois par
         // rencontre active tant que sa composition ne change pas - evite de refaire l'allocation
         // proportionnelle a chaque frame (mission M021, objectif performance).
-        private readonly Dictionary<Guid, List<(string Family, int Count)>> combatPatrolOutboundVisualSampleCache = new Dictionary<Guid, List<(string Family, int Count)>>();
+        private static readonly Dictionary<Guid, List<(string Family, int Count)>> combatPatrolOutboundVisualSampleCache = new Dictionary<Guid, List<(string Family, int Count)>>();
         // World-units-per-second the return march "flies" at - closer targets come home sooner,
         // farther ones take longer (demande de Jeff, 2026-08-25). Placeholder speed/bounds until a
         // real travel-time model (player level/researched upgrades) exists; see
@@ -4627,6 +4684,7 @@ namespace BeeKingdom.Playground
                     combatPatrolOutboundVisualSampleCache[encounter.EncounterId] = outboundSample;
                 }
                 DrawMarchFormation(marker, tangent, outboundSample, marchLeaderChampionId);
+                DrawAttackTargetPulse(b);
 
                 // Cliquer sur sa propre troupe en marche ouvre la fenetre de composition +
                 // rappel (demande de Jeff, 2026-08-26). DrawCombatPatrolMarch ne dessine QUE les
@@ -4710,6 +4768,25 @@ namespace BeeKingdom.Playground
             sparkColor: new Color(0.90f, 0.72f, 1f, 0.75f),
             emberColor: new Color(0.58f, 0.20f, 0.90f, 0.62f));
 
+        // M078G-CL : code couleur des marches demande par Jeff - jaune = collecte de ressources
+        // (DrawWorldResourceCollectionMarch, deja branchee). Meme rendu que CombatMarchPalette.
+        private static readonly MarchPalette CollectionMarchPalette = new MarchPalette(
+            halo: new Color(0.55f, 0.42f, 0.02f, 0.28f),
+            core: new Color(0.95f, 0.78f, 0.10f, 0.92f),
+            filament: new Color(1f, 0.92f, 0.45f, 0.55f),
+            sparkColor: new Color(1f, 0.95f, 0.55f, 0.75f),
+            emberColor: new Color(0.92f, 0.74f, 0.16f, 0.62f));
+
+        // M078G-CL : bleu = transfert de ressources/troupes aux allies, demande par Jeff. Reserve
+        // comme RaidMarchPalette ci-dessus - aucun systeme de transfert entre joueurs n'existe
+        // encore, palette definie pour coherence future uniquement, jamais utilisee aujourd'hui.
+        private static readonly MarchPalette TransferMarchPalette = new MarchPalette(
+            halo: new Color(0.04f, 0.30f, 0.55f, 0.28f),
+            core: new Color(0.14f, 0.62f, 0.95f, 0.92f),
+            filament: new Color(0.55f, 0.86f, 1f, 0.55f),
+            sparkColor: new Color(0.65f, 0.90f, 1f, 0.75f),
+            emberColor: new Color(0.16f, 0.58f, 0.92f, 0.62f));
+
         private void DrawStyledMarchPath(Vector2 a, Vector2 control, Vector2 b, float marchProgress, MarchPalette palette)
         {
             float pulse = 0.5f + 0.5f * Mathf.Sin(animatedTime * 2.2f);
@@ -4737,6 +4814,30 @@ namespace BeeKingdom.Playground
                     : new Color(palette.EmberColor.r, palette.EmberColor.g, palette.EmberColor.b, palette.EmberColor.a * flicker);
                 DrawCircle(p, spark ? 3.2f : 4.6f, emberColor, 10);
             }
+        }
+
+        // Restauration M079 — cible attaquée : cercles concentriques pulsés (historique M021/M023,
+        // jamais effectif en runtime car aucun call n'était branché). Réutilise le même style que
+        // les anneaux de rareté (Pulse + DrawCircle) mais centré sur la cible d'attaque.
+        private void DrawAttackTargetPulse(Vector2 targetScreenPos)
+        {
+            float basePulse = Time.time * 1.8f;
+            // 3 anneaux qui respirent en déphasage — même technique que DrawChampionMarchUnit halo
+            for (int i = 0; i < 3; i++)
+            {
+                float phase = basePulse + i * 1.1f;
+                float pulse = 0.35f + 0.35f * Mathf.Sin(phase);
+                float radius = 18f + i * 14f + Mathf.Sin(phase * 0.7f) * 4f;
+                Color c = new Color(1f, 0.18f, 0.14f, 0.22f + pulse * 0.28f);
+                // anneau creux : on dessine un cercle puis on efface le centre en overlayant le fond
+                // Pour rester IMGUI simple, on dessine un cercle plein semi-transparent + un cercle intérieur opaque masqué
+                DrawCircle(targetScreenPos, radius, c, 24);
+                // second cercle intérieur plus petit pour effet d'anneau
+                Color inner = new Color(1f, 0.18f, 0.14f, 0.12f + pulse * 0.15f);
+                DrawCircle(targetScreenPos, radius * 0.72f, inner, 20);
+            }
+            // coeur rouge fixe
+            DrawCircle(targetScreenPos, 6f, new Color(1f, 0.12f, 0.08f, 0.95f), 14);
         }
 
         // Mission M021 (2026-08-26) : composition proportionnelle + formation + champion meneur.
@@ -5562,9 +5663,9 @@ namespace BeeKingdom.Playground
 
         private float CurrentGuidedForagingProgress01()
         {
-            if (collectionState == CollectionFlightState.FlyingToResource) return Mathf.Clamp01(collectionTimer / 3.2f) * 0.42f;
-            if (collectionState == CollectionFlightState.Collecting) return 0.42f + Mathf.Clamp01(collectionTimer / 1.15f) * 0.18f;
-            if (collectionState == CollectionFlightState.Returning) return 0.60f + Mathf.Clamp01(collectionTimer / 3.0f) * 0.40f;
+            if (collectionState == CollectionFlightState.FlyingToResource) return Mathf.Clamp01(collectionTimer / LocalCollectionFlyingDuration) * 0.42f;
+            if (collectionState == CollectionFlightState.Collecting) return 0.42f + Mathf.Clamp01(collectionTimer / LocalCollectionGatheringDuration) * 0.18f;
+            if (collectionState == CollectionFlightState.Returning) return 0.60f + Mathf.Clamp01(collectionTimer / LocalCollectionReturningDuration) * 0.40f;
             if (collectionState == CollectionFlightState.Completed) return 1f;
             return 0f;
         }
@@ -6636,9 +6737,9 @@ namespace BeeKingdom.Playground
 
         private float CurrentFlightArcProgress()
         {
-            if (collectionState == CollectionFlightState.FlyingToResource) return Mathf.Clamp01(collectionTimer / 3.2f);
+            if (collectionState == CollectionFlightState.FlyingToResource) return Mathf.Clamp01(collectionTimer / LocalCollectionFlyingDuration);
             if (collectionState == CollectionFlightState.Collecting) return 1f;
-            if (collectionState == CollectionFlightState.Returning) return 1f - Mathf.Clamp01(collectionTimer / 3.0f);
+            if (collectionState == CollectionFlightState.Returning) return 1f - Mathf.Clamp01(collectionTimer / LocalCollectionReturningDuration);
             return Mathf.Repeat(animatedTime * 0.18f, 1f);
         }
 
