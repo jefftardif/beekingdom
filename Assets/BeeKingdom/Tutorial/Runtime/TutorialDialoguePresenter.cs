@@ -35,7 +35,7 @@ namespace BeeKingdom.Tutorial
         // championId+stepId (unlike ChampionVoiceBarkController's generic barks, this text is
         // fixed and specific - "any clip in the category" would say the wrong words). Convention
         // matches what Jeff was given: Resources/PremiumBeeReference/ChampionVoices/{championId}/
-        // ftue/{championId}_{stepId}.mp3. Missing clips (not recorded yet) stay silent - the FTUE
+        // {language}/{championId}_{stepId}.mp3. Missing clips (not recorded yet) stay silent - the FTUE
         // must never depend on voice-over to function.
         private const int DialogueGuiDepth = -32000;
         private const string VoiceResourceRoot = "PremiumBeeReference/ChampionVoices";
@@ -125,13 +125,14 @@ namespace BeeKingdom.Tutorial
         private void PlayVoiceIfAvailable(string championId, string stepId)
         {
             if (string.IsNullOrEmpty(championId) || string.IsNullOrEmpty(stepId)) return;
-            string key = championId.ToLowerInvariant() + "|" + stepId;
+            string language = BeeKingdom.Playground.ChampionVoiceBarkController.AudioLanguage;
+            string key = championId.ToLowerInvariant() + "|" + language + "|" + stepId;
             if (key == _lastVoicedKey) return; // avoid restarting the same line if Show() re-fires for the still-active step
             _lastVoicedKey = key;
 
             if (!VoiceClipCache.TryGetValue(key, out AudioClip clip))
             {
-                string resourcePath = VoiceResourceRoot + "/" + championId.ToLowerInvariant() + "/ftue/" + championId.ToLowerInvariant() + "_" + stepId;
+                string resourcePath = VoiceResourceRoot + "/" + championId.ToLowerInvariant() + "/" + language + "/" + championId.ToLowerInvariant() + "_" + stepId;
                 clip = Resources.Load<AudioClip>(resourcePath);
                 VoiceClipCache[key] = clip;
             }

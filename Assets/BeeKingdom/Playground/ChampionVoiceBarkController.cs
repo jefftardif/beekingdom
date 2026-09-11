@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BeeKingdom.Audio;
+using BeeKingdom.Localization;
 using UnityEngine;
 
 namespace BeeKingdom.Playground
@@ -15,9 +16,9 @@ namespace BeeKingdom.Playground
     // construction - en ont une large).
     //
     // Architecture prete pour des centaines de fichiers audio sans toucher au code : chaque clip vit
-    // sous Resources/PremiumBeeReference/ChampionVoices/{championId}/{categorie}/*.mp3 (meme
-    // convention que les portraits deja charges via Resources.Load). Ajouter un fichier dans un
-    // dossier existant, ou creer un nouveau dossier de categorie, suffit - aucune recompilation requise
+    // sous Resources/PremiumBeeReference/ChampionVoices/{championId}/{language}/{voiceKey}.mp3.
+    // La categorie est le prefixe du nom (select1, spawn2, etc.). Ajouter un fichier dans le
+    // dossier de langue suffit - aucune recompilation requise
     // au-dela d'un rafraichissement d'assets.
     public static class ChampionVoiceBarkController
     {
@@ -134,12 +135,8 @@ namespace BeeKingdom.Playground
 
         private static AudioClip PickClip(string beeId, string category)
         {
-            string cacheKey = beeId + "|" + category;
-            if (!clipCache.TryGetValue(cacheKey, out AudioClip[] clips))
-            {
-                clips = Resources.LoadAll<AudioClip>(ResourceRoot + "/" + beeId + "/" + category);
-                clipCache[cacheKey] = clips;
-            }
+            string cacheKey = beeId + "|" + AudioLanguage + "|" + category;
+            AudioClip[] clips = LoadCategoryClips(beeId, category);
             if (clips == null || clips.Length == 0) return null;
             if (clips.Length == 1) return clips[0];
 
@@ -148,6 +145,21 @@ namespace BeeKingdom.Playground
             do { index = UnityEngine.Random.Range(0, clips.Length); } while (index == lastIndex);
             lastClipIndexByKey[cacheKey] = index;
             return clips[index];
+        }
+
+        public static string AudioLanguage => BeeLocalization.CurrentLocale.StartsWith("en", StringComparison.OrdinalIgnoreCase) ? "en" : "fr";
+
+        public static AudioClip[] LoadCategoryClips(string beeId, string category)
+        {
+            string cacheKey = beeId + "|" + AudioLanguage + "|" + category;
+            if (!clipCache.TryGetValue(cacheKey, out AudioClip[] clips))
+            {
+                AudioClip[] languageClips = Resources.LoadAll<AudioClip>(ResourceRoot + "/" + beeId.ToLowerInvariant() + "/" + AudioLanguage);
+                clips = Array.FindAll(languageClips, clip => clip.name.StartsWith(category, StringComparison.OrdinalIgnoreCase)
+                    && (clip.name.Length == category.Length || char.IsDigit(clip.name[category.Length])));
+                clipCache[cacheKey] = clips;
+            }
+            return clips;
         }
     }
 }

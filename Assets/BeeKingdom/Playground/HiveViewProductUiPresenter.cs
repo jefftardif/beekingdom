@@ -26089,8 +26089,8 @@ if (leftNavigationTexture == null)
                 var lastBarkTimeByEvent = barkType.GetField("lastBarkTimeByEvent", staticFlags).GetValue(null) as System.Collections.Generic.IDictionary<string, float>;
                 float lastBarkTime = lastBarkTimeByEvent != null && lastBarkTimeByEvent.TryGetValue(eventKey, out float t) ? t : -1f;
 
-                AudioClip[] selectClips = Resources.LoadAll<AudioClip>("PremiumBeeReference/ChampionVoices/" + beeId + "/select");
-                AudioClip[] spawnClips = Resources.LoadAll<AudioClip>("PremiumBeeReference/ChampionVoices/" + beeId + "/spawn");
+                AudioClip[] selectClips = ChampionVoiceBarkController.LoadCategoryClips(beeId, "select");
+                AudioClip[] spawnClips = ChampionVoiceBarkController.LoadCategoryClips(beeId, "spawn");
 
                 BeeKingdom.Audio.AudioManager audioManager = BeeKingdom.Audio.AudioManager.Instance;
                 string audioManagerState;
