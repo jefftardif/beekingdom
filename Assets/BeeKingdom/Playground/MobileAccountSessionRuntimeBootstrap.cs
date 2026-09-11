@@ -61,9 +61,12 @@ namespace BeeKingdom.Playground
         {
             if (!scene.IsValid() || !scene.isLoaded) return false;
             if (scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal)) return true;
+            // M080 — Also match WorldMap scene so collection controller gets configured
+            if (scene.name.StartsWith("WorldMap", StringComparison.Ordinal)) return true;
             foreach (GameObject root in scene.GetRootGameObjects())
             {
                 if (root != null && root.name != null && root.name.StartsWith("Environment2D5D", StringComparison.Ordinal)) return true;
+                if (root != null && root.name != null && root.name.StartsWith("WorldMap", StringComparison.Ordinal)) return true;
             }
             return false;
         }
