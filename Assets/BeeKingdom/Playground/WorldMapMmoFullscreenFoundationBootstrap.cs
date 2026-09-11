@@ -76,7 +76,9 @@ namespace BeeKingdom.Playground
     private static bool IsEnvironmentScene(Scene scene)
     {
         if (!scene.IsValid() || !scene.isLoaded) return false;
-        return scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal);
+        if (scene.name.StartsWith("Environment2D5D", StringComparison.Ordinal)) return true;
+        if (scene.name.StartsWith("WorldMap", StringComparison.Ordinal)) return true;
+        return false;
     }
 
     public static void InitializeForScene(Scene scene)

@@ -38814,27 +38814,7 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
             ChampionVoiceBarkController.BarkForCollectionLaunch(localPreviewAssignedChampionBeeIds);
         }
 
-        // Escouade reellement engagee (demande de Jeff, 2026-08-01) : tant qu'aucun composeur
-        // interactif dedie n'existe pour ce vol (contrairement a Combat Patrol), une petite
-        // escorte par defaut est choisie automatiquement parmi les troupes disponibles - jamais
-        // zero, jamais plus que necessaire pour rendre le vol reel. Prefere les gardiennes, puis
-        // voltigeuses, puis lanceuses. L'architecture (brouillon, disponibilite, ajustement)
-        // reste identique a Combat Patrol et pourra recevoir un vrai composeur plus tard sans
-        // changement de forme.
-        private const int DefaultWorldResourceEscortSize = 3;
-        private static void ApplyDefaultWorldResourceCollectionEscort()
-        {
-            WorldResourceCollectionScreenModel model = OfficialWorldResourceCollectionModel();
-            if (model == null || model.DraftTotal > 0) return;
-            foreach (string family in new[] { "guardians", "wingrunners", "darters" })
-            {
-                long available = model.AvailableRoster.GetValueOrDefault(family);
-                if (available <= 0) continue;
-                worldResourceCollectionController.AdjustDraft(family, (int)Math.Min(DefaultWorldResourceEscortSize, available));
-                return;
-            }
-        }
-
+        // M080 — Auto-escort removed; troop selection now handled by composition panel.
         internal static void ClaimOfficialWorldResourceCollectionForWorldMap()
         {
             if (!OfficialWorldResourceCollectionConfigured()) return;
