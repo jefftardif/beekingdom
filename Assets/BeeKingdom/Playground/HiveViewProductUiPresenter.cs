@@ -23282,6 +23282,22 @@ public static string[] ConnectionTruthForProof()
             }
         }
 
+        // M078D-CL : le compteur et le blocage de lancement de Patrouille de combat lisaient
+        // toujours localPreviewAssignedChampionBeeIds (purement local, jamais synchronise) meme
+        // en session officielle relle - rapporte par Jeff : "malgre que j'assigne une
+        // championne, c'est toujours inscrit 0/1". IsChampionBeeAssigned/ToggleAssignChampionBee
+        // juste en dessous choisissaient deja correctement entre les deux listes ; ce meme choix
+        // manquait a DrawCombatPatrolPanel. Lecture seule, aucune logique de combat touchee.
+        private static IReadOnlyList<string> CurrentAssignedChampionBeeIds()
+        {
+            if (OfficialChampionBeeProgressionConfigured())
+            {
+                EnsureOfficialChampionBeeAndTroopTierStateLoaded();
+                if (officialAssignedChampionBeeIds != null) return officialAssignedChampionBeeIds;
+            }
+            return localPreviewAssignedChampionBeeIds;
+        }
+
         private static bool IsChampionBeeAssigned(string beeId)
         {
             if (OfficialChampionBeeProgressionConfigured())
@@ -36788,7 +36804,29 @@ if (leftNavigationTexture == null)
 				Event.current.Use();
 				return;
 			}
-			GUIStyle fieldStyle = new GUIStyle(smallStyle) { fontSize = compact ? 13 : 15, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.74f, 1f) } };
+			// M096-CL : Jeff ("quand j'ecris un message, on ne voit pas, la couleur de la police
+			// est trop pale et le texte est coupe en haut et en bas") - fieldStyle heritait de
+			// smallStyle (wordWrap=true, padding du skin par defaut), pense pour des labels
+			// multi-lignes, jamais pour un GUI.TextField mono-ligne : le wrap et le padding
+			// hérités grignotaient la hauteur reelle du texte dans le rect fixe du champ. Reparti
+			// d'un GUIStyle neuf, sans heritage, avec un clipping/overflow et un padding explicites
+			// pour que le texte tienne exactement dans fieldInner quelle que soit la resolution.
+			GUIStyle fieldStyle = new GUIStyle(GUI.skin.textField)
+			{
+				fontSize = compact ? 13 : 15,
+				alignment = TextAnchor.MiddleLeft,
+				wordWrap = false,
+				richText = false,
+				clipping = TextClipping.Overflow,
+				padding = new RectOffset(0, 0, 0, 0),
+				border = new RectOffset(0, 0, 0, 0),
+				margin = new RectOffset(0, 0, 0, 0),
+				contentOffset = Vector2.zero,
+				normal = { textColor = new Color(1f, 0.96f, 0.86f, 1f), background = null },
+				focused = { textColor = new Color(1f, 0.96f, 0.86f, 1f), background = null },
+				hover = { textColor = new Color(1f, 0.96f, 0.86f, 1f), background = null },
+				active = { textColor = new Color(1f, 0.96f, 0.86f, 1f), background = null }
+			};
 			float emojiW = compact ? 42f : 40f;
 			float sendW = compact ? 78f : 86f;
 			Rect fieldRect = new Rect(rect.x + 8f, rect.y + 6f, rect.width - sendW - emojiW - 24f, rect.height - 12f);
@@ -37528,15 +37566,31 @@ if (leftNavigationTexture == null)
 			return style.CalcHeight(chatCalcContentCache, 1000f);
 		}
 
+		// M096-CL : Jeff ("je trouve les beemojis beaucoup trop petits") - un emoji personnalise
+		// doit se lire comme un autocollant, pas comme un glyphe de la taille du texte. La ligne
+		// qui le contient s'agrandit en consequence (au lieu d'un lineHeight fixe pour toutes les
+		// lignes) pour eviter tout chevauchement avec la ligne du dessus/dessous.
+		private static float ChatLineHeightFor(List<ChatTextToken> line, float textLineHeight)
+		{
+			float h = textLineHeight;
+			for (int i = 0; i < line.Count; i++)
+			{
+				if (line[i].Image != null && line[i].Width > h) h = line[i].Width;
+			}
+			return h;
+		}
+
 		private static float ChatBubbleTextHeight(string text, float width, bool compact)
 		{
 			GUIStyle style = ChatBubbleTextStyle(compact);
 			float lineHeight = ChatTextLineHeight(style);
-			float emojiSize = Mathf.Max(1f, lineHeight - 2f);
+			float emojiSize = Mathf.Max(1f, lineHeight * 1.7f);
 			float spaceWidth = style.CalcSize(new GUIContent(" ")).x;
 			List<ChatTextToken> tokens = ChatBuildTextTokens(text, style, emojiSize);
 			List<List<ChatTextToken>> lines = ChatWrapTextTokens(tokens, Mathf.Max(1f, width), spaceWidth);
-			return Mathf.Max(lineHeight, lines.Count * lineHeight);
+			float total = 0f;
+			for (int li = 0; li < lines.Count; li++) total += ChatLineHeightFor(lines[li], lineHeight);
+			return Mathf.Max(lineHeight, total);
 		}
 
 		// Dessine le meme resultat que ChatBubbleTextHeight a mesure - toute modification de l'un
@@ -37545,7 +37599,7 @@ if (leftNavigationTexture == null)
 		{
 			GUIStyle style = ChatBubbleTextStyle(compact);
 			float lineHeight = ChatTextLineHeight(style);
-			float emojiSize = Mathf.Max(1f, lineHeight - 2f);
+			float emojiSize = Mathf.Max(1f, lineHeight * 1.7f);
 			float spaceWidth = style.CalcSize(new GUIContent(" ")).x;
 			List<ChatTextToken> tokens = ChatBuildTextTokens(text, style, emojiSize);
 			List<List<ChatTextToken>> lines = ChatWrapTextTokens(tokens, Mathf.Max(1f, rect.width), spaceWidth);
@@ -37553,17 +37607,18 @@ if (leftNavigationTexture == null)
 			for (int li = 0; li < lines.Count; li++)
 			{
 				List<ChatTextToken> line = lines[li];
+				float rowH = ChatLineHeightFor(line, lineHeight);
 				float x = rect.x;
 				for (int ti = 0; ti < line.Count; ti++)
 				{
 					ChatTextToken token = line[ti];
 					if (token.Image != null)
-						GUI.DrawTexture(new Rect(x, y + (lineHeight - emojiSize) * 0.5f, emojiSize, emojiSize), token.Image, ScaleMode.ScaleToFit, true);
+						GUI.DrawTexture(new Rect(x, y + (rowH - emojiSize) * 0.5f, emojiSize, emojiSize), token.Image, ScaleMode.ScaleToFit, true);
 					else
-						GUI.Label(new Rect(x, y, token.Width, lineHeight), token.Text, style);
+						GUI.Label(new Rect(x, y + (rowH - lineHeight) * 0.5f, token.Width, lineHeight), token.Text, style);
 					x += token.Width + spaceWidth;
 				}
-				y += lineHeight;
+				y += rowH;
 			}
 		}
 
@@ -38746,6 +38801,11 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
         internal static WorldResourceCollectionScreenModel OfficialWorldResourceCollectionModelForWorldMap() =>
             OfficialWorldResourceCollectionConfigured() ? OfficialWorldResourceCollectionModel() : null;
 
+        // M079D — garde d'envoi reelle (remplace le delai wall-clock) : vrai si une mutation
+        // (launch/claim/recall/refresh) est en vol sur le controleur officiel.
+        internal static bool IsOfficialWorldResourceCollectionBusyForWorldMap() =>
+            OfficialWorldResourceCollectionConfigured() && worldResourceCollectionController.IsBusy;
+
         internal static void LaunchOfficialWorldResourceCollectionForWorldMap(string nodeId)
         {
             if (!OfficialWorldResourceCollectionConfigured() || !IsOfficialWorldResourceNode(nodeId)) return;
@@ -39636,7 +39696,7 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
             y += 24f;
 
             if (DrawPreviewActionButton(new Rect(panel.x + 12f, y, panel.width - 24f, 28f),
-                BeeLocalization.Text("champion_bees.entry_button", "Abeilles championnes") + " (" + localPreviewAssignedChampionBeeIds.Count + "/" + CurrentMaxAssignedChampionBees() + ")", true, true))
+                BeeLocalization.Text("champion_bees.entry_button", "Abeilles championnes") + " (" + CurrentAssignedChampionBeeIds().Count + "/" + CurrentMaxAssignedChampionBees() + ")", true, true))
             {
                 championBeesPanelOpen = true;
                 championBeesPanelAnimationStartedAt = NowForUi();
@@ -39665,7 +39725,7 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
             }
 
             bool hasSquadForChampion = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model?.HasReservation ?? false;
-            bool championRequirementMet = model.DraftTotal <= 0 || localPreviewAssignedChampionBeeIds.Count > 0 || hasSquadForChampion;
+            bool championRequirementMet = model.DraftTotal <= 0 || CurrentAssignedChampionBeeIds().Count > 0 || hasSquadForChampion;
             if (!championRequirementMet)
             {
                 GUI.Label(
@@ -42113,20 +42173,39 @@ public static void ResetMissionsStateForProof()
             DrawPremiumPanel(iconWell, new Color(0.018f, 0.018f, 0.015f, 0.68f), new Color(accent.r, accent.g, accent.b, 0.46f));
             DrawGameIcon(new Rect(iconWell.x + 4f, iconWell.y + 4f, 24f, 24f), icon, Color.white);
 
+            // M096-CL : Jeff ("les files d'attente aussi le texte est coupe et l'icone est
+            // illisible") - la carte (116x58, sous-rects fixes de 13-16px) a ete dessinee pour
+            // des polices non mises a l'echelle, mais l'etat/le temps utilisaient
+            // tinyLabelStyle/centeredTinyLabelStyle, qui eux SONT multiplies par
+            // LandscapeUiScale() (jusqu'a 1.30x en 1920x1080) - le texte devenait alors plus
+            // grand que son sous-rect fixe et debordait par-dessus l'icone. Meme logique que le
+            // libelle juste au-dessus (deja en taille fixe, non mise a l'echelle) : des styles
+            // locaux dedies a cette mini-carte, jamais mis a l'echelle, quelle que soit la
+            // resolution.
             GUIStyle timerLabelStyle = new GUIStyle(smallStyle)
             {
-                fontSize = label.Length > 10 ? 9 : label.Length > 6 ? 10 : smallStyle.fontSize,
+                fontSize = label.Length > 10 ? 9 : label.Length > 6 ? 10 : 11,
                 wordWrap = false,
                 clipping = TextClipping.Clip
             };
+            GUIStyle timerStateStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false,
+                clipping = TextClipping.Clip,
+                normal = { textColor = tinyLabelStyle.normal.textColor }
+            };
+            GUIStyle timerBadgeStyle = new GUIStyle(timerStateStyle) { alignment = TextAnchor.MiddleCenter };
             GUI.Label(new Rect(rect.x + 44f, rect.y + 7f, rect.width - 50f, 15f), label, timerLabelStyle);
-            GUI.Label(new Rect(rect.x + 44f, rect.y + 22f, rect.width - 50f, 13f), state, tinyLabelStyle);
+            GUI.Label(new Rect(rect.x + 44f, rect.y + 22f, rect.width - 50f, 13f), state, timerStateStyle);
 
             Rect timeBadge = new Rect(rect.x + 44f, rect.y + 36f, rect.width - 52f, 16f);
             GUI.color = new Color(0f, 0f, 0f, 0.24f);
             GUI.DrawTexture(timeBadge, Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
             GUI.color = Color.white;
-            GUI.Label(timeBadge, time, centeredTinyLabelStyle);
+            GUI.Label(timeBadge, time, timerBadgeStyle);
 
             DrawProgressBar(new Rect(rect.x + 8f, rect.yMax - 5f, rect.width - 16f, 4f), progress);
             GUI.color = new Color(accent.r, accent.g, accent.b, 0.40f);

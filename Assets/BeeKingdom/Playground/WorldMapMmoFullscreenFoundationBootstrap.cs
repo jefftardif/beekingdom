@@ -4497,36 +4497,110 @@ namespace BeeKingdom.Playground
         // n'existe encore, palette definie pour coherence future uniquement). Reutilise tel quel
         // DrawStyledMarchPath/DrawMarchFormation/ComputeMarchVisualSample deja construits pour
         // Combat Patrol, appliques ici a active.CommittedTroops (meme forme de donnees).
+        // M079D — retour collecte calque sur l'attaque (CombatPatrolReturnTrip) : quand le vol
+        // officiel disparait (claim/recall), la formation rentre visiblement au lieu de s'evaporer
+        // sur place. Un seul vol officiel a la fois cote serveur, donc un seul slot suffit.
+        private readonly struct WorldResourceCollectionReturnTrip
+        {
+            public readonly float StartedAtUnscaledTime;
+            public readonly float Duration;
+            public readonly Vector2 FromWorldCoord;
+            public readonly List<(string Family, int Count)> VisualSample;
+            public readonly string LeaderChampionId;
+            public WorldResourceCollectionReturnTrip(float startedAtUnscaledTime, float duration, Vector2 fromWorldCoord, List<(string Family, int Count)> visualSample, string leaderChampionId)
+            {
+                StartedAtUnscaledTime = startedAtUnscaledTime;
+                Duration = duration;
+                FromWorldCoord = fromWorldCoord;
+                VisualSample = visualSample;
+                LeaderChampionId = leaderChampionId;
+            }
+        }
+        private static WorldResourceCollectionReturnTrip? collectionReturnTrip;
+        private static Guid? lastKnownCollectionFlightId;
+        private static string lastKnownCollectionNodeId;
+        private static List<(string Family, int Count)> lastKnownCollectionSample;
+        private static string lastKnownCollectionChampionId;
+        private static float lastSeenCollectionActiveUnscaledTime = -100f;
+
         private void DrawWorldResourceCollectionMarch()
         {
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             RemoteWorldResourceActiveFlight active = model?.Active;
-            if (active == null) return;
             WorldHiveNode from = SelectedHive();
-            WorldResourceNode to = ResourceById(active.NodeId);
-            if (from == null || to == null) return;
+            if (from == null) return;
             Vector2 a = WorldToScreen(from.WorldCoord);
-            Vector2 b = WorldToScreen(to.WorldCoord);
-            if (!IsOnScreen(a, 420f) && !IsOnScreen(b, 420f)) return;
+            string marchLeaderChampionId = ResolveMarchLeaderChampionId();
 
-            Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
-            double totalSeconds = (active.EndsAtUtc - active.StartedAtUtc).TotalSeconds;
-            double elapsedSeconds = (DateTimeOffset.UtcNow - active.StartedAtUtc).TotalSeconds;
-            float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
-            // L'escouade parcourt le premier tiers du vol pour rejoindre le noeud, puis reste
-            // physiquement sur place jusqu'a la fin (demande explicite de Jeff : "rester
-            // physiquement sur place pendant toute la duree de la collecte"). L'etat "occupee"
-            // + le temps restant sont desormais racontes directement par la ressource elle-meme
-            // (DrawResourceLifeIndicators, demande de Jeff, 2026-08-01) - ce marqueur ne
-            // represente plus que la position physique de l'escouade en transit.
-            float travelT = Mathf.Clamp01(t * 3f);
-            Vector2 marker = Bezier(a, control, b, travelT);
-            Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, travelT + 0.02f)) - marker;
+            if (active != null)
+            {
+                WorldResourceNode to = ResourceById(active.NodeId);
+                if (to == null) return;
+                // Mission suivie : preuve "commande consommee / mission active" (remplace la garde 3s).
+                lastKnownCollectionFlightId = active.FlightId;
+                lastKnownCollectionNodeId = active.NodeId;
+                lastKnownCollectionSample = ComputeMarchVisualSample(active.CommittedTroops);
+                lastKnownCollectionChampionId = marchLeaderChampionId;
+                lastSeenCollectionActiveUnscaledTime = Time.unscaledTime;
+                // Un retour ne doit jamais coexister avec un aller reel (course refresh) : on le purge.
+                collectionReturnTrip = null;
 
-            DrawStyledMarchPath(a, control, b, travelT, CollectionMarchPalette);
-            List<(string Family, int Count)> sample = ComputeMarchVisualSample(active.CommittedTroops);
-            DrawMarchFormation(marker, tangent, sample, ResolveMarchLeaderChampionId());
-            DrawCollectionTargetPulse(b);
+                Vector2 b = WorldToScreen(to.WorldCoord);
+                Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
+                double totalSeconds = (active.EndsAtUtc - active.StartedAtUtc).TotalSeconds;
+                double elapsedSeconds = (DateTimeOffset.UtcNow - active.StartedAtUtc).TotalSeconds;
+                float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
+                // L'escouade parcourt le premier tiers du vol pour rejoindre le noeud, puis reste
+                // physiquement sur place jusqu'a la fin (demande explicite de Jeff : "rester
+                // physiquement sur place pendant toute la duree de la collecte"). L'etat "occupee"
+                // + le temps restant sont desormais racontes directement par la ressource elle-meme
+                // (DrawResourceLifeIndicators, demande de Jeff, 2026-08-01) - ce marqueur ne
+                // represente plus que la position physique de l'escouade en transit.
+                float travelT = Mathf.Clamp01(t * 3f);
+                Vector2 marker = Bezier(a, control, b, travelT);
+                Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, travelT + 0.02f)) - marker;
+
+                if (!MarchVisibleOnScreen(a, b, marker)) return;
+                DrawStyledMarchPath(a, control, b, travelT, CollectionMarchPalette);
+                DrawMarchFormation(marker, tangent, lastKnownCollectionSample, marchLeaderChampionId);
+                DrawCollectionTargetPulse(b);
+                return;
+            }
+
+            // Vol disparu (claim/recall) : on fait rentrer la derniere escouade connue, une seule fois.
+            // Delai de confirmation > intervalle de polling (3s) pour ne pas confondre une Refresh
+            // en retard (ex. retour de scene, modele Loading) avec une vraie fin de vol.
+            bool modelRefreshed = model != null
+                && model.State != WorldResourceCollectionScreenState.Loading
+                && model.State != WorldResourceCollectionScreenState.NotConfigured;
+            if (lastKnownCollectionFlightId.HasValue && lastKnownCollectionNodeId != null && collectionReturnTrip == null
+                && modelRefreshed && Time.unscaledTime - lastSeenCollectionActiveUnscaledTime > 4f)
+            {
+                WorldResourceNode lastNode = ResourceById(lastKnownCollectionNodeId);
+                if (lastNode != null)
+                {
+                    float distance = Vector2.Distance(from.WorldCoord, lastNode.WorldCoord);
+                    float duration = Mathf.Clamp(distance / CombatPatrolReturnTripWorldUnitsPerSecond, CombatPatrolReturnTripMinDuration, CombatPatrolReturnTripMaxDuration);
+                    collectionReturnTrip = new WorldResourceCollectionReturnTrip(Time.unscaledTime, duration, lastNode.WorldCoord, lastKnownCollectionSample, lastKnownCollectionChampionId);
+                }
+                lastKnownCollectionFlightId = null;
+                lastKnownCollectionNodeId = null;
+                lastKnownCollectionSample = null;
+                lastKnownCollectionChampionId = null;
+            }
+
+            WorldResourceCollectionReturnTrip? trip = collectionReturnTrip;
+            if (trip == null) return;
+            float returnT = Mathf.Clamp01((Time.unscaledTime - trip.Value.StartedAtUnscaledTime) / trip.Value.Duration);
+            if (returnT >= 1f) { collectionReturnTrip = null; return; }
+            Vector2 rb = WorldToScreen(trip.Value.FromWorldCoord);
+            Vector2 rcontrol = (a + rb) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, rb) * 0.38f));
+            float marchProgress = 1f - returnT; // retour noeud (1) -> ruche (0), comme l'attaque
+            Vector2 rmarker = Bezier(a, rcontrol, rb, marchProgress);
+            Vector2 rtangent = rmarker - Bezier(a, rcontrol, rb, Mathf.Min(1f, marchProgress + 0.02f));
+            if (!MarchVisibleOnScreen(a, rb, rmarker)) return;
+            DrawStyledMarchPath(a, rcontrol, rb, marchProgress, CollectionMarchPalette);
+            DrawMarchFormation(rmarker, rtangent, trip.Value.VisualSample, trip.Value.LeaderChampionId);
         }
 
         // Client-side-only correlation between an active encounter and the map coordinate the
@@ -4544,8 +4618,6 @@ namespace BeeKingdom.Playground
         // combat/resolution n'est touchee, uniquement cette correlation visuelle cote client.
         private static readonly Dictionary<Guid, Vector2> combatPatrolTargetWorldCoordByEncounterId = new Dictionary<Guid, Vector2>();
         private static Vector2? pendingCombatPatrolLaunchTarget;
-        // M079C — Boucle collecte : garde anti-spam pour l'envoi d'une marche de collecte officielle
-        private static float lastOfficialWorldResourceLaunchUnscaledTime = -100f;
         // Tracks which encounters were drawn last frame so a disappearance (auto-claimed by
         // CombatPatrolPanelController.AutoClaimFinishedEncountersAsync) can be turned into a
         // visible return trip below, instead of the bee just vanishing at wherever it was.
@@ -4682,7 +4754,6 @@ namespace BeeKingdom.Playground
             {
                 if (!combatPatrolTargetWorldCoordByEncounterId.TryGetValue(encounter.EncounterId, out Vector2 targetWorldCoord)) continue;
                 Vector2 b = WorldToScreen(targetWorldCoord);
-                if (!IsOnScreen(a, 420f) && !IsOnScreen(b, 420f)) continue;
 
                 Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
                 double totalSeconds = (encounter.EndsAtUtc - encounter.StartedAtUtc).TotalSeconds;
@@ -4698,6 +4769,8 @@ namespace BeeKingdom.Playground
                 Vector2 marker = Bezier(a, control, b, marchProgress);
                 Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, marchProgress + 0.02f)) - marker;
 
+                // M079D — meme culling que la collecte : le marqueur compte, sinon zoom = disparition.
+                if (!MarchVisibleOnScreen(a, b, marker)) continue;
                 DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
                 if (!combatPatrolOutboundVisualSampleCache.TryGetValue(encounter.EncounterId, out List<(string Family, int Count)> outboundSample))
                 {
@@ -4728,13 +4801,14 @@ namespace BeeKingdom.Playground
                 if (returnT >= 1f) { (finishedTrips ??= new List<Guid>()).Add(trip.Key); continue; }
                 if (!combatPatrolTargetWorldCoordByEncounterId.TryGetValue(trip.Key, out Vector2 targetWorldCoord)) { (finishedTrips ??= new List<Guid>()).Add(trip.Key); continue; }
                 Vector2 b = WorldToScreen(targetWorldCoord);
-                if (!IsOnScreen(a, 420f) && !IsOnScreen(b, 420f)) continue;
 
                 Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
                 float marchProgress = 1f - returnT; // heading back from the target (1) to the hive (0)
                 Vector2 marker = Bezier(a, control, b, marchProgress);
                 Vector2 tangent = marker - Bezier(a, control, b, Mathf.Min(1f, marchProgress + 0.02f));
 
+                // M079D — meme culling que la collecte : le marqueur compte, sinon zoom = disparition.
+                if (!MarchVisibleOnScreen(a, b, marker)) continue;
                 DrawStyledMarchPath(a, control, b, marchProgress, CombatMarchPalette);
                 DrawMarchFormation(marker, tangent, trip.Value.VisualSample, trip.Value.LeaderChampionId);
             }
@@ -5830,8 +5904,12 @@ namespace BeeKingdom.Playground
         {
             if (hive == null || resource == null) return;
             if (!IsOfficialResource(resource)) { StartLocalCollectionFlight(); return; }
-            // M079C — Boucle collecte : une action = une marche, pas de spam si le serveur n'a pas encore répondu
-            if (Time.unscaledTime - lastOfficialWorldResourceLaunchUnscaledTime < 3f) { status = "Envoi déjà en cours..."; return; }
+            // M079D — une action = une marche : garde d'etat reelle (remplace le delai 3s M079C).
+            // Tant qu'une mutation est en vol (busy) ou que le modele est en Mutating, la commande
+            // est deja consommee : on refuse le doublon au lieu de renvoyer vers le serveur.
+            if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()
+                || HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap()?.State == WorldResourceCollectionScreenState.Mutating)
+            { status = "Envoi déjà en cours..."; return; }
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
             if (IsOfficialFlightReadyToClaim(model, resource.Id))
@@ -5852,7 +5930,6 @@ namespace BeeKingdom.Playground
             // sembler ne rien faire.
             if (model.AvailableRoster == null || model.AvailableRoster.Values.All(v => v <= 0))
             { status = "Aucune troupe disponible pour escorter la collecte"; return; }
-            lastOfficialWorldResourceLaunchUnscaledTime = Time.unscaledTime;
             HiveViewProductUiPresenter.LaunchOfficialWorldResourceCollectionForWorldMap(resource.Id);
             status = "Vol officiel lance vers " + resource.Label + " (" + hive.Label + ")";
         }
@@ -5862,8 +5939,10 @@ namespace BeeKingdom.Playground
             if (hive == null || resource == null) return false;
             if (!IsOfficialResource(resource))
                 return ResourceRemaining(resource) > 0 && (collectionState == CollectionFlightState.Idle || collectionState == CollectionFlightState.Completed);
+            // M079D — bouton desarme tant qu'une mutation est en vol : une action = une marche.
+            if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()) return false;
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-            if (model == null) return false;
+            if (model == null || model.State == WorldResourceCollectionScreenState.Mutating) return false;
             RemoteWorldResourceNode node = OfficialNodeState(resource);
             return IsOfficialFlightReadyToClaim(model, resource.Id) ||
                 IsOfficialFlightActiveHere(model, resource.Id) ||
@@ -6371,6 +6450,14 @@ namespace BeeKingdom.Playground
         private static bool IsOnScreen(Vector2 point, float margin)
         {
             return point.x >= -margin && point.x <= Screen.width + margin && point.y >= -margin && point.y <= Screen.height + margin;
+        }
+
+        // M079D — culling des marches : les extremites seules ne suffisent pas. En zoom avant,
+        // la ruche et la cible sortent de l'ecran alors que le marqueur (entre les deux) reste
+        // visible : sans lui, toute la marche disparaissait au zoom. Le marqueur decide aussi.
+        private static bool MarchVisibleOnScreen(Vector2 a, Vector2 b, Vector2 marker)
+        {
+            return IsOnScreen(a, 420f) || IsOnScreen(b, 420f) || IsOnScreen(marker, 220f);
         }
 
         private string ChunkId(Vector2Int chunk)
