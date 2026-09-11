@@ -4706,42 +4706,36 @@ namespace BeeKingdom.Playground
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
 
-            // Panel dimensions
-            float panelW = 300f;
-            float panelH = 280f;
+            float panelW = 320f;
+            float panelH = 310f;
             Rect panel = new Rect(Screen.width * 0.5f - panelW * 0.5f, Screen.height * 0.5f - panelH * 0.5f, panelW, panelH);
 
-            // Background
-            GUI.Box(panel, "");
-            GUI.DrawTexture(panel, Texture2D.whiteTexture);
+            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 0.92f));
+            DrawFrame(panel, new Color(0.18f, 0.85f, 1f, 0.86f), 2f);
 
             float y = panel.y + 12f;
 
-            // Title
-            GUIStyle titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 24f), "Composition de l'escouade", titleStyle);
             y += 28f;
 
-            // Resource info
-            GUIStyle infoStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+            GUIStyle infoStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = new Color(0.86f, 0.92f, 1f, 1f) } };
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Cible: " + resource.Label, infoStyle);
-            y += 24f;
+            y += 26f;
 
-            // Troop draft rows
             DrawCollectionDraftRow(panel, ref y, "guardians", "Gardiennes", model.DraftGuardians, model.AvailableRoster);
             DrawCollectionDraftRow(panel, ref y, "wingrunners", "Voltigeuses", model.DraftWingrunners, model.AvailableRoster);
             DrawCollectionDraftRow(panel, ref y, "darters", "Lanceuses", model.DraftDarters, model.AvailableRoster);
             y += 4f;
 
-            GUIStyle totalStyle = new GUIStyle(GUI.skin.label) { fontSize = 11 };
+            GUIStyle totalStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = new Color(1f, 0.88f, 0.38f, 1f) } };
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Total: " + model.DraftTotal, totalStyle);
+            y += 22f;
+
+            GUIStyle champStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = Color.white } };
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Championne: " + ResolveMarchLeaderChampionId(), champStyle);
             y += 24f;
 
-            // Champion bees button (placeholder)
-            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Championne: " + ResolveMarchLeaderChampionId(), totalStyle);
-            y += 24f;
-
-            // Launch button
             bool canLaunch = model.CanLaunch(compositionTargetNodeId);
             GUI.enabled = canLaunch;
             if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 32f), "Envoyer les abeilles"))
@@ -4752,7 +4746,6 @@ namespace BeeKingdom.Playground
             GUI.enabled = true;
             y += 36f;
 
-            // Cancel button
             if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 28f), "Annuler"))
             {
                 collectionVisualState = CollectionVisualState.Idle;
@@ -4765,7 +4758,7 @@ namespace BeeKingdom.Playground
         {
             Rect row = new Rect(panel.x + 12f, y, panel.width - 24f, 30f);
             long available = availableRoster.GetValueOrDefault(family);
-            GUIStyle rowStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+            GUIStyle rowStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = Color.white } };
             GUI.Label(new Rect(row.x, row.y + 4f, row.width - 100f, 22f), label + ": " + value + " / " + available, rowStyle);
             if (GUI.Button(new Rect(row.xMax - 92f, row.y, 40f, 28f), "-")) HiveViewProductUiPresenter.AdjustOfficialWorldResourceCollectionDraftForWorldMap(family, -1);
             if (GUI.Button(new Rect(row.xMax - 46f, row.y, 40f, 28f), "+")) HiveViewProductUiPresenter.AdjustOfficialWorldResourceCollectionDraftForWorldMap(family, 1);
