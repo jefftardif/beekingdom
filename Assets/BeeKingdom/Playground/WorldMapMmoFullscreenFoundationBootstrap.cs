@@ -4552,7 +4552,8 @@ namespace BeeKingdom.Playground
             string marchLeaderChampionId = ResolveMarchLeaderChampionId();
 
             // M080 — Sync visual state with server on scene reload
-            // If server has active flight but client visual state is Idle, sync to Collecting
+            // Only sync if server flight is genuinely in-progress (not already completed/claimable).
+            // If the flight is done (t >= 1f), do NOT sync — the player must Claim via UI.
             if (collectionVisualState == CollectionVisualState.Idle)
             {
                 WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
@@ -4562,18 +4563,16 @@ namespace BeeKingdom.Playground
                     double elapsedSeconds = (DateTimeOffset.UtcNow - model.Active.StartedAtUtc).TotalSeconds;
                     float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
 
-                    collectionVisualState = CollectionVisualState.Collecting;
-                    collectionVisualTimer = 0f;
-                    collectionVisualTargetNodeId = model.Active.NodeId;
-                    collectionVisualSample = ComputeMarchVisualSample(model.Active.CommittedTroops);
-                    collectionVisualChampionId = marchLeaderChampionId;
-
-                    // If flight already completed (elapsed >= total), skip to Returning immediately
-                    if (t >= 1f)
+                    // Only sync to visual state if flight is still in-progress on the server
+                    if (t < 1f)
                     {
-                        collectionVisualState = CollectionVisualState.Returning;
+                        collectionVisualState = CollectionVisualState.Collecting;
                         collectionVisualTimer = 0f;
+                        collectionVisualTargetNodeId = model.Active.NodeId;
+                        collectionVisualSample = ComputeMarchVisualSample(model.Active.CommittedTroops);
+                        collectionVisualChampionId = marchLeaderChampionId;
                     }
+                    // If t >= 1f: flight is done server-side, player must Claim. Do NOT sync.
                 }
             }
 
