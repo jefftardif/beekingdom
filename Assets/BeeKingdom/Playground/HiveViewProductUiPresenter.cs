@@ -38809,7 +38809,7 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
         internal static void LaunchOfficialWorldResourceCollectionForWorldMap(string nodeId)
         {
             if (!OfficialWorldResourceCollectionConfigured() || !IsOfficialWorldResourceNode(nodeId)) return;
-            ApplyDefaultWorldResourceCollectionEscort();
+            // M080 — Troop selection is now handled by composition panel, no auto-escort
             worldResourceCollectionController.Launch(nodeId);
             ChampionVoiceBarkController.BarkForCollectionLaunch(localPreviewAssignedChampionBeeIds);
         }
@@ -38851,6 +38851,13 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
         {
             if (!OfficialWorldResourceCollectionConfigured()) return;
             worldResourceCollectionController.Refresh();
+        }
+
+        // M080 — Composition panel draft adjustment for World Map collection
+        internal static void AdjustOfficialWorldResourceCollectionDraftForWorldMap(string family, int delta)
+        {
+            if (!OfficialWorldResourceCollectionConfigured()) return;
+            worldResourceCollectionController.AdjustDraft(family, delta);
         }
 
         // Monde vivant (demande de Jeff, 2026-08-01) : presence ambiante des autres colonies -

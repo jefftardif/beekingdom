@@ -134,6 +134,18 @@ namespace BeeKingdom.Playground
         private float worldPresenceRefreshTimer;
         private float combatPatrolRefreshTimer;
         private int nextFlightId = 1;
+
+        // M080 — Client-side visual state for official collection
+        private CollectionVisualState collectionVisualState = CollectionVisualState.Idle;
+        private float collectionVisualTimer;
+        private string collectionVisualTargetNodeId;
+        private List<(string Family, int Count)> collectionVisualSample;
+        private string collectionVisualChampionId;
+        private const float CollectionOutboundDuration = 3f;
+        private const float CollectionReturningDuration = 3f;
+        private const float CollectionDuration = 10f; // Alpha: time on resource before claim
+        private bool showCompositionPanel;
+        private string compositionTargetNodeId;
         private bool debugChunkOverlay;
         private bool stress50x50ModeEnabled;
         private bool mapToolsCollapsed = true;
@@ -4527,112 +4539,218 @@ namespace BeeKingdom.Playground
         // (CollectionMarchPalette ci-dessous), bleu = transfert de ressources/troupes aux allies
         // (TransferMarchPalette, reserve comme RaidMarchPalette - aucun systeme de transfert
         // n'existe encore, palette definie pour coherence future uniquement). Reutilise tel quel
-        // DrawStyledMarchPath/DrawMarchFormation/ComputeMarchVisualSample deja construits pour
-        // Combat Patrol, appliques ici a active.CommittedTroops (meme forme de donnees).
-        // M079D — retour collecte calque sur l'attaque (CombatPatrolReturnTrip) : quand le vol
-        // officiel disparait (claim/recall), la formation rentre visiblement au lieu de s'evaporer
-        // sur place. Un seul vol officiel a la fois cote serveur, donc un seul slot suffit.
-        private readonly struct WorldResourceCollectionReturnTrip
-        {
-            public readonly float StartedAtUnscaledTime;
-            public readonly float Duration;
-            public readonly Vector2 FromWorldCoord;
-            public readonly List<(string Family, int Count)> VisualSample;
-            public readonly string LeaderChampionId;
-            public WorldResourceCollectionReturnTrip(float startedAtUnscaledTime, float duration, Vector2 fromWorldCoord, List<(string Family, int Count)> visualSample, string leaderChampionId)
-            {
-                StartedAtUnscaledTime = startedAtUnscaledTime;
-                Duration = duration;
-                FromWorldCoord = fromWorldCoord;
-                VisualSample = visualSample;
-                LeaderChampionId = leaderChampionId;
-            }
-        }
-        private static WorldResourceCollectionReturnTrip? collectionReturnTrip;
-        private static Guid? lastKnownCollectionFlightId;
-        private static string lastKnownCollectionNodeId;
-        private static List<(string Family, int Count)> lastKnownCollectionSample;
-        private static string lastKnownCollectionChampionId;
-        private static float lastSeenCollectionActiveUnscaledTime = -100f;
-
+        // M080 — DrawWorldResourceCollectionMarch: client-side visual state machine.
+        // Server model is single-flight (Active with StartedAtUtc/EndsAtUtc).
+        // Client maps to: IDLE → COMPOSITION → OUTBOUND → COLLECTING → RETURNING → COMPLETED → IDLE
         private void DrawWorldResourceCollectionMarch()
         {
-            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-            RemoteWorldResourceActiveFlight active = model?.Active;
             WorldHiveNode from = SelectedHive();
             if (from == null) return;
             Vector2 a = WorldToScreen(from.WorldCoord);
             string marchLeaderChampionId = ResolveMarchLeaderChampionId();
 
-            if (active != null)
+            switch (collectionVisualState)
             {
-                WorldResourceNode to = ResourceById(active.NodeId);
-                if (to == null) return;
-                // Mission suivie : preuve "commande consommee / mission active" (remplace la garde 3s).
-                lastKnownCollectionFlightId = active.FlightId;
-                lastKnownCollectionNodeId = active.NodeId;
-                lastKnownCollectionSample = ComputeMarchVisualSample(active.CommittedTroops);
-                lastKnownCollectionChampionId = marchLeaderChampionId;
-                lastSeenCollectionActiveUnscaledTime = Time.unscaledTime;
-                // Un retour ne doit jamais coexister avec un aller reel (course refresh) : on le purge.
-                collectionReturnTrip = null;
+                case CollectionVisualState.Outbound:
+                    DrawOutboundMarch(a, marchLeaderChampionId);
+                    break;
+                case CollectionVisualState.Collecting:
+                    DrawCollectingFormation(a, marchLeaderChampionId);
+                    break;
+                case CollectionVisualState.Returning:
+                    DrawReturningMarch(a, marchLeaderChampionId);
+                    break;
+                case CollectionVisualState.Composition:
+                    DrawCompositionPanel();
+                    break;
+            }
+        }
 
-                Vector2 b = WorldToScreen(to.WorldCoord);
-                Vector2 control = (a + b) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, b) * 0.38f));
-                double totalSeconds = (active.EndsAtUtc - active.StartedAtUtc).TotalSeconds;
-                double elapsedSeconds = (DateTimeOffset.UtcNow - active.StartedAtUtc).TotalSeconds;
-                float t = totalSeconds > 0 ? Mathf.Clamp01((float)(elapsedSeconds / totalSeconds)) : 1f;
-                // L'escouade parcourt le premier tiers du vol pour rejoindre le noeud, puis reste
-                // physiquement sur place jusqu'a la fin (demande explicite de Jeff : "rester
-                // physiquement sur place pendant toute la duree de la collecte"). L'etat "occupee"
-                // + le temps restant sont desormais racontes directement par la ressource elle-meme
-                // (DrawResourceLifeIndicators, demande de Jeff, 2026-08-01) - ce marqueur ne
-                // represente plus que la position physique de l'escouade en transit.
-                float travelT = Mathf.Clamp01(t * 3f);
-                Vector2 marker = Bezier(a, control, b, travelT);
-                Vector2 tangent = Bezier(a, control, b, Mathf.Min(1f, travelT + 0.02f)) - marker;
+        private void DrawOutboundMarch(Vector2 fromScreen, string championId)
+        {
+            WorldResourceNode resource = ResourceById(collectionVisualTargetNodeId);
+            if (resource == null) { collectionVisualState = CollectionVisualState.Idle; return; }
 
-                if (!MarchVisibleOnScreen(a, b, marker)) return;
-                DrawStyledMarchPath(a, control, b, travelT, CollectionMarchPalette);
-                DrawMarchFormation(marker, tangent, lastKnownCollectionSample, marchLeaderChampionId);
-                DrawCollectionTargetPulse(b);
+            collectionVisualTimer += Time.deltaTime;
+            float t = Mathf.Clamp01(collectionVisualTimer / CollectionOutboundDuration);
+
+            Vector2 toScreen = WorldToScreen(resource.WorldCoord);
+            Vector2 control = (fromScreen + toScreen) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(fromScreen, toScreen) * 0.38f));
+            Vector2 marker = Bezier(fromScreen, control, toScreen, t);
+            Vector2 tangent = Bezier(fromScreen, control, toScreen, Mathf.Min(1f, t + 0.02f)) - marker;
+
+            if (!MarchVisibleOnScreen(fromScreen, toScreen, marker)) return;
+            DrawStyledMarchPath(fromScreen, control, toScreen, t, CollectionMarchPalette);
+            DrawMarchFormation(marker, tangent, collectionVisualSample, championId);
+
+            if (t >= 1f)
+            {
+                collectionVisualState = CollectionVisualState.Collecting;
+                collectionVisualTimer = 0f;
+                status = "Collecte en cours: " + resource.Label;
+            }
+        }
+
+        private void DrawCollectingFormation(Vector2 hiveScreen, string championId)
+        {
+            WorldResourceNode resource = ResourceById(collectionVisualTargetNodeId);
+            if (resource == null) { collectionVisualState = CollectionVisualState.Idle; return; }
+
+            collectionVisualTimer += Time.deltaTime;
+
+            Vector2 resourceScreen = WorldToScreen(resource.WorldCoord);
+
+            // Draw formation on resource (no march line)
+            DrawMarchFormation(resourceScreen, Vector2.right, collectionVisualSample, championId);
+            DrawCollectionTargetPulse(resourceScreen);
+
+            // Check if collecting time is done
+            if (collectionVisualTimer >= CollectionDuration)
+            {
+                // Call claim on server
+                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
+
+                collectionVisualState = CollectionVisualState.Returning;
+                collectionVisualTimer = 0f;
+                status = "Retour vers la ruche: " + resource.Label;
+            }
+        }
+
+        private void DrawReturningMarch(Vector2 hiveScreen, string championId)
+        {
+            WorldResourceNode resource = ResourceById(collectionVisualTargetNodeId);
+            if (resource == null) { collectionVisualState = CollectionVisualState.Idle; return; }
+
+            collectionVisualTimer += Time.deltaTime;
+            float t = Mathf.Clamp01(collectionVisualTimer / CollectionReturningDuration);
+
+            Vector2 resourceScreen = WorldToScreen(resource.WorldCoord);
+            Vector2 control = (hiveScreen + resourceScreen) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(hiveScreen, resourceScreen) * 0.38f));
+
+            // Return trip: from resource to hive
+            float marchProgress = 1f - t;
+            Vector2 marker = Bezier(hiveScreen, control, resourceScreen, marchProgress);
+            Vector2 tangent = marker - Bezier(hiveScreen, control, resourceScreen, Mathf.Min(1f, marchProgress + 0.02f));
+
+            if (!MarchVisibleOnScreen(hiveScreen, resourceScreen, marker)) return;
+            DrawStyledMarchPath(hiveScreen, control, resourceScreen, marchProgress, CollectionMarchPalette);
+            DrawMarchFormation(marker, tangent, collectionVisualSample, championId);
+
+            if (t >= 1f)
+            {
+                collectionVisualState = CollectionVisualState.Completed;
+                collectionVisualTimer = 0f;
+                status = "Collecte terminee: " + resource.Label;
+
+                // Reset to idle after brief completion display
+                collectionVisualState = CollectionVisualState.Idle;
+                collectionVisualTargetNodeId = null;
+                collectionVisualSample = null;
+                collectionVisualChampionId = null;
+            }
+        }
+
+        private void DrawCompositionPanel()
+        {
+            WorldResourceNode resource = ResourceById(compositionTargetNodeId);
+            if (resource == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
+
+            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+            if (model == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
+
+            // Panel dimensions
+            float panelW = 300f;
+            float panelH = 280f;
+            Rect panel = new Rect(Screen.width * 0.5f - panelW * 0.5f, Screen.height * 0.5f - panelH * 0.5f, panelW, panelH);
+
+            // Background
+            GUI.Box(panel, "");
+            GUI.DrawTexture(panel, Texture2D.whiteTexture);
+
+            float y = panel.y + 12f;
+
+            // Title
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 24f), "Composition de l'escouade", titleStyle);
+            y += 28f;
+
+            // Resource info
+            GUIStyle infoStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Cible: " + resource.Label, infoStyle);
+            y += 24f;
+
+            // Troop draft rows
+            DrawCollectionDraftRow(panel, ref y, "guardians", "Gardiennes", model.DraftGuardians, model.AvailableRoster);
+            DrawCollectionDraftRow(panel, ref y, "wingrunners", "Voltigeuses", model.DraftWingrunners, model.AvailableRoster);
+            DrawCollectionDraftRow(panel, ref y, "darters", "Lanceuses", model.DraftDarters, model.AvailableRoster);
+            y += 4f;
+
+            GUIStyle totalStyle = new GUIStyle(GUI.skin.label) { fontSize = 11 };
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Total: " + model.DraftTotal, totalStyle);
+            y += 24f;
+
+            // Champion bees button (placeholder)
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Championne: " + ResolveMarchLeaderChampionId(), totalStyle);
+            y += 24f;
+
+            // Launch button
+            bool canLaunch = model.CanLaunch(compositionTargetNodeId);
+            GUI.enabled = canLaunch;
+            if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 32f), "Envoyer les abeilles"))
+            {
+                ConfirmCollectionLaunch();
+                return;
+            }
+            GUI.enabled = true;
+            y += 36f;
+
+            // Cancel button
+            if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 28f), "Annuler"))
+            {
+                collectionVisualState = CollectionVisualState.Idle;
+                showCompositionPanel = false;
+                compositionTargetNodeId = null;
+            }
+        }
+
+        private void DrawCollectionDraftRow(Rect panel, ref float y, string family, string label, int value, IReadOnlyDictionary<string, long> availableRoster)
+        {
+            Rect row = new Rect(panel.x + 12f, y, panel.width - 24f, 30f);
+            long available = availableRoster.GetValueOrDefault(family);
+            GUIStyle rowStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+            GUI.Label(new Rect(row.x, row.y + 4f, row.width - 100f, 22f), label + ": " + value + " / " + available, rowStyle);
+            if (GUI.Button(new Rect(row.xMax - 92f, row.y, 40f, 28f), "-")) HiveViewProductUiPresenter.AdjustOfficialWorldResourceCollectionDraftForWorldMap(family, -1);
+            if (GUI.Button(new Rect(row.xMax - 46f, row.y, 40f, 28f), "+")) HiveViewProductUiPresenter.AdjustOfficialWorldResourceCollectionDraftForWorldMap(family, 1);
+            y += 34f;
+        }
+
+        private void ConfirmCollectionLaunch()
+        {
+            WorldResourceNode resource = ResourceById(compositionTargetNodeId);
+            if (resource == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
+
+            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+            if (model == null || !model.CanLaunch(compositionTargetNodeId))
+            {
+                status = "Impossible de lancer la collecte";
+                collectionVisualState = CollectionVisualState.Idle;
+                showCompositionPanel = false;
                 return;
             }
 
-            // Vol disparu (claim/recall) : on fait rentrer la derniere escouade connue, une seule fois.
-            // Delai de confirmation > intervalle de polling (3s) pour ne pas confondre une Refresh
-            // en retard (ex. retour de scene, modele Loading) avec une vraie fin de vol.
-            bool modelRefreshed = model != null
-                && model.State != WorldResourceCollectionScreenState.Loading
-                && model.State != WorldResourceCollectionScreenState.NotConfigured;
-            if (lastKnownCollectionFlightId.HasValue && lastKnownCollectionNodeId != null && collectionReturnTrip == null
-                && modelRefreshed && Time.unscaledTime - lastSeenCollectionActiveUnscaledTime > 4f)
-            {
-                WorldResourceNode lastNode = ResourceById(lastKnownCollectionNodeId);
-                if (lastNode != null)
-                {
-                    float distance = Vector2.Distance(from.WorldCoord, lastNode.WorldCoord);
-                    float duration = Mathf.Clamp(distance / CombatPatrolReturnTripWorldUnitsPerSecond, CombatPatrolReturnTripMinDuration, CombatPatrolReturnTripMaxDuration);
-                    collectionReturnTrip = new WorldResourceCollectionReturnTrip(Time.unscaledTime, duration, lastNode.WorldCoord, lastKnownCollectionSample, lastKnownCollectionChampionId);
-                }
-                lastKnownCollectionFlightId = null;
-                lastKnownCollectionNodeId = null;
-                lastKnownCollectionSample = null;
-                lastKnownCollectionChampionId = null;
-            }
+            // Launch via server
+            HiveViewProductUiPresenter.LaunchOfficialWorldResourceCollectionForWorldMap(compositionTargetNodeId);
 
-            WorldResourceCollectionReturnTrip? trip = collectionReturnTrip;
-            if (trip == null) return;
-            float returnT = Mathf.Clamp01((Time.unscaledTime - trip.Value.StartedAtUnscaledTime) / trip.Value.Duration);
-            if (returnT >= 1f) { collectionReturnTrip = null; return; }
-            Vector2 rb = WorldToScreen(trip.Value.FromWorldCoord);
-            Vector2 rcontrol = (a + rb) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(a, rb) * 0.38f));
-            float marchProgress = 1f - returnT; // retour noeud (1) -> ruche (0), comme l'attaque
-            Vector2 rmarker = Bezier(a, rcontrol, rb, marchProgress);
-            Vector2 rtangent = rmarker - Bezier(a, rcontrol, rb, Mathf.Min(1f, marchProgress + 0.02f));
-            if (!MarchVisibleOnScreen(a, rb, rmarker)) return;
-            DrawStyledMarchPath(a, rcontrol, rb, marchProgress, CollectionMarchPalette);
-            DrawMarchFormation(rmarker, rtangent, trip.Value.VisualSample, trip.Value.LeaderChampionId);
+            // Set visual state
+            collectionVisualState = CollectionVisualState.Outbound;
+            collectionVisualTimer = 0f;
+            collectionVisualTargetNodeId = compositionTargetNodeId;
+            collectionVisualSample = ComputeMarchVisualSample(model.DraftGuardians, model.DraftWingrunners, model.DraftDarters);
+            collectionVisualChampionId = ResolveMarchLeaderChampionId();
+
+            showCompositionPanel = false;
+            compositionTargetNodeId = null;
+            status = "Vol officiel lance vers " + resource.Label;
         }
 
         // Client-side-only correlation between an active encounter and the map coordinate the
@@ -5039,6 +5157,16 @@ namespace BeeKingdom.Playground
             if (total <= 60) return 6;
             if (total <= 400) return 9;
             return 13;
+        }
+
+        // M080 — Overload for composition panel (individual draft counts)
+        private static List<(string Family, int Count)> ComputeMarchVisualSample(int guardians, int wingrunners, int darters)
+        {
+            var composition = new Dictionary<string, long>(StringComparer.Ordinal);
+            if (guardians > 0) composition["guardians"] = guardians;
+            if (wingrunners > 0) composition["wingrunners"] = wingrunners;
+            if (darters > 0) composition["darters"] = darters;
+            return ComputeMarchVisualSample(composition);
         }
 
         // Sprite dedie par famille (objectif 3, mission M021) : les 3 familles de combat ont
@@ -5936,34 +6064,50 @@ namespace BeeKingdom.Playground
         {
             if (hive == null || resource == null) return;
             if (!IsOfficialResource(resource)) { StartLocalCollectionFlight(); return; }
-            // M079D — une action = une marche : garde d'etat reelle (remplace le delai 3s M079C).
-            // Tant qu'une mutation est en vol (busy) ou que le modele est en Mutating, la commande
-            // est deja consommee : on refuse le doublon au lieu de renvoyer vers le serveur.
+
+            // M080 — If in composition state for this resource, this is a confirm action
+            if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
+            {
+                ConfirmCollectionLaunch();
+                return;
+            }
+
+            // M080 — If busy or mutating, refuse
             if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()
                 || HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap()?.State == WorldResourceCollectionScreenState.Mutating)
-            { status = "Envoi déjà en cours..."; return; }
+            { status = "Envoi deja en cours..."; return; }
+
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
+
+            // If flight ready to claim, claim it
             if (IsOfficialFlightReadyToClaim(model, resource.Id))
             {
                 HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
                 status = "Recolte officielle en cours de validation: " + resource.Label;
                 return;
             }
+
+            // If flight active here, recall it
             if (IsOfficialFlightActiveHere(model, resource.Id))
             {
                 HiveViewProductUiPresenter.RecallOfficialWorldResourceCollectionForWorldMap();
                 status = "Escouade rappelee depuis " + resource.Label;
                 return;
             }
+
+            // If another flight active, refuse
             if (model.Active != null) { status = "Un vol officiel est deja en cours"; return; }
-            // Escouade reellement engagee (demande de Jeff, 2026-08-01) : sans troupe disponible,
-            // aucun vol ne peut partir - le dire clairement plutot que de laisser le bouton
-            // sembler ne rien faire.
+
+            // If no troops available, refuse
             if (model.AvailableRoster == null || model.AvailableRoster.Values.All(v => v <= 0))
             { status = "Aucune troupe disponible pour escorter la collecte"; return; }
-            HiveViewProductUiPresenter.LaunchOfficialWorldResourceCollectionForWorldMap(resource.Id);
-            status = "Vol officiel lance vers " + resource.Label + " (" + hive.Label + ")";
+
+            // M080 — Open composition panel instead of directly launching
+            collectionVisualState = CollectionVisualState.Composition;
+            compositionTargetNodeId = resource.Id;
+            showCompositionPanel = true;
+            status = "Choisir les troupes pour " + resource.Label;
         }
 
         private bool CanCollectOrLaunch(WorldHiveNode hive, WorldResourceNode resource)
@@ -5971,7 +6115,18 @@ namespace BeeKingdom.Playground
             if (hive == null || resource == null) return false;
             if (!IsOfficialResource(resource))
                 return ResourceRemaining(resource) > 0 && (collectionState == CollectionFlightState.Idle || collectionState == CollectionFlightState.Completed);
-            // M079D — bouton desarme tant qu'une mutation est en vol : une action = une marche.
+
+            // M080 — If in composition state, allow confirm
+            if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
+                return true;
+
+            // M080 — If in visual flight states, block new launches
+            if (collectionVisualState == CollectionVisualState.Outbound ||
+                collectionVisualState == CollectionVisualState.Collecting ||
+                collectionVisualState == CollectionVisualState.Returning)
+                return false;
+
+            // M080 — Check server state
             if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()) return false;
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null || model.State == WorldResourceCollectionScreenState.Mutating) return false;
@@ -5989,6 +6144,17 @@ namespace BeeKingdom.Playground
         private string CollectionActionLabel(WorldResourceNode resource)
         {
             if (!IsOfficialResource(resource)) return "Collecter";
+
+            // M080 — Visual state machine labels
+            if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
+                return "Confirmer l'envoi";
+            if (collectionVisualState == CollectionVisualState.Outbound)
+                return "En vol...";
+            if (collectionVisualState == CollectionVisualState.Collecting)
+                return "Collecte en cours...";
+            if (collectionVisualState == CollectionVisualState.Returning)
+                return "Retour en cours...";
+
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (IsOfficialFlightReadyToClaim(model, resource.Id)) return "Recolter (officiel)";
             if (IsOfficialFlightActiveHere(model, resource.Id)) return "Rappeler l'escouade";
@@ -7981,6 +8147,18 @@ namespace BeeKingdom.Playground
             Collecting,
             Returning,
             Completed
+        }
+
+        // M080 — Client-side visual state machine for official resource collection.
+        // Maps to server's single-flight model: IDLE → COMPOSITION → OUTBOUND → COLLECTING → RETURNING → COMPLETED → IDLE
+        private enum CollectionVisualState
+        {
+            Idle = 0,
+            Composition = 1,
+            Outbound = 2,
+            Collecting = 3,
+            Returning = 4,
+            Completed = 5
         }
 
         private sealed class WorldChunkData
