@@ -38811,7 +38811,7 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
             if (!OfficialWorldResourceCollectionConfigured() || !IsOfficialWorldResourceNode(nodeId)) return;
             // M080 — Troop selection is now handled by composition panel, no auto-escort
             worldResourceCollectionController.Launch(nodeId);
-            ChampionVoiceBarkController.BarkForCollectionLaunch(localPreviewAssignedChampionBeeIds);
+            // M080: Voice bark is now triggered by WorldMapMmoFullscreenFoundationBootstrap with the selected champion
         }
 
         // M080 — Auto-escort removed; troop selection now handled by composition panel.
@@ -38819,6 +38819,12 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
         {
             if (!OfficialWorldResourceCollectionConfigured()) return;
             worldResourceCollectionController.Claim();
+        }
+
+        internal static void DismissWorldResourceCollectionDebriefForWorldMap()
+        {
+            if (!OfficialWorldResourceCollectionConfigured()) return;
+            worldResourceCollectionController.DismissDebrief();
         }
 
         internal static void RecallOfficialWorldResourceCollectionForWorldMap()
@@ -39419,6 +39425,18 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
         // Abeilles championnes - aucun nouvel appel reseau ici.
         internal static IReadOnlyList<string> PeekAssignedChampionBeeIdsForWorldMap()
             => officialAssignedChampionBeeIds ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+        // M080: Expose owned champion bee IDs for composition panel selector
+        internal static IReadOnlyList<string> PeekOwnedChampionBeeIdsForWorldMap()
+        {
+            var owned = new List<string>();
+            foreach (ChampionBeeDefinition def in ChampionBeeCatalog.All)
+            {
+                if (IsChampionBeeOwned(def.Id))
+                    owned.Add(def.Id);
+            }
+            return owned;
+        }
 
         // Recu de reclamation le plus recent pour une rencontre (mission M021) - permet a la
         // marche de retour de la carte du monde d'afficher la vraie composition de survivants

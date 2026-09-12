@@ -56,6 +56,7 @@ namespace BeeKingdom.Networking
         public bool CanLaunch { get; set; }
         public bool IsDailyFocus { get; set; }
         public bool IsWorldEventBoosted { get; set; }
+        public long Remaining { get; set; } = -1;
     }
 
     public sealed class RemoteWorldResourceActiveFlight

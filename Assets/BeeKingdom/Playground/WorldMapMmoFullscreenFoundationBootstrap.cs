@@ -145,11 +145,17 @@ namespace BeeKingdom.Playground
         private string collectionVisualChampionId;
         private float collectionVisualCooldown; // M080: prevent re-sync loop after cycle completes
         private string collectionVisualLastCompletedNodeId; // M080: don't re-sync a claimed flight
-        private const float CollectionOutboundDuration = 3f;
+        private long collectionVisualLastYield; // M080: yield collected in last completed cycle
+        private long collectionVisualRecallYield; // M080: yield at time of recall for proportional claim
+        private readonly Dictionary<string, long> collectedAmountByNodeId = new Dictionary<string, long>(); // M080: track depleted amount per resource after collection
+        private readonly Dictionary<string, float> tileDepletedAtTime = new Dictionary<string, float>(); // M080: track when tile was depleted for 5s respawn
+        private const float TileRespawnDevDelay = 5f; // M080: dev-only respawn delay for depleted tiles
+        private const float CollectionOutboundDuration = 8f;
         private const float CollectionReturningDuration = 3f;
-        private const float CollectionDuration = 10f; // Alpha: time on resource before claim
+        private const float CollectionDurationFallback = 10f; // Fallback if server EndsAtUtc unavailable
         private bool showCompositionPanel;
         private string compositionTargetNodeId;
+        private int compositionChampionIndex; // Index into assigned champion list for composition panel
         private bool debugChunkOverlay;
         private bool stress50x50ModeEnabled;
         private bool mapToolsCollapsed = true;
@@ -340,6 +346,8 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.TickCourierAlertsForExternalHost();
             HiveViewProductUiPresenter.DrawChatOverlayForWorldMap();
             HiveViewProductUiPresenter.DrawCombatPatrolOverlayForWorldMap();
+            if (showCompositionPanel && collectionVisualState == CollectionVisualState.Composition)
+                DrawCompositionPanel();
         }
 
         private void OnDestroy()
@@ -4297,6 +4305,33 @@ namespace BeeKingdom.Playground
                 // quelques minutes, sans texte ni panneau - juste une impression qui s'estompe.
                 if (official && life == ResourceLifeState.Free) tint = ApplyRecentlyDisturbedTint(tint, resource, OfficialNodeState(resource));
 
+                // M080: Dev respawn — hide depleted tiles for 5s then respawn
+                if (official && tileDepletedAtTime.TryGetValue(resource.Id, out float depletedAt))
+                {
+                    float elapsed = Time.realtimeSinceStartup - depletedAt;
+                    if (elapsed < TileRespawnDevDelay)
+                    {
+                        // Fade out during first 0.5s, invisible for rest, fade in last 0.5s
+                        float alpha;
+                        if (elapsed < 0.5f)
+                            alpha = 1f - elapsed / 0.5f;
+                        else if (elapsed > TileRespawnDevDelay - 0.5f)
+                            alpha = (elapsed - (TileRespawnDevDelay - 0.5f)) / 0.5f;
+                        else
+                            alpha = 0f;
+                        tint.a *= alpha;
+                        collectedAmountByNodeId.Remove(resource.Id);
+                        resourceRemaining.Remove(resource.Id);
+                    }
+                    else
+                    {
+                        // Respawn complete — remove from depleted tracking
+                        tileDepletedAtTime.Remove(resource.Id);
+                        collectedAmountByNodeId.Remove(resource.Id);
+                        resourceRemaining.Remove(resource.Id);
+                    }
+                }
+
                 float size;
                 Color previousGuiColor = GUI.color;
                 Texture2D texture = RuntimeEntityTexture(ResourceTexturePath(resource));
@@ -4381,6 +4416,7 @@ namespace BeeKingdom.Playground
         {
             RemoteWorldResourceNode node = OfficialNodeState(resource);
             if (node == null) return;
+            if (life == ResourceLifeState.Free) return;
 
             float progress01;
             Color fill;
@@ -4431,7 +4467,7 @@ namespace BeeKingdom.Playground
 
             float barWidth = 44f;
             float barHeight = 5f;
-            Rect bar = new Rect(p.x - barWidth * 0.5f, p.y + iconSize * 0.40f, barWidth, barHeight);
+            Rect bar = new Rect(p.x - barWidth * 0.5f, p.y + iconSize * 0.25f, barWidth, barHeight);
             DrawSolid(bar, new Color(0.05f, 0.05f, 0.05f, 0.55f));
             DrawSolid(new Rect(bar.x, bar.y, bar.width * progress01, bar.height), fill);
             DrawFrame(bar, new Color(1f, 1f, 1f, 0.25f), 1f);
@@ -4595,9 +4631,6 @@ namespace BeeKingdom.Playground
                 case CollectionVisualState.Returning:
                     DrawReturningMarch(a, marchLeaderChampionId);
                     break;
-                case CollectionVisualState.Composition:
-                    DrawCompositionPanel();
-                    break;
             }
         }
 
@@ -4611,13 +4644,50 @@ namespace BeeKingdom.Playground
 
             Vector2 toScreen = WorldToScreen(resource.WorldCoord);
             Vector2 control = (fromScreen + toScreen) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(fromScreen, toScreen) * 0.38f));
-            Vector2 marker = Bezier(fromScreen, control, toScreen, t);
-            Vector2 tangent = Bezier(fromScreen, control, toScreen, Mathf.Min(1f, t + 0.02f)) - marker;
 
-            if (!MarchVisibleOnScreen(fromScreen, toScreen, marker)) return;
-            DrawStyledMarchPath(fromScreen, control, toScreen, t, CollectionMarchPalette);
-            DrawMarchFormation(marker, tangent, collectionVisualSample, championId);
+            // Elastic effect: champion arrives ~2s before troops (8s march → champion at t*1.3, troops at t)
+            float championT = Mathf.Min(1f, t * 1.3f);
+            float troopT = t;
 
+            Vector2 championPos = Bezier(fromScreen, control, toScreen, championT);
+            Vector2 troopPos = Bezier(fromScreen, control, toScreen, troopT);
+            Vector2 troopTangent = Bezier(fromScreen, control, toScreen, Mathf.Min(1f, troopT + 0.02f)) - troopPos;
+
+            if (!MarchVisibleOnScreen(fromScreen, toScreen, troopPos)) return;
+            DrawStyledMarchPath(fromScreen, control, toScreen, troopT, CollectionMarchPalette);
+
+            // Draw troops at their position
+            if (collectionVisualSample != null)
+            {
+                int totalUnits = 0;
+                foreach ((string _, int count) in collectionVisualSample) totalUnits += count;
+                if (totalUnits > 0)
+                {
+                    Vector2 forward = troopTangent.sqrMagnitude > 0.0001f ? troopTangent.normalized : Vector2.up;
+                    float formationSpread = WorldSizeToScreen(24f);
+                    int index = 0;
+                    for (int s = 0; s < collectionVisualSample.Count; s++)
+                    {
+                        (string family, int count) = collectionVisualSample[s];
+                        for (int i = 0; i < count; i++)
+                        {
+                            Vector2 offset = MarchFormationOffset(index, totalUnits, formationSpread);
+                            DrawTroopMarchUnit(troopPos + offset, family, index * 1.7f);
+                            index++;
+                        }
+                    }
+                }
+                else
+                {
+                    DrawCombatMarchBee(troopPos);
+                }
+            }
+
+            // Draw champion at their position (ahead of troops)
+            if (!string.IsNullOrEmpty(championId) && championT < 1f)
+                DrawChampionMarchUnit(championPos, championId);
+
+            // Transition to Collecting when troops arrive
             if (t >= 1f)
             {
                 collectionVisualState = CollectionVisualState.Collecting;
@@ -4635,18 +4705,63 @@ namespace BeeKingdom.Playground
 
             Vector2 resourceScreen = WorldToScreen(resource.WorldCoord);
 
-            // Draw formation on resource (no march line)
-            DrawMarchFormation(resourceScreen, Vector2.right, collectionVisualSample, championId);
+            // Champion only on tile (no troops during collection per CEO spec)
+            if (!string.IsNullOrEmpty(championId))
+                DrawChampionMarchUnit(resourceScreen, championId);
             DrawCollectionTargetPulse(resourceScreen);
 
-            // Check if collecting time is done
-            if (collectionVisualTimer >= CollectionDuration)
-            {
-                // Call claim on server
-                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
+            // M080: Use server EndsAtUtc for real collection duration
+            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+            float serverDuration = CollectionDurationFallback;
+            if (model?.Active != null && model.Active.StartedAtUtc != model.Active.EndsAtUtc)
+                serverDuration = (float)(model.Active.EndsAtUtc - model.Active.StartedAtUtc).TotalSeconds;
 
+            float timeProgress = Mathf.Clamp01(collectionVisualTimer / serverDuration);
+
+            // Get tile and patrol amounts
+            long tileAmount = resource.Amount;
+            long patrolYield = model?.ActiveNode?.Yield ?? tileAmount;
+            long collected = (long)(patrolYield * timeProgress);
+
+            // --- PROGRESS BAR 1: Patrol progress (amount collected / patrol yield) ---
+            float patrolProgress = Mathf.Clamp01((float)collected / Mathf.Max(1f, patrolYield));
+            Rect patrolBarRect = new Rect(resourceScreen.x - 30f, resourceScreen.y + 28f, 60f, 5f);
+            DrawSolid(patrolBarRect, new Color(0.1f, 0.1f, 0.1f, 0.8f));
+            DrawSolid(new Rect(patrolBarRect.x, patrolBarRect.y, patrolBarRect.width * patrolProgress, patrolBarRect.height), new Color(0.95f, 0.78f, 0.10f, 0.9f));
+
+            // --- PROGRESS BAR 2: Tile depletion (collected / tile total) ---
+            float depletionProgress = tileAmount > 0 ? Mathf.Clamp01((float)collected / tileAmount) : 0f;
+            Rect depletionBarRect = new Rect(resourceScreen.x - 30f, resourceScreen.y + 35f, 60f, 4f);
+            DrawSolid(depletionBarRect, new Color(0.1f, 0.1f, 0.1f, 0.8f));
+            DrawSolid(new Rect(depletionBarRect.x, depletionBarRect.y, depletionBarRect.width * depletionProgress, depletionBarRect.height), new Color(0.85f, 0.35f, 0.15f, 0.9f));
+
+            // --- Resource count label ---
+            long remaining = tileAmount - collected;
+            GUIStyle resStyle = new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(1f, 0.95f, 0.6f, 1f) } };
+            GUI.Label(new Rect(resourceScreen.x - 40f, resourceScreen.y + 40f, 80f, 18f), model?.ActiveNode?.ResourceKey + " " + Mathf.Max(0, remaining) + "/" + tileAmount, resStyle);
+
+            // --- Recall button (with proportional yield on recall) ---
+            float recallBtnW = 120f;
+            Rect recallRect = new Rect(Screen.width * 0.5f - recallBtnW * 0.5f, Screen.height - 60f, recallBtnW, 30f);
+            GUIStyle recallStyle = new GUIStyle(GUI.skin.button) { fontSize = 11, fontStyle = FontStyle.Bold };
+            if (GUI.Button(recallRect, "Rappeler l'escouade", recallStyle))
+            {
+                // M080: Recall with proportional yield (server handles remaining tracking)
+                if (model?.Active != null)
+                    HiveViewProductUiPresenter.RecallOfficialWorldResourceCollectionForWorldMap();
                 collectionVisualState = CollectionVisualState.Returning;
                 collectionVisualTimer = 0f;
+                collectionVisualRecallYield = collected;
+                status = "Rappel: retour vers la ruche";
+                return;
+            }
+
+            // Check if collecting time is done (using server timer)
+            if (collectionVisualTimer >= serverDuration)
+            {
+                collectionVisualState = CollectionVisualState.Returning;
+                collectionVisualTimer = 0f;
+                collectionVisualRecallYield = patrolYield;
                 status = "Retour vers la ruche: " + resource.Label;
             }
         }
@@ -4662,28 +4777,95 @@ namespace BeeKingdom.Playground
             Vector2 resourceScreen = WorldToScreen(resource.WorldCoord);
             Vector2 control = (hiveScreen + resourceScreen) * 0.5f + new Vector2(0f, -Mathf.Min(220f, Vector2.Distance(hiveScreen, resourceScreen) * 0.38f));
 
-            // Return trip: from resource to hive
+            // Return trip: from resource to hive (no elastic, all units same speed)
             float marchProgress = 1f - t;
             Vector2 marker = Bezier(hiveScreen, control, resourceScreen, marchProgress);
             Vector2 tangent = marker - Bezier(hiveScreen, control, resourceScreen, Mathf.Min(1f, marchProgress + 0.02f));
 
             if (!MarchVisibleOnScreen(hiveScreen, resourceScreen, marker)) return;
             DrawStyledMarchPath(hiveScreen, control, resourceScreen, marchProgress, CollectionMarchPalette);
-            DrawMarchFormation(marker, tangent, collectionVisualSample, championId);
+
+            // Champion disappears at hive (t >= 0.95) — troops continue and trail
+            bool championVisible = t < 0.95f;
+
+            // Draw troops
+            if (collectionVisualSample != null)
+            {
+                int totalUnits = 0;
+                foreach ((string _, int count) in collectionVisualSample) totalUnits += count;
+                if (totalUnits > 0)
+                {
+                    Vector2 forward = tangent.sqrMagnitude > 0.0001f ? tangent.normalized : Vector2.up;
+                    float formationSpread = WorldSizeToScreen(24f);
+                    int index = 0;
+                    for (int s = 0; s < collectionVisualSample.Count; s++)
+                    {
+                        (string family, int count) = collectionVisualSample[s];
+                        for (int i = 0; i < count; i++)
+                        {
+                            // Trail effect: units slightly behind the marker, more spread as they arrive
+                            float trailOffset = (float)index / totalUnits * 0.15f;
+                            float unitProgress = Mathf.Clamp01(marchProgress + trailOffset);
+                            Vector2 unitPos = Bezier(hiveScreen, control, resourceScreen, unitProgress);
+                            Vector2 unitTangent = unitPos - Bezier(hiveScreen, control, resourceScreen, Mathf.Min(1f, unitProgress + 0.02f));
+                            Vector2 forward2 = unitTangent.sqrMagnitude > 0.0001f ? unitTangent.normalized : Vector2.up;
+                            Vector2 offset = MarchFormationOffset(index, totalUnits, formationSpread);
+                            // Fade out troops as they arrive at hive
+                            float alpha = Mathf.Clamp01((1f - unitProgress) * 2f);
+                            if (alpha > 0.01f)
+                            {
+                                Color prev = GUI.color;
+                                GUI.color = new Color(1f, 1f, 1f, alpha);
+                                DrawTroopMarchUnit(unitPos + offset, family, index * 1.7f);
+                                GUI.color = prev;
+                            }
+                            index++;
+                        }
+                    }
+                }
+                else
+                {
+                    DrawCombatMarchBee(marker);
+                }
+            }
+
+            // Draw champion (disappears at hive)
+            if (championVisible && !string.IsNullOrEmpty(championId))
+                DrawChampionMarchUnit(marker + (tangent.sqrMagnitude > 0.0001f ? tangent.normalized : Vector2.up) * WorldSizeToScreen(26f), championId);
 
             if (t >= 1f)
             {
+                // M080 — Auto-claim when return trip completes (no manual button needed)
+                long collectedYield = 0;
+                if (IsOfficialResource(resource))
+                {
+                    WorldResourceCollectionScreenModel claimModel = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+                    collectedYield = collectionVisualRecallYield > 0 ? collectionVisualRecallYield : (claimModel?.ActiveNode?.Yield ?? 0);
+                                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
+                HiveViewProductUiPresenter.DismissWorldResourceCollectionDebriefForWorldMap();
+                }
+
                 collectionVisualState = CollectionVisualState.Completed;
                 collectionVisualTimer = 0f;
                 status = "Collecte terminee: " + resource.Label;
 
+                // M080: Track collected amount for post-collection display
+                if (collectedYield > 0)
+                {
+                    collectedAmountByNodeId[resource.Id] = collectedYield;
+                    // M080: Dev respawn — mark tile depleted for 5s fade-out/respawn cycle
+                    tileDepletedAtTime[resource.Id] = Time.realtimeSinceStartup;
+                }
+
                 // Reset to idle after brief completion display
                 collectionVisualState = CollectionVisualState.Idle;
-                collectionVisualCooldown = 5f; // prevent re-sync loop until server claim clears Active
+                collectionVisualCooldown = 5f;
                 collectionVisualLastCompletedNodeId = collectionVisualTargetNodeId;
+                collectionVisualLastYield = collectedYield;
                 collectionVisualTargetNodeId = null;
                 collectionVisualSample = null;
                 collectionVisualChampionId = null;
+                collectionVisualRecallYield = 0;
             }
         }
 
@@ -4695,11 +4877,13 @@ namespace BeeKingdom.Playground
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
 
+            DrawSolid(new Rect(0, 0, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.6f));
+
             float panelW = 320f;
             float panelH = 310f;
             Rect panel = new Rect(Screen.width * 0.5f - panelW * 0.5f, Screen.height * 0.5f - panelH * 0.5f, panelW, panelH);
 
-            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 0.92f));
+            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 1f));
             DrawFrame(panel, new Color(0.18f, 0.85f, 1f, 0.86f), 2f);
 
             float y = panel.y + 12f;
@@ -4722,7 +4906,28 @@ namespace BeeKingdom.Playground
             y += 22f;
 
             GUIStyle champStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = Color.white } };
-            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Championne: " + ResolveMarchLeaderChampionId(), champStyle);
+            IReadOnlyList<string> ownedChamps = HiveViewProductUiPresenter.PeekOwnedChampionBeeIdsForWorldMap();
+            string champLabel = "Aucune";
+            if (ownedChamps.Count > 0)
+            {
+                compositionChampionIndex = Mathf.Clamp(compositionChampionIndex, 0, ownedChamps.Count - 1);
+                string champId = ownedChamps[compositionChampionIndex];
+                if (ChampionBeeCatalog.TryResolve(champId, out ChampionBeeDefinition def))
+                    champLabel = def.FallbackName + " (" + def.Role + ")";
+                else
+                    champLabel = champId;
+            }
+            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 120f, 20f), "Championne: " + champLabel, champStyle);
+            if (GUI.Button(new Rect(panel.xMax - 52f, y, 20f, 20f), "<"))
+            {
+                if (ownedChamps.Count > 0)
+                    compositionChampionIndex = (compositionChampionIndex - 1 + ownedChamps.Count) % ownedChamps.Count;
+            }
+            if (GUI.Button(new Rect(panel.xMax - 28f, y, 20f, 20f), ">"))
+            {
+                if (ownedChamps.Count > 0)
+                    compositionChampionIndex = (compositionChampionIndex + 1) % ownedChamps.Count;
+            }
             y += 24f;
 
             bool canLaunch = model.CanLaunch(compositionTargetNodeId);
@@ -4776,11 +4981,26 @@ namespace BeeKingdom.Playground
             collectionVisualTimer = 0f;
             collectionVisualTargetNodeId = compositionTargetNodeId;
             collectionVisualSample = ComputeMarchVisualSample(model.DraftGuardians, model.DraftWingrunners, model.DraftDarters);
-            collectionVisualChampionId = ResolveMarchLeaderChampionId();
+
+            // M080: Use selected champion from composition panel (owned champions)
+            IReadOnlyList<string> ownedChamps = HiveViewProductUiPresenter.PeekOwnedChampionBeeIdsForWorldMap();
+            if (ownedChamps.Count > 0)
+            {
+                int idx = Mathf.Clamp(compositionChampionIndex, 0, ownedChamps.Count - 1);
+                collectionVisualChampionId = ownedChamps[idx];
+            }
+            else
+            {
+                collectionVisualChampionId = ResolveMarchLeaderChampionId();
+            }
 
             showCompositionPanel = false;
             compositionTargetNodeId = null;
             status = "Vol officiel lance vers " + resource.Label;
+
+            // M080: Play selected champion voice on collection launch
+            if (!string.IsNullOrEmpty(collectionVisualChampionId))
+                ChampionVoiceBarkController.BarkForCollectionLaunch(new[] { collectionVisualChampionId });
         }
 
         // Client-side-only correlation between an active encounter and the map coordinate the
@@ -5695,7 +5915,7 @@ namespace BeeKingdom.Playground
             WorldHiveNode hive = SelectedHive();
             WorldResourceNode resource = SelectedResource();
             Rect panel = ActionPanelRect();
-            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 0.92f));
+            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 1f));
             DrawFrame(panel, new Color(0.18f, 0.85f, 1f, 0.86f), 2f);
             GUI.Label(new Rect(panel.x + 12f, panel.y + 8f, panel.width - 24f, 22f), "Expedition", LabelStyle(Color.white, 14, FontStyle.Bold, TextAnchor.MiddleLeft));
             GUI.Label(new Rect(panel.x + 12f, panel.y + 33f, panel.width - 24f, 18f), "Ruche: " + (hive != null ? hive.Label : "hors zone"), MiniLabel(Color.white, 11, TextAnchor.MiddleLeft));
@@ -6106,12 +6326,23 @@ namespace BeeKingdom.Playground
         private void TryCollectOrLaunch(WorldHiveNode hive, WorldResourceNode resource)
         {
             if (hive == null || resource == null) return;
-            if (!IsOfficialResource(resource)) { StartLocalCollectionFlight(); return; }
 
             // M080 — If in composition state for this resource, this is a confirm action
             if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
             {
                 ConfirmCollectionLaunch();
+                return;
+            }
+
+            // M080 — Non-official resources: launch directly (local simulation, no server)
+            if (!IsOfficialResource(resource))
+            {
+                collectionVisualState = CollectionVisualState.Outbound;
+                collectionVisualTimer = 0f;
+                collectionVisualTargetNodeId = resource.Id;
+                collectionVisualSample = ComputeMarchVisualSample(10, 5, 3);
+                collectionVisualChampionId = ResolveMarchLeaderChampionId();
+                status = "Vol local lance vers " + resource.Label;
                 return;
             }
 
@@ -6123,23 +6354,16 @@ namespace BeeKingdom.Playground
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
 
-            // M080 — Auto-claim any stale expired flight (on any node) to unblock new launches
+            // M080 — Stale expired flight: auto-claim in background to unblock
             if (model.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc)
             {
-                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
+                                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
+                HiveViewProductUiPresenter.DismissWorldResourceCollectionDebriefForWorldMap();
                 status = "Recolte expiree recuperee automatiquement";
                 return;
             }
 
-            // If flight ready to claim, claim it
-            if (IsOfficialFlightReadyToClaim(model, resource.Id))
-            {
-                HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
-                status = "Recolte officielle en cours de validation: " + resource.Label;
-                return;
-            }
-
-            // If flight active here, recall it
+            // M080 — Flight active here: recall it (recall button shown during Collecting via visual state)
             if (IsOfficialFlightActiveHere(model, resource.Id))
             {
                 HiveViewProductUiPresenter.RecallOfficialWorldResourceCollectionForWorldMap();
@@ -6147,7 +6371,7 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            // If another flight active, refuse
+            // M080 — Flight active on another node: refuse
             if (model.Active != null) { status = "Un vol officiel est deja en cours"; return; }
 
             // If no troops available, refuse
@@ -6164,8 +6388,6 @@ namespace BeeKingdom.Playground
         private bool CanCollectOrLaunch(WorldHiveNode hive, WorldResourceNode resource)
         {
             if (hive == null || resource == null) return false;
-            if (!IsOfficialResource(resource))
-                return ResourceRemaining(resource) > 0 && (collectionState == CollectionFlightState.Idle || collectionState == CollectionFlightState.Completed);
 
             // M080 — If in composition state, allow confirm
             if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
@@ -6177,15 +6399,21 @@ namespace BeeKingdom.Playground
                 collectionVisualState == CollectionVisualState.Returning)
                 return false;
 
-            // M080 — Check server state
+            // M080 — Cooldown after visual cycle completes: block buttons
+            if (collectionVisualCooldown > 0f) return false;
+
+            // M080 — Non-official resources: always launchable (local simulation)
+            if (!IsOfficialResource(resource))
+                return true;
+
+            // M080 — Official resources: check server state
             if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()) return false;
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null || model.State == WorldResourceCollectionScreenState.Mutating) return false;
             RemoteWorldResourceNode node = OfficialNodeState(resource);
-            // M080 — Allow click if stale expired flight (will auto-claim on click)
-            if (model.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc) return true;
-            return IsOfficialFlightReadyToClaim(model, resource.Id) ||
-                IsOfficialFlightActiveHere(model, resource.Id) ||
+            // M080 — Block if stale expired flight (server still has Active, auto-claim on return handles it)
+            if (model.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc) return false;
+            return IsOfficialFlightActiveHere(model, resource.Id) ||
                 (model.Active == null && node != null && node.CanLaunch);
         }
 
@@ -6196,7 +6424,7 @@ namespace BeeKingdom.Playground
 
         private string CollectionActionLabel(WorldResourceNode resource)
         {
-            if (!IsOfficialResource(resource)) return "Collecter";
+            if (!IsOfficialResource(resource)) return "Envoyer les abeilles";
 
             // M080 — Visual state machine labels
             if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
@@ -6208,11 +6436,18 @@ namespace BeeKingdom.Playground
             if (collectionVisualState == CollectionVisualState.Returning)
                 return "Retour en cours...";
 
+            // M080: If visual cycle just completed (cooldown active), do not show recall/claim buttons
+            // The auto-claim already happened at end of Returning
+            if (collectionVisualCooldown > 0f) return "Envoyer les abeilles";
+
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-            if (model?.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc) return "Recuperer la recolte";
-            if (IsOfficialFlightReadyToClaim(model, resource.Id)) return "Recolter (officiel)";
+            // M080: If this resource was just completed in this visual cycle, don't show claim
+            if (model?.Active != null && string.Equals(model.Active.NodeId, collectionVisualLastCompletedNodeId, System.StringComparison.Ordinal))
+                return "Envoyer les abeilles";
+            // M080: "Récupérer la récolte" removed — auto-claim happens at end of Returning
+            if (IsOfficialFlightReadyToClaim(model, resource.Id)) return "Envoyer les abeilles";
             if (IsOfficialFlightActiveHere(model, resource.Id)) return "Rappeler l'escouade";
-            return "Envoyer les abeilles (officiel)";
+            return "Envoyer les abeilles";
         }
 
         private string OfficialStateLabel(WorldResourceNode resource)
@@ -6223,13 +6458,11 @@ namespace BeeKingdom.Playground
             if (model?.Active != null && string.Equals(model.Active.NodeId, resource.Id, StringComparison.Ordinal))
             {
                 TimeSpan remaining = model.Active.EndsAtUtc - DateTimeOffset.UtcNow;
-                return remaining > TimeSpan.Zero ? "Vol officiel en cours: " + Mathf.CeilToInt((float)remaining.TotalSeconds) + "s" : "Recolte prete a valider";
+                return remaining > TimeSpan.Zero ? "Vol officiel en cours: " + Mathf.CeilToInt((float)remaining.TotalSeconds) + "s" : "Retour en cours...";
             }
             if (model?.Debrief != null && string.Equals(model.Debrief.NodeId, resource.Id, StringComparison.Ordinal))
             {
                 string focusSuffix = model.Debrief.DailyFocusApplied ? " (cible du jour, +50% deja inclus)" : "";
-                // Evenement mondial dynamique (demande de Jeff, 2026-08-01) : meme principe que la
-                // Cible du jour ci-dessus, mais change plusieurs fois par jour au lieu d'une fois.
                 string worldEventSuffix = model.Debrief.WorldEventApplied
                     ? " (" + HiveViewProductUiPresenter.WorldEventDisplayName(model.Debrief.WorldEventKey) + ", bonus deja inclus)"
                     : "";
@@ -6240,9 +6473,11 @@ namespace BeeKingdom.Playground
                 TimeSpan cooldown = node.ReadyAtUtc.Value - DateTimeOffset.UtcNow;
                 return cooldown > TimeSpan.Zero ? "Repos: " + Mathf.CeilToInt((float)cooldown.TotalSeconds) + "s" : "Pret";
             }
-            // Cible du jour (demande de Jeff, 2026-07-31) : ce noeud precis donne +50% de
-            // recompense aujourd'hui - visible avant meme d'envoyer les abeilles.
-            string readyLabel = "Pret (" + node.Yield.ToString(CultureInfo.InvariantCulture) + " " + node.ResourceKey + ")";
+            // Show remaining from server if available
+            string remainingLabel = node.Remaining >= 0
+                ? " (" + node.Remaining.ToString(CultureInfo.InvariantCulture) + "/" + resource.Amount + ")"
+                : " (" + node.Yield.ToString(CultureInfo.InvariantCulture) + " " + node.ResourceKey + ")";
+            string readyLabel = "Pret" + remainingLabel;
             if (node.IsDailyFocus) readyLabel += " - Cible du jour +50%";
             // Evenement mondial dynamique (demande de Jeff, 2026-08-01) : la meteo active peut
             // booster (ou reduire) ce rendement precis - change plusieurs fois par jour.
@@ -6798,9 +7033,45 @@ namespace BeeKingdom.Playground
         private string ResourceQuantityLabel(WorldResourceNode resource)
         {
             if (resource == null) return string.Empty;
-            int remaining = ResourceRemaining(resource);
-            if (remaining <= 0) return "Épuisée";
-            return remaining.ToString(CultureInfo.InvariantCulture) + "/" + resource.Amount.ToString(CultureInfo.InvariantCulture);
+
+            // M080: If this is an official resource with active collection, show prorata remaining
+            if (IsOfficialResource(resource) && collectionVisualState == CollectionVisualState.Collecting
+                && collectionVisualTargetNodeId == resource.Id)
+            {
+                WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
+                if (model?.Active != null && model?.ActiveNode != null)
+                {
+                    float serverDuration = CollectionDurationFallback;
+                    if (model.Active.StartedAtUtc != model.Active.EndsAtUtc)
+                        serverDuration = (float)(model.Active.EndsAtUtc - model.Active.StartedAtUtc).TotalSeconds;
+                    float progress = Mathf.Clamp01(collectionVisualTimer / serverDuration);
+                    long tileAmount = resource.Amount;
+                    long patrolYield = model.ActiveNode.Yield;
+                    long collected = (long)(patrolYield * progress);
+                    long remaining = tileAmount - collected;
+                    return Mathf.Max(0, remaining) + "/" + tileAmount;
+                }
+            }
+
+            // M080: Use server-side Remaining if available
+            RemoteWorldResourceNode officialNode = OfficialNodeState(resource);
+            if (officialNode != null && officialNode.Remaining >= 0)
+            {
+                if (officialNode.Remaining <= 0) return "Épuisée";
+                return officialNode.Remaining + "/" + resource.Amount;
+            }
+
+            // M080: After collection completed, show depleted amount from tracked yield
+            if (IsOfficialResource(resource) && collectedAmountByNodeId.TryGetValue(resource.Id, out long postCollectionCollected))
+            {
+                long depleted = resource.Amount - postCollectionCollected;
+                if (depleted <= 0) return "Épuisée";
+                return depleted + "/" + resource.Amount;
+            }
+
+            int remaining2 = ResourceRemaining(resource);
+            if (remaining2 <= 0) return "Épuisée";
+            return remaining2.ToString(CultureInfo.InvariantCulture) + "/" + resource.Amount.ToString(CultureInfo.InvariantCulture);
         }
 
         private string ResourceAccessibilityToken(WorldResourceNode resource)
@@ -7184,6 +7455,14 @@ namespace BeeKingdom.Playground
 
         private string CollectionStateLabel()
         {
+            // M080 — Reflect visual state machine for all resources
+            switch (collectionVisualState)
+            {
+                case CollectionVisualState.Composition: return "Composition";
+                case CollectionVisualState.Outbound: return "En vol";
+                case CollectionVisualState.Collecting: return "Collecte";
+                case CollectionVisualState.Returning: return "Retour";
+            }
             return CollectionStateLabel(collectionState);
         }
 

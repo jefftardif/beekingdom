@@ -55,7 +55,7 @@ namespace BeeKingdom.Playground
             ["select"] = "select",
             ["building_launch"] = "building",
             ["patrol_launch"] = "spawn",
-            ["collection_launch"] = "move",
+            ["collection_launch"] = "collect",
             ["victory"] = "victory",
             ["legendary_discovery"] = "legendary",
             ["bestiary_open"] = "bestiary",

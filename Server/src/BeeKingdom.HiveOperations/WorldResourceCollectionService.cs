@@ -44,14 +44,14 @@ public sealed class WorldResourceCollectionOptions
     }
 }
 
-public sealed record WorldResourceCollectionState(long Revision, Dictionary<string, DateTimeOffset> NodeReadyAtUtc, WorldResourceActiveFlight? Active, Dictionary<string, IdempotencyReceipt> Receipts, Dictionary<string, WorldResourceClaimReceipt>? ClaimReceipts = null);
+public sealed record WorldResourceCollectionState(long Revision, Dictionary<string, DateTimeOffset> NodeReadyAtUtc, WorldResourceActiveFlight? Active, Dictionary<string, IdempotencyReceipt> Receipts, Dictionary<string, WorldResourceClaimReceipt>? ClaimReceipts = null, Dictionary<string, long>? NodeRemaining = null);
 // CommittedTroops (demande de Jeff, 2026-08-01) : premiere brique de l'architecture de deploiement
 // reutilisable plus tard (PvP, raids, renforts, occupation de points d'interet) - l'escouade est
 // reellement engagee hors de la ruche pour toute la duree du vol, comptabilisee par
 // HiveTroopDeploymentAccounting exactement comme les encounters de Combat Patrol.
 public sealed record WorldResourceActiveFlight(Guid FlightId, string NodeId, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc, Dictionary<string, long> CommittedTroops, long Revision, string LaunchIdempotencyKey, string PayloadHash);
 public sealed record WorldResourceClaimReceipt(Guid PlayerId, Guid HiveId, Guid FlightId, string NodeId, string ResourceKey, long CreditedAmount, long Revision, DateTimeOffset ServerTimeUtc, ResourceBalance ResultingBalance, bool DailyFocusApplied = false, bool WorldEventApplied = false, string WorldEventKey = "");
-public sealed record WorldResourceNodeReadModel(string NodeId, string ResourceKey, string Tier, long Yield, TimeSpan Duration, TimeSpan Cooldown, string Label, bool Ready, DateTimeOffset? ReadyAtUtc, bool CanLaunch, bool IsDailyFocus = false, bool IsWorldEventBoosted = false);
+public sealed record WorldResourceNodeReadModel(string NodeId, string ResourceKey, string Tier, long Yield, TimeSpan Duration, TimeSpan Cooldown, string Label, bool Ready, DateTimeOffset? ReadyAtUtc, bool CanLaunch, bool IsDailyFocus = false, bool IsWorldEventBoosted = false, long Remaining = -1);
 public sealed record WorldResourceCollectionSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, string CatalogVersion, long Revision, DateTimeOffset ServerTimeUtc, IReadOnlyList<WorldResourceNodeReadModel> Nodes, WorldResourceActiveFlight? Active, WorldResourceClaimReceipt? ClaimReceipt = null, string? FeaturedNodeId = null, ActiveWorldEvent? WorldEvent = null, IReadOnlyDictionary<string, long>? AvailableRoster = null);
 public sealed record LaunchWorldResourceCollectionRequest(long Guardians, long Wingrunners, long Darters, long ExpectedRevision, string IdempotencyKey);
 public sealed record ClaimWorldResourceCollectionRequest(long ExpectedRevision, string IdempotencyKey);
@@ -127,7 +127,11 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             { result = Fail(state, collection, "game.world_resource_insufficient_troops", now); return state; }
 
             WorldResourceActiveFlight flight = new(Guid.NewGuid(), nodeId, now, now + node.Duration, requestedTroops, collection.Revision + 1, request.IdempotencyKey, hash);
-            WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = flight };
+            // Initialize node remaining tracking on first collection of this node
+            Dictionary<string, long> nodeRemaining = collection.NodeRemaining != null ? new(collection.NodeRemaining, StringComparer.Ordinal) : new(StringComparer.Ordinal);
+            if (!nodeRemaining.ContainsKey(nodeId))
+                nodeRemaining[nodeId] = node.Yield;
+            WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = flight, NodeRemaining = nodeRemaining };
             PlayerHiveState updated = state with { WorldResourceCollection = updatedCollection };
             // M078B-CL: "En mission" - envoyer une expedition reelle sur la World Map.
             if (dailyRoundEnabled) updated = HiveDailyRoundFacts.ApplyFreshFact(updated, now, HiveDailyRoundFact.SnapshotRead, false);
@@ -176,12 +180,18 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             ActiveWorldEvent worldEvent = WorldEventCatalog.Active(now);
             bool worldEventApplied = string.Equals(node.NodeId, WorldEventFeaturedNodeId(worldEvent, now), StringComparison.Ordinal);
             if (worldEventApplied) yield = WorldEventCatalog.ApplyBonusBp(yield, worldEvent.BonusBp);
+            // Remaining: cap yield by server-tracked remaining on tile
+            Dictionary<string, long> nodeRemaining = collection.NodeRemaining != null ? new(collection.NodeRemaining, StringComparer.Ordinal) : new(StringComparer.Ordinal);
+            long tileRemaining = nodeRemaining.TryGetValue(node.NodeId, out long nr) ? nr : node.Yield;
+            long effectiveYield = Math.Min(yield, Math.Max(0, tileRemaining));
             Dictionary<string, ResourceBalance> resources = new(state.Resources, StringComparer.Ordinal);
-            long credited = ApplyReward(resources, node.ResourceKey, yield);
+            long credited = ApplyReward(resources, node.ResourceKey, effectiveYield);
+            // Deplete remaining by the amount actually credited
+            nodeRemaining[node.NodeId] = Math.Max(0, tileRemaining - credited);
             Dictionary<string, DateTimeOffset> readyAt = new(collection.NodeReadyAtUtc, StringComparer.Ordinal) { [node.NodeId] = now + node.Cooldown };
             WorldResourceClaimReceipt claim = new(playerId, hiveId, flightId, node.NodeId, node.ResourceKey, credited, collection.Revision + 1, now, resources[node.ResourceKey], dailyFocusApplied, worldEventApplied, worldEventApplied ? worldEvent.Key : "");
             Dictionary<string, WorldResourceClaimReceipt> claimReceipts = new(collection.ClaimReceipts ?? new(StringComparer.Ordinal), StringComparer.Ordinal) { [request.IdempotencyKey] = claim };
-            WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = null, NodeReadyAtUtc = readyAt, ClaimReceipts = claimReceipts };
+            WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = null, NodeReadyAtUtc = readyAt, ClaimReceipts = claimReceipts, NodeRemaining = nodeRemaining };
             PlayerHiveState updated = state with { Resources = resources, WorldResourceCollection = updatedCollection };
             // M078B-CL: "Recolteur du royaume" - une ressource reellement recoltee sur la World Map.
             if (dailyRoundEnabled) updated = HiveDailyRoundFacts.ApplyFreshFact(updated, now, HiveDailyRoundFact.CollectionReceived, false);
@@ -263,7 +273,22 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             bool ready = readyAt is null || readyAt <= now;
             bool isDailyFocus = string.Equals(node.NodeId, featuredNodeId, StringComparison.Ordinal);
             bool isWorldEventBoosted = string.Equals(node.NodeId, worldEventFeaturedNodeId, StringComparison.Ordinal);
-            nodes.Add(new WorldResourceNodeReadModel(node.NodeId, node.ResourceKey, node.Tier, node.Yield, node.Duration, node.Cooldown, node.Label, ready, ready ? null : readyAt, ready && collection.Active is null, isDailyFocus, isWorldEventBoosted));
+            // Remaining: server-tracked depletion. If no tracking yet, initialize to Yield.
+            long remaining = node.Yield;
+            if (collection.NodeRemaining != null && collection.NodeRemaining.TryGetValue(node.NodeId, out long stored))
+                remaining = stored;
+            // During active flight on this node, compute time-based depletion
+            if (collection.Active != null && string.Equals(collection.Active.NodeId, node.NodeId, StringComparison.Ordinal))
+            {
+                double elapsed = (now - collection.Active.StartedAtUtc).TotalSeconds;
+                double duration = (collection.Active.EndsAtUtc - collection.Active.StartedAtUtc).TotalSeconds;
+                if (duration > 0 && elapsed > 0)
+                {
+                    long collected = (long)(node.Yield * Math.Min(1.0, elapsed / duration));
+                    remaining = Math.Max(0, node.Yield - collected);
+                }
+            }
+            nodes.Add(new WorldResourceNodeReadModel(node.NodeId, node.ResourceKey, node.Tier, node.Yield, node.Duration, node.Cooldown, node.Label, ready, ready ? null : readyAt, ready && collection.Active is null, isDailyFocus, isWorldEventBoosted, remaining));
         }
         IReadOnlyDictionary<string, long> availableRoster = HiveTroopDeploymentAccounting.ComputeAvailableRoster(state);
         return new(state.PlayerId, state.HiveId, ContractVersion, o.CatalogVersion, collection.Revision, now, nodes, collection.Active, claimReceipt, featuredNodeId, worldEvent, availableRoster);
