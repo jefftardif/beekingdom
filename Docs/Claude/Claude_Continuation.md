@@ -40,6 +40,21 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant — M080-OC suite : épuisement des tuiles serveur + marche élastique champion + déploiement (2026-09-12)
+
+Suite du rebuild M080 (collecte World Map). Commit `fd51fe6` poussé sur `origin/main` et déployé via `origin/main:deploy`.
+
+- **Serveur** (`WorldResourceCollectionService.cs`) : suivi par tuile `NodeRemaining` — le rendement est plafonné par ce qui reste sur la tuile, la déplétion temps-réel est affichée pendant un vol actif, et une fois épuisée la tuile ne crédite plus (respawn client). Champ `Remaining` exposé dans le read model.
+- **Client World Map** (`WorldMapMmoFullscreenFoundationBootstrap.cs`) : respawn visible de 5 s sur les tuiles épuisées, marche sortante élastique (8 s — champion ~2 s devant les troupes), sélecteur de champion dans le panneau de composition, `DismissWorldResourceCollectionDebrief`, `PeekOwnedChampionBeeIdsForWorldMap`.
+- **Voix** : bark `collection_launch` passe de `move` à `collect`.
+- Exclu volontairement du commit : `Server/artifacts/packages/`, `publish/`, `deploy-opencode.zip`, `TestResults/`, `.meta` de screenshot (transitoires ; la pipeline rebuild en CI, les artefacts du dépôt ne servent pas à déployer).
+
+Preuves : pipeline `Deploy BeeKingdomApi` run `34723695134` — build 48 s ✓, deploy 23 s ✓ (site offline → copie → online), smoke test `GET https://api-ops.beekingdomgame.com/` 200 ✓.
+
+Prochain test utilisateur : retest de la collecte World Map en Play Mode dans `WorldMapWave6Wave5Method12288Preview` — déplétion/épuisement d'une tuile, respawn 5 s, champion en tête de la marche, sélecteur de champion au panneau composition.
+
+---
+
 ## Jalon courant — M076-CX : placements des chutes corrigés et vérifiés (2026-09-09)
 
 M075 annonçait des placements corrects sans preuve suffisante : origine runtime omise et catalogue non chargé. M076 remplace ces coordonnées par 12 configurations mesurées sur le terrain source (`pixel * 25/12 + 3584`), chacune avec ses propres contours. Le renderer commun charge réellement le JSON et gère les RT/caméras, matériaux, animation et OnGUI ; transfert de la même carte sans replacer les instances.
