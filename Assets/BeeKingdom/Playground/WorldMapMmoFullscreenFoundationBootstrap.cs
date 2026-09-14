@@ -4948,11 +4948,16 @@ namespace BeeKingdom.Playground
 
             GUIStyle champStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = Color.white } };
             IReadOnlyList<string> ownedChamps = HiveViewProductUiPresenter.PeekOwnedChampionBeeIdsForWorldMap();
+            int champOptionsCount = ownedChamps.Count + 1; // +1 for "Aucune"
             string champLabel = "Aucune";
-            if (ownedChamps.Count > 0)
+            if (compositionChampionIndex == 0)
             {
-                compositionChampionIndex = Mathf.Clamp(compositionChampionIndex, 0, ownedChamps.Count - 1);
-                string champId = ownedChamps[compositionChampionIndex];
+                champLabel = "Aucune";
+            }
+            else if (ownedChamps.Count > 0)
+            {
+                int champIdx = Mathf.Clamp(compositionChampionIndex - 1, 0, ownedChamps.Count - 1);
+                string champId = ownedChamps[champIdx];
                 if (ChampionBeeCatalog.TryResolve(champId, out ChampionBeeDefinition def))
                     champLabel = def.FallbackName + " (" + def.Role + ")";
                 else
@@ -4961,13 +4966,11 @@ namespace BeeKingdom.Playground
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 120f, 20f), "Championne: " + champLabel, champStyle);
             if (GUI.Button(new Rect(panel.xMax - 52f, y, 20f, 20f), "<"))
             {
-                if (ownedChamps.Count > 0)
-                    compositionChampionIndex = (compositionChampionIndex - 1 + ownedChamps.Count) % ownedChamps.Count;
+                compositionChampionIndex = (compositionChampionIndex - 1 + champOptionsCount) % champOptionsCount;
             }
             if (GUI.Button(new Rect(panel.xMax - 28f, y, 20f, 20f), ">"))
             {
-                if (ownedChamps.Count > 0)
-                    compositionChampionIndex = (compositionChampionIndex + 1) % ownedChamps.Count;
+                compositionChampionIndex = (compositionChampionIndex + 1) % champOptionsCount;
             }
             y += 24f;
 
@@ -5033,16 +5036,16 @@ namespace BeeKingdom.Playground
             collectionVisualOriginHiveId = SelectedHive()?.Id;
             collectionVisualSample = ComputeMarchVisualSample(model.DraftGuardians, model.DraftWingrunners, model.DraftDarters);
 
-            // M080: Use selected champion from composition panel (owned champions)
+            // M080: Use selected champion from composition panel (index 0 = Aucune)
             IReadOnlyList<string> ownedChamps = HiveViewProductUiPresenter.PeekOwnedChampionBeeIdsForWorldMap();
-            if (ownedChamps.Count > 0)
+            if (compositionChampionIndex > 0 && ownedChamps.Count > 0)
             {
-                int idx = Mathf.Clamp(compositionChampionIndex, 0, ownedChamps.Count - 1);
+                int idx = Mathf.Clamp(compositionChampionIndex - 1, 0, ownedChamps.Count - 1);
                 collectionVisualChampionId = ownedChamps[idx];
             }
             else
             {
-                collectionVisualChampionId = ResolveMarchLeaderChampionId();
+                collectionVisualChampionId = null;
             }
 
             showCompositionPanel = false;
