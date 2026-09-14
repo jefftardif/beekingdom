@@ -4924,6 +4924,15 @@ namespace BeeKingdom.Playground
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 24f), "Composition de l'escouade", titleStyle);
             y += 28f;
 
+            // M081: Show error from controller (e.g., max_marches_reached)
+            if (!string.IsNullOrEmpty(model.ErrorCode))
+            {
+                GUIStyle errorStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = new Color(1f, 0.5f, 0.5f, 1f) }, alignment = TextAnchor.MiddleCenter, wordWrap = true };
+                string errorMsg = model.ErrorCode == "max_marches_reached" ? "Toutes vos marches sont actuellement deployees (max 3)." : model.ErrorCode;
+                GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 40f), errorMsg, errorStyle);
+                y += 44f;
+            }
+
             GUIStyle infoStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = new Color(0.86f, 0.92f, 1f, 1f) } };
             GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Cible: " + resource.Label, infoStyle);
             y += 26f;
@@ -5000,6 +5009,15 @@ namespace BeeKingdom.Playground
             if (model == null || !model.CanLaunch(compositionTargetNodeId))
             {
                 status = "Impossible de lancer la collecte";
+                collectionVisualState = CollectionVisualState.Idle;
+                showCompositionPanel = false;
+                return;
+            }
+
+            // M081: Check global march limit (max 3 active marches)
+            if (!WorldMapMarchRegistry.CanLaunchNewMarch())
+            {
+                status = "Toutes vos marches sont actuellement deployees.";
                 collectionVisualState = CollectionVisualState.Idle;
                 showCompositionPanel = false;
                 return;
@@ -5729,6 +5747,12 @@ namespace BeeKingdom.Playground
             DrawLegendItem(legend.x + 286f, legend.y + 40f, HiveColor(HiveMaturity.Advanced), "Avancee");
             DrawLegendItem(legend.x + 410f, legend.y + 40f, HiveColor(HiveMaturity.Capital), "Capitale");
             DrawLegendItem(legend.x + 536f, legend.y + 40f, ResourceColor(ResourceKind.RoyalJelly), "Ressources rares");
+
+            // M081: March limit indicator
+            string marchText = WorldMapMarchRegistry.GetMarchLimitText();
+            GUIStyle marchStyle = LabelStyle(new Color(1f, 0.95f, 0.6f, 1f), 12, FontStyle.Bold, TextAnchor.MiddleLeft);
+            GUI.Label(new Rect(legend.x + 14f, legend.y + 70f, 200f, 20f), marchText, marchStyle);
+
             DrawBearDenToggle();
         }
 

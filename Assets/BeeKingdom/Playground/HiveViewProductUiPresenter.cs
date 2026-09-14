@@ -39362,6 +39362,11 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
 
         internal static async void OpenCombatPatrolOverlayForWorldMap(int tier)
         {
+            if (!WorldMapMarchRegistry.CanLaunchNewMarch())
+            {
+                return;
+            }
+
             AudioManager.Instance?.PlayMenuOpen();
             combatPatrolOverlayOpen = true;
             combatPatrolController.ClearSelection();
@@ -39411,6 +39416,36 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
         // Read-only peek so the world map can draw marching lines to active patrols' targets
         // without depending on the panel controller's full interface.
         internal static CombatPatrolScreenModel PeekCombatPatrolModelForWorldMap() => combatPatrolController?.Model;
+
+        // M081: Rebuild the unified march registry from both Combat Patrol and Collection server state
+        internal static void RebuildWorldMapMarchRegistry()
+        {
+            var combatModel = combatPatrolController?.Model;
+            var collectionModel = OfficialWorldResourceCollectionModelForWorldMap();
+            var hiveId = MobileAccountSessionRuntimeBootstrap.GameplayHiveId;
+
+            if (hiveId == Guid.Empty) return;
+
+            WorldMapMarchRegistry.RebuildFromServerState(
+                hiveId,
+                combatModel?.ActiveEncounters,
+                collectionModel?.Active
+            );
+        }
+
+        // M081: Get available roster for march reservation (prioritizes combat, falls back to collection)
+        internal static IReadOnlyDictionary<string, long> GetAvailableRosterForMarchRegistry()
+        {
+            var combatModel = combatPatrolController?.Model;
+            if (combatModel != null && combatModel.AvailableRoster != null)
+                return combatModel.AvailableRoster;
+
+            var collectionModel = OfficialWorldResourceCollectionModelForWorldMap();
+            if (collectionModel != null && collectionModel.AvailableRoster != null)
+                return collectionModel.AvailableRoster;
+
+            return new Dictionary<string, long>();
+        }
 
         // Permet a la carte du monde de relire l'etat de patrouille pendant que le joueur reste
         // simplement sur la carte (demande de Jeff, 2026-08-25 : "la troupe doit revenir toute

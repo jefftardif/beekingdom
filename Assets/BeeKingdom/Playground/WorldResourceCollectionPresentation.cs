@@ -180,7 +180,39 @@ namespace BeeKingdom.Playground
         private async Task LaunchCoreAsync(string nodeId)
         {
             if (busy || disposed || !Model.CanLaunch(nodeId)) return;
+            if (!WorldMapMarchRegistry.CanLaunchNewMarch())
+            {
+                SetError("max_marches_reached");
+                return;
+            }
+
             int guardians = Model.DraftGuardians, wingrunners = Model.DraftWingrunners, darters = Model.DraftDarters;
+            var availableRoster = Model.AvailableRoster;
+            var committedTroops = new Dictionary<string, long>
+            {
+                ["guardians"] = guardians,
+                ["wingrunners"] = wingrunners,
+                ["darters"] = darters,
+            };
+
+            var march = new WorldMapMarch
+            {
+                MarchId = $"collection_{Guid.NewGuid():N}",
+                Type = WorldMapMarchType.Collection,
+                State = WorldMapMarchState.Outbound,
+                OriginHiveId = hiveId,
+                TargetId = nodeId,
+                CommittedTroops = committedTroops,
+                ChampionId = null,
+                StartedAtUtc = DateTimeOffset.UtcNow,
+            };
+
+            if (!WorldMapMarchRegistry.TryRegisterMarch(march, availableRoster))
+            {
+                SetError("max_marches_reached");
+                return;
+            }
+
             busy = true;
             Model.State = WorldResourceCollectionScreenState.Mutating;
             try
@@ -208,6 +240,8 @@ namespace BeeKingdom.Playground
                 RemoteWorldResourceCollectionSnapshot snapshot = await client.RecallAsync(hiveId, target.FlightId, Model.Revision, NewKey("recall"), lifetime.Token);
                 if (disposed) return;
                 ApplySnapshot(snapshot);
+                var marchId = $"collection_{target.FlightId}";
+                WorldMapMarchRegistry.UnregisterMarch(marchId, Model.AvailableRoster);
             }
             catch (WorldResourceCollectionClientException error) { if (!disposed) SetError(StableError(error)); }
             catch (Exception) { if (!disposed) SetError("unexpected"); }
@@ -237,6 +271,8 @@ namespace BeeKingdom.Playground
                     };
                 }
                 ApplySnapshot(snapshot);
+                var marchId = $"collection_{target.FlightId}";
+                WorldMapMarchRegistry.UnregisterMarch(marchId, Model.AvailableRoster);
                 if (Model.Debrief != null) Model.State = WorldResourceCollectionScreenState.Debrief;
             }
             catch (WorldResourceCollectionClientException error) { if (!disposed) SetError(StableError(error)); }
@@ -266,6 +302,9 @@ namespace BeeKingdom.Playground
                     Model.State = WorldResourceCollectionScreenState.Ready;
                 }
             }
+
+            // M081: Rebuild unified march registry from fresh server state
+            HiveViewProductUiPresenter.RebuildWorldMapMarchRegistry();
         }
 
         private void SetError(string code)

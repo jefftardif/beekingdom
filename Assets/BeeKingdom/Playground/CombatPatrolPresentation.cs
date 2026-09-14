@@ -319,6 +319,38 @@ namespace BeeKingdom.Playground
         private async Task LaunchCoreAsync()
         {
             if (busy || disposed || !Model.CanLaunch) return;
+            if (!WorldMapMarchRegistry.CanLaunchNewMarch())
+            {
+                SetError("max_marches_reached");
+                return;
+            }
+
+            var availableRoster = Model.AvailableRoster;
+            var committedTroops = new Dictionary<string, long>
+            {
+                ["guardians"] = Model.DraftGuardians,
+                ["wingrunners"] = Model.DraftWingrunners,
+                ["darters"] = Model.DraftDarters,
+            };
+
+            var march = new WorldMapMarch
+            {
+                MarchId = $"combat_{Guid.NewGuid():N}",
+                Type = WorldMapMarchType.Combat,
+                State = WorldMapMarchState.Outbound,
+                OriginHiveId = hiveId,
+                TargetId = $"tier_{Model.SelectedTier}",
+                CommittedTroops = committedTroops,
+                ChampionId = null,
+                StartedAtUtc = DateTimeOffset.UtcNow,
+            };
+
+            if (!WorldMapMarchRegistry.TryRegisterMarch(march, availableRoster))
+            {
+                SetError("max_marches_reached");
+                return;
+            }
+
             busy = true;
             Model.State = CombatPatrolScreenState.Mutating;
             try
@@ -336,7 +368,7 @@ namespace BeeKingdom.Playground
             finally { busy = false; }
         }
 
-        private async Task ClaimCoreAsync()
+private async Task ClaimCoreAsync()
         {
             RemoteCombatPatrolActiveEncounter target = Model.SelectedEncounter;
             if (busy || disposed || target == null) return;
@@ -372,15 +404,15 @@ namespace BeeKingdom.Playground
                     };
                 }
                 ApplySnapshot(response.Snapshot);
+                var marchId = $"combat_{target.EncounterId}";
+                WorldMapMarchRegistry.UnregisterMarch(marchId, Model.AvailableRoster);
                 if (Model.Debrief != null) Model.State = CombatPatrolScreenState.Debrief;
-                // M076-CL: loot from this claim already sits in ResultingBalances server-side —
-                // don't wait for the stock panel's own poll to notice it.
                 if (response.ClaimReceipt != null) HiveViewProductUiPresenter.NotifyStockMightHaveChanged();
             }
             catch (CombatPatrolClientException error) { if (!disposed) SetError(StableError(error)); }
             catch (Exception) { if (!disposed) SetError("unexpected"); }
             finally { busy = false; }
-        }
+}
 
         // Troupes qui reviennent d'elles-memes (demande de Jeff, 2026-08-25) : avant, une
         // patrouille terminee restait "ClaimReady" indefiniment - le joueur devait ouvrir la
@@ -425,6 +457,8 @@ namespace BeeKingdom.Playground
                 if (disposed) return;
                 Model.SelectedEncounterId = null;
                 ApplySnapshot(response.Snapshot);
+                var marchId = $"combat_{target.EncounterId}";
+                WorldMapMarchRegistry.UnregisterMarch(marchId, Model.AvailableRoster);
                 await RefreshPreviewCoreAsync();
             }
             catch (CombatPatrolClientException error) { if (!disposed) SetError(StableError(error)); }
@@ -499,6 +533,9 @@ namespace BeeKingdom.Playground
                     Model.State = Model.HasFreeSlot ? CombatPatrolScreenState.ReadyToLaunch : CombatPatrolScreenState.Blocked;
                 }
             }
+
+            // M081: Rebuild unified march registry from fresh server state
+            HiveViewProductUiPresenter.RebuildWorldMapMarchRegistry();
         }
 
         private void SetError(string code)
