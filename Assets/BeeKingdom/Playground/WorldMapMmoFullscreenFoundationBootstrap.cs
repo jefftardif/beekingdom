@@ -6553,12 +6553,11 @@ namespace BeeKingdom.Playground
         // considere le vol termine, sans dependre d'une nouvelle selection manuelle du joueur.
         private void UpdateOfficialWorldResourceCollectionPolling()
         {
-            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-            if (model == null || model.Active == null) return;
-            officialWorldResourceRefreshTimer += Time.deltaTime;
-            if (officialWorldResourceRefreshTimer < 3f) return;
+            // The visual flight state already has the authoritative start/end timestamps.
+            // Polling here every few seconds put the shared controller in Mutating/Busy,
+            // briefly disabling every resource tile and racing the return auto-claim.
+            // Refreshes are performed by explicit mutations and initial screen setup instead.
             officialWorldResourceRefreshTimer = 0f;
-            HiveViewProductUiPresenter.RefreshOfficialWorldResourceCollectionForWorldMap();
         }
 
         // Monde vivant (demande de Jeff, 2026-08-01) : presence ambiante des autres colonies -
