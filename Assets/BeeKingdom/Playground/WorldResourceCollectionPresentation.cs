@@ -187,32 +187,6 @@ namespace BeeKingdom.Playground
             }
 
             int guardians = Model.DraftGuardians, wingrunners = Model.DraftWingrunners, darters = Model.DraftDarters;
-            var availableRoster = Model.AvailableRoster;
-            var committedTroops = new Dictionary<string, long>
-            {
-                ["guardians"] = guardians,
-                ["wingrunners"] = wingrunners,
-                ["darters"] = darters,
-            };
-
-            var march = new WorldMapMarch
-            {
-                MarchId = $"collection_{Guid.NewGuid():N}",
-                Type = WorldMapMarchType.Collection,
-                State = WorldMapMarchState.Outbound,
-                OriginHiveId = hiveId,
-                TargetId = nodeId,
-                CommittedTroops = committedTroops,
-                ChampionId = null,
-                StartedAtUtc = DateTimeOffset.UtcNow,
-            };
-
-            if (!WorldMapMarchRegistry.TryRegisterMarch(march, availableRoster))
-            {
-                SetError("max_marches_reached");
-                return;
-            }
-
             busy = true;
             Model.State = WorldResourceCollectionScreenState.Mutating;
             try
@@ -303,8 +277,8 @@ namespace BeeKingdom.Playground
                 }
             }
 
-            // M081: Rebuild unified march registry from fresh server state
-            HiveViewProductUiPresenter.RebuildWorldMapMarchRegistry();
+            // M081: Rebuild collection march incrementally (don't clear combat)
+            HiveViewProductUiPresenter.RebuildCollectionMarchRegistry();
         }
 
         private void SetError(string code)

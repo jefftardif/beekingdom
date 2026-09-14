@@ -39362,11 +39362,6 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
 
         internal static async void OpenCombatPatrolOverlayForWorldMap(int tier)
         {
-            if (!WorldMapMarchRegistry.CanLaunchNewMarch())
-            {
-                return;
-            }
-
             AudioManager.Instance?.PlayMenuOpen();
             combatPatrolOverlayOpen = true;
             combatPatrolController.ClearSelection();
@@ -39431,6 +39426,22 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
                 combatModel?.ActiveEncounters,
                 collectionModel?.Active
             );
+        }
+
+        internal static void RebuildCombatMarchRegistry()
+        {
+            var combatModel = combatPatrolController?.Model;
+            var hiveId = MobileAccountSessionRuntimeBootstrap.GameplayHiveId;
+            if (hiveId == Guid.Empty || combatModel == null) return;
+            WorldMapMarchRegistry.UpdateCombatMarches(hiveId, combatModel.ActiveEncounters);
+        }
+
+        internal static void RebuildCollectionMarchRegistry()
+        {
+            var collectionModel = OfficialWorldResourceCollectionModelForWorldMap();
+            var hiveId = MobileAccountSessionRuntimeBootstrap.GameplayHiveId;
+            if (hiveId == Guid.Empty || collectionModel == null) return;
+            WorldMapMarchRegistry.UpdateCollectionMarch(hiveId, collectionModel.Active);
         }
 
         // M081: Get available roster for march reservation (prioritizes combat, falls back to collection)

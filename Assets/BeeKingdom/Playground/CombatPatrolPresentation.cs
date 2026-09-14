@@ -325,32 +325,6 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            var availableRoster = Model.AvailableRoster;
-            var committedTroops = new Dictionary<string, long>
-            {
-                ["guardians"] = Model.DraftGuardians,
-                ["wingrunners"] = Model.DraftWingrunners,
-                ["darters"] = Model.DraftDarters,
-            };
-
-            var march = new WorldMapMarch
-            {
-                MarchId = $"combat_{Guid.NewGuid():N}",
-                Type = WorldMapMarchType.Combat,
-                State = WorldMapMarchState.Outbound,
-                OriginHiveId = hiveId,
-                TargetId = $"tier_{Model.SelectedTier}",
-                CommittedTroops = committedTroops,
-                ChampionId = null,
-                StartedAtUtc = DateTimeOffset.UtcNow,
-            };
-
-            if (!WorldMapMarchRegistry.TryRegisterMarch(march, availableRoster))
-            {
-                SetError("max_marches_reached");
-                return;
-            }
-
             busy = true;
             Model.State = CombatPatrolScreenState.Mutating;
             try
@@ -534,8 +508,8 @@ private async Task ClaimCoreAsync()
                 }
             }
 
-            // M081: Rebuild unified march registry from fresh server state
-            HiveViewProductUiPresenter.RebuildWorldMapMarchRegistry();
+            // M081: Rebuild combat marches incrementally (don't clear collection)
+            HiveViewProductUiPresenter.RebuildCombatMarchRegistry();
         }
 
         private void SetError(string code)

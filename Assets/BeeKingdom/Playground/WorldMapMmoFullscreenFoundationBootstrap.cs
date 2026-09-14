@@ -4974,14 +4974,21 @@ namespace BeeKingdom.Playground
             }
             y += 24f;
 
-            bool canLaunch = model.CanLaunch(compositionTargetNodeId);
+            bool canLaunch = model.CanLaunch(compositionTargetNodeId) && WorldMapMarchRegistry.CanLaunchNewMarch();
+            string launchLabel = WorldMapMarchRegistry.CanLaunchNewMarch() ? "Envoyer les abeilles" : "3/3 marches actives";
             GUI.enabled = canLaunch;
-            if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 32f), "Envoyer les abeilles"))
+            if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 32f), launchLabel))
             {
                 ConfirmCollectionLaunch();
                 return;
             }
             GUI.enabled = true;
+            // M081: Show march limit error even when canLaunch false due to limit (not server)
+            if (!WorldMapMarchRegistry.CanLaunchNewMarch() && model.CanLaunch(compositionTargetNodeId))
+            {
+                GUIStyle limitStyle = new GUIStyle(GUI.skin.label) { fontSize = 10, normal = { textColor = new Color(1f, 0.6f, 0.6f, 1f) }, alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(panel.x + 12f, y - 6f, panel.width - 24f, 20f), "Toutes vos marches sont actuellement déployées (max 3).", limitStyle);
+            }
             y += 36f;
 
             if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 28f), "Annuler"))
@@ -5761,6 +5768,13 @@ namespace BeeKingdom.Playground
 
         private void DrawFixedHudPortrait()
         {
+            // M081: March limit indicator (portrait)
+            string marchText = WorldMapMarchRegistry.GetMarchLimitText();
+            GUIStyle marchStyle = LabelStyle(new Color(1f, 0.95f, 0.6f, 1f), 12, FontStyle.Bold, TextAnchor.MiddleLeft);
+            Rect marchRect = new Rect(14f, Screen.height - 140f, 200f, 20f);
+            DrawSolid(marchRect, new Color(0.025f, 0.022f, 0.016f, 0.82f));
+            DrawFrame(marchRect, new Color(0.94f, 0.64f, 0.16f, 0.70f), 1f);
+            GUI.Label(new Rect(marchRect.x + 6f, marchRect.y + 2f, marchRect.width - 12f, marchRect.height - 4f), marchText, marchStyle);
             DrawBearDenToggle();
         }
 
