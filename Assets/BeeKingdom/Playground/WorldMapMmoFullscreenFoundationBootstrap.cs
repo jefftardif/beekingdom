@@ -6399,11 +6399,6 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            // M080 — If busy or mutating, refuse
-            if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()
-                || HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap()?.State == WorldResourceCollectionScreenState.Mutating)
-            { status = "Envoi deja en cours..."; return; }
-
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
 
@@ -6465,7 +6460,6 @@ namespace BeeKingdom.Playground
                 return true;
 
             // M080 — Official resources: check server state
-            if (HiveViewProductUiPresenter.IsOfficialWorldResourceCollectionBusyForWorldMap()) return false;
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null || model.State == WorldResourceCollectionScreenState.Mutating) return false;
             RemoteWorldResourceNode node = OfficialNodeState(resource);
