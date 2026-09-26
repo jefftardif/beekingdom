@@ -48,6 +48,7 @@ namespace BeeKingdom.Tutorial
         private System.Action _onContinue;
         private bool _visible;
         private string _lastVoicedKey;
+        private Vector2 _textScroll;
 
         // M040-CL: script execution order (even forced via MonoImporter.SetExecutionOrder,
         // confirmed persisted/read back as 32000, with a real Play Mode restart) did NOT
@@ -70,6 +71,7 @@ namespace BeeKingdom.Tutorial
         public static Rect GetCurrentOcclusionRect()
         {
             Rect panel = CalculatePanelRect();
+            if (panel.width < 600f * DialogueScale) return panel;
             float boxHeight = panel.height * 1.6f;
             float top = panel.yMax - boxHeight - 2f;
             return Rect.MinMaxRect(panel.x, Mathf.Min(top, panel.yMin), panel.xMax, panel.yMax);
@@ -79,6 +81,7 @@ namespace BeeKingdom.Tutorial
         {
             _championId = string.IsNullOrEmpty(championId) ? "Zephyra" : championId;
             _text = text ?? string.Empty;
+            _textScroll = Vector2.zero;
             _onContinue = onContinue;
             _visible = true;
             IsAnyDialogueVisible = true;
@@ -107,8 +110,50 @@ namespace BeeKingdom.Tutorial
 
         private static Rect CalculatePanelRect()
         {
-            float h = Mathf.Min(180f, Screen.height * 0.28f);
-            return new Rect(12f, Screen.height - h - 12f, Screen.width - 24f, h);
+            return CalculateLayout(Screen.width, Screen.height, Screen.safeArea).Panel;
+        }
+
+        private static float DialogueScale => Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height) / 390f);
+
+        private struct DialogueLayout
+        {
+            public Rect Panel, Portrait, Name, Text, Continue, Skip;
+            public float Scale;
+            public bool Compact;
+        }
+
+        private static DialogueLayout CalculateLayout(float width, float height, Rect safeArea)
+        {
+            float scale = Mathf.Max(1f, Mathf.Min(width, height) / 390f);
+            if (safeArea.width <= 0f || safeArea.height <= 0f) safeArea = new Rect(0, 0, width, height);
+            // Screen.safeArea uses a bottom-left origin; IMGUI uses top-left.
+            Rect safe = new Rect(safeArea.x, height - safeArea.yMax, safeArea.width, safeArea.height);
+            float margin = 12f * scale;
+            bool compact = safe.width - 2f * margin < 600f * scale;
+            float panelHeight = Mathf.Min((compact ? 300f : 240f) * scale, safe.height * (compact ? 0.55f : 0.65f));
+            Rect panel = new Rect(safe.x + margin, safe.yMax - margin - panelHeight, safe.width - 2f * margin, panelHeight);
+            float portraitWidth = (compact ? 64f : 170f) * scale;
+            float textLeft = compact ? panel.x + margin : panel.x + portraitWidth + margin;
+            float textTop = panel.y + (compact ? 84f : 40f) * scale;
+            Rect action = new Rect(panel.xMax - margin - 120f * scale, panel.yMax - margin - 48f * scale, 120f * scale, 48f * scale);
+            return new DialogueLayout
+            {
+                Panel = panel, Scale = scale, Compact = compact,
+                Portrait = new Rect(panel.x + margin, panel.y + 8f * scale, portraitWidth, 64f * scale),
+                Name = new Rect(panel.x + portraitWidth + 2f * margin, panel.y + 12f * scale, panel.width - portraitWidth - 3f * margin, 24f * scale),
+                Text = new Rect(textLeft, textTop, panel.xMax - margin - textLeft, action.y - 8f * scale - textTop),
+                Continue = action,
+                Skip = new Rect(action.x - 108f * scale, action.y, 96f * scale, action.height)
+            };
+        }
+
+        private void ContinueOrDismiss()
+        {
+            if (!_visible) return;
+            Action callback = _onContinue;
+            Hide();
+            if (callback != null) callback.Invoke();
+            else DismissRequested?.Invoke();
         }
 
         private static Texture2D ChampionPortrait(string championId)
@@ -151,7 +196,8 @@ namespace BeeKingdom.Tutorial
             GUI.depth = DialogueGuiDepth;
 
             // bottom dialogue bar — mobile first, tap compatible
-            Rect panel = CalculatePanelRect();
+            DialogueLayout layout = CalculateLayout(Screen.width, Screen.height, Screen.safeArea);
+            Rect panel = layout.Panel;
             float h = panel.height;
             Color prev = GUI.color;
             // GUI.Box tints the skin's default box texture, which bakes in its own partial
@@ -180,9 +226,9 @@ namespace BeeKingdom.Tutorial
                 // help - see Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md). Falls back
                 // to a portrait fully contained within the panel whenever any modal is open.
                 bool contained = BeeKingdom.Playground.HiveViewProductUiPresenter.AnyModalOpenForExternalHost;
-                float boxWidth = Mathf.Clamp(Screen.width * 0.30f, 170f, 300f);
+                float boxWidth = layout.Portrait.width;
                 float boxHeight = contained ? h - 4f : h * 1.6f;
-                Rect portraitBox = new Rect(panel.x + 4f, panel.yMax - boxHeight - 2f, boxWidth, boxHeight);
+                Rect portraitBox = layout.Compact ? layout.Portrait : new Rect(panel.x + 4f, panel.yMax - boxHeight - 2f, boxWidth, boxHeight);
                 GUI.DrawTexture(portraitBox, portraitTexture, ScaleMode.ScaleToFit, true);
                 reservedWidth = boxWidth;
             }
@@ -190,7 +236,7 @@ namespace BeeKingdom.Tutorial
             {
                 // Unknown champion / missing asset — never break the FTUE, keep the original
                 // compact initial-letter badge.
-                Rect portrait = new Rect(panel.x + 10f, panel.y + 10f, 64f, 64f);
+                Rect portrait = layout.Portrait;
                 GUI.color = new Color(0.18f, 0.15f, 0.08f, 1f);
                 GUI.Box(portrait, GUIContent.none);
                 GUI.color = Color.white;
@@ -206,47 +252,51 @@ namespace BeeKingdom.Tutorial
             GUI.DrawTexture(new Rect(panel.x + reservedWidth, panel.y, panel.width - reservedWidth, 2f), Texture2D.whiteTexture);
             GUI.color = prev;
 
-            float textLeft = panel.x + reservedWidth + 14f;
-            float textWidth = panel.width - reservedWidth - 14f - 100f;
-
-            Rect nameRect = new Rect(textLeft, panel.y + 10f, textWidth, 20f);
+            Rect nameRect = layout.Name;
             GUI.color = new Color(1f, 0.72f, 0.22f, 1f);
-            GUI.Label(nameRect, _championId.ToUpperInvariant(), new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold });
+            GUI.Label(nameRect, _championId.ToUpperInvariant(), new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14f * layout.Scale), fontStyle = FontStyle.Bold });
             GUI.color = prev;
 
-            Rect textRect = new Rect(textLeft, nameRect.yMax + 2f, textWidth, h - (nameRect.height + 12f) - 10f);
-            GUI.Label(textRect, _text, new GUIStyle(GUI.skin.label){wordWrap=true, fontSize=13});
-
-            Rect btn = new Rect(panel.xMax - 84f, panel.yMax - 36f, 72f, 28f);
-            GUI.color = new Color(0.95f, 0.68f, 0.15f, 1f);
-            if (GUI.Button(btn, "Suite"))
+            Rect textRect = layout.Text;
+            GUIStyle textStyle = new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = Mathf.RoundToInt(16f * layout.Scale) };
+            textStyle.normal.textColor = Color.white;
+            float contentWidth = textRect.width - 20f * layout.Scale;
+            float contentHeight = textStyle.CalcHeight(new GUIContent(_text), contentWidth);
+            // IMGUI scrollbars alone are too small to drag comfortably on a phone.
+            if (Event.current.type == EventType.MouseDrag && textRect.Contains(Event.current.mousePosition))
             {
-                var cb = _onContinue;
-                Hide();
+                _textScroll.y = Mathf.Clamp(_textScroll.y - Event.current.delta.y, 0f, Mathf.Max(0f, contentHeight - textRect.height));
+                Event.current.Use();
+            }
+            _textScroll = GUI.BeginScrollView(textRect, _textScroll, new Rect(0, 0, contentWidth, Mathf.Max(textRect.height, contentHeight)));
+            GUI.Label(new Rect(0, 0, contentWidth, contentHeight), _text, textStyle);
+            GUI.EndScrollView();
+
+            Rect btn = layout.Continue;
+            GUI.color = new Color(0.95f, 0.68f, 0.15f, 1f);
+            string actionKey = _onContinue != null ? "common.continue" : "common.close";
+            if (GUI.Button(btn, BeeKingdom.Localization.BeeLocalization.Text(actionKey), new GUIStyle(GUI.skin.button) { fontSize = Mathf.RoundToInt(16f * layout.Scale) }))
+            {
                 // M056A-CL : sur une etape Require*, le dialogue est affiche SANS callback de
                 // continuation. Fermer la bulle ne completait donc jamais l'etape, et plus rien
                 // n'appelait _arrow.Hide()/_blocker.SetActive(false) : la fleche jaune et le
                 // bloqueur d'input invisible restaient orphelins a l'ecran. On traite ce cas
                 // comme une FERMETURE DE PRESENTATION (progression preservee, voir
                 // FtueTutorialBootstrap.DismissPresentation).
-                if (cb != null) cb.Invoke();
-                else DismissRequested?.Invoke();
+                ContinueOrDismiss();
             }
             GUI.color = prev;
 
             // skip for QA (Editor only)
 #if UNITY_EDITOR
-            Rect skip = new Rect(panel.xMax - 170f, panel.yMax - 36f, 78f, 28f);
+            Rect skip = layout.Skip;
             if (GUI.Button(skip, "Passer"))
             {
                 // M056A-CL : defaut d'ordonnancement - Hide() met _onContinue a null, donc
                 // l'appel qui suivait etait TOUJOURS un no-op et l'etape ne se completait
                 // jamais (fleche + bloqueur orphelins, meme sur les etapes Highlight*).
                 // On capture le callback AVANT Hide(), comme le fait deja le bouton "Suite".
-                var cb = _onContinue;
-                Hide();
-                if (cb != null) cb.Invoke();
-                else DismissRequested?.Invoke();
+                ContinueOrDismiss();
             }
 #endif
             GUI.depth = previousDepth;
