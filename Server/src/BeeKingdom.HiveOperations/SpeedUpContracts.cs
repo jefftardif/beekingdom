@@ -122,6 +122,10 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
                 return RecordFailure(state, request, payloadHash, "inventory_insufficient", now, out result);
 
             string handlerKey = string.Equals(definition.Category, SpeedUpCategories.Universal, StringComparison.Ordinal) ? SpeedUpCategories.Universal : request.Category;
+            // A ready research still occupies its queue until explicit completion; it has no time left to reduce.
+            if (handlerKey is SpeedUpCategories.Research or SpeedUpCategories.Universal &&
+                state.Research?.ActiveOperation is { } research && research.ResearchId == request.TargetId && research.EndsAtUtc <= now)
+                return RecordFailure(state, request, payloadHash, "timer_not_found", now, out result);
             if (!TryApplyByCategory(handlerKey, state, request.TargetId, now, TimeSpan.FromSeconds(definition.DurationSeconds), out PlayerHiveState reducedState, out OperationTimerInfo timer))
                 return RecordFailure(state, request, payloadHash, "timer_not_found", now, out result);
 
