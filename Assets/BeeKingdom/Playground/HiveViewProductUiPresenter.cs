@@ -36288,6 +36288,7 @@ if (leftNavigationTexture == null)
 		private static void DrawChatScreen(bool compact)
 		{
 			if (!chatScreenOpen) return;
+			compact |= Screen.width < 960;
 			EnsureChatData();
 			if (Input.GetKeyDown(KeyCode.Escape))
 			{
@@ -36326,7 +36327,7 @@ if (leftNavigationTexture == null)
 			GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
 
-			float bannerHeight = compact ? Mathf.Min(112f, Screen.height * 0.18f) : Mathf.Clamp(Screen.height * 0.15f, 80f, 146f);
+			float bannerHeight = compact ? (Screen.height < 500f ? 56f : 112f) : Mathf.Clamp(Screen.height * 0.15f, 80f, 146f);
 			DrawChatBanner(bannerHeight, compact);
 			DrawChatTopBar(bannerHeight, compact);
 			if (!chatScreenOpen)
@@ -36354,7 +36355,7 @@ if (leftNavigationTexture == null)
 			DrawUnderOwnOverlayGate(ownOverlayOpen, () =>
 			{
 				DrawChatActionBar(new Rect(10f, quickY, Screen.width - 20f, quickH), compact);
-				searchH = chatSearchActive ? (compact ? 40f : 42f) : 0f;
+				searchH = chatSearchActive ? (compact ? 48f : 52f) : 0f;
 				float innerTop = quickY + quickH + 6f + searchH;
 				DrawChatMainLayout(new Rect(0f, innerTop, Screen.width, Mathf.Max(1f, Screen.height - innerTop)), compact);
 			});
@@ -36374,6 +36375,7 @@ if (leftNavigationTexture == null)
 			GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
 			GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
 			GUI.color = Color.white;
+			if (compact && height < 100f) return;
 			GUI.Label(new Rect(34f, compact ? height - 48f : 22f, Screen.width * 0.72f, 42f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 24 : 38, fontStyle = FontStyle.Bold });
 			GUI.Label(new Rect(36f, compact ? height - 22f : 68f, Screen.width * 0.72f, 20f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 15 });
 		}
@@ -36388,7 +36390,7 @@ if (leftNavigationTexture == null)
 				AudioManager.Instance?.PlayUIClick();
 				ChatBackOrClose(compact);
 			}
-			GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
+			if (!compact) GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
 			// M070-CL : ajout Parametres + Fermer a droite (reference CEO : "CHAT / MAIL / Parametres
 			// / Fermer") - a cote des onglets CHAT/MAIL deja presents. "Fermer" ferme l'ecran Chat
 			// Royal (meme action que le bouton retour a gauche) ; "Parametres" ouvre le meme
@@ -36426,7 +36428,8 @@ if (leftNavigationTexture == null)
 			// suis dans CHAT, CHAT n'est pas surligne") - meme technique plate que Courrier
 			// desormais (DrawFlatRoundedRect), un remplissage franc au lieu d'un panneau texture.
 			bool onMailTopBar = courierScreenOpen;
-			Rect mailTab = new Rect(gearButton.x - 128f - 6f, 12f, 128f, 38f);
+			float tabW = compact ? Mathf.Min(96f, (gearButton.x - 70f) * 0.5f) : 128f;
+			Rect mailTab = new Rect(gearButton.x - tabW - 6f, 12f, tabW, 38f);
 			DrawFlatRoundedRect(mailTab, onMailTopBar ? new Color(0.34f, 0.22f, 0.06f, 0.96f) : new Color(0.05f, 0.04f, 0.025f, 0.94f), 10f);
 			GUI.Label(mailTab, "✉  MAIL", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
 			if (GUI.Button(mailTab, string.Empty, GUIStyle.none) && !onMailTopBar)
@@ -36434,7 +36437,7 @@ if (leftNavigationTexture == null)
 				AudioManager.Instance?.PlayUIClick();
 				OpenMailOverlayForExternalHost();
 			}
-			Rect chatTab = new Rect(mailTab.x - 128f - 6f, 12f, 128f, 38f);
+			Rect chatTab = new Rect(mailTab.x - tabW - 6f, 12f, tabW, 38f);
 			DrawFlatRoundedRect(chatTab, onMailTopBar ? new Color(0.05f, 0.04f, 0.025f, 0.94f) : new Color(0.34f, 0.22f, 0.06f, 0.96f), 10f);
 			GUI.Label(chatTab, "💬  CHAT", new GUIStyle(centeredTinyLabelStyle) { fontSize = compact ? 10 : 13 });
 			if (GUI.Button(chatTab, string.Empty, GUIStyle.none) && onMailTopBar)
@@ -36442,6 +36445,7 @@ if (leftNavigationTexture == null)
 				AudioManager.Instance?.PlayUIClick();
 				SwitchToChatFromMailForExternalHost();
 			}
+			if (compact) return;
 			Rect badge = new Rect(chatTab.x - 106f - 8f, 9f, 106f, 30f);
 			DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
 			int unread = ChatUnreadTotal();
@@ -36457,13 +36461,15 @@ if (leftNavigationTexture == null)
 			string[] ids = { "new", "group", "search", "favorites", "settings" };
 			string[] labels = { "Nouvelle discussion", "Nouveau groupe", "Recherche", "Favoris", "Paramètres" };
 			float gap = 8f;
-			float itemWidth = compact ? 168f : Mathf.Max(168f, (rect.width - gap * 4f) / 5f);
+			float itemWidth = compact ? 168f : Mathf.Max(168f, (rect.width - gap * 4f - 10f) / 5f);
+			bool scrolls = itemWidth * 5f + gap * 4f + 10f > rect.width;
+			float contentH = rect.height - (scrolls ? 18f : 0f);
 			DrawFlatRoundedRect(rect, new Color(0.05f, 0.043f, 0.032f, 0.97f), 12f);
-			chatActionBarScroll = GUI.BeginScrollView(rect, chatActionBarScroll, new Rect(0f, 0f, itemWidth * 5f + gap * 4f + 10f, rect.height - 2f), false, false);
+			chatActionBarScroll = GUI.BeginScrollView(rect, chatActionBarScroll, new Rect(0f, 0f, itemWidth * 5f + gap * 4f + 10f, contentH), false, false);
 			float iconSize = compact ? 40f : 44f;
 			for (int i = 0; i < ids.Length; i++)
 			{
-				Rect button = new Rect(5f + i * (itemWidth + gap), 5f, itemWidth, rect.height - 10f);
+				Rect button = new Rect(5f + i * (itemWidth + gap), 5f, itemWidth, contentH - 10f);
 				bool on = (string.Equals(ids[i], "search", StringComparison.Ordinal) && chatSearchActive)
 					|| (string.Equals(ids[i], "favorites", StringComparison.Ordinal) && chatFavoritesOnly);
 				DrawFlatRoundedRect(button, on ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.10f, 0.09f, 0.07f, 0.95f), 10f);
@@ -36567,7 +36573,7 @@ if (leftNavigationTexture == null)
 			float channelW = Mathf.Clamp(main.width * 0.20f, 230f, 300f);
 			float convW = Mathf.Clamp(main.width * 0.26f, 280f, 400f);
 			float x = main.x + 10f;
-			float totalW = main.width - 20f - gap * 2f;
+			float totalW = main.width - 20f;
 			// M068-CL : sur desktop, le panneau Membres d'un groupe (reference CEO) est un 4e
 			// panneau ancre a droite, pas un modal - il retranche sa largeur a la zone messages.
 			bool membersOpen = ChatGroupMembersPanelVisible();
@@ -36727,15 +36733,15 @@ if (leftNavigationTexture == null)
 			// statut serveur en haut de l'ecran (qui ne fonctionnait pas correctement).
 			bool isGroupConversation = conv != null && string.Equals(conv.Channel, ChatGroupsChannelId, StringComparison.Ordinal);
 			bool showMembersButton = isGroupConversation && chatUsingServerData;
-			float headerH = compact ? 58f : 76f;
+			float headerH = compact ? (showMembersButton ? 100f : 64f) : 76f;
 			float membersButtonW = showMembersButton ? (compact ? 120f : 138f) : 0f;
-			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - membersButtonW, compact ? 24f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft });
-			GUI.Label(new Rect(area.x + 12f, area.y + 33f, area.width - 24f - membersButtonW, 16f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
+			GUI.Label(new Rect(area.x + 12f, area.y + 8f, area.width - 24f - (compact ? 0f : membersButtonW), compact ? 32f : 26f), title, new GUIStyle(badgeStyle) { fontSize = compact ? 17 : 19, alignment = TextAnchor.MiddleLeft, wordWrap = false, clipping = TextClipping.Clip });
+			GUI.Label(new Rect(area.x + 12f, area.y + (compact && showMembersButton ? 58f : 36f), area.width - 24f - membersButtonW, 22f), subtitle, new GUIStyle(tinyLabelStyle) { fontSize = 12, alignment = TextAnchor.MiddleLeft, wordWrap = false, clipping = TextClipping.Clip, normal = { textColor = new Color(1f, 0.82f, 0.42f, 1f) } });
 			if (showMembersButton)
 			{
 				// M086-CL : bouton plat arrondi + icone officielle (membres.png), remplace le rendu
 				// "panneau premium" + libelle texte seul.
-				Rect membersButton = new Rect(area.xMax - membersButtonW - 10f, area.y + 10f, membersButtonW, headerH - 20f);
+				Rect membersButton = new Rect(area.xMax - membersButtonW - 10f, area.y + (compact ? 48f : 10f), membersButtonW, compact ? 44f : headerH - 20f);
 				bool membersOn = chatGroupMembersOpen;
 				DrawFlatRoundedRect(membersButton, membersOn ? new Color(0.40f, 0.28f, 0.10f, 0.97f) : new Color(0.12f, 0.10f, 0.08f, 0.95f), 10f);
 				if (membersOn) DrawFlatRoundedRect(new Rect(membersButton.x - 2f, membersButton.y - 2f, membersButton.width + 4f, membersButton.height + 4f), new Color(1f, 0.82f, 0.32f, 0.9f), 12f);
@@ -36745,7 +36751,7 @@ if (leftNavigationTexture == null)
 				Rect membersIconRect = new Rect(membersButton.x + 8f, membersButton.y + (membersButton.height - membersIconSize) * 0.5f, membersIconSize, membersIconSize);
 				if (membersIcon != null) GUI.DrawTexture(membersIconRect, membersIcon, ScaleMode.ScaleToFit, true);
 				GUI.Label(new Rect(membersIconRect.xMax + 6f, membersButton.y, membersButton.width - membersIconSize - 18f, membersButton.height),
-					"Membres", new GUIStyle(badgeStyle) { fontSize = compact ? 11 : 13, alignment = TextAnchor.MiddleLeft });
+					"Membres", new GUIStyle(badgeStyle) { fontSize = 13, alignment = TextAnchor.MiddleLeft });
 				if (GUI.Button(membersButton, string.Empty, GUIStyle.none))
 				{
 					AudioManager.Instance?.PlayUIClick();
@@ -36813,11 +36819,11 @@ if (leftNavigationTexture == null)
 			// pour que le texte tienne exactement dans fieldInner quelle que soit la resolution.
 			GUIStyle fieldStyle = new GUIStyle(GUI.skin.textField)
 			{
-				fontSize = compact ? 13 : 15,
+				fontSize = compact ? 16 : 15,
 				alignment = TextAnchor.MiddleLeft,
 				wordWrap = false,
 				richText = false,
-				clipping = TextClipping.Overflow,
+				clipping = TextClipping.Clip,
 				padding = new RectOffset(0, 0, 0, 0),
 				border = new RectOffset(0, 0, 0, 0),
 				margin = new RectOffset(0, 0, 0, 0),
@@ -36827,9 +36833,9 @@ if (leftNavigationTexture == null)
 				hover = { textColor = new Color(1f, 0.96f, 0.86f, 1f), background = null },
 				active = { textColor = new Color(1f, 0.96f, 0.86f, 1f), background = null }
 			};
-			float emojiW = compact ? 42f : 40f;
-			float sendW = compact ? 78f : 86f;
-			Rect fieldRect = new Rect(rect.x + 8f, rect.y + 6f, rect.width - sendW - emojiW - 24f, rect.height - 12f);
+			float emojiW = compact ? 44f : 40f;
+			float sendW = compact ? 48f : 86f;
+			Rect fieldRect = new Rect(rect.x + 8f, rect.y + 6f, rect.width - sendW - emojiW - 32f, rect.height - 12f);
 			DrawFlatRoundedRect(fieldRect, new Color(1f, 0.74f, 0.22f, 0.85f), 10f);
 			Rect fieldInner = new Rect(fieldRect.x + 2f, fieldRect.y + 2f, fieldRect.width - 4f, fieldRect.height - 4f);
 			DrawFlatRoundedRect(fieldInner, new Color(0.04f, 0.032f, 0.022f, 0.98f), 8f);
@@ -37361,14 +37367,14 @@ if (leftNavigationTexture == null)
 		// largeur/hauteur de la bulle.
 		private static void DrawChatBubble(Rect rect, bool self)
 		{
-			Color fill = self ? new Color(0.74f, 0.55f, 0.24f, 0.98f) : new Color(0.17f, 0.19f, 0.23f, 0.98f);
+			Color fill = self ? new Color(0.34f, 0.24f, 0.08f, 0.98f) : new Color(0.17f, 0.19f, 0.23f, 0.98f);
 			DrawFlatRoundedRect(rect, fill, 10f);
 		}
 
 		private static GUIStyle ChatBubbleTextStyle(bool compact)
 		{
 			if (chatBubbleStyleCache == null) chatBubbleStyleCache = new GUIStyle(smallStyle) { wordWrap = true };
-			chatBubbleStyleCache.fontSize = compact ? 13 : 15;
+			chatBubbleStyleCache.fontSize = compact ? 16 : 15;
 			return chatBubbleStyleCache;
 		}
 
