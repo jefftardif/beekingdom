@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/BeeKingdom/Gameplay/Communication/*.cs"
+             Exclude="../../../Assets/BeeKingdom/Gameplay/Communication/ChatIngamePanel.cs;../../../Assets/BeeKingdom/Gameplay/Communication/UnityWebRequestChatRestTransport.cs;../../../Assets/BeeKingdom/Gameplay/Communication/RemoteChatClientFactory.cs;../../../Assets/BeeKingdom/Gameplay/Communication/LivingHiveChatBootstrap.cs;../../../Assets/BeeKingdom/Gameplay/Communication/SignalRChatRealtimeTransport.cs" />
+    <Compile Include="../../../Assets/BeeKingdom/Tests/Editor/ChatGroupTransportTests.cs" />
+    <Compile Include="../../../Assets/BeeKingdom/Tests/Editor/LivingHiveChatGroupControllerTests.cs" />
+    <Compile Include="UnityStubs.cs" />
+  </ItemGroup>
+</Project>

@@ -437,6 +437,51 @@ public sealed class SqlServerOptInIntegrationTests
     }
 
     [Test]
+    public async Task SqlServerChatGroupsSurviveNewServiceProviderAndPreserveRevocations()
+    {
+        await EnsureMigratedAsync();
+        ChatManager chat = provider!.GetRequiredService<ChatManager>();
+        PlayerId leader = PlayerId.New();
+        PlayerId successor = PlayerId.New();
+        PlayerId removed = PlayerId.New();
+        PlayerId pending = PlayerId.New();
+        CreateChatGroupRequest request = new(Guid.NewGuid(), Guid.NewGuid(), "M084 SQL", [successor.Value, removed.Value], "m084-create");
+        Guid groupId = chat.CreateGroup(leader, request).Conversation.ConversationId;
+        chat.RespondToInvitation(successor, chat.ListPendingInvitations(successor).Single().InviteId, true);
+        chat.RespondToInvitation(removed, chat.ListPendingInvitations(removed).Single().InviteId, true);
+        await chat.SendMessageAsync(leader, groupId, new SendChatMessageRequest("m084-message", "Historique SQL", null, null, null, null, DateTimeOffset.UtcNow));
+        chat.TransferGroupLeadership(leader, groupId, successor.Value);
+        chat.RemoveGroupMember(successor, groupId, removed.Value);
+        chat.LeaveGroup(leader, groupId);
+        Guid inviteId = chat.InviteToGroup(successor, groupId, pending.Value).InviteId;
+
+        using (ServiceProvider reopened = BuildProvider(runtimeConnectionString!, migrationConnectionString!, databaseName!))
+        {
+            ChatManager restored = reopened.GetRequiredService<ChatManager>();
+            Assert.That(reopened.GetRequiredService<IChatRepository>(), Is.TypeOf<SqlChatRepository>());
+            ChatGroupDetail detail = restored.GetGroupDetail(successor, groupId);
+            Assert.That(detail.Title, Is.EqualTo("M084 SQL"));
+            Assert.That(detail.OwnerPlayerId, Is.EqualTo(successor.Value));
+            Assert.That(detail.Members.Single().PlayerId, Is.EqualTo(successor.Value));
+            Assert.That(restored.GetMessages(successor, groupId, 0, 50).Items.Single().Body, Is.EqualTo("Historique SQL"));
+            Assert.That(restored.ListPendingInvitations(pending).Single().InviteId, Is.EqualTo(inviteId));
+            foreach (PlayerId former in new[] { leader, removed })
+            {
+                Assert.That(restored.ListConversations(former, 50).Items, Is.Empty);
+                Assert.Throws<UnauthorizedAccessException>(() => restored.GetGroupDetail(former, groupId));
+                Assert.Throws<UnauthorizedAccessException>(() => restored.GetMessages(former, groupId, 0, 50));
+            }
+            restored.LeaveGroup(successor, groupId);
+        }
+
+        using ServiceProvider finalConnection = BuildProvider(runtimeConnectionString!, migrationConnectionString!, databaseName!);
+        ChatManager finalChat = finalConnection.GetRequiredService<ChatManager>();
+        Assert.That(finalChat.ListPendingInvitations(pending), Is.Empty);
+        Assert.Throws<InvalidOperationException>(() => finalChat.RespondToInvitation(pending, inviteId, true));
+        Assert.That(finalChat.ListConversations(successor, 50).Items, Is.Empty);
+    }
+
+    [Test]
     public async Task SqlServerSerializesMigrationsAndRejectsConcurrentDuplicateAccount()
     {
         Assert.Multiple(() =>
