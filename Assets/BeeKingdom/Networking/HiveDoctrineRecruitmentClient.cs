@@ -557,7 +557,8 @@ namespace BeeKingdom.Networking
                 !IsUtc(operation.StartedAtUtc) ||
                 !IsUtc(operation.EndsAtUtc) ||
                 operation.StartedAtUtc > serverTimeUtc ||
-                operation.EndsAtUtc !=
+                operation.EndsAtUtc < operation.StartedAtUtc ||
+                operation.EndsAtUtc >
                     operation.StartedAtUtc.Add(offer.Duration))
                 throw InvalidResponse(
                     "The doctrine recruitment operation is invalid.");

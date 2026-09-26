@@ -463,6 +463,31 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(proof, Does.Not.Contain(Token));
         }
 
+        [TestCase(0)]
+        [TestCase(7)]
+        public async Task AcceleratedTrainingSnapshotIsAccepted(int durationSeconds)
+        {
+            RemoteDoctrineRecruitmentSnapshot snapshot = ValidSnapshot();
+            snapshot.ActiveOperation = RunningOperation(snapshot.ServerTimeUtc);
+            snapshot.ActiveOperation.EndsAtUtc = snapshot.ActiveOperation.StartedAtUtc.AddSeconds(durationSeconds);
+            snapshot.ActiveOperation.Status = snapshot.ActiveOperation.EndsAtUtc <= snapshot.ServerTimeUtc
+                ? HiveDoctrineRecruitmentClient.AwaitingCompletionStatus
+                : HiveDoctrineRecruitmentClient.RunningStatus;
+            await NewClient(new FakeSessionSource(new GameAccountSession(PlayerId, Token)),
+                new ScriptedTransport(snapshot)).ReadAsync(HiveId);
+        }
+
+        [TestCase(-1)]
+        [TestCase(15)]
+        public void TrainingDurationOutsideCatalogBoundsIsRejected(int durationSeconds)
+        {
+            AssertInvalidSnapshot(snapshot =>
+            {
+                snapshot.ActiveOperation = RunningOperation(snapshot.ServerTimeUtc);
+                snapshot.ActiveOperation.EndsAtUtc = snapshot.ActiveOperation.StartedAtUtc.AddSeconds(durationSeconds);
+            });
+        }
+
         private static HiveDoctrineRecruitmentClient NewClient(
             IGameAccountSessionSource source,
             IAuthenticatedGameRestTransport transport,

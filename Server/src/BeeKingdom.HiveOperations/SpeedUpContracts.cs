@@ -185,9 +185,9 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
         if (state.Research?.ActiveOperation is ResearchOperation research)
             timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Research, research.ResearchId, research.OperationId, research.EndsAtUtc, "running"));
         if (state.DoctrineRoster?.ActiveOperation is DoctrineTrainingOperation training)
-            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Training, training.Family, training.OperationId, training.EndsAtUtc, "running"));
+            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Training, training.Family, training.OperationId, training.EndsAtUtc, training.EndsAtUtc <= now ? "awaiting_completion" : "running"));
         if (state.BroodVitality?.ActiveOperation is BroodVitalityOperation healing)
-            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Healing, healing.Type, healing.OperationId, healing.EndsAtUtc, "running"));
+            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Healing, healing.Type, healing.OperationId, healing.EndsAtUtc, healing.EndsAtUtc <= now ? "awaiting_completion" : "running"));
         List<string> rewards = state.RewardLedger?.Entries
             .Where(entry => !entry.Value.Claimed)
             .OrderBy(entry => entry.Value.GrantedAtUtc)

@@ -28,7 +28,7 @@ public static class HiveStateMigrator
         {
             if (vitality.Nutrition is < 0 or > 100 || vitality.Stability is < 0 or > 100 || vitality.Revision < 0 || vitality.Revision > state.Revision || vitality.UpdatedAtUtc.Offset != TimeSpan.Zero)
                 throw new InvalidOperationException("Invalid brood vitality state.");
-            if (vitality.ActiveOperation is { } operation && (operation.OperationId == Guid.Empty || !BroodVitalityOperationTypes.Allowed.Contains(operation.Type) || operation.StartedAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc < operation.StartedAtUtc || operation.EndsAtUtc - operation.StartedAtUtc != (operation.Type == BroodVitalityOperationTypes.Feeding ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(13))))
+            if (vitality.ActiveOperation is { } operation && (operation.OperationId == Guid.Empty || !BroodVitalityOperationTypes.Allowed.Contains(operation.Type) || operation.StartedAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc < operation.StartedAtUtc || operation.EndsAtUtc - operation.StartedAtUtc > (operation.Type == BroodVitalityOperationTypes.Feeding ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(13))))
                 throw new InvalidOperationException("Invalid brood vitality operation.");
         }
         if (state.DoctrineRoster is { } roster)

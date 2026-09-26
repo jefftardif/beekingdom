@@ -561,7 +561,7 @@ namespace BeeKingdom.Networking
                 !IsUtc(operation.StartedAtUtc) ||
                 !IsUtc(operation.EndsAtUtc) ||
                 operation.StartedAtUtc > serverTimeUtc ||
-                operation.EndsAtUtc <= operation.StartedAtUtc)
+                operation.EndsAtUtc < operation.StartedAtUtc)
                 throw InvalidResponse("The brood vitality operation is invalid.");
             int duration = string.Equals(
                 operation.Type,
@@ -569,7 +569,7 @@ namespace BeeKingdom.Networking
                 StringComparison.Ordinal)
                 ? FeedingDurationSeconds
                 : StabilizationDurationSeconds;
-            if (operation.EndsAtUtc != operation.StartedAtUtc.AddSeconds(duration))
+            if (operation.EndsAtUtc > operation.StartedAtUtc.AddSeconds(duration))
                 throw InvalidResponse(
                     "The brood vitality operation duration is invalid.");
         }

@@ -213,6 +213,28 @@ namespace BeeKingdom.Tests.Editor
                 Is.EqualTo(HivePerimeterClientError.InvalidResponse));
         }
 
+        [TestCase("feeding", 0)]
+        [TestCase("feeding", 7)]
+        [TestCase("stabilization", 0)]
+        [TestCase("stabilization", 8)]
+        public async Task AcceleratedHealingSnapshotIsAccepted(string type, int durationSeconds)
+        {
+            RemoteBroodVitalitySnapshot snapshot = ValidSnapshot();
+            snapshot.Vitality.ActiveOperation.Type = type;
+            snapshot.Vitality.ActiveOperation.EndsAtUtc =
+                snapshot.Vitality.ActiveOperation.StartedAtUtc.AddSeconds(durationSeconds);
+            await NewClient(new FakeTransport(snapshot)).ReadAsync(HiveId);
+        }
+
+        [Test]
+        public void HealingEndBeforeStartIsRejected()
+        {
+            RemoteBroodVitalitySnapshot snapshot = ValidSnapshot();
+            snapshot.Vitality.ActiveOperation.EndsAtUtc = snapshot.Vitality.ActiveOperation.StartedAtUtc.AddSeconds(-1);
+            Assert.ThrowsAsync<HivePerimeterClientException>(async () =>
+                await NewClient(new FakeTransport(snapshot)).ReadAsync(HiveId));
+        }
+
         private static HiveBroodVitalityClient NewClient(
             FakeTransport transport,
             FakeSessionSource source = null)
