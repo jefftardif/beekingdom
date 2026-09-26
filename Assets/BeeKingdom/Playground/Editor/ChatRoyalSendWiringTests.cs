@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using BeeKingdom.Gameplay.Communication;
@@ -23,6 +24,48 @@ namespace BeeKingdom.Playground.Editor
     // exactement son ancien comportement local, et les deux ne se dupliquent jamais.
     public sealed class ChatRoyalSendWiringTests
     {
+        [TestCase("Private")]
+        [TestCase("Group")]
+        public async Task OfflineServerConversationNeverFallsBackToLocalSimulation(string channelType)
+        {
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+            Type presenter = typeof(HiveViewProductUiPresenter);
+            string[] fields = { "chatDataInitialized", "chatChannels", "chatConversations",
+                "chatMessagesByConversation", "chatSelectedChannel", "chatSelectedConversation",
+                "chatUsingServerData", "chatServerStatusLabel", "chatServerSyncedAt", "chatMessagesScroll", "chatComposerText" };
+            var saved = new Dictionary<FieldInfo, object>();
+            foreach (string name in fields)
+            {
+                FieldInfo field = presenter.GetField(name, flags);
+                saved.Add(field, field.GetValue(null));
+            }
+
+            try
+            {
+                // Rebuild isolated demo data before switching to a real, disconnected session.
+                presenter.GetField("chatDataInitialized", flags).SetValue(null, false);
+                var rest = new FakeRest();
+                var controller = new LivingHiveChatController(new ServerChatProvider(rest, new FakeSession()));
+                await controller.SelectKnownConversationAsync("offline-conversation", "Discussion", channelType, CancellationToken.None);
+                await LivingHiveChatRuntime.ReconfigureAsync(controller);
+                HiveViewProductUiPresenter.SetChatSendTestStateForProof(true, "offline-conversation");
+                Assert.That(controller.Snapshot().Status, Is.EqualTo(LivingHiveChatStatus.Offline));
+
+                presenter.GetMethod("ChatRoyalSyncFromServer", flags).Invoke(null, null);
+                int localCount = HiveViewProductUiPresenter.ChatLocalMessageCountForProof("offline-conversation");
+                HiveViewProductUiPresenter.ChatSendCurrentForProof("send after disconnect");
+
+                Assert.That(rest.LastSendRequest, Is.Not.Null, "Offline server conversations must retain the real send/outbox path.");
+                Assert.That(rest.LastSendRequest.Body, Is.EqualTo("send after disconnect"));
+                Assert.That(HiveViewProductUiPresenter.ChatLocalMessageCountForProof("offline-conversation"), Is.EqualTo(localCount),
+                    "A disconnect must never append a simulated message to real history.");
+            }
+            finally
+            {
+                foreach (KeyValuePair<FieldInfo, object> entry in saved) entry.Key.SetValue(null, entry.Value);
+            }
+        }
+
         [TearDown]
         public async Task ResetChatRuntime()
         {

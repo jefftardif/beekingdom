@@ -771,6 +771,7 @@ namespace BeeKingdom.Tests.Editor
         {
             var rest = new FakeRest();
             var controller = new LivingHiveChatController(new ServerChatProvider(rest, new FakeSession()));
+            controller.ConfigureGroupScope("gs-1", "world-1");
 
             string conversationId = await controller.CreatePrivateConversationAsync("target-player-id", CancellationToken.None);
 
@@ -1392,7 +1393,7 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(reports.Count, Is.Zero);
             Assert.That(transport.CallCount, Is.Zero);
 
-            sends.Items.Add(new PendingChatSend { ConversationId = "c1", Body = " restored-invalid ", ClientRequestId = "restored-1", ClientCreatedAt = "2026-07-21T12:00:00Z" });
+            sends.Items.Add(new PendingChatSend { ConversationId = "c1", Body = " restored-invalid ", ClientRequestId = "restored-1", ClientCreatedAt = DateTimeOffset.UtcNow.ToString("O") });
             Assert.ThrowsAsync<ArgumentException>(async () => await provider.RetryPendingAsync(CancellationToken.None));
             Assert.That(sends.Items, Has.Count.EqualTo(1));
             Assert.That(transport.CallCount, Is.Zero);
@@ -1742,7 +1743,7 @@ namespace BeeKingdom.Tests.Editor
             var reports = new VersionedChatPendingModerationReportStore(new MemoryStringStore(), json);
             var reads = new VersionedChatPendingReadStore(new MemoryStringStore(), json);
             await conversations.SaveAsync(new PendingChatConversationCreation { Request = new RemoteCreateConversationRequest { ChannelType = "Alliance", ClientRequestId = "conversation-1" } }, CancellationToken.None);
-            await sends.SaveAsync(new PendingChatSend { ConversationId = "c1", Body = "secret", ClientRequestId = "send-1", ClientCreatedAt = "2026-07-21T12:00:00Z" }, CancellationToken.None);
+            await sends.SaveAsync(new PendingChatSend { ConversationId = "c1", Body = "secret", ClientRequestId = "send-1", ClientCreatedAt = DateTimeOffset.UtcNow.ToString("O") }, CancellationToken.None);
             await reads.SaveMaximumAsync(new PendingReadCursor { ConversationId = "c1", Sequence = 1 }, CancellationToken.None);
             await reports.SaveAsync(new PendingModerationReportRequest { MessageId = "m1", Category = "spam", ClientRequestId = "report-1" }, CancellationToken.None);
             var sink = new CollectingDiagnostics();
@@ -1767,7 +1768,7 @@ namespace BeeKingdom.Tests.Editor
             var conversations = new VersionedChatPendingConversationStore(new MemoryStringStore(), json);
             var sends = new VersionedChatPendingSendStore(new MemoryStringStore(), json);
             await conversations.SaveAsync(new PendingChatConversationCreation { Request = new RemoteCreateConversationRequest { ChannelType = "Alliance", ClientRequestId = "private-conversation" } }, CancellationToken.None);
-            await sends.SaveAsync(new PendingChatSend { ConversationId = "private-id", Body = "private-body", ClientRequestId = "private-send", ClientCreatedAt = "2026-07-21T12:00:00Z" }, CancellationToken.None);
+            await sends.SaveAsync(new PendingChatSend { ConversationId = "private-id", Body = "private-body", ClientRequestId = "private-send", ClientCreatedAt = DateTimeOffset.UtcNow.ToString("O") }, CancellationToken.None);
             var rest = new FakeRest();
             rest.ResponseStatuses.Enqueue(200);
             rest.ResponseStatuses.Enqueue(503);

@@ -37129,8 +37129,8 @@ if (leftNavigationTexture == null)
 			// immediatement puis passe a Confirmed ou Failed) ; ChatRoyalSyncFromServer relit deja
 			// ce meme snapshot dans chatMessagesByConversation, donc rien de plus a faire ici cote
 			// local pour une conversation serveur - ajouter un message local en plus creerait un
-			// doublon. Le mode demo/hors-ligne (chatUsingServerData == false, chat non configure
-			// ou non connecte) garde exactement son ancien comportement local.
+			// doublon. Seul le mode demo (chat non configure) garde le comportement local ;
+			// une deconnexion conserve le routage serveur et son outbox.
 			if (chatUsingServerData)
 			{
 				ChatSendCurrentToServer(text);

@@ -148,11 +148,8 @@ namespace BeeKingdom.Playground
             }
 
             chatServerStatusLabel = ChatStatusLabel(snapshot);
-            if (!ChatServerConnected())
-            {
-                chatUsingServerData = false;
-                return;
-            }
+            // A configured runtime remains authoritative during reconnect/error states.
+            // Falling back to demo here bypasses the server outbox and simulates sends.
 
             bool firstSwitch = !chatUsingServerData;
             chatUsingServerData = true;
