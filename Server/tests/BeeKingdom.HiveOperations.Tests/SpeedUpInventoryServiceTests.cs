@@ -36,6 +36,71 @@ public sealed class SpeedUpInventoryServiceTests
     }
 
     [Fact]
+    public async Task ConstructionReplayAfterReconnectReturnsOriginalReceiptAndCurrentSnapshot()
+    {
+        var clock = new TestClock(DateTimeOffset.UtcNow);
+        var operation = new HiveOperation(Guid.NewGuid(), "honey_storage", 1, 2, clock.UtcNow,
+            clock.UtcNow.AddSeconds(60), HiveOperationStatus.Running, "", 0, null);
+        var repository = new MemoryRepository(CreateState(clock.UtcNow,
+            new Dictionary<string, int> { ["universal_60s"] = 2 }, operation));
+        var request = new ApplySpeedUpRequest("universal_60s", SpeedUpCategories.Construction,
+            "honey_storage", 60, 0, "reconnect");
+        var first = await new SpeedUpInventoryService(repository, clock, Options())
+            .ApplyAsync(repository.State.PlayerId, repository.State.HiveId, request);
+        Assert.True(first.Succeeded);
+        Assert.NotNull(first.Response);
+
+        var upgrades = new BuildingUpgradeService(repository, clock, new BuildingUpgradeOptions
+        {
+            Enabled = true,
+            CatalogVersion = "m095-test",
+            Catalog = [new("honey_storage", 1, 2, TimeSpan.FromMinutes(1),
+                new Dictionary<string, long> { ["honey"] = 20 })]
+        });
+        var completed = await upgrades.CompleteAsync(repository.State.PlayerId, repository.State.HiveId,
+            operation.OperationId, new CompleteBuildingUpgradeRequest(1, "complete"));
+        Assert.True(completed.Succeeded);
+
+        var replay = await new SpeedUpInventoryService(repository, clock, Options())
+            .ApplyAsync(repository.State.PlayerId, repository.State.HiveId, request);
+        Assert.True(replay.Succeeded);
+        Assert.NotNull(replay.Response);
+        Assert.Equal(first.Response.Receipt, replay.Response.Receipt);
+        Assert.Equal(2, replay.Response.Snapshot.Revision);
+        Assert.Empty(replay.Response.Snapshot.Timers);
+        Assert.Equal(1, repository.State.SpeedUps!["universal_60s"]);
+        Assert.Equal(2, repository.State.BuildingLevels["honey_storage"]);
+        Assert.Equal(clock.UtcNow, repository.State.Operations[0].CompletesAtUtc);
+        var conflict = await new SpeedUpInventoryService(repository, clock, Options())
+            .ApplyAsync(repository.State.PlayerId, repository.State.HiveId, request with { ExpectedRevision = 2 });
+        Assert.False(conflict.Succeeded);
+        Assert.Equal("idempotency_conflict", conflict.Code);
+        Assert.Null(conflict.Response);
+        Assert.Equal(1, repository.State.SpeedUps["universal_60s"]);
+    }
+
+    [Fact]
+    public async Task RejectedConstructionReplayRemainsRejectedWithoutConsumption()
+    {
+        var clock = new TestClock(DateTimeOffset.UtcNow);
+        var repository = new MemoryRepository(CreateState(clock.UtcNow,
+            new Dictionary<string, int> { ["universal_60s"] = 1 },
+            new HiveOperation(Guid.NewGuid(), "honey_storage", 1, 2, clock.UtcNow,
+                clock.UtcNow.AddMinutes(2), HiveOperationStatus.Running, "", 0, null)));
+        var request = new ApplySpeedUpRequest("universal_60s", SpeedUpCategories.Construction,
+            "honey_storage", 60, 99, "rejected");
+        var service = new SpeedUpInventoryService(repository, clock, Options());
+        var first = await service.ApplyAsync(repository.State.PlayerId, repository.State.HiveId, request);
+        var replay = await service.ApplyAsync(repository.State.PlayerId, repository.State.HiveId, request);
+        Assert.False(first.Succeeded);
+        Assert.False(replay.Succeeded);
+        Assert.Equal("revision_conflict", replay.Code);
+        Assert.Null(replay.Response);
+        Assert.Equal(0, repository.State.Revision);
+        Assert.Equal(1, repository.State.SpeedUps!["universal_60s"]);
+    }
+
+    [Fact]
     public async Task ConcurrentSecondApplyFailsOnRevisionWithoutConsumption()
     {
         var clock = new TestClock(DateTimeOffset.UtcNow);

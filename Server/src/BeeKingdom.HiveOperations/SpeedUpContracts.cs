@@ -111,7 +111,7 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
             if (state.Receipts.TryGetValue(request.IdempotencyKey, out IdempotencyReceipt? stored))
             {
                 result = stored.PayloadHash == payloadHash
-                    ? new SpeedUpCommandResult(stored.Succeeded, stored.Code, Snapshot(state, now))
+                    ? Replay(state, stored, request, now)
                     : new SpeedUpCommandResult(false, "idempotency_conflict", Snapshot(state, now));
                 return state;
             }
@@ -131,6 +131,18 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
             return RecordSuccess(updated, request, payloadHash, code, now, timer.OperationId, out result);
         }, cancellationToken);
         return result ?? Failure(playerId, hiveId, "mutation_failed");
+    }
+
+    private SpeedUpCommandResult Replay(PlayerHiveState state, IdempotencyReceipt stored, ApplySpeedUpRequest request, DateTimeOffset now)
+    {
+        SpeedUpReadSnapshot snapshot = Snapshot(state, now);
+        if (!stored.Succeeded) return new SpeedUpCommandResult(false, stored.Code, snapshot);
+        // The payload hash binds these request fields to the original accepted command.
+        // Keep its receipt revision/time even when the current snapshot has advanced.
+        SpeedUpReceipt receipt = new(state.PlayerId, state.HiveId, request.IdempotencyKey,
+            request.ItemId, request.Category, request.TargetId, 1,
+            stored.RevisionAfter ?? state.Revision, stored.AcceptedAtUtc ?? stored.CreatedAtUtc, stored.Code);
+        return new SpeedUpCommandResult(true, stored.Code, snapshot, new SpeedUpApplyResponse(receipt, snapshot));
     }
 
     private PlayerHiveState RecordFailure(PlayerHiveState state, ApplySpeedUpRequest request, string hash, string code, DateTimeOffset now, out SpeedUpCommandResult? result)
