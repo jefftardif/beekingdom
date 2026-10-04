@@ -5,8 +5,10 @@ namespace BeeKingdom.HiveOperations;
 
 public sealed record SquadReservationSnapshot(Guid PlayerId, Guid HiveId, string ContractVersion, string CatalogVersion,
     long RosterRevision, long ReservationRevision, int Capacity, IReadOnlyDictionary<string,long> Roster,
-    IReadOnlyDictionary<string,long> Available, IReadOnlyDictionary<string,long> Reserved, string? ReservationId);
-public sealed record CommitSquadReservationCommand(Guid PlayerId, Guid HiveId, long ExpectedRevision, Dictionary<string,long> Quantities, string IdempotencyKey);
+    IReadOnlyDictionary<string,long> Available, IReadOnlyDictionary<string,long> Reserved, string? ReservationId,
+    IReadOnlyList<string>? ChampionBeeIds = null);
+public sealed record CommitSquadReservationCommand(Guid PlayerId, Guid HiveId, long ExpectedRevision,
+    Dictionary<string,long> Quantities, string IdempotencyKey, IReadOnlyList<string>? ChampionBeeIds = null);
 public sealed record ReleaseSquadReservationCommand(Guid PlayerId, Guid HiveId, long ExpectedRevision, string IdempotencyKey);
 public sealed record SquadReservationResult(bool Succeeded, string Code, SquadReservationSnapshot Snapshot, SquadReservationReceipt? Receipt = null);
 public sealed record SquadReservationReceipt(Guid PlayerId, Guid HiveId, string IdempotencyKey, string Action, string? ReservationId, IReadOnlyDictionary<string,long> Quantities, long ReservationRevisionBefore, long ReservationRevisionAfter, DateTimeOffset AcceptedAtUtc, string Code);
@@ -49,10 +51,13 @@ public sealed class CombatSquadReservationService
             int capacity = ComputeCapacity(state.BuildingLevels);
             if (state.ImplicitBuildingDefaultsApplied && state.BuildingLevels.GetValueOrDefault("guard_post") == 1)
                 capacity = InitialCapacity;
-            var hash = Hash("commit|" + (c.Quantities is null ? "<null>" : Canonical(c.Quantities)) + "|" + c.ExpectedRevision);
+            List<string> champions = NormalizeChampions(c.ChampionBeeIds);
+            var hash = Hash("commit|" + (c.Quantities is null ? "<null>" : Canonical(c.Quantities)) + "|champion=" + string.Join(',', champions) + "|" + c.ExpectedRevision);
             if (reservation.Receipts.TryGetValue(key, out var old)) { var qty = ParseQuantities(old.Answer); var receipt = new SquadReservationReceipt(c.PlayerId,c.HiveId,key,"commit",old.ResultingStep,qty,old.RevisionBefore ?? reservation.Revision,old.RevisionAfter ?? reservation.Revision,old.AcceptedAtUtc ?? old.CreatedAtUtc,old.Code); result = old.PayloadHash == hash && old.Succeeded ? new(true,old.Code,Snapshot(state),receipt) : new(false,"game.idempotency_conflict",Snapshot(state)); return state; }
             if (!ValidKey(c.IdempotencyKey) || c.Quantities is null || !ValidQuantities(c.Quantities, capacity))
             { result = new(false, "game.invalid_request", Snapshot(state)); return state; }
+            if (!ValidChampionSelection(state, champions))
+            { result = new(false, "game.squad_champion_required", Snapshot(state)); return state; }
             if (reservation.ReservationId is not null || reservation.Revision != c.ExpectedRevision)
             { result = new(false, "game.revision_conflict", Snapshot(state)); return state; }
             if (c.Quantities.Any(x => x.Value > roster.Counts.GetValueOrDefault(x.Key)))
@@ -60,7 +65,7 @@ public sealed class CombatSquadReservationService
             if (reservation.Revision == long.MaxValue) throw new InvalidDataException("reservation revision overflow");
             var id = Guid.NewGuid().ToString("N");
             var accepted = clock.UtcNow; var receipts = new Dictionary<string, IdempotencyReceipt>(reservation.Receipts) { [key] = new(hash, true, "game.squad_reserved", null, accepted, reservation.Revision, reservation.Revision + 1, "commit", id, Canonical(c.Quantities)) }; while(receipts.Count>128){var victim=receipts.OrderBy(x=>x.Value.CreatedAtUtc).ThenBy(x=>x.Key,StringComparer.Ordinal).First(x=>x.Key!=key).Key;receipts.Remove(victim);}
-            var next = state with { Revision = state.Revision + 1, SquadReservation = reservation with { Revision = reservation.Revision + 1, Capacity = capacity, Reserved = new(c.Quantities), ReservationId = id, Receipts = receipts } };
+            var next = state with { Revision = state.Revision + 1, SquadReservation = reservation with { Revision = reservation.Revision + 1, Capacity = capacity, Reserved = new(c.Quantities), ReservationId = id, Receipts = receipts, ChampionBeeIds = champions } };
             result = new(true, "game.squad_reserved", Snapshot(next), new(c.PlayerId,c.HiveId,key,"commit",id,new Dictionary<string,long>(c.Quantities),reservation.Revision,reservation.Revision+1,accepted,"game.squad_reserved")); return next;
         }, ct);
         return result!;
@@ -83,7 +88,7 @@ public sealed class CombatSquadReservationService
             if (reservation.Revision == long.MaxValue) throw new InvalidDataException("reservation revision overflow");
             var accepted = clock.UtcNow; var receipts = new Dictionary<string, IdempotencyReceipt>(reservation.Receipts) { [key] = new(hash, true, "game.squad_released", null, accepted, reservation.Revision, reservation.Revision + 1, "release", reservation.ReservationId ?? "") }; while(receipts.Count>128){var victim=receipts.OrderBy(x=>x.Value.CreatedAtUtc).ThenBy(x=>x.Key,StringComparer.Ordinal).First(x=>x.Key!=key).Key;receipts.Remove(victim);}
             var empty = Families.ToDictionary(f => f, _ => 0L, StringComparer.Ordinal);
-            var next = state with { Revision = state.Revision + 1, SquadReservation = reservation with { Revision = reservation.Revision + 1, Reserved = empty, ReservationId = null, Receipts = receipts } };
+            var next = state with { Revision = state.Revision + 1, SquadReservation = reservation with { Revision = reservation.Revision + 1, Reserved = empty, ReservationId = null, Receipts = receipts, ChampionBeeIds = new List<string>() } };
             result = new(true, "game.squad_released", Snapshot(next), new(c.PlayerId,c.HiveId,key,"release",null,Families.ToDictionary(f=>f,_=>0L),reservation.Revision,reservation.Revision+1,accepted,"game.squad_released")); return next;
         }, ct);
         return result!;
@@ -96,8 +101,24 @@ public sealed class CombatSquadReservationService
         var roster = Families.ToDictionary(x => x, x => r.Counts.GetValueOrDefault(x));
         var reserved = Families.ToDictionary(x => x, x => q.Reserved.GetValueOrDefault(x));
         var available = Families.ToDictionary(x => x, x => Math.Max(0, roster[x] - reserved[x]));
-        return new(s.PlayerId, s.HiveId, ContractVersion, CombatRecruitmentService.CatalogVersion, r.Revision, q.Revision, ComputeCapacity(s.BuildingLevels), roster, available, reserved, q.ReservationId);
+        return new(s.PlayerId, s.HiveId, ContractVersion, CombatRecruitmentService.CatalogVersion, r.Revision, q.Revision, ComputeCapacity(s.BuildingLevels), roster, available, reserved, q.ReservationId, q.ChampionBeeIds ?? new List<string>());
     }
+
+    private static List<string> NormalizeChampions(IReadOnlyList<string>? championBeeIds)
+        => (championBeeIds ?? Array.Empty<string>())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+    private static bool ValidChampionSelection(PlayerHiveState state, IReadOnlyList<string> championBeeIds)
+    {
+        // Alpha patrols have exactly one champion. Ownership remains server-authoritative.
+        if (championBeeIds is null || championBeeIds.Count != 1) return false;
+        ChampionBeeProgressState progress = state.ChampionBees ?? new(new Dictionary<string, int>(StringComparer.Ordinal), new List<string>());
+        return progress.Levels.TryGetValue(championBeeIds[0], out int level) && level > 0;
+    }
+
     private static bool ValidKey(string? key) => !string.IsNullOrWhiteSpace(key) && key.Length <= 256;
     private const int MaxReceipts = 128;
     private const long MaxQuantity = 1_000_000;

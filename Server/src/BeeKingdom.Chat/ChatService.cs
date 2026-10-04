@@ -413,12 +413,57 @@ public sealed partial class ChatService : IChatService
     private ChatConversationParticipant RequireRead(Guid conversationId, PlayerId playerId)
     {
         ChatConversationParticipant? participant = repository.GetParticipant(conversationId, playerId);
-        if (participant == null || participant.RemovedAtUtc != null || !participant.CanRead)
+        if (participant != null && participant.RemovedAtUtc == null && participant.CanRead)
         {
-            throw new UnauthorizedAccessException("forbidden");
+            return participant;
         }
 
-        return participant;
+        // Alliance membership is the security authority for Alliance/Leaders channels. Older
+        // conversations can legitimately have a stale/missing Chat participant row (for example
+        // when the alliance predates the chat fan-out). Revalidate the real membership before
+        // repairing that derived Chat row; a kicked/left player remains denied.
+        ChatConversation? conversation = repository.GetConversation(conversationId);
+        if (conversation != null &&
+            (conversation.ChannelType == ChatChannelType.Alliance ||
+             conversation.ChannelType == ChatChannelType.Leaders))
+        {
+            ChatAudienceDecision repairDecision = audienceResolver.ResolveConversationAccess(
+                playerId,
+                new CreateChatConversationRequest(
+                    conversation.ChannelType,
+                    conversation.GameServerId,
+                    conversation.WorldId,
+                    conversation.AudienceKey,
+                    conversation.Title,
+                    Array.Empty<Guid>(),
+                    "membership-repair-" + conversationId.ToString("N")));
+
+            if (repairDecision.Allowed)
+            {
+                ChatConversationParticipant repaired = repository.UpsertParticipant(
+                    new ChatConversationParticipant(
+                        conversationId,
+                        playerId,
+                        repairDecision.RequesterRole,
+                        clock.UtcNow,
+                        null,
+                        CanRead: true,
+                        CanWrite: true));
+
+                if (repository.GetInbox(playerId, conversationId) == null)
+                {
+                    repository.SaveInbox(CreateInbox(
+                        playerId,
+                        conversationId,
+                        conversation.LastMessageId,
+                        conversation.LastActivityAtUtc));
+                }
+
+                return repaired;
+            }
+        }
+
+        throw new UnauthorizedAccessException("forbidden");
     }
 
     private ChatConversationParticipant RequireWrite(Guid conversationId, PlayerId playerId)

@@ -4,7 +4,9 @@ using System.Text.Json;
 using System.Text;
 using BeeKingdom.Authentication.Providers;
 using BeeKingdom.Chat.Models;
+using BeeKingdom.Chat.Repositories;
 using BeeKingdom.Shared.Serialization;
+using BeeKingdom.Shared.ValueObjects;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -436,12 +438,30 @@ public sealed class ChatMessagingEndpointTests
         HttpResponseMessage leadersWithRealMember = await memberClient.PostAsJsonAsync("/chat/v1/conversations", LeadersBody("leaders_member"), BeeJson.CreateDefaultOptions());
         HttpResponseMessage leadersWithRealLeader = await leaderClient.PostAsJsonAsync("/chat/v1/conversations", LeadersBody("leaders_leader"), BeeJson.CreateDefaultOptions());
 
+        // Regression: an old/stale Chat participant row must not lock an otherwise-active
+        // Alliance member out of the official Alliance channel. Membership stays authoritative,
+        // so direct read access repairs the derived Chat row.
+        using JsonDocument memberConversationDoc = JsonDocument.Parse(await allianceWithRealMember.Content.ReadAsStringAsync());
+        Guid memberConversationId = memberConversationDoc.RootElement.GetProperty("conversation").GetProperty("conversationId").GetGuid();
+        Guid memberPlayerId = factory.Services.GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>()
+            .ValidateToken(memberToken).PlayerId!.Value;
+        IChatRepository chatRepository = factory.Services.GetRequiredService<IChatRepository>();
+        chatRepository.RemoveParticipant(memberConversationId, new PlayerId(memberPlayerId), DateTimeOffset.UtcNow);
+        HttpResponseMessage repairedAllianceRead = await memberClient.GetAsync(
+            $"/chat/v1/conversations/{memberConversationId:D}/messages?afterSequence=0&limit=10");
+
         Assert.Multiple(() =>
         {
             Assert.That(allianceWithoutMembership.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
             Assert.That(allianceWithRealMember.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(leadersWithRealMember.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
             Assert.That(leadersWithRealLeader.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(repairedAllianceRead.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            ChatConversationParticipant? repaired = chatRepository.GetParticipant(memberConversationId, new PlayerId(memberPlayerId));
+            Assert.That(repaired, Is.Not.Null);
+            Assert.That(repaired!.RemovedAtUtc, Is.Null);
+            Assert.That(repaired.CanRead, Is.True);
+            Assert.That(repaired.CanWrite, Is.True);
         });
     }
 

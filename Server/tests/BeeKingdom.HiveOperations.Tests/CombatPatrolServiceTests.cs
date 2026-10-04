@@ -11,7 +11,7 @@ public sealed class CombatPatrolServiceTests
         string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         try
         {
-            var repo = Repo(root, p, h, guardians: 1, wingrunners: 0, darters: 0);
+            var repo = Repo(root, p, h, guardians: 1, wingrunners: 0, darters: 0, reservedGuardians: 1);
             var service = new CombatPatrolService(repo, clock);
             CombatPatrolSnapshot before = await service.ReadAsync(p, h, default);
 
@@ -32,7 +32,7 @@ public sealed class CombatPatrolServiceTests
         try
         {
             // Tier 2 (guardians hazard, required=90); darters are disadvantaged against it -> HardWon band with real losses.
-            var repo = Repo(root, p, h, guardians: 0, wingrunners: 0, darters: 18, guardPostLevel: 2);
+            var repo = Repo(root, p, h, guardians: 0, wingrunners: 0, darters: 18, guardPostLevel: 2, reservedDarters: 18);
             var service = new CombatPatrolService(repo, clock);
 
             CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 2, 0, 0, 18, 0, "launch"), default);
@@ -74,7 +74,7 @@ public sealed class CombatPatrolServiceTests
         string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         try
         {
-            var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2);
+            var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 18);
             var service = new CombatPatrolService(repo, clock);
             CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 2, 18, 0, 0, 0, "launch"), default);
             Guid encounterId = launch.Snapshot.ActiveEncounters[0].EncounterId;
@@ -96,7 +96,7 @@ public sealed class CombatPatrolServiceTests
         string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         try
         {
-            var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2);
+            var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 18);
             var service = new CombatPatrolService(repo, clock);
             CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 2, 18, 0, 0, 0, "launch"), default);
             Guid encounterId = launch.Snapshot.ActiveEncounters[0].EncounterId;
@@ -120,7 +120,7 @@ public sealed class CombatPatrolServiceTests
         string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         try
         {
-            var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 5);
+            var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 13);
             var service = new CombatPatrolService(repo, clock);
 
             CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 2, 13, 0, 0, 0, "launch-1"), default);
@@ -136,29 +136,26 @@ public sealed class CombatPatrolServiceTests
     }
 
     [Fact]
-    public async Task Two_concurrent_patrols_on_different_tiers_do_not_interfere()
+    public async Task Prepared_patrol_cannot_be_cloned_even_when_a_second_slot_exists()
     {
         string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         try
         {
-            // Base slot count is 1 — buy one resource slot so a second concurrent patrol is allowed.
-            var repo = Repo(root, p, h, guardians: 20, wingrunners: 20, darters: 0, guardPostLevel: 4);
+            // A patrol is now a prepared Caserne object. Buying another combat slot must never
+            // duplicate the same reserved bees into two simultaneous encounters.
+            var repo = Repo(root, p, h, guardians: 0, wingrunners: 20, darters: 0, guardPostLevel: 4, reservedWingrunners: 20);
             var service = new CombatPatrolService(repo, clock);
             CombatPatrolResult purchase = await service.PurchaseResourceSlotAsync(new(p, h, 0, "buy-slot"), default);
             Assert.True(purchase.Succeeded, purchase.Code);
 
             CombatPatrolResult first = await service.LaunchAsync(new(p, h, 1, 0, 20, 0, purchase.Snapshot.Revision, "launch-a"), default);
             Assert.True(first.Succeeded, first.Code);
-            CombatPatrolResult second = await service.LaunchAsync(new(p, h, 2, 20, 0, 0, first.Snapshot.Revision, "launch-b"), default);
-            Assert.True(second.Succeeded, second.Code);
 
-            Assert.Equal(2, second.Snapshot.ActiveEncounters.Count);
-
-            clock.Advance(CombatPatrolCatalog.Tiers[1].Duration);
-            CombatPatrolResult claimFirst = await service.ClaimAsync(new(p, h, first.Snapshot.ActiveEncounters[0].EncounterId, second.Snapshot.Revision, "claim-a"), default);
-            Assert.True(claimFirst.Succeeded, claimFirst.Code);
-            Assert.Single(claimFirst.Snapshot.ActiveEncounters);
-            Assert.Equal(second.Snapshot.ActiveEncounters[1].EncounterId, claimFirst.Snapshot.ActiveEncounters[0].EncounterId);
+            CombatPatrolResult second = await service.LaunchAsync(new(p, h, 2, 0, 20, 0, first.Snapshot.Revision, "launch-b"), default);
+            Assert.False(second.Succeeded);
+            Assert.Equal("game.patrol_squad_in_use", second.Code);
+            Assert.Single(second.Snapshot.ActiveEncounters);
+            Assert.Equal(first.Snapshot.ActiveEncounters[0].EncounterId, second.Snapshot.ActiveEncounters[0].EncounterId);
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
@@ -171,7 +168,7 @@ public sealed class CombatPatrolServiceTests
         {
             // Tier 1 hazard is wingrunners; guardians are disadvantaged against it but 10 is still
             // enough to clear the launch gate (readiness ~9250bp, HardWon band).
-            var repo = Repo(root, p, h, guardians: 40, wingrunners: 0, darters: 0, guardPostLevel: 0);
+            var repo = Repo(root, p, h, guardians: 40, wingrunners: 0, darters: 0, guardPostLevel: 0, reservedGuardians: 10);
             var service = new CombatPatrolService(repo, clock);
 
             CombatPatrolResult first = await service.LaunchAsync(new(p, h, 1, 10, 0, 0, 0, "launch-a"), default);
@@ -186,12 +183,32 @@ public sealed class CombatPatrolServiceTests
     }
 
     [Fact]
+    public async Task Active_prepared_patrol_is_not_double_subtracted_from_available_roster()
+    {
+        string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
+        try
+        {
+            var repo = Repo(root, p, h, guardians: 30, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 10);
+            var service = new CombatPatrolService(repo, clock);
+
+            CombatPatrolSnapshot before = await service.ReadAsync(p, h, default);
+            Assert.Equal(20, before.AvailableRoster["guardians"]);
+
+            CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 1, 10, 0, 0, before.Revision, "launch-prepared"), default);
+
+            Assert.True(launch.Succeeded, launch.Code);
+            Assert.Equal(20, launch.Snapshot.AvailableRoster["guardians"]);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task Committed_troops_are_unavailable_for_a_second_patrol_until_claimed()
     {
         string root = Temp(); Guid p = Guid.NewGuid(); Guid h = Guid.NewGuid(); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         try
         {
-            var repo = Repo(root, p, h, guardians: 10, wingrunners: 0, darters: 0, guardPostLevel: 2);
+            var repo = Repo(root, p, h, guardians: 10, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 10);
             var service = new CombatPatrolService(repo, clock);
             CombatPatrolResult purchase = await service.PurchaseResourceSlotAsync(new(p, h, 0, "buy-slot"), default);
             Assert.True(purchase.Succeeded, purchase.Code);
@@ -200,9 +217,12 @@ public sealed class CombatPatrolServiceTests
             Assert.True(first.Succeeded, first.Code);
             Assert.Equal(0, first.Snapshot.AvailableRoster["guardians"]);
 
+            // The Caserne now owns one exact prepared patrol composition. Asking to
+            // launch a smaller ad-hoc group cannot bypass that prepared object, even when another
+            // combat slot exists.
             CombatPatrolResult second = await service.LaunchAsync(new(p, h, 1, 5, 0, 0, first.Snapshot.Revision, "launch-b"), default);
             Assert.False(second.Succeeded);
-            Assert.Equal("game.patrol_insufficient_troops", second.Code);
+            Assert.Equal("game.patrol_squad_mismatch", second.Code);
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
@@ -302,7 +322,7 @@ public sealed class CombatPatrolServiceTests
             // Large, balanced squad so readiness clears comfortably regardless of which family
             // the featured/other tier's hazard disadvantages - keeps the test independent of
             // which tier happens to be featured on the fixed clock date above.
-            var repo = Repo(root, p, h, guardians: 300, wingrunners: 300, darters: 300, guardPostLevel: 100, honey: 0, pollen: 0);
+            var repo = Repo(root, p, h, guardians: 300, wingrunners: 300, darters: 300, guardPostLevel: 100, honey: 0, pollen: 0, reservedGuardians: 100, reservedWingrunners: 100, reservedDarters: 100);
             var service = new CombatPatrolService(repo, clock);
             Dictionary<string, long> squad = new() { ["guardians"] = 100, ["wingrunners"] = 100, ["darters"] = 100 };
 
@@ -371,7 +391,7 @@ public sealed class CombatPatrolServiceTests
         var clock = new MutableClock(t);
         try
         {
-            var repo = Repo(root, p, h, guardians: 300, wingrunners: 300, darters: 300, guardPostLevel: 100, honey: 0, pollen: 0);
+            var repo = Repo(root, p, h, guardians: 300, wingrunners: 300, darters: 300, guardPostLevel: 100, honey: 0, pollen: 0, reservedGuardians: 100, reservedWingrunners: 100, reservedDarters: 100);
             var service = new CombatPatrolService(repo, clock);
             Dictionary<string, long> squad = new() { ["guardians"] = 100, ["wingrunners"] = 100, ["darters"] = 100 };
 
@@ -412,15 +432,25 @@ public sealed class CombatPatrolServiceTests
     {
         var reservedCounts = new Dictionary<string, long> { ["guardians"] = reservedGuardians, ["wingrunners"] = reservedWingrunners, ["darters"] = reservedDarters };
         bool anyReserved = reservedGuardians + reservedWingrunners + reservedDarters > 0;
+        var champion = new ChampionBeeProgressState(
+            new Dictionary<string, int> { ["striga"] = 1 },
+            new List<string> { "striga" });
         var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(
             p, h, HiveStateMigrator.CurrentModelVersion, 0,
             new Dictionary<string, ResourceBalance> { ["honey"] = new(honey, 1_000_000), ["pollen"] = new(pollen, 1_000_000) },
             new Dictionary<string, int> { ["guard_post"] = guardPostLevel }, [], new(),
             DoctrineRoster: new DoctrineRosterState(0, new() { ["guardians"] = guardians, ["wingrunners"] = wingrunners, ["darters"] = darters }, null, new()),
+            ChampionBees: champion,
             // The stored Capacity here is just the migrator's internal consistency bound (sum(reserved) <= Capacity);
             // CombatSquadReservationService recomputes the *authoritative* capacity from BuildingLevels at read/commit
             // time regardless of this stored value (see CombatSquadReservationService.ComputeCapacity).
-            SquadReservation: new SquadReservationState(0, 1000, reservedCounts, anyReserved ? "reservation" : null, new())));
+            SquadReservation: new SquadReservationState(
+                0,
+                1000,
+                reservedCounts,
+                anyReserved ? "reservation" : null,
+                new(),
+                anyReserved ? new List<string> { "striga" } : new List<string>())));
         repo.ExecuteAtomicallyAsync(p, h, s => s).GetAwaiter().GetResult();
         return repo;
     }

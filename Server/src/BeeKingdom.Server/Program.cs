@@ -991,7 +991,7 @@ app.MapPost("/game/v1/hives/{hiveId}/combat/squad-reservation/commit", async (Ht
     if (!options.Value.Enabled) return GameError(StatusCodes.Status503ServiceUnavailable, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication); if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "game.session_required", "game.error.session_required");
     if (request is null || !TryParseGameResourceId(hiveId, out Guid id) || request.ExpectedRevision < 0 || request.ExpectedRevision == long.MaxValue || string.IsNullOrWhiteSpace(request.IdempotencyKey) || request.IdempotencyKey.Length > 256) return GameError(StatusCodes.Status400BadRequest, "game.invalid_request", "game.error.invalid_request");
-    SquadReservationResult result = await service.CommitAsync(new(auth.PlayerId!.Value, id, request.ExpectedRevision, request.Quantities ?? new(), request.IdempotencyKey), ct);
+    SquadReservationResult result = await service.CommitAsync(new(auth.PlayerId!.Value, id, request.ExpectedRevision, request.Quantities ?? new(), request.IdempotencyKey, request.ChampionBeeIds ?? new List<string>()), ct);
     return result.Succeeded && result.Receipt is not null ? Results.Ok(new SquadReservationResponse(result.Receipt, result.Snapshot)) : GameError(StatusCodes.Status409Conflict, result.Code, "game.error.squad_reservation_conflict");
 });
 
@@ -3816,7 +3816,7 @@ public sealed record WorkshopBatchQualificationHttpResponse(string PreviousStep,
 public sealed record StrategicPathHttpRequest(string PathId, long ExpectedRevision, string IdempotencyKey);
 public sealed record DoctrineRecruitmentStartRequest(string Family, long ExpectedRevision, string IdempotencyKey);
 public sealed record DoctrineRecruitmentClaimRequest(long ExpectedRevision, string IdempotencyKey);
-public sealed record SquadReservationHttpRequest(long ExpectedRevision, Dictionary<string,long>? Quantities, string IdempotencyKey);
+public sealed record SquadReservationHttpRequest(long ExpectedRevision, Dictionary<string,long>? Quantities, string IdempotencyKey, List<string>? ChampionBeeIds = null);
 public sealed record SquadReservationReleaseHttpRequest(long ExpectedRevision, string IdempotencyKey);
 public sealed record HivePerimeterLaunchHttpRequest(string SignalKey, string SignalInstanceId, string ReservationId, long ExpectedRevision, string IdempotencyKey);
 public sealed record HivePerimeterMutationHttpRequest(long ExpectedRevision, string IdempotencyKey);

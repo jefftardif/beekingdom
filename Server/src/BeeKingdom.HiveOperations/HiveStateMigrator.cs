@@ -45,8 +45,25 @@ public static class HiveStateMigrator
             if (reservation.Capacity <= 0 || reservation.Capacity > CombatSquadReservationService.MaxCapacity || reservation.Revision < 0 || reservation.Revision > state.Revision || reservation.Reserved is null || reservation.Reserved.Count != 3 || reservation.Reserved.Keys.Any(k => !CombatDoctrineService.Families.Contains(k)) || reservation.Reserved.Values.Any(v => v < 0 || v > 1_000_000) || SafeSum(reservation.Reserved.Values) > reservation.Capacity || (reservation.ReservationId is null && reservation.Reserved.Values.Any(v => v != 0)) || (reservation.ReservationId is not null && (string.IsNullOrWhiteSpace(reservation.ReservationId) || SafeSum(reservation.Reserved.Values) <= 0)) || reservation.Receipts is null || reservation.Receipts.Count > 4096 || reservation.Receipts.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value.PayloadHash)))
                 throw new InvalidDataException("Invalid squad reservation state");
             var rosterCounts = state.DoctrineRoster?.Counts ?? new Dictionary<string, long>();
-            if (reservation.Reserved.Any(x => x.Value > rosterCounts.GetValueOrDefault(x.Key)))
-                throw new InvalidDataException("Squad reservation exceeds doctrine roster.");
+            IReadOnlyList<CombatPatrolRecoveringBatch> recovering =
+                state.CombatPatrol?.Recovering ?? new List<CombatPatrolRecoveringBatch>();
+            if (reservation.Reserved.Any(x =>
+            {
+                long recoveringCount = SafeSum(
+                    recovering
+                        .Where(batch =>
+                            string.Equals(batch.Family, x.Key, StringComparison.Ordinal) &&
+                            batch.Count > 0)
+                        .Select(batch => batch.Count));
+                long accountedCount = SafeSum(
+                    new[]
+                    {
+                        rosterCounts.GetValueOrDefault(x.Key),
+                        recoveringCount
+                    });
+                return x.Value > accountedCount;
+            }))
+                throw new InvalidDataException("Squad reservation exceeds doctrine roster plus recovering troops.");
         }
         if (state.HivePerimeterSortie is { } sortie)
         {

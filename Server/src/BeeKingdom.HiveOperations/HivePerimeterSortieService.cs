@@ -113,7 +113,7 @@ public sealed class HivePerimeterSortieService
             }
             var empty = Families.ToDictionary(f => f, _ => 0L, StringComparer.Ordinal);
             var reservation = state.SquadReservation;
-            var released = reservation is null ? null : reservation with { Revision = reservation.Revision + 1, Reserved = empty, ReservationId = null };
+            var released = reservation is null ? null : reservation with { Revision = reservation.Revision + 1, Reserved = empty, ReservationId = null, ChampionBeeIds = new List<string>() };
             if (state.SquadReservation is null || state.SquadReservation.ReservationId != active.ReservationId) { result = new(false, "game.perimeter_conflict", Snapshot(state)); return state; }
             var receipts = new Dictionary<string, IdempotencyReceipt>(cycle.Receipts, StringComparer.Ordinal) { [key] = new(hash, true, reward ? "game.perimeter_claimed" : "game.perimeter_recalled", sortieId, now, cycle.Revision, cycle.Revision + 1, active.SignalKey, active.SignalInstanceId, active.ReservationId, now) };
             var completed = new HashSet<string>(cycle.CompletedSignalKeys ?? [], StringComparer.Ordinal); if (reward) completed.Add(active.SignalKey);
@@ -137,7 +137,7 @@ public sealed class HivePerimeterSortieService
         var reserved = Families.ToDictionary(f => f, f => reservationState?.Reserved.GetValueOrDefault(f) ?? 0L, StringComparer.Ordinal);
         var rosterView = Families.ToDictionary(f => f, f => roster.GetValueOrDefault(f), StringComparer.Ordinal);
         var available = Families.ToDictionary(f => f, f => Math.Max(0, rosterView[f] - reserved[f]), StringComparer.Ordinal);
-        var reservation = new SquadReservationSnapshot(state.PlayerId, state.HiveId, CombatSquadReservationService.ContractVersion, CombatRecruitmentService.CatalogVersion, state.DoctrineRoster?.Revision ?? 0, reservationState?.Revision ?? 0, reservationState?.Capacity ?? CombatSquadReservationService.InitialCapacity, rosterView, available, reserved, reservationState?.ReservationId);
+        var reservation = new SquadReservationSnapshot(state.PlayerId, state.HiveId, CombatSquadReservationService.ContractVersion, CombatRecruitmentService.CatalogVersion, state.DoctrineRoster?.Revision ?? 0, reservationState?.Revision ?? 0, reservationState?.Capacity ?? CombatSquadReservationService.InitialCapacity, rosterView, available, reserved, reservationState?.ReservationId, reservationState?.ChampionBeeIds ?? new List<string>());
         var completed = cycle.CompletedSignalKeys ?? new HashSet<string>(StringComparer.Ordinal);
         var signals = Catalog.Values.Select(s => new HivePerimeterSignalReadModel(s.SignalKey, InstanceId(state.PlayerId, state.HiveId, cycle.CycleStartedAtUtc, s.SignalKey), s.HazardDoctrine, s.Duration, s.MinimumSquad, s.HoneyReward, s.PollenReward, completed.Contains(s.SignalKey), cycle.Active is null && !completed.Contains(s.SignalKey))).ToArray();
         return new(state.PlayerId, state.HiveId, ContractVersion, cycle.Revision, now, cycle.CycleStartedAtUtc, cycle.CycleEndsAtUtc, cycle.Active, reservation, signals, claimReceipt);

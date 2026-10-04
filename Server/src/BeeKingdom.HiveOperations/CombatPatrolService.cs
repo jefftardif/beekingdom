@@ -54,7 +54,11 @@ public sealed class CombatPatrolService
         AllianceGameplayBonus allianceBonus = await ResolveAllianceBonusAsync(query.PlayerId, ct);
         CombatPatrolState patrol = state.CombatPatrol ?? EmptyPatrol();
         Dictionary<string, long> requested = Quantities(query.Guardians, query.Wingrunners, query.Darters);
-        ChampionCombatContribution championContribution = ChampionBeeCatalog.CombatContribution(state.ChampionBees);
+        SquadReservationState? reservation = state.SquadReservation;
+        bool hasPreparedPatrol = reservation?.ReservationId is not null;
+        bool isExactPreparedPatrol = IsExactReservedSquad(requested, reservation);
+        IReadOnlyList<string> patrolChampionIds = ReservationChampionIds(state, reservation);
+        ChampionCombatContribution championContribution = ChampionContributionForPatrol(state, patrolChampionIds);
         TroopTierCombatContribution troopTierContribution = TroopTierCatalog.CombatContribution(state.TroopTierProgress);
         IReadOnlyDictionary<string, long> strategicPathBonus = StrategicPathBonusCatalog.CombatPowerBonusBpByFamily(state.StrategicPath?.SelectedPath);
         long availablePower = CombatPatrolResolution.ComputeAvailablePower(requested, tier.HazardFamily, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus, AllianceCombatPowerBonusByFamily(allianceBonus.CombatPowerBp)));
@@ -65,21 +69,26 @@ public sealed class CombatPatrolService
         bool cooldownActive = hasCooldown && cooldownEndsAtUtc > now;
         int capacity = CombatSquadReservationService.ComputeCapacity(state.BuildingLevels);
         long totalRequested = requested.Values.Sum();
-        IReadOnlyDictionary<string, long> availableRoster = ComputeAvailableRoster(state);
         bool hasSlot = patrol.ActiveEncounters.Count < TotalSlots(patrol);
-        IReadOnlyDictionary<string, long> reservedForPreview = state.SquadReservation?.Reserved;
-        bool isReservedSquadForPreview = reservedForPreview != null && Families.All(f => requested.GetValueOrDefault(f) <= reservedForPreview.GetValueOrDefault(f)) && requested.Values.Sum() > 0 && requested.Values.Sum() <= reservedForPreview.Values.Sum();
-        string? blockReason = !hasSlot
-            ? "game.patrol_no_slot_available"
-            : cooldownActive
-                ? "game.patrol_cooldown_active"
-                : totalRequested <= 0 || totalRequested > capacity
-                    ? "game.patrol_invalid_composition"
-                    : !isReservedSquadForPreview && Families.Any(f => requested.GetValueOrDefault(f) > availableRoster.GetValueOrDefault(f))
-                        ? "game.patrol_insufficient_troops"
-                        : !meetsPower
-                            ? "game.patrol_underpowered"
-                            : null;
+        string? blockReason = !hasPreparedPatrol
+            ? "game.patrol_squad_required"
+            : !isExactPreparedPatrol
+                ? "game.patrol_squad_mismatch"
+                : patrolChampionIds.Count != 1
+                    ? "game.patrol_champion_required"
+                    : !hasSlot
+                        ? "game.patrol_no_slot_available"
+                        : IsPreparedPatrolInUse(patrol, reservation)
+                            ? "game.patrol_squad_in_use"
+                            : !PreparedPatrolRosterReady(state, reservation)
+                                ? "game.patrol_recovering"
+                                : cooldownActive
+                            ? "game.patrol_cooldown_active"
+                            : totalRequested <= 0 || totalRequested > capacity
+                                ? "game.patrol_invalid_composition"
+                                : !meetsPower
+                                    ? "game.patrol_underpowered"
+                                    : null;
         bool isDailyFocus = tier.Tier == DailyFocusCatalog.FeaturedCombatTier(now);
         int? worldEventFeaturedTier = WorldEventFeaturedTier(WorldEventCatalog.Active(now), now);
         bool isWorldEventBoosted = worldEventFeaturedTier == tier.Tier;
@@ -117,12 +126,22 @@ public sealed class CombatPatrolService
             long totalRequested = requested.Values.Sum();
             if (totalRequested <= 0 || totalRequested > capacity)
             { result = new(false, "game.patrol_invalid_composition", Snapshot(state)); return state; }
-            IReadOnlyDictionary<string, long> availableRoster = ComputeAvailableRoster(state);
-            IReadOnlyDictionary<string, long> reserved = state.SquadReservation?.Reserved;
-            bool isReservedSquad = reserved != null && Families.All(f => requested.GetValueOrDefault(f) <= reserved.GetValueOrDefault(f)) && requested.Values.Sum() > 0 && requested.Values.Sum() <= reserved.Values.Sum();
-            if (!isReservedSquad && Families.Any(f => requested.GetValueOrDefault(f) > availableRoster.GetValueOrDefault(f)))
-            { result = new(false, "game.patrol_insufficient_troops", Snapshot(state)); return state; }
-            ChampionCombatContribution championContribution = ChampionBeeCatalog.CombatContribution(state.ChampionBees);
+
+            SquadReservationState? reservation = state.SquadReservation;
+            if (reservation?.ReservationId is null)
+            { result = new(false, "game.patrol_squad_required", Snapshot(state)); return state; }
+            if (!IsExactReservedSquad(requested, reservation))
+            { result = new(false, "game.patrol_squad_mismatch", Snapshot(state)); return state; }
+
+            IReadOnlyList<string> patrolChampionIds = ReservationChampionIds(state, reservation);
+            if (patrolChampionIds.Count != 1)
+            { result = new(false, "game.patrol_champion_required", Snapshot(state)); return state; }
+            if (IsPreparedPatrolInUse(patrol, reservation))
+            { result = new(false, "game.patrol_squad_in_use", Snapshot(state)); return state; }
+            if (!PreparedPatrolRosterReady(state, reservation))
+            { result = new(false, "game.patrol_recovering", Snapshot(state)); return state; }
+
+            ChampionCombatContribution championContribution = ChampionContributionForPatrol(state, patrolChampionIds);
             TroopTierCombatContribution troopTierContribution = TroopTierCatalog.CombatContribution(state.TroopTierProgress);
             IReadOnlyDictionary<string, long> strategicPathBonus = StrategicPathBonusCatalog.CombatPowerBonusBpByFamily(state.StrategicPath?.SelectedPath);
             long availablePower = CombatPatrolResolution.ComputeAvailablePower(requested, tier.HazardFamily, MergedPowerBonus(championContribution.PowerBonusBpByFamily, troopTierContribution.PowerBonusBpByFamily, strategicPathBonus, AllianceCombatPowerBonusByFamily(allianceBonus.CombatPowerBp)));
@@ -130,7 +149,7 @@ public sealed class CombatPatrolService
             if (!CombatPatrolResolution.CanLaunch(readinessBp))
             { result = new(false, "game.patrol_underpowered", Snapshot(state)); return state; }
             if (patrol.Revision == long.MaxValue) throw new InvalidDataException("combat patrol revision overflow");
-            var encounter = new CombatPatrolActiveEncounter(Guid.NewGuid(), command.Tier, requested, now, now.Add(tier.Duration), command.IdempotencyKey!, hash);
+            var encounter = new CombatPatrolActiveEncounter(Guid.NewGuid(), command.Tier, requested, now, now.Add(tier.Duration), command.IdempotencyKey!, hash, patrolChampionIds.ToList());
             var activeEncounters = new List<CombatPatrolActiveEncounter>(patrol.ActiveEncounters) { encounter };
             var receipts = new Dictionary<string, IdempotencyReceipt>(patrol.Receipts, StringComparer.Ordinal) { [key] = new(hash, true, "game.patrol_launched", encounter.EncounterId, now, patrol.Revision, patrol.Revision + 1) };
             TrimReceipts(receipts, key);
@@ -257,10 +276,15 @@ public sealed class CombatPatrolService
             var nextResources = new Dictionary<string, ResourceBalance>(state.Resources, StringComparer.Ordinal);
             var credited = new Dictionary<string, long>(StringComparer.Ordinal);
             DoctrineRosterState? nextRoster = state.DoctrineRoster;
+            SquadReservationState? nextReservation = state.SquadReservation;
             var recovering = new List<CombatPatrolRecoveringBatch>(patrol.Recovering ?? new List<CombatPatrolRecoveringBatch>());
             string code;
             CombatPatrolResolutionResult? resolution = null;
-            ChampionCombatContribution championContribution = ChampionBeeCatalog.CombatContribution(state.ChampionBees);
+            IReadOnlyList<string> encounterChampionIds =
+                active.ChampionBeeIds != null && active.ChampionBeeIds.Count > 0
+                    ? active.ChampionBeeIds
+                    : ReservationChampionIds(state, state.SquadReservation);
+            ChampionCombatContribution championContribution = ChampionContributionForPatrol(state, encounterChampionIds);
             TroopTierCombatContribution troopTierContribution = TroopTierCatalog.CombatContribution(state.TroopTierProgress);
             string? strategicPathId = state.StrategicPath?.SelectedPath;
             IReadOnlyDictionary<string, long> strategicPathBonus = StrategicPathBonusCatalog.CombatPowerBonusBpByFamily(strategicPathId);
@@ -283,6 +307,40 @@ public sealed class CombatPatrolService
                     if (wounded > 0) recovering.Add(new CombatPatrolRecoveringBatch(family, wounded, now.Add(recoveryDuration)));
                 }
                 nextRoster = roster with { Counts = counts };
+
+                // The prepared patrol survives the encounter as an object owned by the Caserne.
+                // Permanent losses shrink that patrol permanently; wounded bees stay assigned to
+                // it and simply make it unavailable until their recovery batch matures.
+                if (nextReservation?.ReservationId is not null &&
+                    IsExactReservedSquad(active.CommittedTroops, nextReservation))
+                {
+                    var reserved = new Dictionary<string, long>(nextReservation.Reserved, StringComparer.Ordinal);
+                    bool reservationChanged = false;
+                    foreach (string family in Families)
+                    {
+                        long permanent = resolution.PermanentLosses.GetValueOrDefault(family);
+                        if (permanent <= 0) continue;
+                        reserved[family] = Math.Max(0, reserved.GetValueOrDefault(family) - permanent);
+                        reservationChanged = true;
+                    }
+
+                    if (reservationChanged)
+                    {
+                        if (nextReservation.Revision == long.MaxValue)
+                            throw new InvalidDataException("squad reservation revision overflow");
+                        bool anySurvivor = reserved.Values.Sum() > 0;
+                        nextReservation = nextReservation with
+                        {
+                            Revision = nextReservation.Revision + 1,
+                            Reserved = reserved,
+                            ReservationId = anySurvivor ? nextReservation.ReservationId : null,
+                            ChampionBeeIds = anySurvivor
+                                ? nextReservation.ChampionBeeIds
+                                : new List<string>()
+                        };
+                    }
+                }
+
                 // Cible du jour (demande de Jeff, 2026-07-31) : un palier different chaque jour
                 // civil recoit +50% de recompense a la validation - pure fonction de la date, ne
                 // touche jamais la puissance de combat ni les seuils de resolution ci-dessus.
@@ -341,7 +399,7 @@ public sealed class CombatPatrolService
                 nextSpeedUps[RecallItemId] = nextSpeedUps.GetValueOrDefault(RecallItemId) - 1;
             }
             var nextPatrol = patrol with { Revision = patrol.Revision + 1, ActiveEncounters = remainingEncounters, Receipts = receipts, TierCooldownEndsAtUtc = tierCooldowns, ClaimReceipts = claimReceipts, Recovering = recovering };
-            var next = state with { Revision = checked(state.Revision + 1), Resources = nextResources, DoctrineRoster = nextRoster, CombatPatrol = nextPatrol, BestiaryCodex = nextBestiaryCodex, SpeedUps = nextSpeedUps };
+            var next = state with { Revision = checked(state.Revision + 1), Resources = nextResources, DoctrineRoster = nextRoster, SquadReservation = nextReservation, CombatPatrol = nextPatrol, BestiaryCodex = nextBestiaryCodex, SpeedUps = nextSpeedUps };
             result = new(true, code, Snapshot(next, claimReceipt), claimReceipt);
             return next;
         }, ct);
@@ -431,6 +489,62 @@ public sealed class CombatPatrolService
             foreach (string family in Families)
                 merged[family] += source.GetValueOrDefault(family);
         return merged;
+    }
+
+    private static bool IsPreparedPatrolInUse(CombatPatrolState patrol, SquadReservationState? reservation)
+    {
+        if (reservation?.ReservationId is null || patrol.ActiveEncounters is null || patrol.ActiveEncounters.Count == 0)
+            return false;
+        return patrol.ActiveEncounters.Any(encounter => IsExactReservedSquad(encounter.CommittedTroops, reservation));
+    }
+
+    private static bool PreparedPatrolRosterReady(PlayerHiveState state, SquadReservationState? reservation)
+    {
+        if (reservation?.ReservationId is null || reservation.Reserved is null) return false;
+        DoctrineRosterState roster = state.DoctrineRoster ?? new DoctrineRosterState(0, new(), null, new());
+        return Families.All(family =>
+            reservation.Reserved.GetValueOrDefault(family) <= roster.Counts.GetValueOrDefault(family));
+    }
+
+    private static bool IsExactReservedSquad(IReadOnlyDictionary<string, long> requested, SquadReservationState? reservation)
+    {
+        if (reservation?.ReservationId is null || reservation.Reserved is null) return false;
+        long total = 0;
+        foreach (string family in Families)
+        {
+            long requestedCount = requested.GetValueOrDefault(family);
+            long reservedCount = reservation.Reserved.GetValueOrDefault(family);
+            if (requestedCount != reservedCount) return false;
+            total += requestedCount;
+        }
+        return total > 0;
+    }
+
+    private static IReadOnlyList<string> ReservationChampionIds(PlayerHiveState state, SquadReservationState? reservation)
+    {
+        List<string> reserved = (reservation?.ChampionBeeIds ?? new List<string>())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (reserved.Count > 0) return reserved;
+
+        // Backward compatibility for a reservation created before champions became part of the
+        // patrol contract. The next release/recreate operation will persist the champion explicitly.
+        return (state.ChampionBees?.AssignedBeeIds ?? new List<string>())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Take(1)
+            .ToList();
+    }
+
+    private static ChampionCombatContribution ChampionContributionForPatrol(PlayerHiveState state, IReadOnlyList<string> championBeeIds)
+    {
+        ChampionBeeProgressState progress = state.ChampionBees ?? new(new Dictionary<string, int>(StringComparer.Ordinal), new List<string>());
+        List<string> owned = (championBeeIds ?? Array.Empty<string>())
+            .Where(id => progress.Levels.TryGetValue(id, out int level) && level > 0)
+            .Distinct(StringComparer.Ordinal)
+            .Take(1)
+            .ToList();
+        return ChampionBeeCatalog.CombatContribution(progress with { AssignedBeeIds = owned });
     }
 
     private static Dictionary<string, long> Quantities(long guardians, long wingrunners, long darters) => new(StringComparer.Ordinal)
