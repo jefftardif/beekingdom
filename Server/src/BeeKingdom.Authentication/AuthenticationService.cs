@@ -154,14 +154,36 @@ public sealed class AuthenticationService : IAuthenticationService
         bool isNewAccount)
     {
         long start = Stopwatch.GetTimestamp();
-        if (sessions.GetAccountSessions(account.AccountId).Count(session => !session.IsRevoked) >= options.MaxSessionsPerAccount)
+        DateTimeOffset now = clock.UtcNow;
+
+        IReadOnlyList<AuthenticationSession> existingSessions = sessions.GetAccountSessions(account.AccountId);
+        bool hasStableDeviceId = !string.IsNullOrWhiteSpace(deviceIdentifier);
+        foreach (AuthenticationSession existing in existingSessions)
+        {
+            if (existing.IsRevoked) continue;
+
+            bool expired = existing.ExpirationUtc <= now;
+            bool sameDevice = hasStableDeviceId &&
+                string.Equals(existing.DeviceIdentifier, deviceIdentifier, StringComparison.Ordinal);
+
+            // A successful re-login from the same device replaces that device's previous
+            // session(s) instead of consuming another slot. Expired sessions are also retired
+            // opportunistically so they never count against the active-session ceiling.
+            if (expired || sameDevice)
+            {
+                Logout(existing.SessionId);
+            }
+        }
+
+        int activeSessionCount = sessions.GetAccountSessions(account.AccountId)
+            .Count(session => !session.IsRevoked && session.ExpirationUtc > now);
+        if (activeSessionCount >= options.MaxSessionsPerAccount)
         {
             Diagnostics.RecordFailure(Stopwatch.GetTimestamp() - start);
             return AuthenticationResult.Failure("max_sessions_reached", "Maximum session count reached.");
         }
 
         string sessionId = Guid.NewGuid().ToString("N");
-        DateTimeOffset now = clock.UtcNow;
         AuthenticationSession session = new(
             sessionId,
             account.PlayerId,

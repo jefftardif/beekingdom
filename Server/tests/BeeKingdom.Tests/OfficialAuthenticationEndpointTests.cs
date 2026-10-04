@@ -5,6 +5,7 @@ using System.Text.Json;
 using BeeKingdom.Authentication.Providers;
 using BeeKingdom.Authentication;
 using BeeKingdom.Authentication.Models;
+using BeeKingdom.Authentication.Sessions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -83,10 +84,55 @@ public sealed class OfficialAuthenticationEndpointTests
     [Test]
     public async Task Session_limit_and_lockout_use_409_and_429()
     {
-        await using var limited = Factory("Development", new Dictionary<string, string?> { ["Authentication:MaxSessionsPerAccount"] = "1" }); using var limitedClient = limited.CreateClient(); var limitedEmail = $"limit-{Guid.NewGuid():N}@bee.test"; limited.Services.GetRequiredService<IAccountCredentialStore>().CreateEmailAccount(limitedEmail, "secret"); using var first = await limitedClient.PostAsJsonAsync("/auth/login", Login(limitedEmail)); using var second = await limitedClient.PostAsJsonAsync("/auth/login", Login(limitedEmail)); Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK)); Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Conflict)); Assert.That(await second.Content.ReadAsStringAsync(), Does.Contain("auth.session_limit"));
+        await using var limited = Factory("Development", new Dictionary<string, string?> { ["Authentication:MaxSessionsPerAccount"] = "1" }); using var limitedClient = limited.CreateClient(); var limitedEmail = $"limit-{Guid.NewGuid():N}@bee.test"; limited.Services.GetRequiredService<IAccountCredentialStore>().CreateEmailAccount(limitedEmail, "secret"); using var first = await limitedClient.PostAsJsonAsync("/auth/login", Login(limitedEmail, deviceIdentifier: "device-a")); using var second = await limitedClient.PostAsJsonAsync("/auth/login", Login(limitedEmail, deviceIdentifier: "device-b")); Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK)); Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Conflict)); Assert.That(await second.Content.ReadAsStringAsync(), Does.Contain("auth.session_limit"));
         await using var locked = Factory("Development", new Dictionary<string, string?> { ["Authentication:MaxFailedAttempts"] = "1" }); using var lockedClient = locked.CreateClient(); var lockedEmail = $"locked-{Guid.NewGuid():N}@bee.test"; locked.Services.GetRequiredService<IAccountCredentialStore>().CreateEmailAccount(lockedEmail, "secret"); using var failure = await lockedClient.PostAsJsonAsync("/auth/login", Login(lockedEmail, "wrong")); using var limitedFailure = await lockedClient.PostAsJsonAsync("/auth/login", Login(lockedEmail)); Assert.That(failure.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized)); Assert.That(limitedFailure.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests)); Assert.That(await limitedFailure.Content.ReadAsStringAsync(), Does.Contain("auth.rate_limited"));
     }
 
+    [Test]
+    public async Task Same_device_relogin_replaces_previous_session()
+    {
+        await using var factory = Factory("Development", new Dictionary<string, string?> { ["Authentication:MaxSessionsPerAccount"] = "1" });
+        using var client = factory.CreateClient();
+        var email = $"same-device-{Guid.NewGuid():N}@bee.test";
+        factory.Services.GetRequiredService<IAccountCredentialStore>().CreateEmailAccount(email, "secret");
+
+        using var first = await client.PostAsJsonAsync("/auth/login", Login(email, deviceIdentifier: "unity-editor-device"));
+        using var firstJson = JsonDocument.Parse(await first.Content.ReadAsStringAsync());
+        string firstAccess = firstJson.RootElement.GetProperty("tokens").GetProperty("accessToken").GetString()!;
+
+        using var second = await client.PostAsJsonAsync("/auth/login", Login(email, deviceIdentifier: "unity-editor-device"));
+        using var validateFirst = await client.PostAsJsonAsync("/auth/validate", new { accessToken = firstAccess });
+
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(validateFirst.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Expired_sessions_do_not_consume_active_session_limit()
+    {
+        await using var factory = Factory("Development", new Dictionary<string, string?> { ["Authentication:MaxSessionsPerAccount"] = "1" });
+        using var client = factory.CreateClient();
+        var email = $"expired-session-{Guid.NewGuid():N}@bee.test";
+        AuthenticationAccount account = factory.Services.GetRequiredService<IAccountCredentialStore>().CreateEmailAccount(email, "secret");
+        factory.Services.GetRequiredService<IAuthenticationSessionStore>().Save(new AuthenticationSession(
+            "expired-session",
+            account.PlayerId,
+            account.AccountId,
+            AuthenticationProviderKind.EmailPassword,
+            DateTimeOffset.UtcNow.AddDays(-15),
+            DateTimeOffset.UtcNow.AddDays(-15),
+            DateTimeOffset.UtcNow.AddMinutes(-1),
+            "1.0.0",
+            "127.0.0.1",
+            "old-device",
+            "local",
+            false));
+
+        using var login = await client.PostAsJsonAsync("/auth/login", Login(email, deviceIdentifier: "new-device"));
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
     private static WebApplicationFactory<Program> Factory(string environment, IReadOnlyDictionary<string, string?>? settings = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder => { builder.UseSetting("environment", environment); if (settings is not null) builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings)); });
-    private static object Login(string email, string password = "secret") => new { email, password, clientVersion = "1.0.0", ipAddress = "127.0.0.1", deviceIdentifier = "official-auth-tests", region = "local" };
+    private static object Login(string email, string password = "secret", string deviceIdentifier = "official-auth-tests") => new { email, password, clientVersion = "1.0.0", ipAddress = "127.0.0.1", deviceIdentifier, region = "local" };
 }
