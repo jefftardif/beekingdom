@@ -145,9 +145,71 @@ public sealed class NewsService
         return deleted ? new NewsArticleCommandResult(true, "ok", null) : new NewsArticleCommandResult(false, "not_found", null);
     }
 
+    /// <summary>
+    /// Machine-to-machine publication path used by the dedicated News automation endpoint.
+    /// The operation is idempotent by slug: a missing article is created, an existing
+    /// article is updated, and the final state is Published in both cases.
+    /// </summary>
+    public async Task<NewsArticleCommandResult> UpsertAndPublishAsync(
+        Guid actorAccountId,
+        NewsArticleCreateRequest request,
+        CancellationToken ct = default)
+    {
+        RequireEnabled();
+        if (request is null
+            || !IsValidSlug(request.Slug)
+            || !HasBothLocalesFilled(request)
+            || !HasValidAutomationLengths(request))
+        {
+            return new NewsArticleCommandResult(false, "invalid_request", null);
+        }
+
+        NewsArticle? existing = await repository.GetBySlugAsync(request.Slug, ct);
+        NewsArticleCommandResult saved;
+        if (existing is null)
+        {
+            saved = await CreateAsync(actorAccountId, request, ct);
+        }
+        else
+        {
+            saved = await UpdateAsync(
+                request.Slug,
+                new NewsArticleUpdateRequest(
+                    request.TitleEn,
+                    request.TitleFr,
+                    request.ExcerptEn,
+                    request.ExcerptFr,
+                    request.BodyEn,
+                    request.BodyFr),
+                ct);
+        }
+
+        if (!saved.Succeeded)
+        {
+            return saved;
+        }
+
+        return await PublishAsync(request.Slug, ct);
+    }
+
     private static bool HasBothLocalesFilled(NewsArticle article) =>
         !string.IsNullOrWhiteSpace(article.TitleEn) && !string.IsNullOrWhiteSpace(article.TitleFr) &&
         !string.IsNullOrWhiteSpace(article.BodyEn) && !string.IsNullOrWhiteSpace(article.BodyFr);
+
+    private static bool HasBothLocalesFilled(NewsArticleCreateRequest request) =>
+        !string.IsNullOrWhiteSpace(request.TitleEn) && !string.IsNullOrWhiteSpace(request.TitleFr) &&
+        !string.IsNullOrWhiteSpace(request.BodyEn) && !string.IsNullOrWhiteSpace(request.BodyFr);
+
+    private static bool HasValidAutomationLengths(NewsArticleCreateRequest request) =>
+        IsWithinLimit(request.TitleEn, 400) &&
+        IsWithinLimit(request.TitleFr, 400) &&
+        IsWithinLimit(request.ExcerptEn, 1000) &&
+        IsWithinLimit(request.ExcerptFr, 1000) &&
+        IsWithinLimit(request.BodyEn, 200_000) &&
+        IsWithinLimit(request.BodyFr, 200_000);
+
+    private static bool IsWithinLimit(string? value, int maxLength) =>
+        value is null || value.Length <= maxLength;
 
     // ---------------- Reads ----------------
 

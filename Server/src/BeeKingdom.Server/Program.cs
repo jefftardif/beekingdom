@@ -121,6 +121,8 @@ builder.Services.AddOptions<DevToolsOptions>()
 
 builder.Services.AddOptions<OpsSecurityOptions>()
     .Bind(builder.Configuration.GetSection(OpsSecurityOptions.SectionName));
+builder.Services.AddOptions<NewsAutomationOptions>()
+    .Bind(builder.Configuration.GetSection(NewsAutomationOptions.SectionName));
 builder.Services.AddOptions<SqlProductionDryRunOptions>()
     .Bind(builder.Configuration.GetSection(SqlProductionDryRunOptions.SectionName));
 builder.Services.AddOptions<RuntimeHandshakeOptions>()
@@ -2116,6 +2118,28 @@ app.MapDelete("/news/v1/admin/articles/{slug}", async (HttpContext context, Auth
     });
 });
 
+// Dedicated machine-to-machine publication path. It deliberately does not reuse
+// the broad Ops admin key or a player session. The only permitted action is
+// idempotent create/update + publish of one bilingual News article.
+app.MapPost("/news/v1/automation/publish", async (
+    HttpContext context,
+    IOptions<NewsAutomationOptions> automation,
+    NewsService news,
+    NewsArticleCreateRequest request,
+    CancellationToken cancellationToken) =>
+{
+    IResult? authorization = AuthorizeNewsAutomation(context, automation.Value);
+    if (authorization != null) return authorization;
+
+    return await ExecuteNewsAsync(async () =>
+    {
+        NewsArticleCommandResult result = await news.UpsertAndPublishAsync(Guid.Empty, request, cancellationToken);
+        return result.Succeeded && result.Article is not null
+            ? Results.Ok(NewsArticleDetail.FromArticle(result.Article))
+            : NewsCommandError(result.Code);
+    });
+});
+
 app.MapGet("/ops/migrations/pending", async (HttpContext context, IOptions<OpsSecurityOptions> ops, IMigrationRunner migrations, CancellationToken cancellationToken) =>
 {
     IResult? authorization = AuthorizeOps(context, ops.Value);
@@ -2778,6 +2802,45 @@ static IResult? AuthorizeOps(HttpContext context, OpsSecurityOptions options)
     }
 
     return VerifyProvidedSecret(provided.ToString(), options.AdminKey, options.AdminKeySha256) ? null : Results.Unauthorized();
+}
+
+static IResult? AuthorizeNewsAutomation(HttpContext context, NewsAutomationOptions options)
+{
+    if (!options.Enabled)
+    {
+        return NewsError(StatusCodes.Status503ServiceUnavailable, "automation_disabled");
+    }
+
+    if (string.IsNullOrWhiteSpace(options.KeyFile))
+    {
+        return Results.Problem("News automation key file is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    string keyPath = Path.IsPathRooted(options.KeyFile)
+        ? options.KeyFile
+        : Path.Combine(AppContext.BaseDirectory, options.KeyFile);
+
+    string configuredKey;
+    try
+    {
+        configuredKey = File.ReadAllText(keyPath).Trim();
+    }
+    catch
+    {
+        return Results.Problem("News automation key file is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    if (configuredKey.Length < 24 || configuredKey.Length > 512)
+    {
+        return Results.Problem("News automation key is not valid.", statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    if (!context.Request.Headers.TryGetValue("X-BeeKingdom-News-Key", out Microsoft.Extensions.Primitives.StringValues provided))
+    {
+        return Results.Unauthorized();
+    }
+
+    return VerifyProvidedSecret(provided.ToString(), configuredKey, string.Empty) ? null : Results.Unauthorized();
 }
 
 static IResult? AuthorizeAdminSupport(HttpContext context, AdminSupportOptions options)

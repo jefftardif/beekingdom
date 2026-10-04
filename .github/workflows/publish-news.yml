@@ -1,0 +1,96 @@
+name: Publish BeeKingdom News
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: URL-safe article slug
+        required: true
+        type: string
+      titleEn:
+        description: English title
+        required: true
+        type: string
+      titleFr:
+        description: French title
+        required: true
+        type: string
+      excerptEn:
+        description: English excerpt
+        required: true
+        type: string
+      excerptFr:
+        description: French excerpt
+        required: true
+        type: string
+      bodyEn:
+        description: English article body
+        required: true
+        type: string
+      bodyFr:
+        description: French article body
+        required: true
+        type: string
+
+concurrency:
+  group: beekingdom-news-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: [self-hosted, beekingdom-deploy]
+    steps:
+      - name: Publish bilingual article through the News automation API
+        shell: powershell
+        env:
+          NEWS_SLUG: ${{ inputs.slug }}
+          NEWS_TITLE_EN: ${{ inputs.titleEn }}
+          NEWS_TITLE_FR: ${{ inputs.titleFr }}
+          NEWS_EXCERPT_EN: ${{ inputs.excerptEn }}
+          NEWS_EXCERPT_FR: ${{ inputs.excerptFr }}
+          NEWS_BODY_EN: ${{ inputs.bodyEn }}
+          NEWS_BODY_FR: ${{ inputs.bodyFr }}
+        run: |
+          $keyPath = "C:\inetpub\BeeKingdomApi\news-automation.key"
+          if (-not (Test-Path $keyPath)) { throw "News automation key is missing on the server." }
+          $newsKey = (Get-Content -Path $keyPath -Raw).Trim()
+          if ([string]::IsNullOrWhiteSpace($newsKey)) { throw "News automation key is empty." }
+
+          $payload = [ordered]@{
+            slug = $env:NEWS_SLUG
+            titleEn = $env:NEWS_TITLE_EN
+            titleFr = $env:NEWS_TITLE_FR
+            excerptEn = $env:NEWS_EXCERPT_EN
+            excerptFr = $env:NEWS_EXCERPT_FR
+            bodyEn = $env:NEWS_BODY_EN
+            bodyFr = $env:NEWS_BODY_FR
+          } | ConvertTo-Json -Depth 4
+
+          $headers = @{ "X-BeeKingdom-News-Key" = $newsKey }
+          $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+          try {
+            $result = Invoke-RestMethod -Method Post -Uri "https://api-ops.beekingdomgame.com/news/v1/automation/publish" -Headers $headers -ContentType "application/json; charset=utf-8" -Body $payloadBytes -TimeoutSec 30
+          } finally {
+            Remove-Variable newsKey,headers,payloadBytes -ErrorAction SilentlyContinue
+          }
+
+          if ($result.slug -ne $env:NEWS_SLUG -or $result.status -ne "Published") {
+            throw "News API returned an unexpected result."
+          }
+
+          Write-Host "NEWS_PUBLISH_OK slug=$($result.slug) publishedAtUtc=$($result.publishedAtUtc)"
+
+      - name: Verify the article is publicly readable
+        shell: powershell
+        env:
+          NEWS_SLUG: ${{ inputs.slug }}
+        run: |
+          Start-Sleep -Seconds 2
+          $slug = [Uri]::EscapeDataString($env:NEWS_SLUG)
+          $article = Invoke-RestMethod -Method Get -Uri "https://api-ops.beekingdomgame.com/news/v1/articles/$slug" -TimeoutSec 20
+
+          if ($article.slug -ne $env:NEWS_SLUG -or $article.status -ne "Published") {
+            throw "Published article is not readable through the public News API."
+          }
+
+          Write-Host "NEWS_PUBLIC_VERIFY_OK slug=$($article.slug)"

@@ -95,6 +95,26 @@ jobs:
               }
             }
 
+      - name: Ensure News automation key exists
+        shell: powershell
+        run: |
+          $keyPath = "C:\inetpub\BeeKingdomApi\news-automation.key"
+          if (-not (Test-Path $keyPath)) {
+            $bytes = New-Object byte[] 32
+            $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+            try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
+            $secret = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+','-').Replace('/','_')
+            [System.IO.File]::WriteAllText($keyPath, $secret, (New-Object System.Text.UTF8Encoding($false)))
+            Remove-Variable secret -ErrorAction SilentlyContinue
+            Write-Host "Generated a dedicated News automation key on the production server."
+          } else {
+            Write-Host "Existing News automation key preserved."
+          }
+
+          # The API worker must be able to read the key, but the value is never
+          # printed and never leaves this server.
+          icacls $keyPath /inheritance:r /grant:r "IIS AppPool\BeeKingdomApi:(R)" "SYSTEM:(F)" "Administrators:(F)" | Out-Null
+
       - name: Bring the site back online
         shell: powershell
         run: |

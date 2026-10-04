@@ -180,6 +180,71 @@ public sealed class NewsServiceTests
     }
 
     [Test]
+    public async Task UpsertAndPublishAsync_CreatesAndPublishesNewArticle()
+    {
+        Fixture fx = CreateFixture();
+
+        NewsArticleCommandResult result = await fx.Service.UpsertAndPublishAsync(
+            Guid.Empty,
+            ValidCreateRequest("automation-alpha-update"));
+
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Article, Is.Not.Null);
+        Assert.That(result.Article!.Status, Is.EqualTo(NewsArticleStatus.Published));
+        Assert.That(result.Article.PublishedAtUtc, Is.Not.Null);
+        Assert.That(await fx.Service.GetPublishedBySlugAsync("automation-alpha-update"), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task UpsertAndPublishAsync_IsIdempotentBySlug_AndPreservesFirstPublishTime()
+    {
+        Fixture fx = CreateFixture();
+
+        NewsArticleCommandResult first = await fx.Service.UpsertAndPublishAsync(
+            Guid.Empty,
+            ValidCreateRequest("automation-daily-news"));
+        DateTimeOffset firstPublishedAt = first.Article!.PublishedAtUtc!.Value;
+
+        fx.Clock.UtcNow = fx.Clock.UtcNow.AddDays(1);
+        NewsArticleCreateRequest updated = new(
+            "automation-daily-news",
+            "Updated EN",
+            "FR mis à jour",
+            "Updated excerpt",
+            "Extrait mis à jour",
+            "Updated body EN",
+            "Corps FR mis à jour");
+
+        NewsArticleCommandResult second = await fx.Service.UpsertAndPublishAsync(Guid.Empty, updated);
+
+        Assert.That(second.Succeeded, Is.True);
+        Assert.That(second.Article!.Status, Is.EqualTo(NewsArticleStatus.Published));
+        Assert.That(second.Article.PublishedAtUtc, Is.EqualTo(firstPublishedAt));
+        Assert.That(second.Article.TitleEn, Is.EqualTo("Updated EN"));
+        Assert.That((await fx.Service.ListAllAsync(0, 10)).Count(a => a.Slug == "automation-daily-news"), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task UpsertAndPublishAsync_RejectsIncompleteBilingualContentWithoutCreatingDraft()
+    {
+        Fixture fx = CreateFixture();
+        NewsArticleCreateRequest incomplete = new(
+            "automation-incomplete",
+            "English title",
+            "",
+            "English excerpt",
+            "",
+            "English body",
+            "");
+
+        NewsArticleCommandResult result = await fx.Service.UpsertAndPublishAsync(Guid.Empty, incomplete);
+
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.Code, Is.EqualTo("invalid_request"));
+        Assert.That(await fx.Repository.GetBySlugAsync("automation-incomplete"), Is.Null);
+    }
+
+    [Test]
     public async Task GetPublishedBySlugAsync_ReturnsNull_ForDraftArticle_NeverLeaksDraftExistence()
     {
         Fixture fx = CreateFixture();
