@@ -36,6 +36,7 @@ public sealed partial class ChatService : IChatService
     private static readonly JsonSerializerOptions JsonOptions = BeeJson.CreateDefaultOptions();
     private readonly IChatRepository repository;
     private readonly IChatAudienceResolver audienceResolver;
+    private readonly IAllianceMembershipResolver allianceMembershipResolver;
     private readonly IChatRealtimeDispatcher realtime;
     private readonly IServerClock clock;
     private readonly ChatOptions options;
@@ -45,10 +46,18 @@ public sealed partial class ChatService : IChatService
     private readonly object rateSync=new();
     private DateTimeOffset nextReceiptPurgeUtc=DateTimeOffset.MinValue;
 
-    public ChatService(IChatRepository repository, IChatAudienceResolver audienceResolver, IChatRealtimeDispatcher realtime, IServerClock clock, IOptions<ChatOptions> options, IChatSenderDisplayNameResolver? senderDisplayNameResolver = null)
+    public ChatService(
+        IChatRepository repository,
+        IChatAudienceResolver audienceResolver,
+        IChatRealtimeDispatcher realtime,
+        IServerClock clock,
+        IOptions<ChatOptions> options,
+        IChatSenderDisplayNameResolver? senderDisplayNameResolver = null,
+        IAllianceMembershipResolver? allianceMembershipResolver = null)
     {
         this.repository = repository;
         this.audienceResolver = audienceResolver;
+        this.allianceMembershipResolver = allianceMembershipResolver ?? new NullAllianceMembershipResolver();
         this.realtime = realtime;
         this.clock = clock;
         this.options = options.Value;
@@ -427,6 +436,9 @@ public sealed partial class ChatService : IChatService
             (conversation.ChannelType == ChatChannelType.Alliance ||
              conversation.ChannelType == ChatChannelType.Leaders))
         {
+            ChatPermissionRole? repairedRole = null;
+
+            // Normal path: the conversation's AudienceKey points to the correct Alliance.
             ChatAudienceDecision repairDecision = audienceResolver.ResolveConversationAccess(
                 playerId,
                 new CreateChatConversationRequest(
@@ -437,14 +449,22 @@ public sealed partial class ChatService : IChatService
                     conversation.Title,
                     Array.Empty<Guid>(),
                     "membership-repair-" + conversationId.ToString("N")));
-
             if (repairDecision.Allowed)
+                repairedRole = repairDecision.RequesterRole;
+
+            // Legacy-path repair for Alliance channels: some old persisted conversations can
+            // have stale AudienceKey metadata while the Alliance aggregate itself still links the
+            // exact conversation id. Trust only that server-owned link + active membership.
+            if (!repairedRole.HasValue && conversation.ChannelType == ChatChannelType.Alliance)
+                repairedRole = allianceMembershipResolver.GetLinkedConversationRole(conversationId, playerId.Value);
+
+            if (repairedRole.HasValue)
             {
                 ChatConversationParticipant repaired = repository.UpsertParticipant(
                     new ChatConversationParticipant(
                         conversationId,
                         playerId,
-                        repairDecision.RequesterRole,
+                        repairedRole.Value,
                         clock.UtcNow,
                         null,
                         CanRead: true,

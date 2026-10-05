@@ -15,6 +15,11 @@ public interface IAllianceMembershipResolver
     // member (or the alliance/membership system isn't wired up) - null must always mean "deny",
     // never "fall back to trusting the client".
     ChatPermissionRole? GetMemberRole(Guid allianceId, Guid playerId);
+
+    // Legacy-channel repair path: resolve access from the Alliance aggregate that officially
+    // owns this exact chat conversation id, without trusting an old/stale Chat AudienceKey.
+    // Default is fail-closed so existing standalone/test implementations remain source-compatible.
+    ChatPermissionRole? GetLinkedConversationRole(Guid conversationId, Guid playerId) => null;
 }
 
 // Fail-closed default: until BeeKingdom.Alliance's real resolver is registered on top of this
@@ -23,4 +28,5 @@ public interface IAllianceMembershipResolver
 public sealed class NullAllianceMembershipResolver : IAllianceMembershipResolver
 {
     public ChatPermissionRole? GetMemberRole(Guid allianceId, Guid playerId) => null;
+    public ChatPermissionRole? GetLinkedConversationRole(Guid conversationId, Guid playerId) => null;
 }

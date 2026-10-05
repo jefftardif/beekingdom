@@ -22,12 +22,27 @@ public sealed class AllianceMembershipResolver : IAllianceMembershipResolver
     public ChatPermissionRole? GetMemberRole(Guid allianceId, Guid playerId)
     {
         AllianceMembership? membership = repository.GetActiveMembership(new AllianceId(allianceId), new PlayerId(playerId));
-        return membership?.Role switch
-        {
-            AllianceRole.Leader => ChatPermissionRole.Leader,
-            AllianceRole.Officer => ChatPermissionRole.Officer,
-            AllianceRole.Member => ChatPermissionRole.Member,
-            _ => null
-        };
+        return ToChatRole(membership?.Role);
     }
+
+    public ChatPermissionRole? GetLinkedConversationRole(Guid conversationId, Guid playerId)
+    {
+        if (conversationId == Guid.Empty || playerId == Guid.Empty) return null;
+
+        AllianceMembership? membership = repository.GetActiveMembershipForPlayer(new PlayerId(playerId));
+        if (membership == null) return null;
+
+        AllianceEntity? alliance = repository.Get(membership.AllianceId);
+        if (alliance?.ChatConversationId != conversationId) return null;
+
+        return ToChatRole(membership.Role);
+    }
+
+    private static ChatPermissionRole? ToChatRole(AllianceRole? role) => role switch
+    {
+        AllianceRole.Leader => ChatPermissionRole.Leader,
+        AllianceRole.Officer => ChatPermissionRole.Officer,
+        AllianceRole.Member => ChatPermissionRole.Member,
+        _ => null
+    };
 }

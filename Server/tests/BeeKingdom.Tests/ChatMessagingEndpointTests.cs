@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
 using BeeKingdom.Authentication.Providers;
+using BeeKingdom.Alliance.Models;
+using BeeKingdom.Alliance.Repositories;
 using BeeKingdom.Chat.Models;
 using BeeKingdom.Chat.Repositories;
 using BeeKingdom.Shared.Serialization;
@@ -463,6 +465,73 @@ public sealed class ChatMessagingEndpointTests
             Assert.That(repaired.CanRead, Is.True);
             Assert.That(repaired.CanWrite, Is.True);
         });
+    }
+
+    [Test]
+    public async Task OfficialAllianceConversationRepairsAccessWhenLegacyAudienceKeyIsStale()
+    {
+        await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
+        using HttpClient leaderClient = factory.CreateClient();
+        string leaderToken = await LoginTestAccount(factory, leaderClient, "chat-legacy-link-leader@bee.test");
+        leaderClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
+
+        HttpResponseMessage createAlliance = await leaderClient.PostAsJsonAsync(
+            "/alliance/v1/alliances",
+            new
+            {
+                name = "Legacy Linked Chat Test",
+                tag = "LLC",
+                description = "",
+                language = "fr-CA",
+                emblemKey = "",
+                joinMode = 0,
+                clientRequestId = "chat-legacy-link-alliance"
+            },
+            BeeJson.CreateDefaultOptions());
+        Assert.That(createAlliance.StatusCode, Is.EqualTo(HttpStatusCode.OK), await createAlliance.Content.ReadAsStringAsync());
+
+        using JsonDocument allianceDoc = JsonDocument.Parse(await createAlliance.Content.ReadAsStringAsync());
+        Guid allianceId = allianceDoc.RootElement
+            .GetProperty("alliance")
+            .GetProperty("allianceId")
+            .GetProperty("value")
+            .GetGuid();
+
+        IAllianceRepository allianceRepository = factory.Services.GetRequiredService<IAllianceRepository>();
+        AllianceEntity alliance = allianceRepository.Get(new AllianceId(allianceId))!;
+        Assert.That(alliance.ChatConversationId, Is.Not.Null);
+        Guid officialConversationId = alliance.ChatConversationId!.Value;
+
+        Guid leaderPlayerId = factory.Services
+            .GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>()
+            .ValidateToken(leaderToken).PlayerId!.Value;
+
+        IChatRepository chatRepository = factory.Services.GetRequiredService<IChatRepository>();
+        ChatConversation conversation = chatRepository.GetConversation(officialConversationId)!;
+        IReadOnlyList<ChatConversationParticipant> participants = chatRepository.ListParticipants(officialConversationId);
+
+        // Simulate a persisted pre-fix conversation whose AudienceKey drifted from the Alliance
+        // aggregate. The Alliance still owns this exact conversation id.
+        chatRepository.SaveConversation(
+            conversation with { AudienceKey = "alliance:" + Guid.NewGuid().ToString("N") },
+            participants);
+        chatRepository.RemoveParticipant(
+            officialConversationId,
+            new PlayerId(leaderPlayerId),
+            DateTimeOffset.UtcNow);
+
+        HttpResponseMessage repairedRead = await leaderClient.GetAsync(
+            $"/chat/v1/conversations/{officialConversationId:D}/messages?afterSequence=0&limit=10");
+
+        Assert.That(repairedRead.StatusCode, Is.EqualTo(HttpStatusCode.OK), await repairedRead.Content.ReadAsStringAsync());
+        ChatConversationParticipant? repaired =
+            chatRepository.GetParticipant(officialConversationId, new PlayerId(leaderPlayerId));
+        Assert.That(repaired, Is.Not.Null);
+        Assert.That(repaired!.RemovedAtUtc, Is.Null);
+        Assert.That(repaired.Role, Is.EqualTo(ChatPermissionRole.Leader));
+        Assert.That(repaired.CanRead, Is.True);
+        Assert.That(repaired.CanWrite, Is.True);
     }
 
     // M042-CL: announcement access is now gated by real server-side Alliance membership
