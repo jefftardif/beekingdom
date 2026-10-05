@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
 using BeeKingdom.Authentication.Providers;
+using BeeKingdom.Alliance;
 using BeeKingdom.Alliance.Models;
 using BeeKingdom.Alliance.Repositories;
 using BeeKingdom.Chat.Models;
@@ -465,6 +466,77 @@ public sealed class ChatMessagingEndpointTests
             Assert.That(repaired.CanRead, Is.True);
             Assert.That(repaired.CanWrite, Is.True);
         });
+    }
+
+    [Test]
+    public async Task AllianceOverviewRepairsStaleOfficialChatConversationLink()
+    {
+        await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
+        using HttpClient leaderClient = factory.CreateClient();
+        string leaderToken = await LoginTestAccount(factory, leaderClient, "chat-link-repair-leader@bee.test");
+        leaderClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
+
+        HttpResponseMessage createAlliance = await leaderClient.PostAsJsonAsync(
+            "/alliance/v1/alliances",
+            new
+            {
+                name = "Alliance Link Repair Test",
+                tag = "ALR",
+                description = "",
+                language = "fr-CA",
+                emblemKey = "",
+                joinMode = 0,
+                clientRequestId = "chat-link-repair-alliance"
+            },
+            BeeJson.CreateDefaultOptions());
+        Assert.That(createAlliance.StatusCode, Is.EqualTo(HttpStatusCode.OK), await createAlliance.Content.ReadAsStringAsync());
+
+        using JsonDocument allianceDoc = JsonDocument.Parse(await createAlliance.Content.ReadAsStringAsync());
+        Guid allianceId = allianceDoc.RootElement
+            .GetProperty("alliance")
+            .GetProperty("allianceId")
+            .GetProperty("value")
+            .GetGuid();
+
+        Guid leaderPlayerId = factory.Services
+            .GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>()
+            .ValidateToken(leaderToken).PlayerId!.Value;
+
+        IAllianceRepository allianceRepository = factory.Services.GetRequiredService<IAllianceRepository>();
+        IChatRepository chatRepository = factory.Services.GetRequiredService<IChatRepository>();
+        AllianceService allianceService = factory.Services.GetRequiredService<AllianceService>();
+
+        AllianceEntity originalAlliance = allianceRepository.Get(new AllianceId(allianceId))!;
+        Assert.That(originalAlliance.ChatConversationId, Is.Not.Null);
+        Guid canonicalConversationId = originalAlliance.ChatConversationId!.Value;
+        Guid brokenConversationId = Guid.NewGuid();
+
+        allianceRepository.Save(originalAlliance with
+        {
+            ChatConversationId = brokenConversationId,
+            Revision = originalAlliance.Revision + 1
+        });
+
+        MyAllianceOverview? repairedOverview =
+            allianceService.GetMyAlliance(new PlayerId(leaderPlayerId));
+
+        Assert.That(repairedOverview, Is.Not.Null);
+        Assert.That(repairedOverview!.Alliance.ChatConversationId, Is.EqualTo(canonicalConversationId));
+
+        ChatConversation? canonicalConversation = chatRepository.GetConversation(canonicalConversationId);
+        Assert.That(canonicalConversation, Is.Not.Null);
+        Assert.That(canonicalConversation!.ChannelType, Is.EqualTo(ChatChannelType.Alliance));
+        Assert.That(
+            canonicalConversation.AudienceKey,
+            Is.EqualTo("alliance:" + allianceId.ToString("N")).IgnoreCase);
+
+        ChatConversationParticipant? repairedParticipant =
+            chatRepository.GetParticipant(canonicalConversationId, new PlayerId(leaderPlayerId));
+        Assert.That(repairedParticipant, Is.Not.Null);
+        Assert.That(repairedParticipant!.RemovedAtUtc, Is.Null);
+        Assert.That(repairedParticipant.CanRead, Is.True);
+        Assert.That(repairedParticipant.CanWrite, Is.True);
     }
 
     [Test]

@@ -729,7 +729,67 @@ public sealed class AllianceService
         AllianceMembership? membership = repository.GetActiveMembershipForPlayer(actorPlayerId);
         if (membership == null) return null;
         AllianceEntity alliance = repository.Get(membership.AllianceId) ?? throw new KeyNotFoundException("not_found");
+
+        alliance = EnsureCanonicalAllianceChatLink(alliance, actorPlayerId);
+
+        // Self-heal participant desynchronization as well. Membership is the source of truth.
+        SyncChatParticipantAdded(alliance.ChatConversationId, actorPlayerId, membership.Role, membership.JoinedAtUtc);
+
         return new MyAllianceOverview(alliance, membership);
+    }
+
+    private AllianceEntity EnsureCanonicalAllianceChatLink(AllianceEntity alliance, PlayerId requesterPlayerId)
+    {
+        if (chatManager == null || chatRepository == null) return alliance;
+
+        string expectedAudienceKey = "alliance:" + alliance.AllianceId.Value.ToString("N");
+        bool linkedConversationIsCanonical = false;
+
+        if (alliance.ChatConversationId is Guid linkedId && linkedId != Guid.Empty)
+        {
+            try
+            {
+                ChatConversation? linked = chatRepository.GetConversation(linkedId);
+                linkedConversationIsCanonical =
+                    linked != null &&
+                    linked.ChannelType == ChatChannelType.Alliance &&
+                    string.Equals(linked.AudienceKey?.Trim(), expectedAudienceKey, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception exception)
+            {
+                logger?.LogWarning(
+                    exception,
+                    "Alliance {AllianceId} could not validate linked chat conversation {ConversationId}.",
+                    alliance.AllianceId.Value,
+                    linkedId);
+            }
+        }
+
+        if (!linkedConversationIsCanonical)
+        {
+            Guid? repairedConversationId = CreateOrLinkAllianceChat(
+                requesterPlayerId,
+                alliance.AllianceId,
+                alliance.Name,
+                "repair-" + alliance.AllianceId.Value.ToString("N"));
+
+            if (repairedConversationId.HasValue && repairedConversationId.Value != Guid.Empty)
+            {
+                alliance = repository.Save(alliance with
+                {
+                    ChatConversationId = repairedConversationId.Value,
+                    Revision = checked(alliance.Revision + 1)
+                });
+
+                // A repaired link can point to a newly-created canonical conversation. Restore all
+                // currently-active members immediately instead of waiting for each member to open
+                // the Alliance screen on their own device.
+                foreach (AllianceMembership member in repository.ListActiveMembers(alliance.AllianceId))
+                    SyncChatParticipantAdded(alliance.ChatConversationId, member.PlayerId, member.Role, member.JoinedAtUtc);
+            }
+        }
+
+        return alliance;
     }
 
     // Member-visible roster - not exposed on AlliancePublicProfile (see AllianceMemberSummary).
