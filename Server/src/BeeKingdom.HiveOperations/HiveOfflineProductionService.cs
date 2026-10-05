@@ -151,7 +151,7 @@ public sealed class HiveOfflineProductionService
         decimal levelMultiplier = 1m + 0.10m * (level - 1);
         return item.HourlyRate * levelMultiplier * (1m + (bps + allianceProductionBp) / 10_000m);
     }
-    private static long EffectiveCapacity(PlayerHiveState state, OfflineProductionCatalogEntry item, long allianceCapacityBp = 0)
+    internal static long EffectiveCapacity(PlayerHiveState state, OfflineProductionCatalogEntry item, long allianceCapacityBp = 0)
     {
         int level = EffectiveBuildingLevel(state, item);
         long leveledCapacity = checked(item.Capacity * level);
