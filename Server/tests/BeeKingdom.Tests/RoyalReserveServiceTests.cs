@@ -121,6 +121,25 @@ public sealed class RoyalReserveServiceTests
     }
 
     [Test]
+    public async Task UnrelatedHiveRevisionChangeDoesNotInvalidateBankRevision()
+    {
+        var (service, _, player, hive, repo) = Create(bankLevel: 2);
+        RoyalReserveReadSnapshot before = (await service.ReadAsync(player, hive))!;
+
+        PlayerHiveState state = (await repo.ReadAsync(player, hive))!;
+        repo.Replace(state with { Revision = state.Revision + 7 });
+
+        RoyalReserveCommandResult result = await service.DepositAsync(
+            player,
+            hive,
+            new RoyalReserveTransferRequest("honey", 100, before.Revision, "independent-bank-revision"));
+
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Snapshot.Revision, Is.EqualTo(before.Revision + 1));
+        Assert.That((await repo.ReadAsync(player, hive))!.RoyalReserve!.Revision, Is.EqualTo(1));
+    }
+
+    [Test]
     public void CapacityGrowsQuadraticallyWithBankLevel()
     {
         Assert.That(RoyalReserveService.CapacityForBankLevel(1), Is.EqualTo(5_000));

@@ -105,7 +105,10 @@ public sealed class RoyalReserveService(
                 return state;
             }
 
-            if (state.Revision != request.ExpectedRevision)
+            // La Réserve Royale possède sa propre révision métier. Les autres mutations de la
+            // ruche (production, combat, lecture avec accrual, etc.) ne doivent jamais invalider
+            // une transaction bancaire préparée à partir d'un snapshot encore courant de la Banque.
+            if (reserve.Revision != request.ExpectedRevision)
             {
                 result = new(false, "game.revision_conflict", Snapshot(state, now));
                 return state;
@@ -153,8 +156,9 @@ public sealed class RoyalReserveService(
                 }
             }
 
-            long revisionBefore = state.Revision;
-            long revisionAfter = checked(revisionBefore + 1);
+            long reserveRevisionBefore = reserve.Revision;
+            long reserveRevisionAfter = checked(reserveRevisionBefore + 1);
+            long hiveRevisionAfter = checked(state.Revision + 1);
             Dictionary<string, ResourceBalance> resources = new(state.Resources, StringComparer.Ordinal);
             Dictionary<string, long> amounts = new(reserve.Amounts, StringComparer.Ordinal);
 
@@ -182,16 +186,16 @@ public sealed class RoyalReserveService(
                         successCode,
                         null,
                         now,
-                        revisionBefore,
-                        revisionAfter,
+                        reserveRevisionBefore,
+                        reserveRevisionAfter,
                         AcceptedAtUtc: now)
                 };
             TrimReceipts(receipts);
 
-            RoyalReserveState updatedReserve = new(revisionAfter, amounts, receipts);
+            RoyalReserveState updatedReserve = new(reserveRevisionAfter, amounts, receipts);
             PlayerHiveState updated = state with
             {
-                Revision = revisionAfter,
+                Revision = hiveRevisionAfter,
                 Resources = resources,
                 RoyalReserve = updatedReserve
             };
@@ -219,7 +223,7 @@ public sealed class RoyalReserveService(
             state.PlayerId,
             state.HiveId,
             ContractVersion,
-            state.Revision,
+            reserve.Revision,
             now,
             bankLevel,
             CapacityForBankLevel(bankLevel),
