@@ -699,6 +699,71 @@ public sealed class ChatMessagingEndpointTests
         Console.WriteLine("LIST body: " + await listResponse.Content.ReadAsStringAsync());
     }
 
+    [Test]
+    public async Task BKStudio_TwoAuthenticatedAlliancePlayersExchangeOneMessage()
+    {
+        await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
+        using HttpClient leader = factory.CreateClient();
+        string leaderToken = await LoginTestAccount(factory, leader, "bkstudio-social-leader@bee.test");
+        leader.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
+        HttpResponseMessage created = await leader.PostAsJsonAsync(
+            "/alliance/v1/alliances",
+            new { name = "BeeKingdom Together", tag = "BKT", description = "",
+                  language = "fr-CA", emblemKey = "", joinMode = 0,
+                  clientRequestId = "bkstudio-social-create" },
+            BeeJson.CreateDefaultOptions());
+        Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.OK), await created.Content.ReadAsStringAsync());
+        using JsonDocument alliance = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        JsonElement entity = alliance.RootElement.GetProperty("alliance");
+        Guid allianceId = entity.GetProperty("allianceId").GetProperty("value").GetGuid();
+        Guid conversationId = entity.GetProperty("chatConversationId").GetGuid();
+        Assert.That(conversationId, Is.Not.EqualTo(Guid.Empty));
+
+        using HttpClient member = factory.CreateClient();
+        string memberToken = await LoginTestAccount(factory, member, "bkstudio-social-member@bee.test");
+        member.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", memberToken);
+        HttpResponseMessage joined = await member.PostAsync($"/alliance/v1/alliances/{allianceId:D}/join", null);
+        Assert.That(joined.StatusCode, Is.EqualTo(HttpStatusCode.OK), await joined.Content.ReadAsStringAsync());
+
+        const string messageText = "Équipe : Travaillons ensemble pour la victoire!";
+        var sendRequest = new
+        {
+            clientRequestId = "bkstudio-social-message",
+            body = messageText,
+            contentParts = new[] { new { kind = "text", text = messageText } },
+            mentions = Array.Empty<object>(), emoji = Array.Empty<object>(),
+            replyToMessageId = (Guid?)null, clientCreatedAt = DateTimeOffset.UtcNow
+        };
+        HttpResponseMessage sent = await member.PostAsJsonAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages",
+            sendRequest, BeeJson.CreateDefaultOptions());
+        Assert.That(sent.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+            "The second alliance member must be able to send a real message.");
+
+        HttpResponseMessage received = await leader.GetAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages?afterSequence=0&limit=10");
+        Assert.That(received.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+            await received.Content.ReadAsStringAsync());
+        using JsonDocument inbox = JsonDocument.Parse(await received.Content.ReadAsStringAsync());
+        Assert.That(inbox.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
+        Assert.That(inbox.RootElement.GetProperty("items")[0].GetProperty("body").GetString(),
+            Is.EqualTo(messageText));
+
+        // A second authenticated request after reconnect must see exactly the same server message.
+        using HttpClient reconnected = factory.CreateClient();
+        reconnected.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
+        HttpResponseMessage replay = await reconnected.GetAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages?afterSequence=0&limit=10");
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using JsonDocument recovered = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        Assert.That(recovered.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
+        Assert.That(recovered.RootElement.GetProperty("items")[0].GetProperty("body").GetString(),
+            Is.EqualTo(messageText));
+    }
+
     private static WebApplicationFactory<Program> CreateFactory(bool chatEnabled)
     {
         return new WebApplicationFactory<Program>()
