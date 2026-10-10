@@ -127,9 +127,12 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             { result = Fail(state, collection, "game.world_resource_insufficient_troops", now); return state; }
 
             WorldResourceActiveFlight flight = new(Guid.NewGuid(), nodeId, now, now + node.Duration, requestedTroops, collection.Revision + 1, request.IdempotencyKey, hash);
-            // Initialize node remaining tracking on first collection of this node
+            // A node is replenished once its server cooldown has elapsed. Older
+            // persisted states may contain Remaining=0 from a previous completed harvest; never
+            // expose a "ready" node that can only award zero resources.
             Dictionary<string, long> nodeRemaining = collection.NodeRemaining != null ? new(collection.NodeRemaining, StringComparer.Ordinal) : new(StringComparer.Ordinal);
-            if (!nodeRemaining.ContainsKey(nodeId))
+            bool cooldownElapsed = collection.NodeReadyAtUtc.TryGetValue(nodeId, out DateTimeOffset previousReadyAt) && previousReadyAt <= now;
+            if (!nodeRemaining.ContainsKey(nodeId) || cooldownElapsed)
                 nodeRemaining[nodeId] = node.Yield;
             WorldResourceCollectionState updatedCollection = collection with { Revision = collection.Revision + 1, Active = flight, NodeRemaining = nodeRemaining };
             PlayerHiveState updated = state with { WorldResourceCollection = updatedCollection };
@@ -168,26 +171,32 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             if (!catalogByKey.TryGetValue(active.NodeId, out WorldResourceNodeDefinition? node))
             { result = Fail(state, collection, "game.invalid_request", now); return state; }
 
+            // Remaining tracks the physical/base quantity on the node. Reward bonuses
+            // apply on top of the quantity actually harvested; otherwise a +50% daily bonus would
+            // be calculated and then immediately clipped back to the node's base Yield.
+            Dictionary<string, long> nodeRemaining = collection.NodeRemaining != null ? new(collection.NodeRemaining, StringComparer.Ordinal) : new(StringComparer.Ordinal);
+            long tileRemaining = nodeRemaining.TryGetValue(node.NodeId, out long nr) ? nr : node.Yield;
+            long harvestedBaseYield = Math.Min(node.Yield, Math.Max(0, tileRemaining));
+
             // Cible du jour (demande de Jeff, 2026-07-31) : un noeud different chaque jour civil
             // recoit +50% de recompense a la validation - meme mecanique et meme raisonnement que
             // pour Combat Patrol, pure fonction de la date.
             bool dailyFocusApplied = string.Equals(node.NodeId, DailyFocusCatalog.FeaturedWorldResourceNodeId(now, o.Catalog.Select(x => x.NodeId).ToList()), StringComparison.Ordinal);
-            long yield = dailyFocusApplied ? DailyFocusCatalog.ApplyRewardBonus(node.Yield) : node.Yield;
+            long rewardYield = dailyFocusApplied ? DailyFocusCatalog.ApplyRewardBonus(harvestedBaseYield) : harvestedBaseYield;
+
             // Evenement mondial dynamique, localise (demande de Jeff, 2026-08-01) : la meteo du
             // cycle ne boost/reduit plus tous les noeuds de la ressource visee a la fois - un seul
             // noeud precis, choisi parmi eux, est reellement affecte ce cycle. En plus (et
             // independamment) de la Cible du jour - change plusieurs fois par jour au lieu d'une fois.
             ActiveWorldEvent worldEvent = WorldEventCatalog.Active(now);
             bool worldEventApplied = string.Equals(node.NodeId, WorldEventFeaturedNodeId(worldEvent, now), StringComparison.Ordinal);
-            if (worldEventApplied) yield = WorldEventCatalog.ApplyBonusBp(yield, worldEvent.BonusBp);
-            // Remaining: cap yield by server-tracked remaining on tile
-            Dictionary<string, long> nodeRemaining = collection.NodeRemaining != null ? new(collection.NodeRemaining, StringComparer.Ordinal) : new(StringComparer.Ordinal);
-            long tileRemaining = nodeRemaining.TryGetValue(node.NodeId, out long nr) ? nr : node.Yield;
-            long effectiveYield = Math.Min(yield, Math.Max(0, tileRemaining));
+            if (worldEventApplied) rewardYield = WorldEventCatalog.ApplyBonusBp(rewardYield, worldEvent.BonusBp);
+
             Dictionary<string, ResourceBalance> resources = new(state.Resources, StringComparer.Ordinal);
-            long credited = ApplyReward(resources, node.ResourceKey, effectiveYield);
-            // Deplete remaining by the amount actually credited
-            nodeRemaining[node.NodeId] = Math.Max(0, tileRemaining - credited);
+            long credited = ApplyReward(resources, node.ResourceKey, rewardYield);
+            // The flight harvested the base quantity even if storage capacity prevented all of the
+            // reward from being credited. Cooldown replenishes the node for the next expedition.
+            nodeRemaining[node.NodeId] = Math.Max(0, tileRemaining - harvestedBaseYield);
             Dictionary<string, DateTimeOffset> readyAt = new(collection.NodeReadyAtUtc, StringComparer.Ordinal) { [node.NodeId] = now + node.Cooldown };
             WorldResourceClaimReceipt claim = new(playerId, hiveId, flightId, node.NodeId, node.ResourceKey, credited, collection.Revision + 1, now, resources[node.ResourceKey], dailyFocusApplied, worldEventApplied, worldEventApplied ? worldEvent.Key : "");
             Dictionary<string, WorldResourceClaimReceipt> claimReceipts = new(collection.ClaimReceipts ?? new(StringComparer.Ordinal), StringComparer.Ordinal) { [request.IdempotencyKey] = claim };
@@ -277,6 +286,10 @@ public sealed class WorldResourceCollectionService(IHiveStateRepository reposito
             long remaining = node.Yield;
             if (collection.NodeRemaining != null && collection.NodeRemaining.TryGetValue(node.NodeId, out long stored))
                 remaining = stored;
+            // Once cooldown has elapsed, present the replenished amount immediately, even before
+            // the next Launch persists the refreshed NodeRemaining value.
+            if (collection.Active is null && readyAt.HasValue && readyAt.Value <= now)
+                remaining = node.Yield;
             // During active flight on this node, compute time-based depletion
             if (collection.Active != null && string.Equals(collection.Active.NodeId, node.NodeId, StringComparison.Ordinal))
             {
