@@ -23,7 +23,7 @@ public sealed class BKStudioUnicodeChatRegressionTests
         var service = new ChatService(repository, new LocalChatAudienceResolver(options), new NoopChatRealtimeDispatcher(), new Clock(), options);
         PlayerId player = PlayerId.New();
         var conversation = service.CreateConversation(player, new(ChatChannelType.Server, Guid.NewGuid(), Guid.NewGuid(), null, "Global", Array.Empty<Guid>(), "unicode-create"));
-        string original = "Allô, reine! À bientôt 🍯";
+        string original = "All\u00F4, reine ! \u00C0 bient\u00F4t \uD83D\uDC1D";
         var sent = await service.SendMessageAsync(player, conversation.Conversation.ConversationId, new("unicode-send", original, null, null, null, null, DateTimeOffset.UtcNow));
         var received = service.GetMessages(player, conversation.Conversation.ConversationId, 0, 10).Items.Single();
         Assert.That(received.Body, Is.EqualTo(original));
