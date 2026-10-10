@@ -188,10 +188,55 @@ public sealed partial class ChatService : IChatService
     {
         EnsureEnabled();
         int boundedLimit = Math.Clamp(limit, 1, 100);
-        int offset=DecodeConversationCursor(playerId,cursor);
-        IReadOnlyList<ChatConversation> fetched=repository.ListConversations(playerId,offset,boundedLimit+1);
-        bool hasMore=fetched.Count>boundedLimit; ChatConversation[] items=fetched.Take(boundedLimit).Select(value => ConversationForViewer(value, playerId)).ToArray();
-        return new ChatConversationPage(items,hasMore?EncodeConversationCursor(playerId,offset+items.Length):null);
+        int rawOffset = DecodeConversationCursor(playerId, cursor);
+        int nextOffset = rawOffset;
+        int batchSize = Math.Min(100, Math.Max(16, boundedLimit + 1));
+        List<ChatConversation> visible = new(boundedLimit + 1);
+
+        // The persisted inbox can still contain an active participant row for a player who
+        // left an Alliance (or lost a Leaders role). Recheck server-owned membership before
+        // disclosing even the title and metadata of such a conversation.
+        //
+        // Cursor offsets count unfiltered repository rows. Otherwise a hidden item could
+        // cause later pages to repeat or skip legitimate conversations.
+        while (visible.Count <= boundedLimit)
+        {
+            IReadOnlyList<ChatConversation> batch = repository.ListConversations(
+                playerId, rawOffset, batchSize);
+            if (batch.Count == 0) break;
+
+            foreach (ChatConversation conversation in batch)
+            {
+                rawOffset++;
+                if (conversation.ChannelType == ChatChannelType.Alliance ||
+                    conversation.ChannelType == ChatChannelType.Leaders)
+                {
+                    try
+                    {
+                        RequireRead(conversation.ConversationId, playerId);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // The user is no longer an active member/leader. Fail closed.
+                        continue;
+                    }
+                }
+
+                if (visible.Count < boundedLimit)
+                    nextOffset = rawOffset;
+
+                visible.Add(ConversationForViewer(conversation, playerId));
+                if (visible.Count > boundedLimit) break;
+            }
+
+            if (visible.Count > boundedLimit || batch.Count < batchSize)
+                break;
+        }
+
+        bool hasMore = visible.Count > boundedLimit;
+        ChatConversation[] items = visible.Take(boundedLimit).ToArray();
+        return new ChatConversationPage(items,
+            hasMore ? EncodeConversationCursor(playerId, nextOffset) : null);
     }
 
     public ChatInboxEntry? GetInbox(PlayerId playerId, Guid conversationId)
