@@ -424,6 +424,26 @@ public sealed partial class ChatService : IChatService
         ChatConversationParticipant? participant = repository.GetParticipant(conversationId, playerId);
         if (participant != null && participant.RemovedAtUtc == null && participant.CanRead)
         {
+            var checkedConversation = repository.GetConversation(conversationId);
+            if (checkedConversation.ChannelType == ChatChannelType.Alliance || checkedConversation.ChannelType == ChatChannelType.Leaders)
+            {
+                var access = audienceResolver.ResolveConversationAccess(playerId, new CreateChatConversationRequest(checkedConversation.ChannelType, checkedConversation.GameServerId, checkedConversation.WorldId, checkedConversation.AudienceKey, checkedConversation.Title, Array.Empty<Guid>(), "membership-check-" + conversationId.ToString("N")));
+                if (!access.Allowed)
+                {
+                    if (checkedConversation.ChannelType == ChatChannelType.Alliance)
+                    {
+                        var linkedRole = allianceMembershipResolver.GetLinkedConversationRole(conversationId, playerId.Value);
+                        if (!linkedRole.HasValue)
+                        {
+                            throw new UnauthorizedAccessException("forbidden");
+                        }
+                    }
+                    else
+                    {
+                        throw new UnauthorizedAccessException("forbidden");
+                    }
+                }
+            }
             return participant;
         }
 
