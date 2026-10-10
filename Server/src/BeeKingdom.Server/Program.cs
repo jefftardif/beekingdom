@@ -2731,6 +2731,31 @@ app.MapGet("/accounts/v1/admin/lookup", async (HttpContext context, string email
 // Irreversible. The typed-email confirmation the admin UI collects is forwarded here and
 // re-checked against the account id at execution time (see AccountDeletionService.DeleteAsync) so
 // a stale search result can never delete a different account than the one on screen.
+// Admin account management: explicit promotion authorized from the current
+// persisted caller role, independently of bootstrap/support-key endpoints.
+app.MapPost("/accounts/v1/admin/accounts/{accountId:guid}/promote", (HttpContext context, Guid accountId, AuthenticationManager authentication, IAccountCredentialStore credentials, AdminAccountPromoteHttpRequest? request, ILoggerFactory loggerFactory) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!credentials.TryGetByAccountId(auth.AccountId, out AuthenticationAccount caller) || caller.Role != AccountRole.Admin)
+        return GameError(403, "game.forbidden", "game.error.forbidden");
+    if (request is null || string.IsNullOrWhiteSpace(request.ConfirmEmail) || request.ConfirmEmail.Length > 320)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    if (!credentials.TryGetByAccountId(accountId, out AuthenticationAccount target))
+        return GameError(404, "account.not_found", "game.error.not_found");
+    if (!string.Equals(target.Email.Trim(), request.ConfirmEmail.Trim(), StringComparison.OrdinalIgnoreCase))
+        return GameError(400, "account.email_mismatch", "Confirmation email does not match the target account.");
+    bool changed = target.Role != AccountRole.Admin;
+    if (changed)
+    {
+        credentials.Save(target with { Role = AccountRole.Admin });
+        loggerFactory.CreateLogger("AccountAdministration").LogInformation(
+            "Account promoted to Admin by {ActorAccountId}: target {TargetAccountId}, previous role {PreviousRole}",
+            caller.AccountId, target.AccountId, target.Role);
+    }
+    return Results.Ok(new { accountId = target.AccountId, role = "Admin", changed });
+});
+
 app.MapDelete("/accounts/v1/admin/accounts/{accountId:guid}", async (HttpContext context, Guid accountId, AuthenticationManager authentication, IAccountCredentialStore credentials, AccountDeletionService deletion, [Microsoft.AspNetCore.Mvc.FromBody] AdminAccountDeleteHttpRequest? request, CancellationToken cancellationToken) =>
 {
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);

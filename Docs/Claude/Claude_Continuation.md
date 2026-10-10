@@ -1,3 +1,9 @@
+## Jalon courant — Promotion administrateur depuis le site (2026-10-10)
+
+Nouvelle action POST /accounts/v1/admin/accounts/{accountId}/promote, réservée à un administrateur dont le rôle est relu dans le stockage serveur. Confirmation du courriel cible, promotion uniquement vers Admin, journalisation des identifiants auteur/cible, répétition idempotente. Aucun secret bootstrap utilisé. Le nouveau rôle du site est récupéré à la reconnexion de l’utilisateur.
+
+Validation : 11 tests de promotion et rôles réussis (anonyme, joueur, modérateur, administrateur révoqué, confirmation incorrecte, succès et répétition). Base de publication 94752336 : hash du binaire identique à la production, déploiement ciblé Server.dll/PDB avec sauvegarde, contrôle du hash initial et retour arrière.
+
 # Reprise Claude Code — Bee Kingdom
 
 Ce document est la memoire de travail active de Claude Code sur ce projet. Il

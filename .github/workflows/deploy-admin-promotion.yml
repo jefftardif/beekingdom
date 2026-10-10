@@ -1,0 +1,87 @@
+name: Deploy administrator promotion endpoint
+on:
+  push:
+    branches: [feature/admin-role-promotion-20261010]
+concurrency:
+  group: beekingdom-admin-promotion
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Verify promotion authorization and existing role behavior
+        run: dotnet test Server/tests/BeeKingdom.Tests/BeeKingdom.Tests.csproj --filter 'FullyQualifiedName~AdminAccountPromotionTests|FullyQualifiedName~AccountRoleEndpointTests' -c Release
+      - name: Build from verified production baseline
+        run: |
+          dotnet publish Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release -o publish-output
+          mkdir promotion-output
+          cp publish-output/BeeKingdom.Server.dll promotion-output/
+          cp publish-output/BeeKingdom.Server.pdb promotion-output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: admin-promotion-server
+          path: promotion-output/
+          retention-days: 14
+  deploy:
+    needs: build
+    runs-on: [self-hosted, beekingdom-deploy]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: admin-promotion-server
+          path: promotion-output
+      - name: Replace only the server assembly with rollback
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\inetpub\BeeKingdomApi'
+          $expected = '109AB25B79D488B920918D9F4107E277504554119BF2259923CFB2C899D92C22'
+          $dll = Join-Path $root 'BeeKingdom.Server.dll'
+          $offline = Join-Path $root 'app_offline.htm'
+          if (Test-Path $offline) { throw 'Another deployment or maintenance operation is active.' }
+          if ((Get-FileHash $dll).Hash -ne $expected) { throw 'Production has changed: rebase and revalidate this targeted release.' }
+          $backup = 'C:\BeeKingdom\deploy-backups\admin-promotion-' + (Get-Date -Format yyyyMMdd-HHmmss)
+          New-Item -ItemType Directory -Path $backup -Force | Out-Null
+          $names = @('BeeKingdom.Server.dll', 'BeeKingdom.Server.pdb')
+          foreach ($name in $names) { if (Test-Path (Join-Path $root $name)) { Copy-Item (Join-Path $root $name) $backup } }
+          $untouched = Get-ChildItem $root -File | Where-Object { $_.Extension -in @('.dll','.json','.config') -and $_.Name -notin $names } | ForEach-Object { [pscustomobject]@{ Path=$_.FullName; Hash=(Get-FileHash $_.FullName).Hash } }
+          Import-Module WebAdministration
+          $applied = $false
+          try {
+            '<html><body>Brief maintenance</body></html>' | Set-Content -Encoding utf8 $offline
+            if ((Get-WebAppPoolState -Name BeeKingdomApi).Value -ne 'Stopped') { Stop-WebAppPool -Name BeeKingdomApi }
+            $deadline = (Get-Date).AddSeconds(30)
+            while ((Get-WebAppPoolState -Name BeeKingdomApi).Value -ne 'Stopped' -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
+            if ((Get-WebAppPoolState -Name BeeKingdomApi).Value -ne 'Stopped') { throw 'App pool did not stop safely.' }
+            if ((Get-FileHash $dll).Hash -ne $expected) { throw 'Concurrent API modification detected.' }
+            $applied = $true
+            foreach ($name in $names) { Copy-Item (Join-Path 'promotion-output' $name) (Join-Path $root $name) -Force }
+            foreach ($file in $untouched) { if ((Get-FileHash $file.Path).Hash -ne $file.Hash) { throw 'An unrelated production file changed.' } }
+            Start-WebAppPool -Name BeeKingdomApi
+            Remove-Item $offline -Force
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $healthy = $false
+            for ($i=0; $i -lt 6; $i++) {
+              try { $r=Invoke-WebRequest 'https://api-ops.beekingdomgame.com/' -UseBasicParsing -TimeoutSec 15; if ($r.StatusCode -eq 200) { $healthy=$true; break } } catch { Start-Sleep -Seconds 2 }
+            }
+            if (-not $healthy) { throw 'API health check failed.' }
+            $status = 0
+            try { $r=Invoke-WebRequest 'https://api-ops.beekingdomgame.com/accounts/v1/admin/accounts/00000000-0000-0000-0000-000000000001/promote' -Method POST -Body '{"confirmEmail":"test@example.invalid"}' -ContentType 'application/json' -UseBasicParsing -TimeoutSec 15; $status=[int]$r.StatusCode } catch { if ($_.Exception.Response) { $status=[int]$_.Exception.Response.StatusCode } }
+            if ($status -ne 401) { throw "Promotion endpoint expected anonymous 401, received $status" }
+            Write-Host 'PROMOTION_DEPLOYED health=200 anonymous=401 unrelated-files=unchanged'
+          } catch {
+            if ($applied) {
+              '<html><body>Restoring service</body></html>' | Set-Content -Encoding utf8 $offline
+              if ((Get-WebAppPoolState -Name BeeKingdomApi).Value -ne 'Stopped') { Stop-WebAppPool -Name BeeKingdomApi }
+              Start-Sleep -Seconds 3
+              foreach ($name in $names) { if (Test-Path (Join-Path $backup $name)) { Copy-Item (Join-Path $backup $name) (Join-Path $root $name) -Force } }
+            }
+            throw
+          } finally {
+            if ((Get-WebAppPoolState -Name BeeKingdomApi).Value -ne 'Started') { Start-WebAppPool -Name BeeKingdomApi }
+            Remove-Item $offline -Force -ErrorAction SilentlyContinue
+          }
