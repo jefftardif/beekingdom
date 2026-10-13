@@ -75,6 +75,30 @@ public sealed class ChatAudienceResolverTests
     }
 
     [Test]
+    public void AllianceChannelDoesNotTrustClientSuppliedParticipants()
+    {
+        var fake = new FakeAllianceMembershipResolver();
+        fake.SetRole(AllianceId, Requester.Value, ChatPermissionRole.Member);
+        LocalChatAudienceResolver resolver = CreateResolver(fake);
+
+        Guid extraParticipant = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        ChatAudienceDecision decision = resolver.ResolveConversationAccess(Requester, new CreateChatConversationRequest(
+            ChatChannelType.Alliance,
+            GameServerId,
+            WorldId,
+            $"alliance:{AllianceId:N}",
+            "Alliance",
+            [extraParticipant],
+            "alliance_001"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(decision.Allowed, Is.True);
+            Assert.That(decision.Participants.Select(player => player.Value), Is.EquivalentTo(new[] { Requester.Value }));
+        });
+    }
+
+    [Test]
     public void ClientDeclaredRoleIsIgnoredCompletely()
     {
         // No membership registered in the fake resolver at all - even though the request claims

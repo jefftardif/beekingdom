@@ -48,6 +48,44 @@ public sealed class BKStudioAllianceRevocationTests
     }
 
     [Test]
+    public async Task Revoked_alliance_member_cannot_report_a_message()
+    {
+        // The message-level authorization path (POST /chat/v1/messages/{messageId}/report,
+        // ChatService.ReportMessage -> RequireRead) was not covered when read/send were revoked;
+        // only GetMessages and SendMessageAsync were. This is the closest real action a member can
+        // take on a specific message, so a kicked Alliance member must lose it too. Do not confuse
+        // this with a chat "reaction": no reaction or pinned-message endpoint exists in the backend.
+        var options = Options.Create(new ChatOptions { Enabled = true, RealtimeEnabled = false });
+        var repository = new InMemoryChatRepository();
+        PlayerId player = PlayerId.New();
+        Guid allianceId = Guid.NewGuid();
+        var membership = new MutableMembershipResolver(allianceId, player.Value);
+        var service = new ChatService(repository,
+            new LocalChatAudienceResolver(options, membership),
+            new NoopChatRealtimeDispatcher(), new Clock(), options,
+            allianceMembershipResolver: membership);
+        var conversation = service.CreateConversation(player,
+            new CreateChatConversationRequest(ChatChannelType.Alliance,
+                Guid.NewGuid(), Guid.NewGuid(), "alliance:" + allianceId.ToString("N"),
+                "Alliance Test", Array.Empty<Guid>(), "report-auth-create"));
+
+        SendChatMessageResult sent = await service.SendMessageAsync(player,
+            conversation.Conversation.ConversationId,
+            new SendChatMessageRequest("report-auth-send", "flagged target",
+                null, null, null, null, DateTimeOffset.UtcNow));
+
+        ChatModerationReport accepted = service.ReportMessage(player, sent.Message.MessageId,
+            new ReportChatMessageRequest("report-auth-active", "spam"));
+        Assert.That(accepted.MessageId, Is.EqualTo(sent.Message.MessageId));
+
+        membership.IsActive = false;
+
+        Assert.Throws<UnauthorizedAccessException>(() =>
+            service.ReportMessage(player, sent.Message.MessageId,
+                new ReportChatMessageRequest("report-auth-revoked", "spam")));
+    }
+
+    [Test]
     public void Revoked_alliance_member_is_hidden_from_paged_conversation_list()
     {
         var options = Options.Create(new ChatOptions { Enabled = true, RealtimeEnabled = false });

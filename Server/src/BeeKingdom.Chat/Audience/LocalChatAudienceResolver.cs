@@ -70,7 +70,7 @@ public sealed class LocalChatAudienceResolver : IChatAudienceResolver
 
         ChatPermissionRole? requesterRole = allianceMembership.GetMemberRole(allianceId, requester.Value);
         return requesterRole.HasValue && IsAllianceMemberRole(requesterRole.Value)
-            ? ChatAudienceDecision.Allow(requesterRole.Value, BuildParticipantList(requester, request.ParticipantIds ?? Array.Empty<Guid>()))
+            ? ChatAudienceDecision.Allow(requesterRole.Value, BuildParticipantList(requester, Array.Empty<Guid>()))
             : ChatAudienceDecision.Deny("alliance_membership_required");
     }
 
@@ -83,7 +83,7 @@ public sealed class LocalChatAudienceResolver : IChatAudienceResolver
 
         ChatPermissionRole? requesterRole = allianceMembership.GetMemberRole(allianceId, requester.Value);
         return requesterRole.HasValue && IsAllianceLeaderRole(requesterRole.Value)
-            ? ChatAudienceDecision.Allow(requesterRole.Value, BuildParticipantList(requester, request.ParticipantIds ?? Array.Empty<Guid>()))
+            ? ChatAudienceDecision.Allow(requesterRole.Value, BuildParticipantList(requester, Array.Empty<Guid>()))
             : ChatAudienceDecision.Deny("alliance_leader_role_required");
     }
 

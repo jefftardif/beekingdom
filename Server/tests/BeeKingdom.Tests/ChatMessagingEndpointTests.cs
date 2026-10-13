@@ -764,6 +764,116 @@ public sealed class ChatMessagingEndpointTests
             Is.EqualTo(messageText));
     }
 
+    // Regression for the two server fixes that made Alliance chat access re-check authoritative
+    // membership (4c4d591d) and hide revoked conversations from the paged inbox (5e8a2f39).
+    // The two players below are two independently authenticated HTTP clients inside this single
+    // in-process test host - NOT two physical devices and NOT a real external realtime transport.
+    // Their tokens are real; the revocation is a real /alliance/v1/membership/leave.
+    [Test]
+    public async Task BKStudio_RevokedAllianceMemberLosesHttpChatAccessAndInboxVisibility()
+    {
+        await using WebApplicationFactory<Program> factory = CreateFactory(chatEnabled: true);
+        using HttpClient leader = factory.CreateClient();
+        string leaderToken = await LoginTestAccount(factory, leader, "bkstudio-revoked-leader@bee.test");
+        leader.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", leaderToken);
+        HttpResponseMessage created = await leader.PostAsJsonAsync(
+            "/alliance/v1/alliances",
+            new { name = "BeeKingdom Revocation", tag = "BKR", description = "",
+                  language = "fr-CA", emblemKey = "", joinMode = 0,
+                  clientRequestId = "bkstudio-revoked-create" },
+            BeeJson.CreateDefaultOptions());
+        Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.OK), await created.Content.ReadAsStringAsync());
+        using JsonDocument alliance = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        JsonElement entity = alliance.RootElement.GetProperty("alliance");
+        Guid allianceId = entity.GetProperty("allianceId").GetProperty("value").GetGuid();
+        Guid conversationId = entity.GetProperty("chatConversationId").GetGuid();
+        Assert.That(conversationId, Is.Not.EqualTo(Guid.Empty));
+
+        using HttpClient member = factory.CreateClient();
+        string memberToken = await LoginTestAccount(factory, member, "bkstudio-revoked-member@bee.test");
+        member.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", memberToken);
+        HttpResponseMessage joined = await member.PostAsync($"/alliance/v1/alliances/{allianceId:D}/join", null);
+        Assert.That(joined.StatusCode, Is.EqualTo(HttpStatusCode.OK), await joined.Content.ReadAsStringAsync());
+
+        Guid memberPlayerId = factory.Services
+            .GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>()
+            .ValidateToken(memberToken).PlayerId!.Value;
+
+        const string messageText = "Le membre doit perdre l'acces apres avoir quitte.";
+        HttpResponseMessage sentBeforeRevocation = await member.PostAsJsonAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages",
+            new
+            {
+                clientRequestId = "bkstudio-revoked-before-leave",
+                body = messageText,
+                contentParts = new[] { new { kind = "text", text = messageText } },
+                mentions = Array.Empty<object>(), emoji = Array.Empty<object>(),
+                replyToMessageId = (Guid?)null, clientCreatedAt = DateTimeOffset.UtcNow
+            },
+            BeeJson.CreateDefaultOptions());
+        Assert.That(sentBeforeRevocation.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+            "An active alliance member must be able to send before revocation.");
+
+        HttpResponseMessage left = await member.PostAsync("/alliance/v1/membership/leave", null);
+        Assert.That(left.StatusCode, Is.EqualTo(HttpStatusCode.OK), await left.Content.ReadAsStringAsync());
+
+        // Reproduce the persisted desync the server fixes must survive: the derived Chat
+        // participant row still looks active even though the authoritative alliance membership is
+        // gone. HTTP access must stay denied, and the inbox must still hide the conversation.
+        IChatRepository chatRepository = factory.Services.GetRequiredService<IChatRepository>();
+        chatRepository.UpsertParticipant(new ChatConversationParticipant(
+            conversationId, new PlayerId(memberPlayerId), ChatPermissionRole.Member,
+            DateTimeOffset.UtcNow, null, CanRead: true, CanWrite: true));
+
+        HttpResponseMessage revokedRead = await member.GetAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages?afterSequence=0&limit=10");
+        Assert.That(revokedRead.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden),
+            await revokedRead.Content.ReadAsStringAsync());
+        using JsonDocument revokedReadError = JsonDocument.Parse(await revokedRead.Content.ReadAsStringAsync());
+        Assert.That(revokedReadError.RootElement.GetProperty("code").GetString(), Is.EqualTo("chat.forbidden"));
+
+        HttpResponseMessage revokedSend = await member.PostAsJsonAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages",
+            new
+            {
+                clientRequestId = "bkstudio-revoked-after-leave",
+                body = "Ce message ne doit jamais etre accepte.",
+                contentParts = new[] { new { kind = "text", text = "Ce message ne doit jamais etre accepte." } },
+                mentions = Array.Empty<object>(), emoji = Array.Empty<object>(),
+                replyToMessageId = (Guid?)null, clientCreatedAt = DateTimeOffset.UtcNow
+            },
+            BeeJson.CreateDefaultOptions());
+        Assert.That(revokedSend.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden),
+            "A revoked member must not be able to write over HTTP.");
+
+        HttpResponseMessage revokedInbox = await member.GetAsync("/chat/v1/conversations");
+        Assert.That(revokedInbox.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using JsonDocument inbox = JsonDocument.Parse(await revokedInbox.Content.ReadAsStringAsync());
+        Assert.That(inbox.RootElement.GetProperty("items").EnumerateArray()
+            .Any(item => item.GetProperty("conversationId").GetGuid() == conversationId), Is.False,
+            "A revoked member must not see the alliance conversation in their HTTP inbox.");
+
+        // A fresh HTTP client authenticated with the same token (reconnect) must remain denied:
+        // the denial is server-authoritative, not tied to one connection.
+        using HttpClient reconnected = factory.CreateClient();
+        reconnected.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", memberToken);
+        HttpResponseMessage reconnectedRead = await reconnected.GetAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages?afterSequence=0&limit=10");
+        Assert.That(reconnectedRead.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+
+        // The still-active leader keeps full access and the pre-revocation message is intact.
+        HttpResponseMessage leaderRead = await leader.GetAsync(
+            $"/chat/v1/conversations/{conversationId:D}/messages?afterSequence=0&limit=10");
+        Assert.That(leaderRead.StatusCode, Is.EqualTo(HttpStatusCode.OK), await leaderRead.Content.ReadAsStringAsync());
+        using JsonDocument leaderMessages = JsonDocument.Parse(await leaderRead.Content.ReadAsStringAsync());
+        Assert.That(leaderMessages.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
+        Assert.That(leaderMessages.RootElement.GetProperty("items")[0].GetProperty("body").GetString(),
+            Is.EqualTo(messageText));
+    }
+
     private static WebApplicationFactory<Program> CreateFactory(bool chatEnabled)
     {
         return new WebApplicationFactory<Program>()
