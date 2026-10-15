@@ -279,6 +279,9 @@ public sealed class DatabaseMigrationTests
 
     private static string NormalizeSql(string sql)
     {
-        return sql.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
+        string[] lines = sql.Replace("\r\n", "\n", StringComparison.Ordinal).Trim().Split('\n');
+        int start = 0;
+        while (start < lines.Length && (lines[start].TrimStart().StartsWith("--", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(lines[start]))) start++;
+        return string.Join("\n", lines.Skip(start)).Trim();
     }
 }
