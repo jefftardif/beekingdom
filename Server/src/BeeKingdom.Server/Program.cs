@@ -1,4 +1,4 @@
-﻿using BeeKingdom.Accounts;
+using BeeKingdom.Accounts;
 using BeeKingdom.Accounts.DependencyInjection;
 using BeeKingdom.Accounts.Models;
 using BeeKingdom.Alliance;
@@ -141,6 +141,8 @@ builder.Services.AddOptions<FoundationDotationOptions>()
 builder.Services.AddOptions<BroodVitalityOptions>()
     .Bind(builder.Configuration.GetSection(BroodVitalityOptions.SectionName))
     .ValidateOnStart();
+builder.Services.AddOptions<NurseryCohortOptions>()
+    .Bind(builder.Configuration.GetSection(NurseryCohortOptions.SectionName));
 builder.Services.AddOptions<WorkshopBatchQualificationOptions>()
     .Bind(builder.Configuration.GetSection(WorkshopBatchQualificationOptions.SectionName));
 builder.Services.AddOptions<LivingHiveResearchOptions>()
@@ -923,6 +925,64 @@ app.MapPost("/game/v1/hives/{hiveId}/brood/vitality/care/{operationId}/complete"
     if (!options.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable"); var auth = AuthenticateGameRequest(context, authentication); if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required"); if (!TryParseGameResourceId(hiveId, out var hive) || !Guid.TryParse(operationId, out var op)) return GameError(400, "game.invalid_request", "game.error.invalid_request"); try { var r = await new BroodVitalityCareService(repository, clock).CompleteAsync(auth.PlayerId!.Value, hive, op, request, ct); return r.Succeeded && r.Receipt is not null ? Results.Ok(new BroodVitalityCareResponse(r.Receipt, new(auth.PlayerId!.Value, hive, BroodVitalityCareService.ContractVersion, clock.UtcNow, r.State.Revision, r.State.BroodVitality))) : GameError(409, r.Code, "game.error.conflict"); } catch (ArgumentException) { return GameError(400, "game.invalid_request", "game.error.invalid_request"); }
 });
 
+// Nursery cohorts V1. Entire API is opt-in and disabled by default.
+// Only authenticated player/hive state can start or read a cohort.
+// No client-supplied player/hive identity or arbitrary yield/timing input.
+app.MapGet("/game/v1/hives/{hiveId}/brood/cohorts", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<NurseryCohortOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        NurseryCohortSnapshot snapshot = await new NurseryCohortService(
+            repository, clock, options.Value).ReadAsync(auth.PlayerId!.Value, hive, ct);
+        return Results.Ok(snapshot);
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/brood/cohorts/start", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<NurseryCohortOptions> options,
+    NurseryCohortStartRequest request, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.unavailable", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        NurseryCohortCommandResult result = await new NurseryCohortService(
+            repository, clock, options.Value).StartAsync(
+                new NurseryCohortStartCommand(auth.PlayerId!.Value, hive,
+                    request.ExpectedRevision, request.IdempotencyKey), ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+});
 app.MapGet("/game/v1/hives/{hiveId}/strategic-path", async (HttpContext context, string hiveId, AuthenticationManager authentication, StrategicPathService strategic, IOptions<StrategicPathOptions> options, CancellationToken ct) =>
 {
     if (!options.Value.Enabled) return GameError(StatusCodes.Status503ServiceUnavailable, "game.unavailable", "game.error.unavailable");

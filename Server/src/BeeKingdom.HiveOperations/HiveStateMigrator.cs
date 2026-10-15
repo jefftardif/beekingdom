@@ -31,6 +31,32 @@ public static class HiveStateMigrator
             if (vitality.ActiveOperation is { } operation && (operation.OperationId == Guid.Empty || !BroodVitalityOperationTypes.Allowed.Contains(operation.Type) || operation.StartedAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc < operation.StartedAtUtc || operation.EndsAtUtc - operation.StartedAtUtc > (operation.Type == BroodVitalityOperationTypes.Feeding ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(13))))
                 throw new InvalidOperationException("Invalid brood vitality operation.");
         }
+        // Nullable additive model: old hives remain valid and keep their roster.
+        if (state.NurseryCohorts is { } cohorts)
+        {
+            const long maxReserve = NurseryGrowthRules.InitialReserveCapacity;
+            if (cohorts.Revision < 0 || cohorts.Revision > state.Revision
+                || cohorts.RecruitsInReserve < 0 || cohorts.RecruitsInReserve > maxReserve
+                || cohorts.Receipts is null || cohorts.Receipts.Count > 128
+                || cohorts.Receipts.Any(item =>
+                    string.IsNullOrWhiteSpace(item.Key) || item.Key.Length > 256
+                    || item.Value is null || string.IsNullOrWhiteSpace(item.Value.PayloadHash)))
+                throw new InvalidDataException("Invalid nursery cohort state.");
+            if (cohorts.ActiveCohort is { } growing)
+            {
+                if (growing.CohortId == Guid.Empty
+                    || growing.StartedAtUtc.Offset != TimeSpan.Zero
+                    || growing.ReadyAtUtc.Offset != TimeSpan.Zero
+                    || growing.ReadyAtUtc <= growing.StartedAtUtc
+                    || growing.ReadyAtUtc - growing.StartedAtUtc > TimeSpan.FromDays(9)
+                    || growing.ExpectedRecruits < 1
+                    || growing.ExpectedRecruits > maxReserve
+                    || growing.NutritionAtStart is < 0 or > 100
+                    || growing.StabilityAtStart is < 0 or > 100
+                    || cohorts.RecruitsInReserve > maxReserve - growing.ExpectedRecruits)
+                    throw new InvalidDataException("Invalid nursery active cohort.");
+            }
+        }
         if (state.DoctrineRoster is { } roster)
         {
             const long maxCount = 1_000_000_000;
