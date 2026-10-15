@@ -1,4 +1,6 @@
-﻿# BeeKingdom — Nurserie royale, cohortes serveur v1 (prototype désactivé)
+> Note historique : ce rapport de branche isolee precede le portage controle sur main (b6656062). Voir BK_NURSERY_OFFICIAL_MAIN_20261014.md pour le statut actuel.
+
+# BeeKingdom — Nurserie royale, cohortes serveur v1 (prototype désactivé)
 
 Date : 14 octobre 2026. Vision produit approuvée par le fondateur.
 Base de référence : commit 609401a8. Branche isolée : bkstudio/nursery-growth-20261014.
