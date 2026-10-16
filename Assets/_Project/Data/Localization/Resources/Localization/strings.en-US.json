@@ -1,6 +1,9 @@
 {
   "locale": "en-US",
   "entries": [
+    {"key":"infirmary.recovery.loading","value":"Loading recovery data…"},
+    {"key":"infirmary.recovery.unavailable","value":"Recovery data unavailable"},
+    {"key":"infirmary.recovery.connection_required","value":"Connection required"},
     {"key":"startup.step.alliance","value":"Alliance"},
     {"key":"startup.step.army","value":"Armies and wounded bees"},
     {"key":"startup.step.bank","value":"Bank"},
@@ -71,7 +74,7 @@
     { "key": "building_info.administration_core.body", "value": "The administration core is the heart of your hive: it gathers general information about your colony, such as its identity and overall progress. It's a good reference point for checking your hive's overall state at a glance." },
     { "key": "building_info.defense_growth.body", "value": "This extra defensive zone isn't available yet in this version. It will open at a future colony level, once this system is ready." },
     { "key": "building_info.genetics_garden.body", "value": "The genetics garden is an advanced research feature planned for a future update. For now, this zone remains a preview and has no real effect on your colony." },
-    { "key": "building_info.infirmary_grove.body", "value": "The infirmary will heal and support injured bees in a future update. No official health system is active right now — this zone is still under development." },
+    {"key":"building_info.infirmary_grove.body","value":"The Infirmary shows wounded Guardians, Wingrunners and Darters recovering from combat. The server manages troop counts and their return to Barracks. Refresh to check completed recoveries."},
     { "key": "building_info.academy_canopy.body", "value": "The academy will one day let you train your bees in advanced skills, beyond basic training. This feature isn't connected to the game yet." },
     { "key": "building_info.hive_bank.body", "value": "The bank will require a connection to an official server to manage your resources securely, like many mobile games. It isn't active yet in this local preview — no official resources are currently managed there." },
     { "key": "building_info.archives_honeyfall.body", "value": "The archives will one day keep a full history of your colony's events. This zone isn't persistent yet: nothing that happens here is saved for the moment." },

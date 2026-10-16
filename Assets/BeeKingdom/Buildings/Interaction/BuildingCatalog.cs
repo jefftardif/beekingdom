@@ -32,7 +32,7 @@ namespace BeeKingdom.Buildings.Interaction
                 "Atelier cire et transformation", "production", "active", "Organiser atelier",
                 "Transforme les ressources en cire.", 37),
             new LivingHiveHotspotMetadata(BuildingLegacyKeys.InfirmaryGrove, "cell--2-1", 9, "Infirmerie",
-                "Soins et soutien", "help", "future", "Voir soins",
+                "Soins et soutien", "help", "active", "Voir soins",
                 "Fonctionnalite a venir.", 24),
             new LivingHiveHotspotMetadata(BuildingLegacyKeys.AcademyCanopy, "cell-2--2", 10, "Academie",
                 "Apprentissage", "book", "future", "Voir academie",

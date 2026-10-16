@@ -66,6 +66,7 @@ namespace BeeKingdom.Playground
         private Button nurseryCompleteButton;
         private Button nurseryRetryButton;
         private ICombatPatrolPanelController infirmaryController;
+        private bool infirmaryHasLoadedRecovery;
         private float nextInfirmaryRefreshAt;
         private float nextInfirmaryLabelAt;
         private TextMeshProUGUI infirmaryTotalLabel;
@@ -88,7 +89,9 @@ namespace BeeKingdom.Playground
         // Inject the existing shared patrol controller before showing the Infirmary.
         public void BindInfirmaryController(ICombatPatrolPanelController controller)
         {
+            if (!ReferenceEquals(infirmaryController, controller)) infirmaryHasLoadedRecovery = false;
             infirmaryController = controller;
+            if (infirmaryMode && windowOpen) RefreshInfirmaryLabels();
         }
 
         public void Show(BuildingDefinition building, string titleFrench, string titleEnglish,
@@ -139,6 +142,7 @@ namespace BeeKingdom.Playground
             nurseryCompleteButton = null;
             nurseryRetryButton = null;
             infirmaryController = null;
+            infirmaryHasLoadedRecovery = false;
             infirmaryTotalLabel = null;
             infirmaryStatusLabel = null;
             infirmaryCountLabels.Clear();
@@ -351,48 +355,48 @@ namespace BeeKingdom.Playground
             if (!infirmaryMode || !windowOpen || suppressed
                 || infirmaryTotalLabel == null || infirmaryStatusLabel == null) return;
             bool french = string.IsNullOrEmpty(BeeLocalization.CurrentLocale)
-                || BeeLocalization.CurrentLocale.StartsWith("fr",
-                    StringComparison.OrdinalIgnoreCase);
+                || BeeLocalization.CurrentLocale.StartsWith("fr", StringComparison.OrdinalIgnoreCase);
             bool configured = infirmaryController != null && infirmaryController.IsConfigured;
             CombatPatrolScreenModel model = configured ? infirmaryController.Model : null;
             bool busy = configured && infirmaryController.IsBusy;
-            IReadOnlyList<InfirmaryRecoveryRow> rows = InfirmaryRecoveryOverview.Aggregate(
-                model != null ? model.Recovering : null);
+            bool failed = model != null && model.State == CombatPatrolScreenState.Error;
+            bool loading = model == null || model.State == CombatPatrolScreenState.NotConfigured
+                || model.State == CombatPatrolScreenState.Loading;
+            if (configured && !failed && !loading && model.Recovering != null)
+                infirmaryHasLoadedRecovery = true;
+            // A failed first read is not a ward with zero wounded. A refresh may retain
+            // an already received snapshot, but no timer credits troops on the device.
+            bool readable = configured && model != null && !failed && infirmaryHasLoadedRecovery;
+            var rows = InfirmaryRecoveryOverview.Aggregate(model != null ? model.Recovering : null);
             long total = InfirmaryRecoveryOverview.Total(rows);
-            infirmaryTotalLabel.text = configured
-                ? total.ToString(System.Globalization.CultureInfo.CurrentCulture)
-                    + (french ? " blessées en soins" : " recovering troops")
-                : (french ? "Connexion requise" : "Connection required");
+            infirmaryTotalLabel.text = !configured
+                ? BeeLocalization.Text("infirmary.recovery.connection_required")
+                : !readable ? BeeLocalization.Text(failed ? "infirmary.recovery.unavailable" : "infirmary.recovery.loading")
+                : total.ToString(System.Globalization.CultureInfo.CurrentCulture)
+                    + (french ? " blessées en soins" : " recovering troops");
             if (!configured)
                 infirmaryStatusLabel.text = french
                     ? "Connecte-toi pour consulter les blessées enregistrées par le serveur."
                     : "Sign in to view server-recorded wounded troops.";
-            else if (busy)
-                infirmaryStatusLabel.text = french
-                    ? "Synchronisation de la convalescence..." : "Syncing recovery...";
-            else if (model != null && model.State == CombatPatrolScreenState.Error)
+            else if (failed)
                 infirmaryStatusLabel.text = french
                     ? "Lecture indisponible. Appuie sur Actualiser pour réessayer."
                     : "Data unavailable. Tap Refresh to try again.";
+            else if (busy || loading)
+                infirmaryStatusLabel.text = french ? "Synchronisation de la convalescence..." : "Syncing recovery...";
             else
                 infirmaryStatusLabel.text = total > 0
                     ? (french ? "Retour automatique dans la Caserne à la fin des soins."
                               : "Troops return to Barracks automatically once recovered.")
                     : (french ? "Aucune blessée actuellement en convalescence."
                               : "No troops are currently recovering.");
-
-            foreach (InfirmaryRecoveryRow row in rows)
+            foreach (var row in rows)
             {
-                if (infirmaryCountLabels.TryGetValue(row.Family, out TextMeshProUGUI count)
-                    && count != null)
-                    count.text = configured
-                        ? row.Wounded.ToString(System.Globalization.CultureInfo.CurrentCulture)
-                        : "--";
-                if (infirmaryTimerLabels.TryGetValue(row.Family, out TextMeshProUGUI timer)
-                    && timer != null)
-                    timer.text = configured
-                        ? InfirmaryRecoveryOverview.Countdown(row.NextReadyAtUtc,
-                            DateTimeOffset.UtcNow, french)
+                if (infirmaryCountLabels.TryGetValue(row.Family, out TextMeshProUGUI count) && count != null)
+                    count.text = readable ? row.Wounded.ToString(System.Globalization.CultureInfo.CurrentCulture) : "--";
+                if (infirmaryTimerLabels.TryGetValue(row.Family, out TextMeshProUGUI timer) && timer != null)
+                    timer.text = readable
+                        ? InfirmaryRecoveryOverview.Countdown(row.NextReadyAtUtc, DateTimeOffset.UtcNow, french)
                         : (french ? "En attente du serveur" : "Awaiting server");
             }
         }

@@ -40,6 +40,23 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Infirmerie fonctionnelle restauree (2026-10-16)
+
+Le clic INFIRMARY ouvrait le vieux panneau futur alors que le Centre de convalescence
+premium et son modele de blesses existaient toujours. Raccordement restaure dans le
+host actuel a la meme instance de controleur combat, sans retoucher les autres routes.
+Catalogue Infirmerie Active retabli. Embleme premium local ajoute au suivi Git.
+Les lectures absentes/erreurs ne sont plus rendues comme zero blessees; rebind de session
+et fermeture liberent l'etat precedent. Aucune mutation serveur ou guerison locale ajoutee.
+
+119 tests Editor cibles PASS. Vue verifiee en Play Mode dans la scene canonique,
+controleur reel ReadyToLaunch et zero blessee actuellement. Actualiser, Retour,
+liberation du monde et reouverture verifies. Tests avec blesses via fixtures Editor
+seulement; aucune perte artificielle infligee et aucune guerison reelle chronometree.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/infirmary-recovery-20261016/.
+Rapport : Docs/AI/Missions/Infirmary-Window-Recovery-20261016.md.
+Livraison locale sans push/build/deploiement. Unity laisse en Play, Infirmerie ouverte.
+
 ## Jalon courant - Test Google autorise du chargement synchronise (2026-10-16)
 
 Jeff autorise le parcours habituel : Google, puis le compte tardif.jeff@gmail.com dans

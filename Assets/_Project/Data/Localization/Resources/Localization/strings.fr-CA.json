@@ -1,6 +1,9 @@
 {
   "locale": "fr-CA",
   "entries": [
+    {"key":"infirmary.recovery.loading","value":"Chargement de la convalescence…"},
+    {"key":"infirmary.recovery.unavailable","value":"Données de convalescence indisponibles"},
+    {"key":"infirmary.recovery.connection_required","value":"Connexion requise"},
     {"key":"startup.step.alliance","value":"Alliance"},
     {"key":"startup.step.army","value":"Armées et blessées"},
     {"key":"startup.step.bank","value":"Banque"},
@@ -71,7 +74,7 @@
     { "key": "building_info.administration_core.body", "value": "Le centre administratif est le cœur de la ruche : il regroupe les informations générales sur ta colonie, comme son identité et sa progression d'ensemble. C'est un bon point de repère pour évaluer l'état global de ta ruche en un coup d'œil." },
     { "key": "building_info.defense_growth.body", "value": "Cette zone défensive supplémentaire n'est pas encore disponible dans cette version. Elle s'ouvrira à un niveau futur de la colonie, quand ce système sera prêt." },
     { "key": "building_info.genetics_garden.body", "value": "Le jardin génétique est une fonctionnalité de recherche avancée prévue pour une prochaine mise à jour. Pour l'instant, cette zone reste un aperçu et n'a aucun effet réel sur ta colonie." },
-    { "key": "building_info.infirmary_grove.body", "value": "L'infirmerie soignera et soutiendra les abeilles blessées dans une future mise à jour. Aucun système de santé officiel n'est actif pour le moment — cette zone est encore en développement." },
+    {"key":"building_info.infirmary_grove.body","value":"L\u0027Infirmerie présente les blessées de combat en convalescence : Gardiennes, Voltigeuses et Lanceuses. Les effectifs et les retours en Caserne sont gérés par le serveur. Actualisez pour vérifier les guérisons terminées."},
     { "key": "building_info.academy_canopy.body", "value": "L'académie permettra un jour de former tes abeilles à des compétences avancées, au-delà de l'entraînement de base. Cette fonctionnalité n'est pas encore connectée au jeu." },
     { "key": "building_info.hive_bank.body", "value": "La banque nécessitera une connexion à un serveur officiel pour gérer tes ressources de manière sécurisée, comme dans beaucoup de jeux mobiles. Elle n'est pas encore active dans cet aperçu local — aucune ressource officielle n'y est actuellement gérée." },
     { "key": "building_info.archives_honeyfall.body", "value": "Les archives conserveront un jour l'historique complet des évènements de ta colonie. Cette zone n'est pas encore persistante : rien de ce qui s'y passe n'est sauvegardé pour l'instant." },
