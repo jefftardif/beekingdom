@@ -4875,42 +4875,8 @@ DrawFriendsScreen(compact);
         private static float startupLoadingScreenStartRealtime = -1f;
         private static Texture2D startupLoadingScreenTexture;
 
-        // Ecran de chargement purement cosmetique au demarrage : barre de progression et texte
-        // sont indicatifs (duree fixe), pas lies a un vrai suivi de chargement d'assets.
-        private static bool DrawStartupLoadingScreenIfActive()
-        {
-            if (startupLoadingScreenDone) return false;
-            if (startupLoadingScreenStartRealtime < 0f) startupLoadingScreenStartRealtime = Time.realtimeSinceStartup;
-            float elapsed = Time.realtimeSinceStartup - startupLoadingScreenStartRealtime;
-            float progress = Mathf.Clamp01(elapsed / StartupLoadingScreenDurationSeconds);
-            if (progress >= 1f)
-            {
-                startupLoadingScreenDone = true;
-                return false;
-            }
-
-            if (startupLoadingScreenTexture == null)
-                startupLoadingScreenTexture = Resources.Load<Texture2D>("PremiumBeeReference/splash_loading");
-
-            Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
-            GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
-            if (startupLoadingScreenTexture != null)
-                GUI.DrawTexture(full, startupLoadingScreenTexture, ScaleMode.ScaleAndCrop, false);
-
-            float barWidth = Mathf.Min(Screen.width * 0.7f, 520f);
-            float barHeight = 14f;
-            float barX = (Screen.width - barWidth) * 0.5f;
-            float barY = Screen.height - (IsPortraitLayout() ? 96f : 72f);
-            Rect barBackground = new Rect(barX, barY, barWidth, barHeight);
-            Rect barFill = new Rect(barX, barY, barWidth * progress, barHeight);
-            DrawPremiumPanel(barBackground, new Color(0.05f, 0.05f, 0.05f, 0.85f), new Color(0.6f, 0.5f, 0.2f, 0.6f));
-            GUI.DrawTexture(new Rect(barFill.x + 2f, barFill.y + 2f, Mathf.Max(0f, barFill.width - 4f), barFill.height - 4f), Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, new Color(0.95f, 0.78f, 0.25f, 0.95f), 0f, 0f);
-
-            Rect textRect = new Rect(barX, barY - 30f, barWidth, 24f);
-            GUIStyle loadingLabelStyle = new GUIStyle(centeredTinyLabelStyle) { normal = { textColor = new Color(0.95f, 0.9f, 0.8f, 0.9f) } };
-            GUI.Label(textRect, BeeLocalization.Text("splash.loading.text", "Chargement de la ruche..."), loadingLabelStyle);
-            return true;
-        }
+        // Keep the approved artwork; progression now follows real session and gameplay reads.
+        private static bool DrawStartupLoadingScreenIfActive() => DrawSynchronizedStartupScreen();
 
         private static bool DrawReferenceBackedRuntimeUi(float fps, bool compact)
         {
@@ -5803,6 +5769,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 
         private static void EnterHiveFromSplash(string route)
         {
+            if (DeferHiveEntryUntilSynchronized(route)) return;
+            PublishSynchronizedHeaderBeforeEntry();
             splashAuthGateState = SplashAuthGateState.EnteredHive;
             splashAuthLastRoute = route;
             SetSplashAuthMessage("splash.message.entered", false, route);

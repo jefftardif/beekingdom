@@ -67,10 +67,12 @@ namespace BeeKingdom.Playground {
         public static void OpenBankOverlayForExternalHost()
         {
             MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
-            if (OfficialBuildingUpgradeConfigured() && buildingUpgradeController != null && !buildingUpgradeController.IsBusy)
+            if (OfficialBuildingUpgradeConfigured() && buildingUpgradeController != null && !buildingUpgradeController.IsBusy
+                && (buildingUpgradeController.Model == null || buildingUpgradeController.Model.BuildingLevels.Count == 0))
                 buildingUpgradeController.Refresh();
             ResetBankViewState();
             bankOverlayOpenForExternalHost = true;
+            bankRoyalReserveSnapshot = MobileAccountSessionRuntimeBootstrap.TakeStartupBankSnapshot();
             bankRoadmapScroll = Vector2.zero;
             bankSelectedView = "roadmap";
             bankRoyalReserveError = string.Empty;

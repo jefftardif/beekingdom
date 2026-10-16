@@ -40,6 +40,29 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Synchronisation reelle pendant le chargement (2026-10-16)
+
+Demande Jeff : attendre les donnees pendant le loading, meme plus long. La barre purement
+cosmetique est remplacee par une attente des lectures reelles. Avant entree officielle :
+ruche, batiments, ressources/production et population doivent etre disponibles. Dix
+services additionnels sont prepares, ou signales indisponibles sans bloquer ces essentiels.
+Delai de 45 secondes pour les donnees, Reessayer/Connexion en cas de blocage essentiel.
+
+Cause de resynchronisations repetitives corrigee : TryConfigureGameplayForActiveSession
+fermait toute la session gameplay inconditionnellement. Les controleurs sont maintenant
+conserves pour le meme compte/ruche/serveur/source/autorite. Generation et annulation
+protegent contre des retours asynchrones apres deconnexion ou changement de compte.
+Banque utilise une premiere lecture prechargee et conserve les niveaux deja charges.
+
+126 tests Editor cibles PASS. Scene canonique et demo locale verifies. Session authentifiee
+ensuite verifiee : 14/14 controles termines, essentiels disponibles, Nurserie/inventaire/stock
+signales indisponibles. Huit instances preservees apres cinq configurations successives;
+generation identique apres entree dans la ruche et ouverture Banque. Niveau Banque 2 et
+ressources prets. Aucun temps de cold-start ni transaction economique revendique.
+Rapport : Docs/AI/Missions/Startup-Data-Synchronization-20261016.md.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/startup-sync-20261016/.
+Aucune activation serveur, aucune mutation economique de test, aucun deploiement.
+
 ## Jalon courant - Tutoriel compact final, Banque et Nurserie (2026-10-16)
 
 Tutoriel reduit a 300 px de haut a 1920x1080, style premium conserve. Banque restauree
