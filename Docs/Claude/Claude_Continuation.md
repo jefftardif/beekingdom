@@ -40,6 +40,10 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Contrats serveur Caserne et Patrouilles reconciliés (2026-10-16)
+
+Git aligné avec les contrats actifs de SRVESDT : réservations associées à une championne, patrouilles préparées, état v13, blessées, comptabilisation, services Banque et Nurserie préservés. Flags Production conformes aux valeurs actives du serveur. 284 tests métier PASS, 35 tests HTTP ciblés PASS, build Release 0 erreur. Aucun déploiement ni mutation des données. Suite HTTP complète restant à revalider avant future publication.
+
 ## Jalon courant - Caserne Activites premium restauree (2026-10-16)
 
 La regression Caserne renvoyait a l'ancien ecran. Refonte des deux onglets

@@ -22,15 +22,46 @@ public static class HiveTroopDeploymentAccounting
     private static Dictionary<string, long> SumAllCommitted(PlayerHiveState state)
     {
         Dictionary<string, long> sums = Families.ToDictionary(f => f, _ => 0L, StringComparer.Ordinal);
+
+        // A combat patrol launched from the Caserne keeps the exact same prepared reservation
+        // while it is active. ComputeAvailableRoster already subtracts that reservation, so the
+        // matching active encounter must not debit the same bees a second time. Skip at most one
+        // matching encounter: legacy/corrupt states containing duplicate active copies remain
+        // conservatively accounted rather than accidentally freeing troops.
+        SquadReservationState? reservation = state.SquadReservation;
+        bool preparedEncounterAbsorbedByReservation = false;
         if (state.CombatPatrol?.ActiveEncounters != null)
+        {
             foreach (CombatPatrolActiveEncounter encounter in state.CombatPatrol.ActiveEncounters)
+            {
+                if (!preparedEncounterAbsorbedByReservation &&
+                    reservation?.ReservationId is not null &&
+                    SameComposition(encounter.CommittedTroops, reservation.Reserved))
+                {
+                    preparedEncounterAbsorbedByReservation = true;
+                    continue;
+                }
+
                 foreach (string family in Families)
                     sums[family] += encounter.CommittedTroops.GetValueOrDefault(family);
+            }
+        }
+
         IReadOnlyDictionary<string, long>? worldResourceCommitted = state.WorldResourceCollection?.Active?.CommittedTroops;
         if (worldResourceCommitted != null)
             foreach (string family in Families)
                 sums[family] += worldResourceCommitted.GetValueOrDefault(family);
         return sums;
+    }
+
+    private static bool SameComposition(
+        IReadOnlyDictionary<string, long>? left,
+        IReadOnlyDictionary<string, long>? right)
+    {
+        if (left is null || right is null) return false;
+        return Families.All(family =>
+            left.GetValueOrDefault(family) == right.GetValueOrDefault(family)) &&
+            Families.Sum(family => left.GetValueOrDefault(family)) > 0;
     }
 
     public static bool IsValidComposition(Dictionary<string, long> requested, int capacity)

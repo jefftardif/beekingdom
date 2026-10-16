@@ -65,12 +65,18 @@ public sealed record PlayerHiveState(
      // still defensively sums across every owned hive on read, so the balance stays correct even in
      // the theoretical case a second hive ever appears, without requiring a schema change then.
      long RoyalSeals = 0,
-     NurseryCohortState? NurseryCohorts = null);
+     NurseryCohortState? NurseryCohorts = null,
+     RoyalReserveState? RoyalReserve = null);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
 // adjustments, compensation slot grants). Written inside the SAME atomic mutation as the
 // change it documents, so it can never drift out of sync with what actually happened.
 public sealed record AdminAuditEntry(Guid EntryId, DateTimeOffset AtUtc, string Action, string Details, string Reason);
+
+public sealed record RoyalReserveState(
+    long Revision,
+    Dictionary<string, long> Amounts,
+    Dictionary<string, IdempotencyReceipt> Receipts);
     
     
 
@@ -110,12 +116,26 @@ public sealed record StrategicPathState(string CatalogVersion, string? SelectedP
 public sealed record StrategicPathSnapshot(Guid PlayerId, Guid HiveId, string CatalogVersion, IReadOnlyList<string> CanonicalPaths, string? SelectedPath, long Revision, DateTimeOffset UpdatedAtUtc);
 public sealed record DoctrineTrainingOperation(Guid OperationId, string Family, int BatchSize, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc, long Revision, string IdempotencyKey, string PayloadHash, bool Claimed);
 public sealed record DoctrineRosterState(long Revision, Dictionary<string, long> Counts, DoctrineTrainingOperation? ActiveOperation, Dictionary<string, IdempotencyReceipt> Receipts);
-public sealed record SquadReservationState(long Revision, int Capacity, Dictionary<string, long> Reserved, string? ReservationId, Dictionary<string, IdempotencyReceipt> Receipts);
+public sealed record SquadReservationState(
+    long Revision,
+    int Capacity,
+    Dictionary<string, long> Reserved,
+    string? ReservationId,
+    Dictionary<string, IdempotencyReceipt> Receipts,
+    List<string>? ChampionBeeIds = null);
 public sealed record HivePerimeterSortieState(long Revision, DateTimeOffset CycleStartedAtUtc, DateTimeOffset CycleEndsAtUtc, HivePerimeterActiveSortie? Active, Dictionary<string, IdempotencyReceipt> Receipts, HashSet<string>? CompletedSignalKeys = null, Dictionary<string, HivePerimeterClaimReceipt>? ClaimReceipts = null);
 public sealed record HivePerimeterActiveSortie(Guid SortieId, string SignalKey, string SignalInstanceId, string ReservationId, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc, long Revision, string LaunchIdempotencyKey, string PayloadHash);
 public sealed record HivePerimeterClaimReceipt(Guid PlayerId, Guid HiveId, Guid SortieId, string SignalKey, string SignalInstanceId, DateTimeOffset CycleStartedAtUtc, DateTimeOffset CycleEndsAtUtc, long Revision, DateTimeOffset ServerTimeUtc, Dictionary<string, long> CreditedByResource, Dictionary<string, ResourceBalance> ResultingBalances);
 public sealed record DailyRoundCommandResult(bool Succeeded, string Code, long RevisionBefore, long RevisionAfter, DateTimeOffset AcceptedAtUtc, PlayerHiveState State);
-public sealed record CombatPatrolActiveEncounter(Guid EncounterId, int Tier, Dictionary<string, long> CommittedTroops, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc, string LaunchIdempotencyKey, string PayloadHash);
+public sealed record CombatPatrolActiveEncounter(
+    Guid EncounterId,
+    int Tier,
+    Dictionary<string, long> CommittedTroops,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset EndsAtUtc,
+    string LaunchIdempotencyKey,
+    string PayloadHash,
+    List<string>? ChampionBeeIds = null);
 public sealed record CombatPatrolClaimReceipt(Guid PlayerId, Guid HiveId, Guid EncounterId, int Tier, string Band, DateTimeOffset ServerTimeUtc, Dictionary<string, long> PermanentLosses, Dictionary<string, long> WoundedLosses, Dictionary<string, long> CreditedByResource, Dictionary<string, ResourceBalance> ResultingBalances, List<string> ContributingChampionBeeIds, Dictionary<string, long> ChampionPowerBonusBpByFamily, Dictionary<string, int> TroopTierByFamily, Dictionary<string, long> TroopPowerBonusBpByFamily, long AvailablePower, long RequiredPower, long ReadinessBp, string? StrategicPathId, Dictionary<string, long> StrategicPathPowerBonusBpByFamily, bool DailyFocusApplied = false, bool WorldEventApplied = false, string WorldEventKey = "");
 public sealed record CombatPatrolRecoveringBatch(string Family, long Count, DateTimeOffset ReadyAtUtc);
 public sealed record CombatPatrolState(long Revision, List<CombatPatrolActiveEncounter> ActiveEncounters, Dictionary<int, DateTimeOffset> TierCooldownEndsAtUtc, Dictionary<string, IdempotencyReceipt> Receipts, Dictionary<string, CombatPatrolClaimReceipt>? ClaimReceipts = null, List<CombatPatrolRecoveringBatch>? Recovering = null, int ResourcePurchasedSlots = 0, int PremiumPurchasedSlots = 0);

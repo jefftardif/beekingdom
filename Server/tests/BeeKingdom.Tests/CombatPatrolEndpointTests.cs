@@ -41,11 +41,16 @@ public sealed class CombatPatrolEndpointTests
     }
 
     [Test]
-    public void Both_settings_keep_feature_closed()
+    public void Default_setting_is_closed_and_production_setting_is_enabled()
     {
-        using var factory = CreateFactory(false); var root = factory.Services.GetRequiredService<IHostEnvironment>().ContentRootPath;
-        foreach (var file in new[] { Path.Combine(root, "appsettings.json"), Path.Combine(root, "appsettings.Production.json") })
-        { using var doc = JsonDocument.Parse(File.ReadAllText(file)); Assert.That(doc.RootElement.GetProperty("CombatPatrol").GetProperty("Enabled").GetBoolean(), Is.False); }
+        using var factory = CreateFactory(false);
+        var root = factory.Services.GetRequiredService<IHostEnvironment>().ContentRootPath;
+
+        using var defaultDoc = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "appsettings.json")));
+        Assert.That(defaultDoc.RootElement.GetProperty("CombatPatrol").GetProperty("Enabled").GetBoolean(), Is.False);
+
+        using var productionDoc = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "appsettings.Production.json")));
+        Assert.That(productionDoc.RootElement.GetProperty("CombatPatrol").GetProperty("Enabled").GetBoolean(), Is.True);
     }
 
     [Test]
@@ -59,6 +64,7 @@ public sealed class CombatPatrolEndpointTests
             var hive = Guid.NewGuid(); var token = await LoginTestAccount(factory, client, $"weak-{Guid.NewGuid():N}@bee.test"); client.DefaultRequestHeaders.Authorization = new("Bearer", token);
             var player = factory.Services.GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>().ValidateToken(token).PlayerId!.Value;
             await factory.Services.GetRequiredService<IHiveStateRepository>().ExecuteAtomicallyAsync(player, hive, s => s);
+            await PrepareSquadAsync(factory, player, hive, 1, 0, 0);
 
             var preview = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/3/preview", new { guardians = 1, wingrunners = 0, darters = 0 });
             var previewed = await preview.Content.ReadFromJsonAsync<CombatPatrolPreview>();
@@ -88,6 +94,7 @@ public sealed class CombatPatrolEndpointTests
             var hive = Guid.NewGuid(); var token = await LoginTestAccount(factory, client, $"launch-{Guid.NewGuid():N}@bee.test"); client.DefaultRequestHeaders.Authorization = new("Bearer", token);
             var player = factory.Services.GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>().ValidateToken(token).PlayerId!.Value;
             await factory.Services.GetRequiredService<IHiveStateRepository>().ExecuteAtomicallyAsync(player, hive, s => s);
+            await PrepareSquadAsync(factory, player, hive, 0, 0, 18);
 
             var launch = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/launch", new { tier = 2, guardians = 0, wingrunners = 0, darters = 18, expectedRevision = 0, idempotencyKey = "launch" });
             Assert.That(launch.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -136,6 +143,7 @@ public sealed class CombatPatrolEndpointTests
             var hive = Guid.NewGuid(); var token = await LoginTestAccount(factory, client, $"recall-{Guid.NewGuid():N}@bee.test"); client.DefaultRequestHeaders.Authorization = new("Bearer", token);
             var player = factory.Services.GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>().ValidateToken(token).PlayerId!.Value;
             await factory.Services.GetRequiredService<IHiveStateRepository>().ExecuteAtomicallyAsync(player, hive, s => s);
+            await PrepareSquadAsync(factory, player, hive, 18, 0, 0);
 
             var launch = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/launch", new { tier = 2, guardians = 18, wingrunners = 0, darters = 0, expectedRevision = 0, idempotencyKey = "launch" });
             var launched = await launch.Content.ReadFromJsonAsync<CombatPatrolMutationResponse>(ReadOptions);
@@ -159,7 +167,7 @@ public sealed class CombatPatrolEndpointTests
     }
 
     [Test]
-    public async Task Enabled_second_concurrent_launch_needs_a_purchased_slot()
+    public async Task Enabled_purchased_slot_does_not_clone_the_prepared_patrol()
     {
         var root = Path.Combine(Path.GetTempPath(), "patrol-http-" + Guid.NewGuid().ToString("N")); var clock = new MutableClock(new(2026, 7, 25, 9, 0, 0, TimeSpan.Zero));
         await using var factory = CreateFactory(true, root, clock, guardians: 0, wingrunners: 40, darters: 0, guardPostLevel: 4, honey: 10_000, pollen: 10_000);
@@ -169,6 +177,7 @@ public sealed class CombatPatrolEndpointTests
             var hive = Guid.NewGuid(); var token = await LoginTestAccount(factory, client, $"slots-{Guid.NewGuid():N}@bee.test"); client.DefaultRequestHeaders.Authorization = new("Bearer", token);
             var player = factory.Services.GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>().ValidateToken(token).PlayerId!.Value;
             await factory.Services.GetRequiredService<IHiveStateRepository>().ExecuteAtomicallyAsync(player, hive, s => s);
+            await PrepareSquadAsync(factory, player, hive, 0, 20, 0);
 
             var first = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/launch", new { tier = 1, guardians = 0, wingrunners = 20, darters = 0, expectedRevision = 0, idempotencyKey = "launch-a" });
             Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -183,12 +192,43 @@ public sealed class CombatPatrolEndpointTests
             var purchased = await purchase.Content.ReadFromJsonAsync<CombatPatrolMutationResponse>(ReadOptions);
             Assert.That(purchased!.Snapshot.TotalSlots, Is.EqualTo(2));
 
-            var second = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/launch", new { tier = 1, guardians = 0, wingrunners = 10, darters = 0, expectedRevision = purchased.Snapshot.Revision, idempotencyKey = "launch-b2" });
-            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            var secondLaunched = await second.Content.ReadFromJsonAsync<CombatPatrolMutationResponse>(ReadOptions);
-            Assert.That(secondLaunched!.Snapshot.ActiveEncounters, Has.Count.EqualTo(2));
+            // A purchased slot increases future concurrency capacity, but the current
+            // single prepared Caserne patrol is still one object and cannot be cloned into it.
+            var second = await client.PostAsJsonAsync($"/game/v1/hives/{hive:D}/combat/patrol/launch", new { tier = 1, guardians = 0, wingrunners = 20, darters = 0, expectedRevision = purchased.Snapshot.Revision, idempotencyKey = "launch-b2" });
+            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            using (var json = JsonDocument.Parse(await second.Content.ReadAsStringAsync()))
+                Assert.That(json.RootElement.GetProperty("code").GetString(), Is.EqualTo("game.patrol_squad_in_use"));
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    private static async Task PrepareSquadAsync(
+        WebApplicationFactory<Program> factory,
+        Guid player,
+        Guid hive,
+        long guardians,
+        long wingrunners,
+        long darters)
+    {
+        var repository = factory.Services.GetRequiredService<IHiveStateRepository>();
+        await repository.ExecuteAtomicallyAsync(player, hive, state => state with
+        {
+            ChampionBees = new ChampionBeeProgressState(
+                new Dictionary<string, int> { ["striga"] = 1 },
+                new List<string> { "striga" }),
+            SquadReservation = new SquadReservationState(
+                0,
+                CombatSquadReservationService.ComputeCapacity(state.BuildingLevels),
+                new Dictionary<string, long>
+                {
+                    ["guardians"] = guardians,
+                    ["wingrunners"] = wingrunners,
+                    ["darters"] = darters
+                },
+                "patrol-http-reservation-" + Guid.NewGuid().ToString("N"),
+                new(),
+                new List<string> { "striga" })
+        });
     }
 
     private static async Task<string> LoginTestAccount(WebApplicationFactory<Program> factory, HttpClient client, string email)

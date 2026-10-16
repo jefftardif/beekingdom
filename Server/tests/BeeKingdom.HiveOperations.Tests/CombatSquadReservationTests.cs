@@ -11,16 +11,17 @@ public sealed class CombatSquadReservationTests
         var root = Path.Combine(Path.GetTempPath(), "squad-" + Guid.NewGuid()); Directory.CreateDirectory(root);
         var player = Guid.NewGuid(); var hive = Guid.NewGuid();
         var roster = new DoctrineRosterState(0, new() { ["guardians"] = 4, ["wingrunners"] = 3, ["darters"] = 0 }, null, new());
-        var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(player, hive, HiveStateMigrator.CurrentModelVersion, 0, new(), new(), [], new(), DoctrineRoster: roster));
+        var champion = new ChampionBeeProgressState(new Dictionary<string, int> { ["striga"] = 1 }, new List<string> { "striga" });
+        var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(player, hive, HiveStateMigrator.CurrentModelVersion, 0, new(), new(), [], new(), DoctrineRoster: roster, ChampionBees: champion));
         var service = new CombatSquadReservationService(repo);
         var q = new Dictionary<string,long> { ["guardians"] = 2, ["wingrunners"] = 1, ["darters"] = 0 };
-        var first = await service.CommitAsync(new(player, hive, 0, q, "commit-1"), default);
+        var first = await service.CommitAsync(new(player, hive, 0, q, "commit-1", new[] { "striga" }), default);
         Assert.True(first.Succeeded); Assert.NotNull(first.Receipt); Assert.Equal(q, first.Receipt!.Quantities); Assert.Equal(0, first.Receipt.ReservationRevisionBefore); Assert.Equal(1, first.Receipt.ReservationRevisionAfter); Assert.Equal(3, first.Snapshot.Reserved.Values.Sum());
-        var secondCommit = await service.CommitAsync(new(player, hive, 1, q, "commit-2"), default);
+        var secondCommit = await service.CommitAsync(new(player, hive, 1, q, "commit-2", new[] { "striga" }), default);
         Assert.Equal("game.revision_conflict", secondCommit.Code);
-        var replay = await service.CommitAsync(new(player, hive, 0, q, "commit-1"), default);
+        var replay = await service.CommitAsync(new(player, hive, 0, q, "commit-1", new[] { "striga" }), default);
         Assert.True(replay.Succeeded); Assert.NotNull(replay.Receipt); Assert.Equal(first.Receipt!.ReservationId, replay.Receipt!.ReservationId); Assert.Equal(first.Receipt.ReservationRevisionAfter, replay.Receipt.ReservationRevisionAfter); Assert.Equal(first.Receipt.Quantities, replay.Receipt.Quantities); Assert.Equal(first.Snapshot.ReservationId, replay.Snapshot.ReservationId);
-        var conflict = await service.CommitAsync(new(player, hive, 0, new() { ["guardians"] = 1, ["wingrunners"] = 1, ["darters"] = 0 }, "commit-1"), default);
+        var conflict = await service.CommitAsync(new(player, hive, 0, new() { ["guardians"] = 1, ["wingrunners"] = 1, ["darters"] = 0 }, "commit-1", new[] { "striga" }), default);
         Assert.Equal("game.idempotency_conflict", conflict.Code);
         var reconstructed = new CombatSquadReservationService(new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(player, hive, HiveStateMigrator.CurrentModelVersion, 0, new(), new(), [], new(), DoctrineRoster: roster)));
         var persisted = await reconstructed.ReadAsync(player, hive, default);
@@ -33,7 +34,7 @@ public sealed class CombatSquadReservationTests
         Assert.Null(reread.ReservationId); Assert.Equal(0, reread.Reserved.Values.Sum()); Assert.Equal(roster.Counts, reread.Roster);
         var releaseReplay = await afterRelease.ReleaseAsync(new(player, hive, 1, "release-1"), default);
         Assert.True(releaseReplay.Succeeded); Assert.NotNull(releaseReplay.Receipt); Assert.Equal(released.Receipt!.ReservationRevisionAfter, releaseReplay.Receipt!.ReservationRevisionAfter); Assert.Equal(released.Receipt.AcceptedAtUtc, releaseReplay.Receipt.AcceptedAtUtc); Assert.Equal(reread.Reserved, releaseReplay.Snapshot.Reserved);
-        var commitReplayAfterRelease = await afterRelease.CommitAsync(new(player, hive, 0, q, "commit-1"), default);
+        var commitReplayAfterRelease = await afterRelease.CommitAsync(new(player, hive, 0, q, "commit-1", new[] { "striga" }), default);
         Assert.True(commitReplayAfterRelease.Succeeded); Assert.NotNull(commitReplayAfterRelease.Receipt); Assert.Equal(first.Receipt!.ReservationId, commitReplayAfterRelease.Receipt!.ReservationId); Assert.Equal(first.Receipt.Quantities, commitReplayAfterRelease.Receipt.Quantities); Assert.Equal(first.Receipt.ReservationRevisionBefore, commitReplayAfterRelease.Receipt.ReservationRevisionBefore); Assert.Equal(first.Receipt.ReservationRevisionAfter, commitReplayAfterRelease.Receipt.ReservationRevisionAfter); Assert.Equal(first.Receipt.AcceptedAtUtc, commitReplayAfterRelease.Receipt.AcceptedAtUtc); Assert.Equal(first.Receipt.Code, commitReplayAfterRelease.Receipt.Code); Assert.Null(commitReplayAfterRelease.Snapshot.ReservationId);
         var otherPlayer = Guid.NewGuid(); var otherHive = Guid.NewGuid();
         var other = new CombatSquadReservationService(new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(otherPlayer, otherHive, HiveStateMigrator.CurrentModelVersion, 0, new(), new(), [], new(), DoctrineRoster: roster)));
@@ -46,11 +47,12 @@ public sealed class CombatSquadReservationTests
         var root = Path.Combine(Path.GetTempPath(), "squad-" + Guid.NewGuid()); Directory.CreateDirectory(root);
         var p = Guid.NewGuid(); var h = Guid.NewGuid();
         var roster = new DoctrineRosterState(0, new() { ["guardians"] = 1, ["wingrunners"] = 0, ["darters"] = 0 }, null, new());
-        var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(p, h, HiveStateMigrator.CurrentModelVersion, 0, new(), new(), [], new(), DoctrineRoster: roster));
+        var champion = new ChampionBeeProgressState(new Dictionary<string, int> { ["striga"] = 1 }, new List<string> { "striga" });
+        var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(p, h, HiveStateMigrator.CurrentModelVersion, 0, new(), new(), [], new(), DoctrineRoster: roster, ChampionBees: champion));
         var service = new CombatSquadReservationService(repo);
-        var tooMany = await service.CommitAsync(new(p, h, 0, new() { ["guardians"] = 2, ["wingrunners"] = 0, ["darters"] = 0 }, "k"), default);
+        var tooMany = await service.CommitAsync(new(p, h, 0, new() { ["guardians"] = 2, ["wingrunners"] = 0, ["darters"] = 0 }, "k", new[] { "striga" }), default);
         Assert.Equal("game.squad_over_reserved", tooMany.Code);
-        var overCapacity = await service.CommitAsync(new(p, h, 0, new() { ["guardians"] = 13, ["wingrunners"] = 0, ["darters"] = 0 }, "capacity"), default);
+        var overCapacity = await service.CommitAsync(new(p, h, 0, new() { ["guardians"] = 13, ["wingrunners"] = 0, ["darters"] = 0 }, "capacity", new[] { "striga" }), default);
         Assert.Equal("game.invalid_request", overCapacity.Code);
     }
 
@@ -60,14 +62,15 @@ public sealed class CombatSquadReservationTests
         var root = Path.Combine(Path.GetTempPath(), "squad-" + Guid.NewGuid()); Directory.CreateDirectory(root);
         var p = Guid.NewGuid(); var h = Guid.NewGuid();
         var roster = new DoctrineRosterState(0, new() { ["guardians"] = 20, ["wingrunners"] = 0, ["darters"] = 0 }, null, new());
+        var champion = new ChampionBeeProgressState(new Dictionary<string, int> { ["striga"] = 1 }, new List<string> { "striga" });
         var buildingLevels = new Dictionary<string, int> { ["guard_post"] = 2 };
-        var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(p, h, HiveStateMigrator.CurrentModelVersion, 0, new(), buildingLevels, [], new(), DoctrineRoster: roster));
+        var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(p, h, HiveStateMigrator.CurrentModelVersion, 0, new(), buildingLevels, [], new(), DoctrineRoster: roster, ChampionBees: champion));
         var service = new CombatSquadReservationService(repo);
 
         Assert.Equal(12 + 2 * CombatSquadReservationService.CapacityPerGuardPostLevel, CombatSquadReservationService.ComputeCapacity(buildingLevels));
         Assert.Equal(12, CombatSquadReservationService.ComputeCapacity(new Dictionary<string, int>()));
 
-        var withinGrownCapacity = await service.CommitAsync(new(p, h, 0, new() { ["guardians"] = 20, ["wingrunners"] = 0, ["darters"] = 0 }, "k"), default);
+        var withinGrownCapacity = await service.CommitAsync(new(p, h, 0, new() { ["guardians"] = 20, ["wingrunners"] = 0, ["darters"] = 0 }, "k", new[] { "striga" }), default);
         Assert.True(withinGrownCapacity.Succeeded, withinGrownCapacity.Code);
         Assert.Equal(20, withinGrownCapacity.Snapshot.Capacity);
     }

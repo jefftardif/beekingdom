@@ -598,6 +598,87 @@ app.MapGet("/game/v1/hives/{hiveId}/hive-stock", async (HttpContext context, str
     catch (InvalidDataException) { return GameError(503, "game.unavailable", "game.error.unavailable"); }
 });
 
+app.MapGet("/game/v1/hives/{hiveId}/bank/royal-reserve", async (
+    HttpContext context,
+    string hiveId,
+    AuthenticationManager authentication,
+    IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<HiveOfflineProductionOptions> storage,
+    CancellationToken ct) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+
+    try
+    {
+        RoyalReserveReadSnapshot? snapshot =
+            await new RoyalReserveService(repository, clock, storage.Value)
+                .ReadAsync(auth.PlayerId!.Value, parsed, ct);
+        return snapshot is null
+            ? GameError(404, "game.hive_not_found", "game.error.not_found")
+            : Results.Ok(snapshot);
+    }
+    catch (InvalidDataException)
+    {
+        return GameError(503, "game.unavailable", "game.error.unavailable");
+    }
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/bank/royal-reserve/deposit", async (
+    HttpContext context,
+    string hiveId,
+    AuthenticationManager authentication,
+    IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<HiveOfflineProductionOptions> storage,
+    RoyalReserveTransferRequest request,
+    CancellationToken ct) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+
+    RoyalReserveCommandResult result =
+        await new RoyalReserveService(repository, clock, storage.Value)
+            .DepositAsync(auth.PlayerId!.Value, parsed, request, ct);
+
+    if (result.Succeeded) return Results.Ok(result.Snapshot);
+    int status = result.Code == "game.invalid_request" ? 400
+        : result.Code == "game.hive_not_found" ? 404
+        : 409;
+    return GameError(status, result.Code, "game.error.conflict");
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/bank/royal-reserve/withdraw", async (
+    HttpContext context,
+    string hiveId,
+    AuthenticationManager authentication,
+    IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<HiveOfflineProductionOptions> storage,
+    RoyalReserveTransferRequest request,
+    CancellationToken ct) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid) return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsed) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+
+    RoyalReserveCommandResult result =
+        await new RoyalReserveService(repository, clock, storage.Value)
+            .WithdrawAsync(auth.PlayerId!.Value, parsed, request, ct);
+
+    if (result.Succeeded) return Results.Ok(result.Snapshot);
+    int status = result.Code == "game.invalid_request" ? 400
+        : result.Code == "game.hive_not_found" ? 404
+        : 409;
+    return GameError(status, result.Code, "game.error.conflict");
+});
+
 app.MapGet("/game/v1/hives/{hiveId}/daily-round", async (HttpContext context,string hiveId,AuthenticationManager authentication,IHiveStateRepository repository,BeeKingdom.HiveOperations.IServerClock clock,IOptions<HiveDailyRoundOptions> configured,CancellationToken ct)=>
 {
  if(!configured.Value.Enabled)return GameError(503,"game.unavailable","game.error.unavailable");var auth=AuthenticateGameRequest(context,authentication);if(!auth.IsValid)return GameError(401,"game.session_required","game.error.session_required");if(!TryParseGameResourceId(hiveId,out Guid hive))return GameError(400,"game.invalid_request","game.error.invalid_request");var state=await repository.ReadAsync(auth.PlayerId!.Value,hive,ct);if(state is null)return GameError(404,"game.hive_not_found","game.error.not_found");var now=clock.UtcNow;var day=new DateTimeOffset(now.UtcDateTime.Date,TimeSpan.Zero);var round=state.DailyRound is { } r&&r.DayUtc==day?r:new(day,false,false,false,null);var facts=new Dictionary<string,bool>{{"collection_received",round.CollectionReceived},{"operation_launched",round.OperationLaunched},{"snapshot_read",round.SnapshotRead}};return Results.Ok(new HiveDailyRoundSnapshot(state.PlayerId,state.HiveId,"living-hive-daily-round-v1",day,day.AddDays(1),now,state.Revision,facts,facts.Values.Count(x=>x),120,60, facts.Values.All(x=>x)&&round.ClaimedAtUtc is null,round.ClaimedAtUtc));
@@ -1049,7 +1130,7 @@ app.MapPost("/game/v1/hives/{hiveId}/combat/squad-reservation/commit", async (Ht
     if (!options.Value.Enabled) return GameError(StatusCodes.Status503ServiceUnavailable, "game.unavailable", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication); if (!auth.IsValid) return GameError(StatusCodes.Status401Unauthorized, "game.session_required", "game.error.session_required");
     if (request is null || !TryParseGameResourceId(hiveId, out Guid id) || request.ExpectedRevision < 0 || request.ExpectedRevision == long.MaxValue || string.IsNullOrWhiteSpace(request.IdempotencyKey) || request.IdempotencyKey.Length > 256) return GameError(StatusCodes.Status400BadRequest, "game.invalid_request", "game.error.invalid_request");
-    SquadReservationResult result = await service.CommitAsync(new(auth.PlayerId!.Value, id, request.ExpectedRevision, request.Quantities ?? new(), request.IdempotencyKey), ct);
+    SquadReservationResult result = await service.CommitAsync(new(auth.PlayerId!.Value, id, request.ExpectedRevision, request.Quantities ?? new(), request.IdempotencyKey, request.ChampionBeeIds ?? new List<string>()), ct);
     return result.Succeeded && result.Receipt is not null ? Results.Ok(new SquadReservationResponse(result.Receipt, result.Snapshot)) : GameError(StatusCodes.Status409Conflict, result.Code, "game.error.squad_reservation_conflict");
 });
 
@@ -3813,7 +3894,7 @@ public sealed record WorkshopBatchQualificationHttpResponse(string PreviousStep,
 public sealed record StrategicPathHttpRequest(string PathId, long ExpectedRevision, string IdempotencyKey);
 public sealed record DoctrineRecruitmentStartRequest(string Family, long ExpectedRevision, string IdempotencyKey);
 public sealed record DoctrineRecruitmentClaimRequest(long ExpectedRevision, string IdempotencyKey);
-public sealed record SquadReservationHttpRequest(long ExpectedRevision, Dictionary<string,long>? Quantities, string IdempotencyKey);
+public sealed record SquadReservationHttpRequest(long ExpectedRevision, Dictionary<string,long>? Quantities, string IdempotencyKey, List<string>? ChampionBeeIds = null);
 public sealed record SquadReservationReleaseHttpRequest(long ExpectedRevision, string IdempotencyKey);
 public sealed record HivePerimeterLaunchHttpRequest(string SignalKey, string SignalInstanceId, string ReservationId, long ExpectedRevision, string IdempotencyKey);
 public sealed record HivePerimeterMutationHttpRequest(long ExpectedRevision, string IdempotencyKey);

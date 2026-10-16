@@ -2,7 +2,7 @@ namespace BeeKingdom.HiveOperations;
 
 public static class HiveStateMigrator
 {
-    public const int CurrentModelVersion = 12;
+    public const int CurrentModelVersion = 13;
 
     public static PlayerHiveState ToCurrent(PlayerHiveState state)
     {
@@ -23,6 +23,21 @@ public static class HiveStateMigrator
             throw new InvalidDataException("Invalid SpeedUp inventory state.");
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
+
+        if (state.RoyalReserve is { } royalReserve)
+        {
+            string[] allowed = ["honey", "pollen", "wax"];
+            if (royalReserve.Revision < 0 || royalReserve.Revision > state.Revision ||
+                royalReserve.Amounts is null || royalReserve.Receipts is null ||
+                royalReserve.Amounts.Count != 3 ||
+                !royalReserve.Amounts.Keys.OrderBy(x => x, StringComparer.Ordinal)
+                    .SequenceEqual(allowed.OrderBy(x => x, StringComparer.Ordinal)) ||
+                royalReserve.Amounts.Values.Any(v => v < 0 || v > 1_000_000_000_000L) ||
+                royalReserve.Receipts.Count > 4096 ||
+                royalReserve.Receipts.Any(x => string.IsNullOrWhiteSpace(x.Key) || x.Key.Length > 256 ||
+                    x.Value is null || string.IsNullOrWhiteSpace(x.Value.PayloadHash)))
+                throw new InvalidDataException("Invalid royal reserve state.");
+        }
 
         if (state.BroodVitality is { } vitality)
         {
@@ -71,8 +86,25 @@ public static class HiveStateMigrator
             if (reservation.Capacity <= 0 || reservation.Capacity > CombatSquadReservationService.MaxCapacity || reservation.Revision < 0 || reservation.Revision > state.Revision || reservation.Reserved is null || reservation.Reserved.Count != 3 || reservation.Reserved.Keys.Any(k => !CombatDoctrineService.Families.Contains(k)) || reservation.Reserved.Values.Any(v => v < 0 || v > 1_000_000) || SafeSum(reservation.Reserved.Values) > reservation.Capacity || (reservation.ReservationId is null && reservation.Reserved.Values.Any(v => v != 0)) || (reservation.ReservationId is not null && (string.IsNullOrWhiteSpace(reservation.ReservationId) || SafeSum(reservation.Reserved.Values) <= 0)) || reservation.Receipts is null || reservation.Receipts.Count > 4096 || reservation.Receipts.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value.PayloadHash)))
                 throw new InvalidDataException("Invalid squad reservation state");
             var rosterCounts = state.DoctrineRoster?.Counts ?? new Dictionary<string, long>();
-            if (reservation.Reserved.Any(x => x.Value > rosterCounts.GetValueOrDefault(x.Key)))
-                throw new InvalidDataException("Squad reservation exceeds doctrine roster.");
+            IReadOnlyList<CombatPatrolRecoveringBatch> recovering =
+                state.CombatPatrol?.Recovering ?? new List<CombatPatrolRecoveringBatch>();
+            if (reservation.Reserved.Any(x =>
+            {
+                long recoveringCount = SafeSum(
+                    recovering
+                        .Where(batch =>
+                            string.Equals(batch.Family, x.Key, StringComparison.Ordinal) &&
+                            batch.Count > 0)
+                        .Select(batch => batch.Count));
+                long accountedCount = SafeSum(
+                    new[]
+                    {
+                        rosterCounts.GetValueOrDefault(x.Key),
+                        recoveringCount
+                    });
+                return x.Value > accountedCount;
+            }))
+                throw new InvalidDataException("Squad reservation exceeds doctrine roster plus recovering troops.");
         }
         if (state.HivePerimeterSortie is { } sortie)
         {
@@ -197,7 +229,23 @@ public static class HiveStateMigrator
             TroopTierProgress = state.TroopTierProgress is { } troopTiers
                 ? troopTiers with { Tiers = troopTiers.Tiers ?? new(StringComparer.Ordinal) }
                 : new(new Dictionary<string, int>(StringComparer.Ordinal)),
-            Vip = state.Vip is { } vip ? vip with { LifetimePoints = Math.Max(0, vip.LifetimePoints) } : new(0)
+            Vip = state.Vip is { } vip ? vip with { LifetimePoints = Math.Max(0, vip.LifetimePoints) } : new(0),
+            RoyalReserve = state.RoyalReserve is { } reserveState
+                ? reserveState with
+                {
+                    Amounts = reserveState.Amounts ?? new Dictionary<string, long>(StringComparer.Ordinal)
+                    {
+                        ["honey"] = 0, ["pollen"] = 0, ["wax"] = 0
+                    },
+                    Receipts = reserveState.Receipts ?? new Dictionary<string, IdempotencyReceipt>(StringComparer.Ordinal)
+                }
+                : new RoyalReserveState(
+                    0,
+                    new Dictionary<string, long>(StringComparer.Ordinal)
+                    {
+                        ["honey"] = 0, ["pollen"] = 0, ["wax"] = 0
+                    },
+                    new Dictionary<string, IdempotencyReceipt>(StringComparer.Ordinal))
         };
     }
 
