@@ -4,6 +4,7 @@
     { "key": "locale.display_name", "value": "English (United States)" },
     { "key": "common.close", "value": "Close" },
     { "key": "common.continue", "value": "Continue" },
+    { "key": "common.skip", "value": "Skip" },
     { "key": "common.back", "value": "Back" },
     { "key": "common.confirm", "value": "Confirm" },
     { "key": "common.cancel", "value": "Cancel" },

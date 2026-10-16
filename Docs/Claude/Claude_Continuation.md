@@ -40,6 +40,35 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Tutoriel royal compact approuve (2026-10-16)
+
+La fenetre FTUE utilise la composition premium approuvee par Jeff : barre compacte
+centree en paysage (32,2 % de la hauteur a 1920x1080), fond opaque, portrait existant
+sans deformation, ornements or/bleu extraits de la maquette et titre Cinzel.
+Le palais et la navigation basse restent visibles. Portrait : safe area et defilement
+pour les textes longs. Les voix et les callbacks Continuer/Fermer ne changent pas.
+Passer reste une commande QA Editor uniquement, maintenant localisee FR/EN.
+
+Fichiers : TutorialDialoguePresenter.cs, TutorialPremiumSkin.cs,
+Resources/TutorialPremium (atlas 352x256 et copie du Cinzel deja present),
+TutorialPremiumDialogueTests.cs, catalogues FR/EN (common.skip).
+Correction visuelle verifiee : les scaledBackgrounds du skin Unity ne doivent jamais
+recouvrir les boutons dores. L'etat GUI complet est restaure apres le dessin.
+
+Preuves : 34 tests Editor cibles passes, 0 echec (presentation, moteur FTUE,
+resolutions, ressources et fonds des boutons).
+C:/BeeKingdom/DEV/BK-Studio/tutorial-premium-20261016/tutorial-test-results-final.json.
+Controle visuel apres recompilation, Play Mode 1920x1080 dans la scene canonique
+Environment2D5D_HiveMap_Test : tutorial-final.png et tutorial-final-review.jpg.
+Etape active : "Touche le Palais Royal pour l'ouvrir." ; le bouton Fermer est normal
+pour cette etape Require. Aucun reset de progression demande pour la capture.
+Pas de build Windows, de push Git ni de deploiement serveur.
+
+Suite : restaurer Alliance sur le modele Activites v4. La refonte existe dans la
+sauvegarde 55264b3b. Ne pas restaurer le grand presenter en bloc : il contient aussi
+des modifications hors perimetre. Sauvegarde du code courant avant intervention :
+C:/BeeKingdom/DEV/BK-Studio/alliance-recovery-20261016/presenter-before.cs.
+
 ## Jalon courant — M080-OC suite : épuisement des tuiles serveur + marche élastique champion + déploiement (2026-09-12)
 
 Suite du rebuild M080 (collecte World Map). Commit `fd51fe6` poussé sur `origin/main` et déployé via `origin/main:deploy`.

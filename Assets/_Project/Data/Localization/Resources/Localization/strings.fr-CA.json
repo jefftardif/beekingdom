@@ -4,6 +4,7 @@
     { "key": "locale.display_name", "value": "Français (Canada)" },
     { "key": "common.close", "value": "Fermer" },
     { "key": "common.continue", "value": "Continuer" },
+    { "key": "common.skip", "value": "Passer" },
     { "key": "common.back", "value": "Retour" },
     { "key": "common.confirm", "value": "Confirmer" },
     { "key": "common.cancel", "value": "Annuler" },
