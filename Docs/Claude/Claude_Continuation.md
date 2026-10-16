@@ -40,6 +40,25 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Alliance Activites v4 restauree (2026-10-16)
+
+Retour a l'ancienne UI confirme. Refonte retrouvee dans 55264b3b et recuperee par
+membres syntaxiques, sans ecraser les autres chantiers du grand presenter.
+Sept onglets Alpha retablis, profil membre inclus. Inspection reelle : correction du
+titre du profil superpose a Retour, des compteurs inconnus -1 et du bouton d'amelioration
+qui restait au-dessus du profil. Retour profil -> Alliance -> ruche verifie.
+
+Preuves : 107 tests cibles Alliance + tutoriel passent, 0 echec ; comparaison finale
+3654 membres preexistants preserves et 0 changement hors perimetre.
+Captures : C:/BeeKingdom/DEV/BK-Studio/alliance-recovery-20261016/.
+Rapport : Docs/AI/Missions/Alliance-Activities-Recovery-20261016.md.
+Un ancien test de fondation Colony echoue independamment (fixture de permission
+Leader contradictoire) ; il est documente, pas modifie ni ignore silencieusement.
+
+Controle visuel avec donnees QA explicitement fictives, sans appels serveur. Fixture
+retiree, controleur precedent restaure, Play Mode arrete, scene canonique conservee.
+Les mutations avec un compte officiel restent a revalider. Aucun push ni deploiement.
+
 ## Jalon courant - Tutoriel royal compact approuve (2026-10-16)
 
 La fenetre FTUE utilise la composition premium approuvee par Jeff : barre compacte

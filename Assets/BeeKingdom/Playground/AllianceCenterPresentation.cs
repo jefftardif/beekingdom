@@ -461,6 +461,7 @@ namespace BeeKingdom.Playground
         void Demote(Guid targetPlayerId);
         void TransferLeadership(Guid targetPlayerId);
         void Dissolve();
+        void UpdateProfile(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode);
 
         // M045-CL: Alliance Help.
         IReadOnlyList<AllianceHelpRowModel> HelpRequests { get; }
@@ -513,6 +514,7 @@ namespace BeeKingdom.Playground
         public void Demote(Guid targetPlayerId) { }
         public void TransferLeadership(Guid targetPlayerId) { }
         public void Dissolve() { }
+        public void UpdateProfile(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode) { }
 
         public IReadOnlyList<AllianceHelpRowModel> HelpRequests => Array.Empty<AllianceHelpRowModel>();
         public void RefreshHelp() { }
@@ -612,6 +614,8 @@ namespace BeeKingdom.Playground
         public void Demote(Guid targetPlayerId) => RunFireAndForget(() => DemoteCoreAsync(targetPlayerId));
         public void TransferLeadership(Guid targetPlayerId) => RunFireAndForget(() => TransferLeadershipCoreAsync(targetPlayerId));
         public void Dissolve() => RunFireAndForget(() => DissolveCoreAsync());
+        public void UpdateProfile(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode)
+            => RunFireAndForget(() => UpdateProfileCoreAsync(description, language, emblemKey, joinMode));
 
         // M045-CL: Alliance Help.
         public IReadOnlyList<AllianceHelpRowModel> HelpRequests => helpRows;
@@ -676,6 +680,8 @@ namespace BeeKingdom.Playground
         public Task JoinOpenForProofAsync(Guid allianceId) => JoinOpenCoreAsync(allianceId);
         public Task LeaveForProofAsync() => LeaveCoreAsync();
         public Task DissolveForProofAsync() => DissolveCoreAsync();
+        public Task UpdateProfileForProofAsync(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode)
+            => UpdateProfileCoreAsync(description, language, emblemKey, joinMode);
         public Task SearchPlayersForInviteForProofAsync(string query) => SearchPlayersForInviteCoreAsync(query);
         public Task InvitePlayerForProofAsync(Guid playerId) => InvitePlayerCoreAsync(playerId);
         public Task RefreshHelpForProofAsync() => RefreshHelpCoreAsync();
@@ -1449,6 +1455,31 @@ namespace BeeKingdom.Playground
             try
             {
                 await client.TransferLeadershipAsync(targetPlayerId, lifetime.Token);
+                if (disposed) return;
+                busy = false;
+                await RefreshCoreAsync(false);
+                return;
+            }
+            catch (HivePerimeterClientException error) { if (!disposed) Model = AllianceCenterPresentation.Error(Model, StableError(error)); }
+            catch (Exception) { if (!disposed) Model = AllianceCenterPresentation.Error(Model, "unexpected"); }
+            busy = false;
+        }
+
+        private async Task UpdateProfileCoreAsync(string description, string language, string emblemKey, RemoteAllianceJoinMode? joinMode)
+        {
+            if (busy || disposed || Model?.Overview == null) return;
+            busy = true;
+            Model = AllianceCenterPresentation.Mutating(Model, "update-profile");
+            try
+            {
+                AllianceOverviewModel overview = Model.Overview;
+                await client.UpdateProfileAsync(
+                    description ?? overview.Description,
+                    string.IsNullOrWhiteSpace(language) ? overview.Language : language,
+                    emblemKey ?? overview.EmblemKey,
+                    joinMode ?? overview.JoinMode,
+                    overview.Revision,
+                    lifetime.Token);
                 if (disposed) return;
                 busy = false;
                 await RefreshCoreAsync(false);
