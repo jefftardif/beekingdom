@@ -28,6 +28,7 @@
     {"key":"startup.sync.retry","value":"Réessayer"},
     {"key":"startup.sync.session","value":"Préparation de la connexion sécurisée…"},
     {"key":"startup.sync.unavailable","value":"Indisponible :"},
+    { "key": "formation_readiness.reservation.champion_required", "value": "Championne requise" },
     { "key": "nursery.status.retry_hint", "value": "Données indisponibles. Utilise Actualiser pour réessayer." },
     { "key": "nursery.status.sync_failed", "value": "Synchronisation impossible" },
     { "key": "locale.display_name", "value": "Français (Canada)" },

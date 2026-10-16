@@ -37,6 +37,7 @@ namespace BeeKingdom.Playground
             long reservedWingrunners,
             long reservedDarters,
             string reservationId,
+            IReadOnlyList<string> championBeeIds,
             bool protectedOutboxAvailable,
             bool readOnlyOffline,
             DateTimeOffset cachedAtUtc,
@@ -61,6 +62,10 @@ namespace BeeKingdom.Playground
             ReservedWingrunners = Math.Max(0L, reservedWingrunners);
             ReservedDarters = Math.Max(0L, reservedDarters);
             ReservationId = reservationId ?? string.Empty;
+            ChampionBeeIds = (championBeeIds ?? Array.Empty<string>())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
             ProtectedOutboxAvailable = protectedOutboxAvailable;
             ReadOnlyOffline = readOnlyOffline;
             CachedAtUtc = cachedAtUtc;
@@ -86,6 +91,7 @@ namespace BeeKingdom.Playground
         public long ReservedWingrunners { get; }
         public long ReservedDarters { get; }
         public string ReservationId { get; }
+        public IReadOnlyList<string> ChampionBeeIds { get; }
         public bool ProtectedOutboxAvailable { get; }
         public bool ReadOnlyOffline { get; }
         public DateTimeOffset CachedAtUtc { get; }
@@ -129,9 +135,9 @@ namespace BeeKingdom.Playground
                 composition.IsEmpty ||
                 composition.Total > Capacity)
                 return false;
-            return composition.Guardians <= RosterGuardians &&
-                composition.Wingrunners <= RosterWingrunners &&
-                composition.Darters <= RosterDarters;
+            return composition.Guardians <= AvailableGuardians &&
+                composition.Wingrunners <= AvailableWingrunners &&
+                composition.Darters <= AvailableDarters;
         }
 
         public HiveSquadCompositionSnapshot ReservedComposition()
@@ -206,6 +212,7 @@ namespace BeeKingdom.Playground
                 Count(snapshot == null ? null : snapshot.Reserved, "wingrunners"),
                 Count(snapshot == null ? null : snapshot.Reserved, "darters"),
                 snapshot == null ? string.Empty : snapshot.ReservationId,
+                snapshot?.ChampionBeeIds ?? new List<string>(),
                 protectedOutboxAvailable,
                 readOnlyOffline,
                 cachedAtUtc,
@@ -232,7 +239,7 @@ namespace BeeKingdom.Playground
         bool IsConfigured { get; }
         bool IsBusy { get; }
         void Refresh();
-        void Commit(int guardians, int wingrunners, int darters);
+        void Commit(int guardians, int wingrunners, int darters, string championBeeId);
         void Release();
         void Retry();
     }
@@ -247,7 +254,7 @@ namespace BeeKingdom.Playground
         public bool IsConfigured => false;
         public bool IsBusy => false;
         public void Refresh() { }
-        public void Commit(int guardians, int wingrunners, int darters) { }
+        public void Commit(int guardians, int wingrunners, int darters, string championBeeId) { }
         public void Release() { }
         public void Retry() { }
     }
@@ -323,12 +330,20 @@ namespace BeeKingdom.Playground
         public void Commit(
             int guardians,
             int wingrunners,
-            int darters)
+            int darters,
+            string championBeeId)
         {
             CommitInsideLifetime(
                 guardians,
                 wingrunners,
-                darters);
+                darters,
+                championBeeId);
+        }
+
+        // Compatibility overload for older proof harnesses. Runtime UI always supplies a champion.
+        public void Commit(int guardians, int wingrunners, int darters)
+        {
+            CommitInsideLifetime(guardians, wingrunners, darters, string.Empty);
         }
 
         public void Release()
@@ -349,12 +364,14 @@ namespace BeeKingdom.Playground
         public Task CommitForProofAsync(
             int guardians,
             int wingrunners,
-            int darters)
+            int darters,
+            string championBeeId = "")
         {
             return CommitCoreAsync(
                 guardians,
                 wingrunners,
-                darters);
+                darters,
+                championBeeId);
         }
 
         public Task ReleaseForProofAsync()
@@ -398,12 +415,14 @@ namespace BeeKingdom.Playground
         private async void CommitInsideLifetime(
             int guardians,
             int wingrunners,
-            int darters)
+            int darters,
+            string championBeeId)
         {
             await CommitCoreAsync(
                 guardians,
                 wingrunners,
-                darters);
+                darters,
+                championBeeId);
         }
 
         private async void ReleaseInsideLifetime()
@@ -484,7 +503,8 @@ namespace BeeKingdom.Playground
         private async Task CommitCoreAsync(
             int guardians,
             int wingrunners,
-            int darters)
+            int darters,
+            string championBeeId)
         {
             HiveSquadCompositionSnapshot composition =
                 new HiveSquadCompositionSnapshot(
@@ -495,8 +515,10 @@ namespace BeeKingdom.Playground
                     wingrunners,
                     darters);
             HiveSquadReservationScreenModel current = Model;
+            string champion = (championBeeId ?? string.Empty).Trim();
             if (busy || disposed || snapshot == null ||
-                current == null || !current.CanCommit(composition))
+                current == null || !current.CanCommit(composition) ||
+                string.IsNullOrWhiteSpace(champion))
                 return;
 
             busy = true;
@@ -506,7 +528,8 @@ namespace BeeKingdom.Playground
                 composition.Guardians,
                 composition.Wingrunners,
                 composition.Darters,
-                string.Empty);
+                string.Empty,
+                champion);
             try
             {
                 PendingDescriptor existing =
@@ -524,7 +547,7 @@ namespace BeeKingdom.Playground
                 pending = NewPending(
                     HivePerimeterSortieClient.ReservationCommitPath(
                         hiveId),
-                    CommitToken(composition),
+                    CommitToken(composition, champion),
                     current.ReservationRevision,
                     keySource.Create("reserve"));
                 await outbox.SavePreparedAsync(
@@ -544,6 +567,7 @@ namespace BeeKingdom.Playground
                         hiveId,
                         pending.ExpectedRevision,
                         Quantities(descriptor),
+                        new[] { descriptor.ChampionBeeId },
                         pending.IdempotencyKey,
                         lifetime.Token);
                 if (disposed) return;
@@ -721,6 +745,7 @@ namespace BeeKingdom.Playground
                             hiveId,
                             pending.ExpectedRevision,
                             Quantities(descriptor),
+                            new[] { descriptor.ChampionBeeId },
                             pending.IdempotencyKey,
                             lifetime.Token);
                 }
@@ -820,6 +845,7 @@ namespace BeeKingdom.Playground
                     0,
                     0,
                     string.Empty,
+                    string.Empty,
                     entries.Last());
             PendingGameMutation pending = entries[0];
             if (string.Equals(
@@ -831,13 +857,15 @@ namespace BeeKingdom.Playground
                     pending.PayloadToken,
                     out int guardians,
                     out int wingrunners,
-                    out int darters))
+                    out int darters,
+                    out string championBeeId))
                 return new PendingDescriptor(
                     "commit",
                     guardians,
                     wingrunners,
                     darters,
                     string.Empty,
+                    championBeeId,
                     pending);
             if (string.Equals(
                     pending.Path,
@@ -853,12 +881,14 @@ namespace BeeKingdom.Playground
                     0,
                     0,
                     reservationId,
+                    string.Empty,
                     pending);
             return new PendingDescriptor(
                 "unknown",
                 0,
                 0,
                 0,
+                string.Empty,
                 string.Empty,
                 pending);
         }
@@ -923,41 +953,47 @@ namespace BeeKingdom.Playground
         }
 
         private static string CommitToken(
-            HiveSquadCompositionSnapshot composition)
+            HiveSquadCompositionSnapshot composition,
+            string championBeeId)
         {
             return "commit.g" +
-                composition.Guardians.ToString(
-                    CultureInfo.InvariantCulture) +
+                composition.Guardians.ToString(CultureInfo.InvariantCulture) +
                 ".w" +
-                composition.Wingrunners.ToString(
-                    CultureInfo.InvariantCulture) +
+                composition.Wingrunners.ToString(CultureInfo.InvariantCulture) +
                 ".d" +
-                composition.Darters.ToString(
-                    CultureInfo.InvariantCulture);
+                composition.Darters.ToString(CultureInfo.InvariantCulture) +
+                ".c" + (championBeeId ?? string.Empty).Trim();
         }
 
         private static bool TryParseCommitToken(
             string token,
             out int guardians,
             out int wingrunners,
-            out int darters)
+            out int darters,
+            out string championBeeId)
         {
             guardians = 0;
             wingrunners = 0;
             darters = 0;
+            championBeeId = string.Empty;
             string[] parts =
                 string.IsNullOrWhiteSpace(token)
                     ? Array.Empty<string>()
                     : token.Split('.');
-            if (parts.Length != 4 ||
+            if (parts.Length != 5 ||
                 !string.Equals(parts[0], "commit", StringComparison.Ordinal) ||
                 !TryParseQuantity(parts[1], 'g', out guardians) ||
                 !TryParseQuantity(parts[2], 'w', out wingrunners) ||
-                !TryParseQuantity(parts[3], 'd', out darters))
+                !TryParseQuantity(parts[3], 'd', out darters) ||
+                string.IsNullOrWhiteSpace(parts[4]) ||
+                parts[4][0] != 'c')
                 return false;
+            championBeeId = parts[4].Substring(1);
             int total = guardians + wingrunners + darters;
             return total > 0 &&
-                total <= HiveSquadCompositionPlanner.InitialCapacity;
+                total <= 1000 &&
+                !string.IsNullOrWhiteSpace(championBeeId) &&
+                championBeeId.Length <= 64;
         }
 
         private static bool TryParseQuantity(
@@ -975,7 +1011,7 @@ namespace BeeKingdom.Playground
                     CultureInfo.InvariantCulture,
                     out value) &&
                 value >= 0 &&
-                value <= HiveSquadCompositionPlanner.InitialCapacity;
+                value <= 1000;
         }
 
         private static string ReleaseToken(string reservationId)
@@ -1077,6 +1113,7 @@ namespace BeeKingdom.Playground
                 int wingrunners,
                 int darters,
                 string reservationId,
+                string championBeeId = "",
                 PendingGameMutation pending = null)
             {
                 Kind = kind ?? string.Empty;
@@ -1084,6 +1121,7 @@ namespace BeeKingdom.Playground
                 Wingrunners = Math.Max(0, wingrunners);
                 Darters = Math.Max(0, darters);
                 ReservationId = reservationId ?? string.Empty;
+                ChampionBeeId = (championBeeId ?? string.Empty).Trim();
                 Pending = pending;
             }
 
@@ -1092,6 +1130,7 @@ namespace BeeKingdom.Playground
             public int Wingrunners { get; }
             public int Darters { get; }
             public string ReservationId { get; }
+            public string ChampionBeeId { get; }
             public PendingGameMutation Pending { get; }
         }
     }

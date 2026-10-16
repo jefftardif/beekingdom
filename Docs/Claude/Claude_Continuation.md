@@ -40,6 +40,27 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Caserne Activites premium restauree (2026-10-16)
+
+La regression Caserne renvoyait a l'ancien ecran. Refonte des deux onglets
+Entrainement/Armees retrouvee dans la sauvegarde 55264b3b. Restauration ciblee
+de 22 membres (3714 intacts, aucune suppression ni changement hors sujet) avec
+les contrats client de reservation et championne, reprises des commandes protegees,
+raccourci Armee vers le bon onglet et garde des ecrans indisponibles.
+Defilement mobile et bouton Carte du Monde accessibles.
+
+150 tests EditMode cibles PASS, 0 echec. Unity 1920x1080, session officielle :
+Caserne niveau 6, 40 Gardiennes, 54 Voltigeuses, 16 Lanceuses; patrouille
+preservee : 32 Gardiennes, 4 Voltigeuses, championne Zephyra. Clic reel et
+retour vers l'onglet Armee verifies; entree monde liberee a la fermeture.
+Aucun recrutement, reservation, release, soin, combat ou debit effectue.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/barrack-recovery-20261016/.
+Rapport : Docs/AI/Missions/Barrack-Activities-Recovery-20261016.md.
+**Risque a suivre** : contrat/configuration serveur dans Git derriere le serveur
+actif qui retourne une reservation championne; audit de parite avant prochain
+deploiement serveur. Aucun serveur modifie maintenant.
+Livraison locale sur main, sans push/build/deploiement. Unity Play Mode Caserne ouverte.
+
 ## Jalon courant - Infirmerie fonctionnelle restauree (2026-10-16)
 
 Le clic INFIRMARY ouvrait le vieux panneau futur alors que le Centre de convalescence

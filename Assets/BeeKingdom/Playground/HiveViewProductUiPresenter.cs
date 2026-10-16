@@ -3711,6 +3711,7 @@ private static string courierToast = string.Empty;
         public static void OpenBarrackOverlayForExternalHost()
         {
             EnsureLocalPreviewQueueJournalLoaded();
+            barrackSelectedTab = "training";
             barrackOverlayOpenForExternalHost = true;
             try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("guard_post"); } catch {}
             // Without this, the panel shows whatever the controller last fetched (possibly
@@ -3777,57 +3778,47 @@ private static string courierToast = string.Empty;
         private static void DrawBarrackBanner(float height, bool compact)
         {
             Rect banner = new Rect(0f, 0f, Screen.width, height);
-            Texture2D texture = Resources.Load<Texture2D>("PremiumBeeReference/BuildingBanners/guard_post");
-            if (texture != null) GUI.DrawTexture(banner, texture, ScaleMode.ScaleAndCrop, true);
-            else DrawPremiumPanel(banner, new Color(0.14f, 0.085f, 0.025f, 0.98f), new Color(1f, 0.68f, 0.16f, 0.90f));
-            GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
-            GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
+            GUI.color = new Color(.055f, .037f, .024f, .995f);
+            GUI.DrawTexture(banner, Texture2D.whiteTexture);
             GUI.color = Color.white;
-            GUI.Label(new Rect(28f, height - (compact ? 42f : 48f), Screen.width * 0.68f, 26f), "CASERNE", new GUIStyle(titleStyle) { fontSize = compact ? 20 : 28, fontStyle = FontStyle.Bold });
-            GUI.Label(new Rect(30f, height - (compact ? 20f : 23f), Screen.width * 0.70f, 16f), "Entrainement des troupes de defense", new GUIStyle(smallStyle) { fontSize = compact ? 9 : 12 });
+
+            Texture2D texture = Resources.Load<Texture2D>("PremiumBeeReference/BuildingBanners/guard_post");
+            if (texture != null)
+            {
+                Rect art = new Rect(Screen.width * .40f, 0f, Screen.width * .60f, height);
+                GUI.color = new Color(1f, 1f, 1f, .34f);
+                GUI.DrawTexture(art, texture, ScaleMode.ScaleAndCrop, true);
+                GUI.color = Color.white;
+            }
+
+            GUI.color = new Color(1f, .77f, .36f, .88f);
+            GUI.DrawTexture(new Rect(0f, height - 1f, Screen.width, 1f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
         }
 
         private static void DrawBarrackTopBar(float bannerHeight)
         {
-            GUI.color = new Color(1f, 0.60f, 0.14f, 0.95f);
-            GUI.DrawTexture(new Rect(0f, bannerHeight - 1f, Screen.width, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
-            GUI.color = Color.white;
-            if (DrawPremiumBackButton(new Rect(4f, 2f, 48f, 46f)))
+            if (DrawAllianceActivitiesButton(new Rect(16f, 14f, 78f, 48f), "Retour", true, false))
             {
                 AudioManager.Instance?.PlayUIClick();
                 CloseBarrackOverlayForExternalHost();
                 return;
             }
-            GUI.Label(new Rect(54f, 12f, Screen.width - 220f, 24f), "CASERNE", new GUIStyle(badgeStyle) { fontSize = 11 });
-            Rect badge = new Rect(Screen.width - 158f, 10f, 96f, 28f);
-            DrawPremiumPanel(badge, new Color(0.05f, 0.04f, 0.025f, 0.96f), new Color(0.86f, 0.58f, 0.16f, 0.85f));
-            GUI.Label(badge, LocalArmyTotal().ToString(CultureInfo.InvariantCulture) + " TROUPES", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
 
-            // Building-level upgrade for the Barrack itself (guard_post), separate from troop
-            // training below - same shared redirect+glow entry point as everywhere else.
-            Rect upgradeBadge = new Rect(Screen.width - 158f, 42f, 96f, 24f);
-            // M038C-CL: publish the REAL geometry every frame this is drawn, so the FTUE arrow
-            // targets the actual button instead of a guessed screen fraction (see
-            // TutorialTargetRegistry.RegisterScreenRect).
-            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetUpgradeButton, upgradeBadge); } catch {}
-            // M039-CL: le bouton ne doit plus paraitre actionnable pendant Loading/Starting/
-            // Completing/NotConfigured - OfficialBuildingUpgradeActionEnabled reflete le vrai
-            // etat du modele (et garde Error actionnable, pour la reprise/retry).
-            if (DrawPreviewActionButton(upgradeBadge, "N." + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture) + " Ameliorer", OfficialBuildingUpgradeActionEnabled("guard_post"), true))
-            {
-                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("guard_post");
-            }
+            GUI.Label(new Rect(112f, 12f, Screen.width * .30f, 38f), "CASERNE",
+                new GUIStyle(titleStyle) { fontSize = 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+            GUI.Label(new Rect(114f, 52f, Screen.width * .36f, 22f), "Entraînez vos troupes et préparez vos patrouilles",
+                new GUIStyle(smallStyle) { fontSize = 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+            GUI.Label(new Rect(114f, 76f, Screen.width * .36f, 18f),
+                "Niveau " + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture) + "  ·  " + LocalArmyTotal().ToString(CultureInfo.InvariantCulture) + " troupes",
+                new GUIStyle(smallStyle) { fontSize = 11, normal = { textColor = new Color(.68f, .62f, .52f, 1f) } });
 
-            // Direct request (Jeff, live during M038C): give the Caserne its own real entry
-            // point into Army, not just via the "Plus" submenu. Same handler as that existing
-            // entry (BeeKingdom.Core.Integration.LivingHiveArmyBridge.OpenOverlay), so it opens
-            // the exact same real Army overlay - not a second implementation.
-            Rect armyBadge = new Rect(Screen.width - 158f, 68f, 96f, 24f);
-            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetArmyMenu, armyBadge); } catch {}
-            if (DrawPreviewActionButton(armyBadge, "Armee", true, true))
+            if (DrawAllianceActivitiesButton(new Rect(Screen.width - 126f, 14f, 110f, 48f), "Actualiser", true, false))
             {
-                CloseBarrackOverlayForExternalHost();
-                BeeKingdom.Core.Integration.LivingHiveArmyBridge.OpenOverlay();
+                if (OfficialDoctrineRecruitmentConfigured() && doctrineRecruitmentController != null && !doctrineRecruitmentController.IsBusy)
+                    doctrineRecruitmentController.Refresh();
+                try { MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Refresh(); } catch {}
+                try { MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap?.Refresh(); } catch {}
             }
         }
 
@@ -3836,22 +3827,28 @@ private static string courierToast = string.Empty;
         // BarrackTroopPlaceholderDescription above).
         private static void DrawBarrackTroopDetail(Rect rect, string troopType)
         {
-            DrawPremiumPanel(rect, new Color(0.025f, 0.022f, 0.017f, 0.98f), new Color(0.82f, 0.54f, 0.14f, 0.84f));
+            DrawAllianceActivitiesSurface(rect);
 
-            float portraitSize = Mathf.Min(rect.height - 24f, 120f);
-            Rect portraitRect = new Rect(rect.x + 16f, rect.y + 12f, portraitSize, portraitSize);
-            DrawPremiumPanel(portraitRect, new Color(0.05f, 0.045f, 0.03f, 0.92f), new Color(0.62f, 0.42f, 0.14f, 0.6f));
-            DrawGameIcon(new Rect(portraitRect.x + portraitRect.width * 0.2f, portraitRect.y + portraitRect.height * 0.2f, portraitRect.width * 0.6f, portraitRect.height * 0.6f), BarrackTroopIcon(troopType), Color.white);
-            GUI.Label(new Rect(portraitRect.x, portraitRect.yMax - 16f, portraitRect.width, 14f), "Image a venir", new GUIStyle(centeredTinyLabelStyle) { fontSize = 8 });
+            float portraitSize = Mathf.Min(rect.height - 40f, 112f);
+            Rect portraitRect = new Rect(rect.x + 18f, rect.y + 18f, portraitSize, portraitSize);
+            GUI.color = new Color(.095f, .063f, .033f, .98f);
+            GUI.DrawTexture(portraitRect, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            DrawGameIcon(new Rect(portraitRect.x + 18f, portraitRect.y + 18f, portraitRect.width - 36f, portraitRect.height - 36f), BarrackTroopIcon(troopType), Color.white);
 
-            float textX = portraitRect.xMax + 16f;
-            float textWidth = rect.xMax - textX - 16f;
-            GUI.Label(new Rect(textX, rect.y + 12f, textWidth, 24f), troopType, new GUIStyle(titleStyle) { fontSize = 18, fontStyle = FontStyle.Bold });
-            GUI.Label(new Rect(textX, rect.y + 40f, textWidth, rect.height - 80f), BarrackTroopPlaceholderDescription(troopType), new GUIStyle(smallStyle) { wordWrap = true });
-            GUI.Label(
-                new Rect(textX, rect.yMax - 26f, textWidth, 18f),
-                "En reserve : " + TroopCount(troopType).ToString(CultureInfo.InvariantCulture) + "  ·  Cout : " + TrainingCostText(troopType),
-                new GUIStyle(tinyLabelStyle));
+            float textX = portraitRect.xMax + 20f;
+            float textWidth = rect.xMax - textX - 18f;
+            GUI.Label(new Rect(textX, rect.y + 18f, textWidth, 30f), troopType.ToUpperInvariant(),
+                new GUIStyle(titleStyle) { fontSize = 20, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+            GUI.Label(new Rect(textX, rect.y + 56f, textWidth, Mathf.Max(42f, rect.height - 112f)), BarrackTroopPlaceholderDescription(troopType),
+                new GUIStyle(smallStyle) { fontSize = 13, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+
+            GUI.color = new Color(.40f, .29f, .14f, .72f);
+            GUI.DrawTexture(new Rect(textX, rect.yMax - 42f, textWidth, 1f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(textX, rect.yMax - 34f, textWidth, 22f),
+                "En réserve : " + TroopCount(troopType).ToString(CultureInfo.InvariantCulture) + "  ·  Coût : " + TrainingCostText(troopType),
+                new GUIStyle(smallStyle) { fontSize = 12, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
         }
 
         public static void DrawBarrackOverlayForExternalHost(bool compact)
@@ -3861,63 +3858,80 @@ private static string courierToast = string.Empty;
             EnsureLocalPreviewHiveProgressLoaded();
 
             Rect full = new Rect(0f, 0f, Screen.width, Screen.height);
-            GUI.color = new Color(0.006f, 0.005f, 0.004f, 0.99f);
-            GUI.DrawTexture(full, Texture2D.blackTexture, ScaleMode.StretchToFill, false);
+            GUI.color = new Color(.028f, .019f, .011f, .995f);
+            GUI.DrawTexture(full, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
             GUI.color = Color.white;
 
-            float bannerHeight = compact ? Mathf.Min(150f, Screen.height * 0.20f) : Mathf.Clamp(Screen.height * 0.20f, 150f, 190f);
+            float bannerHeight = compact ? 104f : 108f;
             DrawBarrackBanner(bannerHeight, compact);
             DrawBarrackTopBar(bannerHeight);
             if (!barrackOverlayOpenForExternalHost) return;
 
-            float margin = 16f;
-            float contentTop = bannerHeight + 12f;
-            float contentWidth = Screen.width - margin * 2f;
+            float margin = compact ? 12f : 18f;
+            Rect tabs = new Rect(margin, bannerHeight + 10f, Screen.width - margin * 2f, compact ? 44f : 50f);
+            DrawBarrackTabs(tabs, compact);
 
-            // Training + population milestone: when a real session is configured, the
-            // Barrack trains against CombatRecruitmentService's 3 real families
-            // (guardians/wingrunners/darters) instead of the local-preview Soldats/
-            // Gardiennes/Eclaireuses set - a separate, self-contained content block
-            // rather than threading official-awareness through the local selector's
-            // troop-tier/promotion UI (which has no server equivalent at all), same
-            // reasoning as DrawOfficialBuildingUpgradeOnlyDetail being separate from the
-            // local Construction detail rendering.
-            if (OfficialDoctrineRecruitmentConfigured())
+            float contentTop = tabs.yMax + 12f;
+            Rect content = new Rect(margin, contentTop, Screen.width - margin * 2f, Screen.height - contentTop - margin);
+
+            if (string.Equals(barrackSelectedTab, "army", StringComparison.Ordinal))
             {
-                DrawOfficialBarrackContent(margin, contentTop, contentWidth);
+                if (compact)
+                {
+                    // Stack the two cards with real scrolling so champions stay reachable.
+                    float innerWidth = Mathf.Max(200f, content.width - 18f);
+                    float innerHeight = Mathf.Max(content.height, 932f);
+                    barrackArmyScroll = GUI.BeginScrollView(content, barrackArmyScroll,
+                        new Rect(0f, 0f, innerWidth, innerHeight), false, true);
+                    DrawBarrackArmyTab(new Rect(0f, 0f, innerWidth, innerHeight), true);
+                    GUI.EndScrollView();
+                }
+                else DrawBarrackArmyTab(content, compact);
                 return;
             }
 
+            // Training remains the sole owner of troop recruitment. The Army tab consumes this
+            // authoritative roster and never trains units itself.
+            if (OfficialDoctrineRecruitmentConfigured())
+            {
+                DrawOfficialBarrackContentActivities(content, compact);
+                return;
+            }
+
+            // Offline/local-preview fallback keeps the same two-tab shell and Activities language.
+            GUI.Label(new Rect(content.x + 18f, content.y + 12f, content.width - 36f, 34f), "ENTRAÎNEMENT",
+                new GUIStyle(titleStyle) { fontSize = compact ? 20 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+            GUI.Label(new Rect(content.x + 18f, content.y + 50f, content.width - 36f, 20f), "Formez les troupes qui composeront vos patrouilles.",
+                new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+
             float selectorHeight = compact ? 84f : 96f;
-            DrawBarracksTroopSelector(new Rect(margin, contentTop, contentWidth, selectorHeight));
-            float y = contentTop + selectorHeight + 14f;
+            DrawBarracksTroopSelector(new Rect(content.x + 18f, content.y + 82f, content.width - 36f, selectorHeight));
+            float y = content.y + 82f + selectorHeight + 14f;
 
             float footerHeight = IsTrainingRunning() ? 56f : 76f;
-            float detailHeight = Mathf.Max(120f, Screen.height - y - footerHeight - margin);
-            DrawBarrackTroopDetail(new Rect(margin, y, contentWidth, detailHeight), selectedLocalTroopType);
+            float detailHeight = Mathf.Max(120f, content.yMax - y - footerHeight - 12f);
+            DrawBarrackTroopDetail(new Rect(content.x + 18f, y, content.width - 36f, detailHeight), selectedLocalTroopType);
             y += detailHeight + 12f;
 
             if (IsTrainingRunning())
             {
-                float speedUpButtonWidth = 130f;
-                GUI.Label(new Rect(margin, y, contentWidth - speedUpButtonWidth - 8f, 18f), "Entrainement en cours (" + localPreviewTrainingTroopType + ") : " + Mathf.RoundToInt(TrainingProgress01() * 100f).ToString(CultureInfo.InvariantCulture) + " %", smallStyle);
-                if (DrawPreviewActionButton(new Rect(margin + contentWidth - speedUpButtonWidth, y - 2f, speedUpButtonWidth, 22f), "⚡ Accelerer", true, true))
-                {
+                float speedUpButtonWidth = 150f;
+                GUI.Label(new Rect(content.x + 18f, y, content.width - speedUpButtonWidth - 48f, 22f),
+                    "Entraînement en cours (" + localPreviewTrainingTroopType + ") : " + Mathf.RoundToInt(TrainingProgress01() * 100f).ToString(CultureInfo.InvariantCulture) + " %",
+                    new GUIStyle(smallStyle) { fontSize = 12, fontStyle = FontStyle.Bold });
+                if (DrawAllianceActivitiesButton(new Rect(content.xMax - speedUpButtonWidth - 18f, y - 4f, speedUpButtonWidth, 32f), "Accélérer", true, false))
                     OpenSpeedUpForExternalHost(SpeedUpCategory.Training, localPreviewTrainingTroopType, (long)GetTrainingRemaining(localPreviewTrainingTroopType));
-                }
-                DrawProgressBar(new Rect(margin, y + 20f, contentWidth, 12f), TrainingProgress01());
+                DrawProgressBar(new Rect(content.x + 18f, y + 28f, content.width - 36f, 12f), TrainingProgress01());
             }
             else
             {
                 bool canTrain = CanStartTraining(selectedLocalTroopType);
-                if (DrawPreviewActionButton(new Rect(margin, y, contentWidth, 44f), "Entrainer (" + TrainingCostText(selectedLocalTroopType) + ")", canTrain))
-                {
+                if (DrawAllianceActivitiesButton(new Rect(content.x + 18f, y, content.width - 36f, 44f),
+                    "Entraîner (" + TrainingCostText(selectedLocalTroopType) + ")", canTrain, true))
                     StartPreviewTraining(selectedLocalTroopType);
-                }
                 if (!canTrain)
-                {
-                    GUI.Label(new Rect(margin, y + 48f, contentWidth, 18f), TrainingDisabledReason(selectedLocalTroopType), new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleCenter });
-                }
+                    GUI.Label(new Rect(content.x + 18f, y + 48f, content.width - 36f, 18f), TrainingDisabledReason(selectedLocalTroopType),
+                        new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 11, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
             }
         }
 
@@ -30923,21 +30937,33 @@ if (leftNavigationTexture == null)
             }
             else
             {
+                IReadOnlyList<string> assignedChampions = CurrentAssignedChampionBeeIds();
+                string championBeeId = assignedChampions != null && assignedChampions.Count > 0
+                    ? assignedChampions[0]
+                    : string.Empty;
+                bool championReady = !string.IsNullOrWhiteSpace(championBeeId);
+                string reserveCaption = championReady
+                    ? string.Format(
+                        CultureInfo.CurrentCulture,
+                        BeeLocalization.Text(
+                            "formation_readiness.reservation.commit",
+                            "Réserver {0}/{1}"),
+                        composition.Total,
+                        reservationModel.Capacity)
+                    : BeeLocalization.Text(
+                        "formation_readiness.reservation.champion_required",
+                        "Championne requise");
                 if (DrawPreviewActionButton(
                         wide,
-                        string.Format(
-                            CultureInfo.CurrentCulture,
-                            BeeLocalization.Text(
-                                "formation_readiness.reservation.commit",
-                                "Réserver {0}/{1}"),
-                            composition.Total,
-                            reservationModel.Capacity),
+                        reserveCaption,
                         !reservationBusy &&
+                        championReady &&
                         reservationModel.CanCommit(composition)))
                     squadReservationController.Commit(
                         composition.Guardians,
                         composition.Wingrunners,
-                        composition.Darters);
+                        composition.Darters,
+                        championBeeId);
             }
         }
 
@@ -50012,6 +50038,602 @@ public static void ResetMissionsStateForProof()
                 Title = new Rect(112f, 14f, Mathf.Max(1f, width - 128f), 48f),
                 BodyTop = 88f
             };
+        }
+
+
+        private static string barrackSelectedTab = "training";
+
+        private static Vector2 barrackArmyScroll;
+
+        private static int barrackArmyDraftGuardians;
+
+        private static int barrackArmyDraftWingrunners;
+
+        private static int barrackArmyDraftDarters;
+
+        private static string barrackArmyDraftChampionBeeId = string.Empty;
+
+        private static string barrackArmyLastReservationId = string.Empty;
+
+        private static bool barrackArmyDraftInitialized;
+
+        public static bool BarrackArmyTabOpenForExternalHost => barrackOverlayOpenForExternalHost && string.Equals(barrackSelectedTab, "army", StringComparison.Ordinal);
+
+
+        public static void OpenBarrackArmyTabForExternalHost()
+        {
+            EnsureLocalPreviewQueueJournalLoaded();
+            barrackSelectedTab = "army";
+            barrackArmyScroll = Vector2.zero;
+            barrackOverlayOpenForExternalHost = true;
+            MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
+            try { MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Refresh(); } catch {}
+            try { MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap?.Refresh(); } catch {}
+            try { MobileAccountSessionRuntimeBootstrap.PerimeterSortieControllerForHiveMap?.Refresh(); } catch {}
+            try { EnsureOfficialChampionBeeAndTroopTierStateLoaded(); } catch {}
+            barrackArmyDraftInitialized = false;
+            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("army"); } catch {}
+        }
+
+
+        private static void DrawBarrackTabs(Rect rect, bool compact)
+        {
+            GUI.color = new Color(.56f, .38f, .15f, .55f);
+            GUI.DrawTexture(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            string[] ids = { "training", "army" };
+            string[] labels = { "ENTRAÎNEMENT", "ARMÉES" };
+            float gap = 10f;
+            float width = (rect.width - gap) * .5f;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                Rect tab = new Rect(rect.x + i * (width + gap), rect.y + 4f, width, rect.height - 8f);
+                bool selected = string.Equals(barrackSelectedTab, ids[i], StringComparison.Ordinal);
+                bool hovered = tab.Contains(Event.current != null ? Event.current.mousePosition : Vector2.zero);
+                if (selected || hovered)
+                {
+                    GUI.color = selected ? new Color(.30f, .19f, .075f, .92f) : new Color(.16f, .11f, .035f, .72f);
+                    GUI.DrawTexture(tab, Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
+                if (selected)
+                {
+                    GUI.color = new Color(1f, .77f, .36f, .95f);
+                    GUI.DrawTexture(new Rect(tab.x, tab.yMax - 3f, tab.width, 3f), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
+                GUI.Label(tab, labels[i], new GUIStyle(centeredTinyLabelStyle)
+                {
+                    fontSize = compact ? 11 : 13,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = selected ? new Color(1f, .95f, .82f, 1f) : new Color(.80f, .73f, .61f, 1f) }
+                });
+
+                if (ids[i] == "army")
+                {
+                    try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetArmyMenu, tab); } catch {}
+                }
+
+                if (GUI.Button(tab, string.Empty, GUIStyle.none) && !selected)
+                {
+                    AudioManager.Instance?.PlayUIClick();
+                    barrackSelectedTab = ids[i];
+                    barrackArmyScroll = Vector2.zero;
+                    if (string.Equals(ids[i], "army", StringComparison.Ordinal))
+                    {
+                        MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
+                        try { MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Refresh(); } catch {}
+                        try { MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap?.Refresh(); } catch {}
+                        try { EnsureOfficialChampionBeeAndTroopTierStateLoaded(); } catch {}
+                        barrackArmyDraftInitialized = false;
+                        try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("army"); } catch {}
+                    }
+                    else if (OfficialDoctrineRecruitmentConfigured() && doctrineRecruitmentController != null && !doctrineRecruitmentController.IsBusy)
+                    {
+                        doctrineRecruitmentController.Refresh();
+                    }
+                }
+            }
+        }
+
+
+        private static void SyncBarrackArmyDraftFromServer()
+        {
+            IHiveSquadReservationPanelController ctrl = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap;
+            HiveSquadReservationScreenModel model = ctrl?.Model;
+            if (model == null) return;
+
+            string reservationId = model.ReservationId ?? string.Empty;
+            bool reservationChanged = !string.Equals(barrackArmyLastReservationId, reservationId, StringComparison.Ordinal);
+            if (!barrackArmyDraftInitialized || reservationChanged)
+            {
+                if (model.HasReservation)
+                {
+                    barrackArmyDraftGuardians = (int)Math.Min(int.MaxValue, model.ReservedGuardians);
+                    barrackArmyDraftWingrunners = (int)Math.Min(int.MaxValue, model.ReservedWingrunners);
+                    barrackArmyDraftDarters = (int)Math.Min(int.MaxValue, model.ReservedDarters);
+                    barrackArmyDraftChampionBeeId =
+                        model.ChampionBeeIds != null && model.ChampionBeeIds.Count > 0
+                            ? model.ChampionBeeIds[0]
+                            : string.Empty;
+                }
+                else
+                {
+                    barrackArmyDraftGuardians = 0;
+                    barrackArmyDraftWingrunners = 0;
+                    barrackArmyDraftDarters = 0;
+                    // No patrol exists yet: do not inherit the old global champion assignment.
+                    // The player must explicitly choose the champion for this new patrol draft.
+                    barrackArmyDraftChampionBeeId = string.Empty;
+                }
+                barrackArmyDraftInitialized = true;
+                barrackArmyLastReservationId = reservationId;
+            }
+        }
+
+
+        private static void DrawBarrackArmyDraftRow(
+            Rect rect,
+            string icon,
+            string label,
+            long available,
+            ref int selected,
+            int capacity,
+            int totalSelected)
+        {
+            bool hovered = rect.Contains(Event.current != null ? Event.current.mousePosition : Vector2.zero);
+            if (hovered)
+            {
+                GUI.color = new Color(.11f, .07f, .025f, .45f);
+                GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            }
+            GUI.color = new Color(.40f, .29f, .14f, .72f);
+            GUI.DrawTexture(new Rect(rect.x + 8f, rect.yMax - 1f, rect.width - 16f, 1f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            DrawGameIcon(new Rect(rect.x + 10f, rect.y + 10f, 30f, 30f), icon, Color.white);
+            GUI.Label(new Rect(rect.x + 52f, rect.y + 7f, rect.width * .36f, 24f), label,
+                new GUIStyle(smallStyle) { fontSize = 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+            GUI.Label(new Rect(rect.x + 52f, rect.y + 31f, rect.width * .36f, 18f), "Disponible : " + available.ToString(CultureInfo.InvariantCulture),
+                new GUIStyle(smallStyle) { fontSize = 11, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+
+            float controlW = 46f;
+            float valueW = 64f;
+            float gap = 6f;
+            float right = rect.xMax - 10f;
+            Rect maxRect = new Rect(right - 62f, rect.y + 11f, 62f, 32f);
+            right = maxRect.x - gap;
+            Rect plusRect = new Rect(right - controlW, rect.y + 11f, controlW, 32f);
+            right = plusRect.x - gap;
+            Rect valueRect = new Rect(right - valueW, rect.y + 11f, valueW, 32f);
+            right = valueRect.x - gap;
+            Rect minusRect = new Rect(right - controlW, rect.y + 11f, controlW, 32f);
+
+            bool canDec = selected > 0;
+            bool canInc = selected < available && totalSelected < capacity;
+            if (DrawAllianceActivitiesButton(minusRect, "−", canDec, false) && canDec) selected = Math.Max(0, selected - 1);
+            GUI.Label(valueRect, selected.ToString(CultureInfo.InvariantCulture),
+                new GUIStyle(centeredTinyLabelStyle) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+            if (DrawAllianceActivitiesButton(plusRect, "+", canInc, false) && canInc) selected = Math.Min((int)Math.Min(int.MaxValue, available), selected + 1);
+            if (DrawAllianceActivitiesButton(maxRect, "MAX", available > 0 && totalSelected - selected < capacity, false))
+            {
+                int maxByAvailable = (int)Math.Min(int.MaxValue, available);
+                int maxByCapacity = Math.Max(0, capacity - (totalSelected - selected));
+                selected = Math.Min(maxByAvailable, maxByCapacity);
+            }
+        }
+
+
+        private static void DrawBarrackChampionSelector(Rect rect, bool compact)
+        {
+            DrawAllianceActivitiesSurface(rect);
+            HiveSquadReservationScreenModel squadModel =
+                MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
+            bool patrolLocked = squadModel != null && squadModel.HasReservation;
+
+            GUI.Label(new Rect(rect.x + 18f, rect.y + 12f, rect.width - 36f, 30f), "CHAMPIONNE",
+                new GUIStyle(titleStyle) { fontSize = compact ? 18 : 21, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+            GUI.Label(new Rect(rect.x + 18f, rect.y + 46f, rect.width - 36f, 44f),
+                patrolLocked
+                    ? "Championne verrouillée avec la patrouille active. Libérez la patrouille pour changer ce choix."
+                    : "Choisissez la championne qui accompagne cette patrouille. Ce choix est fait ici, jamais au moment d'attaquer.",
+                new GUIStyle(smallStyle) { fontSize = compact ? 10 : 12, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+
+            EnsureOfficialChampionBeeAndTroopTierStateLoaded();
+            List<ChampionBeeDefinition> owned = ChampionBeeCatalog.All.Where(def => IsChampionBeeOwned(def.Id)).ToList();
+            float y = rect.y + 94f;
+            if (owned.Count == 0)
+            {
+                GUI.Label(new Rect(rect.x + 18f, y, rect.width - 36f, 48f), "Aucune championne débloquée.",
+                    new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                return;
+            }
+
+            float rowH = compact ? 56f : 62f;
+            for (int i = 0; i < owned.Count && y + rowH <= rect.yMax - 12f; i++)
+            {
+                ChampionBeeDefinition def = owned[i];
+                bool assigned = patrolLocked
+                    ? squadModel.ChampionBeeIds != null && squadModel.ChampionBeeIds.Contains(def.Id)
+                    : string.Equals(barrackArmyDraftChampionBeeId, def.Id, StringComparison.Ordinal);
+                Rect row = new Rect(rect.x + 14f, y, rect.width - 28f, rowH);
+                if (assigned)
+                {
+                    GUI.color = new Color(.30f, .19f, .075f, .88f);
+                    GUI.DrawTexture(row, Texture2D.whiteTexture);
+                }
+                GUI.color = new Color(.40f, .29f, .14f, .75f);
+                GUI.DrawTexture(new Rect(row.x + 8f, row.yMax - 1f, row.width - 16f, 1f), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+
+                DrawGameIcon(new Rect(row.x + 10f, row.y + 10f, rowH - 20f, rowH - 20f), "queen", Color.white);
+                GUI.Label(new Rect(row.x + rowH, row.y + 7f, row.width - rowH - 90f, 22f), ChampionBeeName(def),
+                    new GUIStyle(smallStyle) { fontSize = compact ? 12 : 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+                GUI.Label(new Rect(row.x + rowH, row.y + 31f, row.width - rowH - 90f, 18f),
+                    ChampionBeeRarityLabel(def.Rarity) + " · " + ChampionBeeRoleLabel(def.Role),
+                    new GUIStyle(smallStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+
+                Rect select = new Rect(row.xMax - 92f, row.y + 13f, 82f, 34f);
+                string caption = assigned
+                    ? (patrolLocked ? "Assignée" : "Sélectionnée")
+                    : patrolLocked ? "Verrouillée" : "Choisir";
+                bool selectable = !patrolLocked && !assigned;
+                if (DrawAllianceActivitiesButton(select, caption, selectable || assigned, assigned) && selectable)
+                {
+                    // Draft-only choice. It becomes an actual patrol assignment only when the
+                    // reservation commit succeeds on the server.
+                    barrackArmyDraftChampionBeeId = def.Id;
+                }
+                y += rowH + 6f;
+            }
+        }
+
+
+        private static void DrawBarrackArmyTab(Rect area, bool compact)
+        {
+            IHiveSquadReservationPanelController ctrl = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap;
+            HiveSquadReservationScreenModel model = ctrl?.Model;
+
+            GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 36f, 34f), "ARMÉES & PATROUILLES",
+                new GUIStyle(titleStyle) { fontSize = compact ? 20 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+            GUI.Label(new Rect(area.x + 18f, area.y + 50f, area.width - 36f, 38f),
+                "Préparez une patrouille complète ici : troupes et championne. Sur la Carte du Monde, vous sélectionnez ensuite cette patrouille comme une seule unité.",
+                new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+
+            if (ctrl == null || !ctrl.IsConfigured || model == null)
+            {
+                Rect unavailable = new Rect(area.x + 18f, area.y + 100f, area.width - 36f, 120f);
+                DrawAllianceActivitiesSurface(unavailable);
+                GUI.Label(new Rect(unavailable.x + 18f, unavailable.y + 18f, unavailable.width - 36f, 26f), "PATROUILLES INDISPONIBLES",
+                    new GUIStyle(titleStyle) { fontSize = 18, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+                GUI.Label(new Rect(unavailable.x + 18f, unavailable.y + 56f, unavailable.width - 36f, 38f), "La session serveur doit être active pour réserver une patrouille.",
+                    new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                return;
+            }
+
+            if (model.State == HiveSquadReservationScreenState.Error
+                || model.State == HiveSquadReservationScreenState.NotConfigured
+                || model.State == HiveSquadReservationScreenState.OfflineReadOnly
+                || model.State == HiveSquadReservationScreenState.Loading
+                || model.State == HiveSquadReservationScreenState.PendingConfirmation
+                || model.State == HiveSquadReservationScreenState.Mutating)
+            {
+                // Disabled service is never a reservable army or an invented zero.
+                Rect notice = new Rect(area.x + 18f, area.y + 100f, area.width - 36f, 150f);
+                DrawAllianceActivitiesSurface(notice);
+                bool pending = model.IsPending;
+                string heading = pending ? "COMMANDE À VÉRIFIER"
+                    : model.State == HiveSquadReservationScreenState.Loading
+                        || model.State == HiveSquadReservationScreenState.Mutating
+                        ? "SYNCHRONISATION DES PATROUILLES"
+                        : "SERVICE DE PATROUILLE INDISPONIBLE";
+                GUI.Label(new Rect(notice.x + 16f, notice.y + 16f, notice.width - 32f, 28f),
+                    heading, new GUIStyle(titleStyle) { fontSize = compact ? 16 : 20,
+                        normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+                GUI.Label(new Rect(notice.x + 16f, notice.y + 52f, notice.width - 32f, 46f),
+                    pending ? "Une commande attend sa confirmation. Vérifiez-la sans créer de nouvelle patrouille."
+                    : "La réservation n'est pas disponible sur le serveur actuel. L'Entraînement reste accessible.",
+                    new GUIStyle(smallStyle) { wordWrap = true, fontSize = compact ? 11 : 13,
+                        normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                bool retry = pending ? model.CanRetry : !ctrl.IsBusy;
+                if (DrawAllianceActivitiesButton(new Rect(notice.x + 16f, notice.yMax - 45f,
+                    notice.width - 32f, 36f), pending ? "Vérifier la commande" : "Actualiser",
+                    retry, false))
+                {
+                    if (pending) ctrl.Retry();
+                    else ctrl.Refresh();
+                }
+                return;
+            }
+
+            SyncBarrackArmyDraftFromServer();
+
+            float top = area.y + 100f;
+            float gap = 18f;
+            float leftW = compact ? area.width - 36f : (area.width - 54f) * .58f;
+            Rect squadCard = new Rect(area.x + 18f, top, leftW, compact ? 390f : area.height - 118f);
+            Rect championCard = compact
+                ? new Rect(area.x + 18f, squadCard.yMax + gap, area.width - 36f, 330f)
+                : new Rect(squadCard.xMax + gap, top, area.xMax - squadCard.xMax - gap - 18f, squadCard.height);
+
+            DrawAllianceActivitiesSurface(squadCard);
+            GUI.Label(new Rect(squadCard.x + 18f, squadCard.y + 12f, squadCard.width - 36f, 30f), model.HasReservation ? "PATROUILLE PRÉPARÉE" : "NOUVELLE PATROUILLE",
+                new GUIStyle(titleStyle) { fontSize = compact ? 18 : 21, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+
+            int capacity = model.Capacity;
+            int totalSelected = barrackArmyDraftGuardians + barrackArmyDraftWingrunners + barrackArmyDraftDarters;
+            GUI.Label(new Rect(squadCard.x + 18f, squadCard.y + 48f, squadCard.width - 36f, 22f),
+                "Capacité : " + totalSelected.ToString(CultureInfo.InvariantCulture) + " / " + capacity.ToString(CultureInfo.InvariantCulture),
+                new GUIStyle(smallStyle) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+            DrawProgressBar(new Rect(squadCard.x + 18f, squadCard.y + 76f, squadCard.width - 36f, 9f),
+                capacity > 0 ? Mathf.Clamp01((float)totalSelected / capacity) : 0f);
+
+            float rowY = squadCard.y + 98f;
+            if (model.HasReservation)
+            {
+                string[] names = { "Gardiennes", "Voltigeuses", "Lanceuses" };
+                long[] counts = { model.ReservedGuardians, model.ReservedWingrunners, model.ReservedDarters };
+                string[] icons = { "guard-bee", "bee", "bee" };
+                for (int i = 0; i < names.Length; i++)
+                {
+                    Rect row = new Rect(squadCard.x + 14f, rowY, squadCard.width - 28f, 52f);
+                    DrawGameIcon(new Rect(row.x + 8f, row.y + 10f, 30f, 30f), icons[i], Color.white);
+                    GUI.Label(new Rect(row.x + 50f, row.y + 7f, row.width - 120f, 22f), names[i],
+                        new GUIStyle(smallStyle) { fontSize = 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+                    GUI.Label(new Rect(row.xMax - 90f, row.y + 7f, 74f, 32f), counts[i].ToString(CultureInfo.InvariantCulture),
+                        new GUIStyle(titleStyle) { fontSize = 18, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
+                    GUI.color = new Color(.40f, .29f, .14f, .72f);
+                    GUI.DrawTexture(new Rect(row.x + 8f, row.yMax - 1f, row.width - 16f, 1f), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                    rowY += 56f;
+                }
+
+                IReadOnlyList<string> champions = model.ChampionBeeIds;
+                string champion = "Aucune championne";
+                if (champions != null && champions.Count > 0 && ChampionBeeCatalog.TryResolve(champions[0], out ChampionBeeDefinition assigned))
+                    champion = ChampionBeeName(assigned);
+                GUI.Label(new Rect(squadCard.x + 18f, rowY + 8f, squadCard.width - 36f, 22f), "Championne : " + champion,
+                    new GUIStyle(smallStyle) { fontSize = 12, fontStyle = FontStyle.Bold, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                rowY += 42f;
+
+                bool ready = champions != null && champions.Count > 0;
+                GUI.Label(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 42f),
+                    ready ? "Cette patrouille est prête à être sélectionnée sur la Carte du Monde." : "Choisissez une championne avant de partir.",
+                    new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true, normal = { textColor = ready ? new Color(.56f, .87f, .61f, 1f) : new Color(.90f, .63f, .34f, 1f) } });
+                rowY += 52f;
+
+                if (DrawAllianceActivitiesButton(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 42f), "Libérer la patrouille", model.CanRelease && !ctrl.IsBusy, false))
+                {
+                    ctrl.Release();
+                    barrackArmyDraftInitialized = false;
+                }
+            }
+            else
+            {
+                DrawBarrackArmyDraftRow(new Rect(squadCard.x + 14f, rowY, squadCard.width - 28f, 58f), "guard-bee", "Gardiennes", model.AvailableGuardians, ref barrackArmyDraftGuardians, capacity, totalSelected);
+                totalSelected = barrackArmyDraftGuardians + barrackArmyDraftWingrunners + barrackArmyDraftDarters;
+                rowY += 62f;
+                DrawBarrackArmyDraftRow(new Rect(squadCard.x + 14f, rowY, squadCard.width - 28f, 58f), "bee", "Voltigeuses", model.AvailableWingrunners, ref barrackArmyDraftWingrunners, capacity, totalSelected);
+                totalSelected = barrackArmyDraftGuardians + barrackArmyDraftWingrunners + barrackArmyDraftDarters;
+                rowY += 62f;
+                DrawBarrackArmyDraftRow(new Rect(squadCard.x + 14f, rowY, squadCard.width - 28f, 58f), "bee", "Lanceuses", model.AvailableDarters, ref barrackArmyDraftDarters, capacity, totalSelected);
+                totalSelected = barrackArmyDraftGuardians + barrackArmyDraftWingrunners + barrackArmyDraftDarters;
+                rowY += 72f;
+
+                bool championReady = !string.IsNullOrWhiteSpace(barrackArmyDraftChampionBeeId);
+                bool canCommit = model.CanCommit(new HiveSquadCompositionSnapshot(capacity, barrackArmyDraftGuardians, barrackArmyDraftWingrunners, barrackArmyDraftDarters));
+                if (DrawAllianceActivitiesButton(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 44f),
+                    "Créer la patrouille", canCommit && championReady && !ctrl.IsBusy, true))
+                {
+                    ctrl.Commit(
+                        barrackArmyDraftGuardians,
+                        barrackArmyDraftWingrunners,
+                        barrackArmyDraftDarters,
+                        barrackArmyDraftChampionBeeId);
+                }
+                if (!championReady)
+                {
+                    GUI.Label(new Rect(squadCard.x + 18f, rowY + 50f, squadCard.width - 36f, 34f), "Sélectionnez d'abord une championne dans le panneau de droite.",
+                        new GUIStyle(smallStyle) { fontSize = 11, wordWrap = true, normal = { textColor = new Color(.90f, .63f, .34f, 1f) } });
+                }
+            }
+
+            DrawBarrackChampionSelector(championCard, compact);
+
+            {
+                CombatPatrolScreenModel patrol = MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap?.Model;
+                int active = patrol?.ActiveEncounters?.Count ?? 0;
+                Rect footer = compact
+                    ? new Rect(area.x + 18f, championCard.yMax + 14f, area.width - 36f, 42f)
+                    : new Rect(area.x + 18f, area.yMax - 56f, area.width - 36f, 42f);
+                string caption = active > 0 ? "Carte du Monde · " + active + " patrouille(s) en cours" : "Ouvrir la Carte du Monde";
+                if (DrawAllianceActivitiesButton(footer, caption, true, false))
+                {
+                    CloseBarrackOverlayForExternalHost();
+                    SplashDevelopmentSceneConfig.TryOpenScene(SplashDevelopmentSceneConfig.WorldMapScenePath, out _);
+                }
+            }
+        }
+
+
+
+        private static void DrawOfficialBarrackContentActivities(Rect area, bool compact)
+        {
+            RefreshDoctrineRecruitmentIfDueOrJustFinished();
+            HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
+
+            GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 36f, 34f), "ENTRAÎNEMENT",
+                new GUIStyle(titleStyle)
+                {
+                    fontSize = compact ? 20 : 27,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(1f, .77f, .36f, 1f) }
+                });
+            GUI.Label(new Rect(area.x + 18f, area.y + 50f, area.width - 36f, 22f),
+                "Formez les troupes qui composeront vos patrouilles.",
+                new GUIStyle(smallStyle)
+                {
+                    fontSize = compact ? 11 : 13,
+                    normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
+                });
+
+            Rect levelCard = new Rect(area.x + 18f, area.y + 82f, area.width - 36f, 62f);
+            DrawAllianceActivitiesSurface(levelCard, new Color(.095f, .063f, .033f, .98f));
+            GUI.Label(new Rect(levelCard.x + 16f, levelCard.y + 9f, levelCard.width - 200f, 22f),
+                "Caserne · Niveau " + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture),
+                new GUIStyle(smallStyle)
+                {
+                    fontSize = compact ? 12 : 14,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(1f, .95f, .82f, 1f) }
+                });
+            GUI.Label(new Rect(levelCard.x + 16f, levelCard.y + 33f, levelCard.width - 200f, 18f),
+                "Améliorer la caserne augmente votre progression militaire.",
+                new GUIStyle(smallStyle)
+                {
+                    fontSize = compact ? 9 : 11,
+                    normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
+                });
+            Rect upgrade = new Rect(levelCard.xMax - 172f, levelCard.y + 12f, 156f, 38f);
+            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetUpgradeButton, upgrade); } catch {}
+            if (DrawAllianceActivitiesButton(upgrade, "Améliorer", OfficialBuildingUpgradeActionEnabled("guard_post"), false))
+                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("guard_post");
+
+            float selectorTop = levelCard.yMax + 14f;
+            float gap = compact ? 8f : 12f;
+            float troopWidth = (area.width - 36f - gap * 2f) / 3f;
+            float troopHeight = compact ? 92f : 106f;
+            for (int i = 0; i < OfficialTroopFamilies.Length; i++)
+            {
+                string family = OfficialTroopFamilies[i];
+                Rect troop = new Rect(area.x + 18f + i * (troopWidth + gap), selectorTop, troopWidth, troopHeight);
+                bool selected = string.Equals(family, officialSelectedTroopFamily, StringComparison.Ordinal);
+                DrawAllianceActivitiesSurface(troop, selected ? new Color(.23f, .145f, .055f, .98f) : new Color(.19f, .125f, .068f, .98f));
+                if (selected)
+                {
+                    GUI.color = new Color(1f, .77f, .36f, .96f);
+                    GUI.DrawTexture(new Rect(troop.x + 1f, troop.yMax - 3f, troop.width - 2f, 3f), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
+
+                DrawGameIcon(new Rect(troop.x + 14f, troop.y + 14f, 38f, 38f), i == 0 ? "guard-bee" : "bee", Color.white);
+                GUI.Label(new Rect(troop.x + 64f, troop.y + 12f, troop.width - 78f, 24f), OfficialTroopFamilyLabels[i],
+                    new GUIStyle(smallStyle)
+                    {
+                        fontSize = compact ? 12 : 14,
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(1f, .95f, .82f, 1f) }
+                    });
+                long count = model != null ? model.Count(family) : 0L;
+                GUI.Label(new Rect(troop.x + 64f, troop.y + 40f, troop.width - 78f, 28f), count.ToString(CultureInfo.InvariantCulture),
+                    new GUIStyle(titleStyle)
+                    {
+                        fontSize = compact ? 16 : 20,
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(1f, .77f, .36f, 1f) }
+                    });
+                GUI.Label(new Rect(troop.x + 14f, troop.yMax - 26f, troop.width - 28f, 18f), OfficialDoctrineRecruitmentStatusText(family),
+                    new GUIStyle(smallStyle)
+                    {
+                        fontSize = compact ? 8 : 10,
+                        alignment = TextAnchor.MiddleLeft,
+                        clipping = TextClipping.Clip,
+                        normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
+                    });
+                if (GUI.Button(troop, string.Empty, GUIStyle.none)) officialSelectedTroopFamily = family;
+            }
+
+            float y = selectorTop + troopHeight + 14f;
+            Rect population = new Rect(area.x + 18f, y, area.width - 36f, 54f);
+            DrawAllianceActivitiesSurface(population, new Color(.095f, .063f, .033f, .98f));
+            GUI.Label(new Rect(population.x + 16f, population.y + 8f, population.width - 32f, 20f), "POPULATION",
+                new GUIStyle(smallStyle)
+                {
+                    fontSize = compact ? 10 : 12,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(1f, .77f, .36f, 1f) }
+                });
+            GUI.Label(new Rect(population.x + 16f, population.y + 29f, population.width - 32f, 18f),
+                DisplayedPopulationUsed().ToString("F0", CultureInfo.InvariantCulture) + " / " +
+                DisplayedPopulationCapacity().ToString("F0", CultureInfo.InvariantCulture),
+                new GUIStyle(smallStyle)
+                {
+                    fontSize = compact ? 12 : 14,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(1f, .95f, .82f, 1f) }
+                });
+            y += 68f;
+
+            Rect detail = new Rect(area.x + 18f, y, area.width - 36f, compact ? 130f : 148f);
+            DrawAllianceActivitiesSurface(detail);
+            int selectedIndex = Array.IndexOf(OfficialTroopFamilies, officialSelectedTroopFamily);
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, OfficialTroopFamilies.Length - 1);
+            DrawGameIcon(new Rect(detail.x + 18f, detail.y + 18f, 54f, 54f), selectedIndex == 0 ? "guard-bee" : "bee", Color.white);
+            GUI.Label(new Rect(detail.x + 90f, detail.y + 14f, detail.width - 108f, 30f), OfficialTroopFamilyLabels[selectedIndex],
+                new GUIStyle(titleStyle)
+                {
+                    fontSize = compact ? 17 : 20,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(1f, .77f, .36f, 1f) }
+                });
+            GUI.Label(new Rect(detail.x + 90f, detail.y + 50f, detail.width - 108f, 64f),
+                OfficialDoctrineRecruitmentStatusText(officialSelectedTroopFamily),
+                new GUIStyle(smallStyle)
+                {
+                    fontSize = compact ? 10 : 12,
+                    wordWrap = true,
+                    normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
+                });
+            y += detail.height + 14f;
+
+            HiveDoctrineRecruitmentOperationModel active = model?.ActiveOperation;
+            bool runningHere = active != null &&
+                string.Equals(active.Family, officialSelectedTroopFamily, StringComparison.Ordinal) &&
+                !IsTrainingReadyToClaimNow(model);
+
+            if (runningHere)
+            {
+                Rect progressCard = new Rect(area.x + 18f, y, area.width - 36f, 94f);
+                DrawAllianceActivitiesSurface(progressCard, new Color(.095f, .063f, .033f, .98f));
+                double progress01 = model.Progress01(doctrineRecruitmentController.Elapsed);
+                GUI.Label(new Rect(progressCard.x + 16f, progressCard.y + 10f, progressCard.width - 190f, 22f),
+                    "Entraînement en cours · " + Mathf.RoundToInt((float)progress01 * 100f).ToString(CultureInfo.InvariantCulture) + " %",
+                    new GUIStyle(smallStyle)
+                    {
+                        fontSize = compact ? 11 : 13,
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(1f, .95f, .82f, 1f) }
+                    });
+                DrawProgressBar(new Rect(progressCard.x + 16f, progressCard.y + 39f, progressCard.width - 32f, 10f), (float)progress01);
+
+                double estimatedOriginalDurationSeconds = (active.EndsAtUtc - active.StartedAtUtc).TotalSeconds;
+                DrawAllianceHelpAction(new Rect(progressCard.x + 16f, progressCard.y + 56f, progressCard.width - 32f, 30f),
+                    MobileAccountSessionRuntimeBootstrap.GameplayHiveId,
+                    BeeKingdom.Networking.RemoteAllianceHelpCategories.Training,
+                    officialSelectedTroopFamily,
+                    estimatedOriginalDurationSeconds,
+                    false);
+            }
+            else
+            {
+                Rect trainButton = new Rect(area.x + 18f, y, area.width - 36f, 46f);
+                try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetTrainingStartButton, trainButton); } catch {}
+                bool enabled = OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily);
+                if (DrawAllianceActivitiesButton(trainButton, OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), enabled, true))
+                    RunOfficialDoctrineRecruitmentAction(officialSelectedTroopFamily);
+                if (!enabled)
+                {
+                    GUI.Label(new Rect(area.x + 18f, y + 52f, area.width - 36f, 34f), OfficialDoctrineRecruitmentStatusText(officialSelectedTroopFamily),
+                        new GUIStyle(smallStyle)
+                        {
+                            fontSize = compact ? 10 : 11,
+                            alignment = TextAnchor.MiddleCenter,
+                            wordWrap = true,
+                            normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
+                        });
+                }
+            }
         }
 
 }

@@ -28,6 +28,7 @@
     {"key":"startup.sync.retry","value":"Retry"},
     {"key":"startup.sync.session","value":"Preparing a secure connection…"},
     {"key":"startup.sync.unavailable","value":"Unavailable:"},
+    { "key": "formation_readiness.reservation.champion_required", "value": "Champion required" },
     { "key": "nursery.status.retry_hint", "value": "Data unavailable. Use Refresh to try again." },
     { "key": "nursery.status.sync_failed", "value": "Unable to sync" },
     { "key": "locale.display_name", "value": "English (United States)" },

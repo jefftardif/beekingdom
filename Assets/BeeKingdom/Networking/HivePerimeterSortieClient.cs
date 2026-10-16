@@ -103,6 +103,7 @@ namespace BeeKingdom.Networking
         public long ExpectedRevision { get; set; }
         public Dictionary<string, long> Quantities { get; set; }
         public string IdempotencyKey { get; set; }
+        public List<string> ChampionBeeIds { get; set; }
     }
 
     public sealed class SquadReservationReleaseRequest
@@ -139,6 +140,7 @@ namespace BeeKingdom.Networking
         public Dictionary<string, long> Available { get; set; }
         public Dictionary<string, long> Reserved { get; set; }
         public string ReservationId { get; set; }
+        public List<string> ChampionBeeIds { get; set; }
     }
 
     public sealed class RemoteSquadReservationReceipt
@@ -174,6 +176,7 @@ namespace BeeKingdom.Networking
                 Guid hiveId,
                 long expectedRevision,
                 IReadOnlyDictionary<string, long> quantities,
+                IReadOnlyList<string> championBeeIds,
                 string idempotencyKey,
                 CancellationToken cancellationToken =
                     default(CancellationToken));
@@ -391,6 +394,7 @@ namespace BeeKingdom.Networking
                     hiveId,
                     expectedRevision,
                     quantities,
+                    Array.Empty<string>(),
                     idempotencyKey,
                     cancellationToken).ConfigureAwait(false);
             return response.Snapshot;
@@ -401,6 +405,7 @@ namespace BeeKingdom.Networking
             Guid hiveId,
             long expectedRevision,
             IReadOnlyDictionary<string, long> quantities,
+            IReadOnlyList<string> championBeeIds,
             string idempotencyKey,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -408,6 +413,11 @@ namespace BeeKingdom.Networking
             RequireRevision(expectedRevision);
             RequireKey(idempotencyKey, nameof(idempotencyKey));
             Dictionary<string, long> copy = CopyAndValidateQuantities(quantities);
+            List<string> championCopy = (championBeeIds ?? Array.Empty<string>())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
             return SendReservationMutationAsync(
                 hiveId,
                 new AuthenticatedGameRestRequest(
@@ -417,12 +427,32 @@ namespace BeeKingdom.Networking
                     {
                         ExpectedRevision = expectedRevision,
                         Quantities = copy,
-                        IdempotencyKey = idempotencyKey
+                        IdempotencyKey = idempotencyKey,
+                        ChampionBeeIds = championCopy
                     }),
                 "commit",
                 expectedRevision,
                 idempotencyKey,
                 copy,
+                cancellationToken);
+        }
+
+        // Backward-compatible overload for tooling/tests that predate patrol-bound champions.
+        // Runtime Caserne uses the overload above and always supplies the selected champion.
+        public Task<RemoteSquadReservationResponse>
+            CommitReservationWithReceiptAsync(
+            Guid hiveId,
+            long expectedRevision,
+            IReadOnlyDictionary<string, long> quantities,
+            string idempotencyKey,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return CommitReservationWithReceiptAsync(
+                hiveId,
+                expectedRevision,
+                quantities,
+                Array.Empty<string>(),
+                idempotencyKey,
                 cancellationToken);
         }
 

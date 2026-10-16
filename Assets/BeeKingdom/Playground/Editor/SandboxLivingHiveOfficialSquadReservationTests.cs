@@ -26,6 +26,7 @@ namespace BeeKingdom.Playground.Editor
                 0,
                 0,
                 TimeSpan.Zero);
+        private const string TestChampionBeeId = "zephyra";
 
         [Test]
         public void NotConfiguredModelInventsNoReservation()
@@ -87,7 +88,7 @@ namespace BeeKingdom.Playground.Editor
                 NewController(client, store);
 
             await controller.RefreshForProofAsync();
-            await controller.CommitForProofAsync(3, 6, 3);
+            await controller.CommitForProofAsync(3, 6, 3, TestChampionBeeId);
 
             Assert.That(protectedBeforeTransport, Is.True);
             Assert.That(client.CommitCalls, Is.EqualTo(1));
@@ -122,7 +123,7 @@ namespace BeeKingdom.Playground.Editor
                 NewController(client, store);
 
             await controller.RefreshForProofAsync();
-            await controller.CommitForProofAsync(3, 6, 3);
+            await controller.CommitForProofAsync(3, 6, 3, TestChampionBeeId);
 
             Assert.That(controller.Model.IsPending, Is.True);
             Assert.That(client.CommitCalls, Is.EqualTo(1));
@@ -161,7 +162,7 @@ namespace BeeKingdom.Playground.Editor
                    NewController(firstClient, store))
             {
                 await first.RefreshForProofAsync();
-                await first.CommitForProofAsync(3, 6, 3);
+                await first.CommitForProofAsync(3, 6, 3, TestChampionBeeId);
                 originalKey = firstClient.LastCommitKey;
                 Assert.That(first.Model.IsPending, Is.True);
                 Assert.That(store.Value, Is.Not.Null);
@@ -206,7 +207,7 @@ namespace BeeKingdom.Playground.Editor
                 NewController(client, store);
 
             await controller.RefreshForProofAsync();
-            await controller.CommitForProofAsync(3, 6, 3);
+            await controller.CommitForProofAsync(3, 6, 3, TestChampionBeeId);
 
             Assert.That(controller.Model.IsPending, Is.True);
             Assert.That(store.Value, Is.Not.Null);
@@ -228,7 +229,7 @@ namespace BeeKingdom.Playground.Editor
                 NewController(client, store);
 
             await controller.RefreshForProofAsync();
-            await controller.CommitForProofAsync(3, 6, 3);
+            await controller.CommitForProofAsync(3, 6, 3, TestChampionBeeId);
 
             Assert.That(
                 controller.Model.State,
@@ -436,7 +437,10 @@ namespace BeeKingdom.Playground.Editor
                     item => item.Value - reserved[item.Key],
                     StringComparer.Ordinal),
                 Reserved = reserved,
-                ReservationId = reservationId
+                ReservationId = reservationId,
+                ChampionBeeIds = string.IsNullOrEmpty(reservationId)
+                    ? new List<string>()
+                    : new List<string> { TestChampionBeeId }
             };
         }
 
@@ -520,6 +524,7 @@ namespace BeeKingdom.Playground.Editor
             public int ReleaseCalls { get; private set; }
             public string LastCommitKey { get; private set; }
             public Dictionary<string, long> LastCommitQuantities { get; private set; }
+            public List<string> LastCommitChampionBeeIds { get; private set; } = new List<string>();
             public List<string> CommitKeys { get; } =
                 new List<string>();
             public GameReadSource LastReadSource { get; set; } =
@@ -536,14 +541,14 @@ namespace BeeKingdom.Playground.Editor
                 return Task.FromResult(ReadSnapshot);
             }
 
-            public Task<RemoteSquadReservationResponse>
-                CommitReservationWithReceiptAsync(
+            Task<RemoteSquadReservationResponse>
+                IHiveSquadReservationClient.CommitReservationWithReceiptAsync(
                     Guid hiveId,
                     long expectedRevision,
                     IReadOnlyDictionary<string, long> quantities,
+                    IReadOnlyList<string> championBeeIds,
                     string idempotencyKey,
-                    CancellationToken cancellationToken =
-                        default(CancellationToken))
+                    CancellationToken cancellationToken)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 CommitCalls++;
@@ -553,6 +558,7 @@ namespace BeeKingdom.Playground.Editor
                     item => item.Key,
                     item => item.Value,
                     StringComparer.Ordinal);
+                LastCommitChampionBeeIds = (championBeeIds ?? Array.Empty<string>()).ToList();
                 OnCommit?.Invoke();
                 if (CommitFailure != null) throw CommitFailure;
                 return Task.FromResult(CommitResponse);
