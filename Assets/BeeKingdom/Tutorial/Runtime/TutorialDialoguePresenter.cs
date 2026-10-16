@@ -133,12 +133,14 @@ namespace BeeKingdom.Tutorial
             float margin = (compact ? 12f : 16f) * scale;
             float panelWidth = compact ? safe.width - 2f * margin
                 : Mathf.Min(1240f * scale, safe.width - 2f * margin);
-            float panelHeight = Mathf.Min((compact ? 300f : 290f) * scale, safe.height * 0.6f);
+            // Final compact landscape: 14% shorter; keep phone touch targets and readable copy.
+            float landscapeHeight = safe.height / scale < 650f ? 275f : 250f;
+            float panelHeight = Mathf.Min((compact ? 300f : landscapeHeight) * scale, safe.height * 0.6f);
             float bottom = compact ? margin : Mathf.Min(90f * scale, safe.height * 0.105f);
             Rect panel = new Rect(safe.center.x - panelWidth * 0.5f,
                 safe.yMax - bottom - panelHeight, panelWidth, panelHeight);
             float padding = (compact ? 20f : 24f) * scale;
-            float portraitWidth = compact ? 64f * scale : Mathf.Min(360f * scale, panelWidth * 0.29f);
+            float portraitWidth = compact ? 64f * scale : Mathf.Min(330f * scale, panelWidth * 0.29f);
             float contentLeft = compact ? panel.x + padding : panel.x + portraitWidth + 30f * scale;
             Rect portrait = compact
                 ? new Rect(panel.x + padding, panel.y + 14f * scale, portraitWidth, 64f * scale)
@@ -146,14 +148,14 @@ namespace BeeKingdom.Tutorial
             Rect name = compact
                 ? new Rect(portrait.xMax + 14f * scale, panel.y + 26f * scale,
                     panel.xMax - padding - portrait.xMax - 14f * scale, 32f * scale)
-                : new Rect(contentLeft, panel.y + 24f * scale, panel.xMax - padding - contentLeft,
-                    Mathf.Max(26f, 36f * scale));
+                : new Rect(contentLeft, panel.y + 20f * scale, panel.xMax - padding - contentLeft,
+                    Mathf.Max(26f, 32f * scale));
             float actionHeight = Mathf.Max(48f, (compact ? 52f : 58f) * scale);
             float actionWidth = (compact ? 126f : 206f) * scale;
             Rect action = new Rect(panel.xMax - padding - actionWidth,
-                panel.yMax - (compact ? 20f : 22f) * scale - actionHeight, actionWidth, actionHeight);
+                panel.yMax - (compact ? 20f : 18f) * scale - actionHeight, actionWidth, actionHeight);
             float skipWidth = (compact ? 98f : 136f) * scale;
-            float textTop = compact ? panel.y + 96f * scale : name.yMax + 10f * scale;
+            float textTop = compact ? panel.y + 96f * scale : name.yMax + 8f * scale;
             return new DialogueLayout
             {
                 Panel = panel, Scale = scale, Compact = compact, Portrait = portrait, Name = name,
@@ -168,8 +170,8 @@ namespace BeeKingdom.Tutorial
         {
             if (layout.Compact || BeeKingdom.Playground.HiveViewProductUiPresenter.AnyModalOpenForExternalHost)
                 return layout.Portrait;
-            return new Rect(layout.Panel.x - 40f * layout.Scale, layout.Panel.y - 32f * layout.Scale,
-                layout.Portrait.width + 70f * layout.Scale, layout.Panel.height + 30f * layout.Scale);
+            return new Rect(layout.Panel.x - 32f * layout.Scale, layout.Panel.y - 26f * layout.Scale,
+                layout.Portrait.width + 60f * layout.Scale, layout.Panel.height + 24f * layout.Scale);
         }
         private void ContinueOrDismiss()
         {

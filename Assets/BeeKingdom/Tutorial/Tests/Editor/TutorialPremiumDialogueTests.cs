@@ -27,9 +27,9 @@ namespace BeeKingdom.Tutorial.Tests.Editor
         {
             var layout = Layout(width, height, new Rect(0, 0, width, height));
             Rect panel = Box(layout, "Panel");
-            Assert.That(panel.height / height, Is.LessThanOrEqualTo(0.34f), "No return to the oversized black panel.");
+            Assert.That(panel.height / height, Is.LessThanOrEqualTo(0.28f), "No return to the oversized black panel.");
             Assert.That(panel.width / width, Is.LessThanOrEqualTo(0.80f));
-            Assert.That(panel.yMin / height, Is.GreaterThanOrEqualTo(0.54f));
+            Assert.That(panel.yMin / height, Is.GreaterThanOrEqualTo(0.61f));
             Assert.That((height - panel.yMax) / height, Is.GreaterThanOrEqualTo(0.095f));
             Assert.That(Box(layout, "Text").Overlaps(Box(layout, "Continue")), Is.False);
             Assert.That(Box(layout, "Text").Overlaps(Box(layout, "Skip")), Is.False);
