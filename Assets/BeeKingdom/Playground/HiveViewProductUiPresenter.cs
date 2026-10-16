@@ -4467,7 +4467,8 @@ private static string courierToast = string.Empty;
         // modal is open and would otherwise paint over the overflowing part - see
         // Docs/AI/Missions/M040X-CL-FTUE-Overlay-Occlusion-Fix.md).
         public static bool AnyModalOpenForExternalHost =>
-            AllianceOverlayOpenForExternalHost
+            BankOverlayOpenForExternalHost
+            || AllianceOverlayOpenForExternalHost
             || CommunicationOverlayOpenForExternalHost
             || BarrackOverlayOpenForExternalHost
             || ConstructionOverlayOpenForExternalHost
@@ -10846,6 +10847,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             if (championBeesPanelOpen) { championBeesPanelOpen = false; return true; }
             if (speedUpWindowOpen) { speedUpWindowOpen = false; SpeedUpDialog.Close(); return true; }
             if (friendsScreenOpen) { friendsScreenOpen = false; return true; }
+            if (BankOverlayOpenForExternalHost) { CloseBankOverlayForExternalHost(); ReleaseGuiInputCapture(); return true; }
             if (activeHiveMenu == HiveMenuMode.Alliance)
             {
                 ReleaseAllianceScreenOverlays();
@@ -48139,6 +48141,9 @@ public static void ResetMissionsStateForProof()
             GUI.DrawTexture(new Rect(rect.x + 6f, rect.yMax - 2f, rect.width - 12f, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
             GUI.color = previous;
         }
+
+        // Stable bridge for Activities-based building windows; never use city artwork as panel grain.
+        internal static Texture2D BuildingWindowMaterial(string id) => GetPremiumTexture(id);
 
         private static Texture2D GetPremiumTexture(string id)
         {

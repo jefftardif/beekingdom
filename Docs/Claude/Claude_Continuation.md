@@ -40,6 +40,23 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Tutoriel compact final, Banque et Nurserie (2026-10-16)
+
+Tutoriel reduit a 300 px de haut a 1920x1080, style premium conserve. Banque restauree
+avec son client authentifie, sa feuille de route et sa Reserve Royale dans un fichier
+partial separe. Route batiment, fermeture, input et occlusion recables. Nurserie :
+textures Activites et densite retablies, jauges corrigees et erreur serveur visible au
+lieu d'un chargement infini. Operations et couvees desactivees preservees.
+
+Preuves : 125 tests cibles passes, 0 echec ; 3717 membres du presenter preserves.
+Reserve Royale lue avec succes depuis le serveur ; aucun depot/retrait de test effectue.
+Soins de Nurserie toujours indisponibles : BroodVitality.Enabled=false sur SRVESDT.
+Ce reglage serveur n'a pas ete modifie et aucune couvee experimentale n'a ete activee.
+
+Rapport : Docs/AI/Missions/Compact-Bank-Nursery-Recovery-20261016.md.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/compact-bank-nursery-20261016/.
+Livraison locale, aucun push/build/deploiement. Unity hors Play Mode apres controle.
+
 ## Jalon courant - Alliance Activites v4 restauree (2026-10-16)
 
 Retour a l'ancienne UI confirme. Refonte retrouvee dans 55264b3b et recuperee par

@@ -127,8 +127,7 @@ namespace BeeKingdom.Playground
             return string.Equals(buildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)
                 || string.Equals(buildingType, BuildingTypes.Genetics, StringComparison.Ordinal)
                 || string.Equals(buildingType, BuildingTypes.Academy, StringComparison.Ordinal)
-                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal)
-                || string.Equals(buildingType, BuildingTypes.Bank, StringComparison.Ordinal);
+                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal);
         }
 
         private static string BuildingStatus(BuildingDefinition building)

@@ -115,6 +115,7 @@ namespace BeeKingdom.Playground
             HiveMapRoyalPalaceBootstrap.InitializeForScene(scene);
             HiveMapSettingsBootstrap.InitializeForScene(scene);
             HiveMapUnsupportedBuildingBootstrap.InitializeForScene(scene);
+            HiveMapBankBootstrap.InitializeForScene(scene);
             HiveMapArmyBootstrap.InitializeForScene(scene);
             HiveMapAmbientBeesBootstrap.InitializeForScene(scene);
             LivingHiveChatBridgeBootstrap.InitializeForScene(scene);

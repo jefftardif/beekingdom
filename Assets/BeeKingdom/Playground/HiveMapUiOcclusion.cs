@@ -97,7 +97,8 @@ namespace BeeKingdom.Playground
 
         private static bool IsFullscreenOverlayOpen()
         {
-            return HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
+            return HiveViewProductUiPresenter.BankOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost
                 || LivingHiveResearchRuntime.IsModalOpen
                 || HiveMapActivitiesBootstrap.ModalOpenForExternalHost

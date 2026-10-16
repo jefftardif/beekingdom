@@ -1,6 +1,8 @@
 {
   "locale": "fr-CA",
   "entries": [
+    { "key": "nursery.status.retry_hint", "value": "Données indisponibles. Utilise Actualiser pour réessayer." },
+    { "key": "nursery.status.sync_failed", "value": "Synchronisation impossible" },
     { "key": "locale.display_name", "value": "Français (Canada)" },
     { "key": "common.close", "value": "Fermer" },
     { "key": "common.continue", "value": "Continuer" },

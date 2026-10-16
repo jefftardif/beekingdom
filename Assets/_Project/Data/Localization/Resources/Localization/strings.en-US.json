@@ -1,6 +1,8 @@
 {
   "locale": "en-US",
   "entries": [
+    { "key": "nursery.status.retry_hint", "value": "Data unavailable. Use Refresh to try again." },
+    { "key": "nursery.status.sync_failed", "value": "Unable to sync" },
     { "key": "locale.display_name", "value": "English (United States)" },
     { "key": "common.close", "value": "Close" },
     { "key": "common.continue", "value": "Continue" },

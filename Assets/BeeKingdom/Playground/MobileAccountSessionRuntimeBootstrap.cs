@@ -148,6 +148,7 @@ namespace BeeKingdom.Playground
         private static IHiveVipClient vipClient;
         private static IHiveSpeedUpClient speedUpClient;
         private static IHiveRewardLedgerClient rewardLedgerClient;
+        private static IRoyalReserveClient royalReserveClient;
         private static HiveSpeedUpPanelController speedUpController;
         private static HiveRewardLedgerPanelController rewardLedgerController;
         private static bool championBeeAndTroopTierGameplayReady;
@@ -157,6 +158,15 @@ namespace BeeKingdom.Playground
         public static IHiveVipClient VipClient => championBeeAndTroopTierGameplayReady ? vipClient : null;
         public static IHiveSpeedUpClient SpeedUpClient => championBeeAndTroopTierGameplayReady ? speedUpClient : null;
         public static IHiveRewardLedgerClient RewardLedgerClient => championBeeAndTroopTierGameplayReady ? rewardLedgerClient : null;
+        public static IRoyalReserveClient RoyalReserveClient => championBeeAndTroopTierGameplayReady ? royalReserveClient : null;
+
+        public static void RefreshStocksAfterBankMutation()
+        {
+            stockController?.Refresh();
+            offlineProductionController?.Refresh();
+            buildingUpgradeController?.Refresh();
+        }
+
         public static Guid GameplayHiveId => gameplayHiveId;
         public static Guid GameplayPlayerId => gameplayPlayerId;
         private static readonly LivingHiveChatSessionCoordinator chatCoordinator = new LivingHiveChatSessionCoordinator();
@@ -417,6 +427,7 @@ namespace BeeKingdom.Playground
             vipClient = new HiveVipClient(client.Gate, client, gameTransport);
             speedUpClient = new HiveSpeedUpClient(client.Gate, client, gameTransport);
             rewardLedgerClient = new HiveRewardLedgerClient(client.Gate, client, gameTransport);
+            royalReserveClient = new RoyalReserveClient(client.Gate, client, gameTransport);
             speedUpController = new HiveSpeedUpPanelController(speedUpClient, hiveId);
             rewardLedgerController = new HiveRewardLedgerPanelController(rewardLedgerClient, hiveId);
             championBeeAndTroopTierGameplayReady = authenticatedAuthority;
@@ -731,6 +742,8 @@ namespace BeeKingdom.Playground
             vipClient = null;
             speedUpClient = null;
             rewardLedgerClient = null;
+            royalReserveClient = null;
+            HiveViewProductUiPresenter.CloseBankOverlayForExternalHost();
             HiveSpeedUpPanelController previousSpeedUp = speedUpController;
             HiveRewardLedgerPanelController previousRewardLedger = rewardLedgerController;
             speedUpController = null;

@@ -22,6 +22,7 @@ namespace BeeKingdom.Playground
         public const string InfirmaryPremiumIconResourcePath =
             "PremiumBeeIcons/infirmary_royal_healing";
 
+        private static Sprite nurseryProgressSprite;
         private static readonly Color Gold = new Color(1f, .77f, .36f);
         private static readonly Color Ink = new Color(.055f, .037f, .024f);
         private static readonly Color Paper = new Color(1f, .95f, .82f);
@@ -252,8 +253,10 @@ namespace BeeKingdom.Playground
             HiveBroodVitalityScreenModel model = configured ? nurseryController.Model : null;
             bool loaded = model != null && model.Initialized;
             bool busy = configured && nurseryController.IsBusy;
+            bool error = model != null && model.State == HiveBroodVitalityScreenState.Error;
             nurserySummaryLabel.text = !configured
                 ? (fr ? "Connexion requise" : "Connection required")
+                : error ? BeeLocalization.Text("nursery.status.sync_failed")
                 : !loaded ? (fr ? "Chargement..." : "Loading...")
                 : (fr ? "Vitalité de la colonie : " : "Colony vitality: ") + model.Quality + " / 100";
             if (nurseryNutritionLabel != null)
@@ -268,12 +271,14 @@ namespace BeeKingdom.Playground
             bool hasOperation = loaded && model.ActiveOperation != null;
             bool pending = loaded && model.IsPending;
             bool readOnly = loaded && model.IsReadOnly;
-            bool error = loaded && model.State == HiveBroodVitalityScreenState.Error;
+
             TimeSpan remaining = hasOperation
                 ? model.Remaining(nurseryController.Elapsed) : TimeSpan.Zero;
             if (!configured) nurseryStatusLabel.text = fr
                 ? "Connecte-toi pour accéder aux soins de la Nurserie."
                 : "Sign in to access Nursery care.";
+            else if (error) nurseryStatusLabel.text =
+                BeeLocalization.Text("nursery.status.retry_hint") + " (" + model.ErrorCode + ")";
             else if (!loaded) nurseryStatusLabel.text = fr
                 ? "Chargement des données officielles..." : "Loading server data...";
             else if (busy) nurseryStatusLabel.text = fr
@@ -645,6 +650,16 @@ namespace BeeKingdom.Playground
                 Mathf.Max(1f, rect.width - 2f), Mathf.Max(1f, rect.height - 2f)));
             Image fill = front.gameObject.AddComponent<Image>();
             fill.color = Gold;
+            if (nurseryProgressSprite == null)
+            {
+                Texture2D white = Texture2D.whiteTexture;
+                nurseryProgressSprite = Sprite.Create(white,
+                    new Rect(0f, 0f, white.width, white.height), Vector2.one * .5f);
+                nurseryProgressSprite.name = "Nursery progress source";
+                nurseryProgressSprite.hideFlags = HideFlags.HideAndDontSave;
+            }
+            // Image.Type.Filled needs a sprite; without one an empty gauge looks full.
+            fill.sprite = nurseryProgressSprite;
             fill.type = Image.Type.Filled;
             fill.fillMethod = Image.FillMethod.Horizontal;
             fill.fillOrigin = (int)Image.OriginHorizontal.Left;
@@ -788,8 +803,9 @@ namespace BeeKingdom.Playground
         public static float PremiumCanvasScale(Vector2 size)
         {
             if (size.x <= 0f || size.y <= 0f) return 1f;
-            float basis = size.y > size.x ? size.x / 390f : size.y / 720f;
-            return Mathf.Clamp(basis, .85f, 1.6f);
+            // Match the approved Activities-v4 density; 1920x1080 uses 1.2, not 1.5.
+            float basis = size.y > size.x ? size.x / 390f : size.y / 900f;
+            return size.y > size.x ? Mathf.Clamp(basis, 1f, 3f) : Mathf.Clamp(basis, 1f, 2f);
         }
 
         public static Rect PremiumSafeCanvasRect(Vector2 size, Rect safeArea, float scale)
@@ -806,10 +822,10 @@ namespace BeeKingdom.Playground
 
         private static Texture PremiumMaterial(string kind)
         {
-            string path = string.Equals(kind, "cave-background", StringComparison.Ordinal)
-                ? "PremiumBeeReference/background_hive"
-                : "PremiumBeeReference/bg_beehive";
-            return Resources.Load<Texture2D>(path) ?? Texture2D.whiteTexture;
+            // Use the original subtle Activities materials, never stretch a city image
+            // across each card. The bridge is source-owned and compilation-checked.
+            return HiveViewProductUiPresenter.BuildingWindowMaterial(kind)
+                ?? Texture2D.whiteTexture;
         }
 
         private static Texture PremiumIcon(string key)
