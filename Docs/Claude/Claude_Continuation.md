@@ -40,6 +40,19 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Parite SRVESDT confirmee sans redeploiement (2026-10-16)
+
+Audit comparant main cd8fd289, origin/deploy 609401a8 et DLL live datées
+du 13/10 15:21. Contrats CombatPatrol, CombatSquadReservation,
+HiveTroopDeploymentAccounting et RoyalReserveService : blobs Git identiques
+entre les deux branches. Serveur : HTTP 200 / et /health, HTTP 401 pour les
+lectures sans session des trois routes Caserne/Patrouille/Banque. Drapeaux
+CombatSquadReservation/CombatPatrol actifs, BroodVitality toujours desactive.
+Les DLL n'ont pas ete touchees. Aucun redeploiement necessaire pour ces contrats.
+
+Attention : main et deploy divergent sur Chat, Alliance et Nurserie; ne pas
+publier main:deploy sans reconciliation et tests complets. Le serveur actif
+reste valide. Rapport : Docs/AI/Missions/Production-Contract-Parity-Verification-20261016.md.
 ## Jalon courant - Contrats serveur Caserne et Patrouilles reconciliés (2026-10-16)
 
 Git aligné avec les contrats actifs de SRVESDT : réservations associées à une championne, patrouilles préparées, état v13, blessées, comptabilisation, services Banque et Nurserie préservés. Flags Production conformes aux valeurs actives du serveur. 284 tests métier PASS, 35 tests HTTP ciblés PASS, build Release 0 erreur. Aucun déploiement ni mutation des données. Suite HTTP complète restant à revalider avant future publication.
