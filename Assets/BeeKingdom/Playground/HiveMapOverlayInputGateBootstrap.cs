@@ -73,7 +73,8 @@ namespace BeeKingdom.Playground
         // Single source of truth so a new overlay only needs to be added once here.
         public static bool IsAnyOverlayBlocking()
         {
-            return HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
+            return HiveViewProductUiPresenter.BankOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost

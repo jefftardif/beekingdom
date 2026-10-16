@@ -168,9 +168,14 @@ namespace BeeKingdom.Gameplay.Communication
                 {
                     conversations.Clear();
                     conversations.AddRange(accessible.Where(value => value != null && !string.IsNullOrWhiteSpace(value.ConversationId)).Select(MapConversation));
+                    PruneInaccessibleGroupDetails();
                     if (!conversations.Any(value => string.Equals(value.ConversationId, selectedConversationId, StringComparison.Ordinal)))
+                    {
                         selectedConversationId = conversations.FirstOrDefault()?.ConversationId;
+                        messages.Clear();
+                    }
                 }
+                PersistRecentCache();
                 await provider.EnsureRealtimeSubscriptionsAsync(accessible.Select(value => value.ConversationId), ct);
                 // RAP-OPTIONNEL-COMMUNICATIONS_01 : le scope monde vient des capacites negociees,
                 // jamais d'une valeur inventee cote client. S'il manque (serveur plus ancien), la
@@ -470,6 +475,12 @@ namespace BeeKingdom.Gameplay.Communication
             {
                 conversations.Clear();
                 conversations.AddRange(accessible.Where(value => value != null && !string.IsNullOrWhiteSpace(value.ConversationId)).Select(MapConversation));
+                PruneInaccessibleGroupDetails();
+                if (!conversations.Any(value => string.Equals(value.ConversationId, selectedConversationId, StringComparison.Ordinal)))
+                {
+                    selectedConversationId = conversations.FirstOrDefault()?.ConversationId;
+                    messages.Clear();
+                }
             }
             await provider.EnsureRealtimeSubscriptionsAsync(accessible.Select(value => value.ConversationId), ct);
             PersistRecentCache();

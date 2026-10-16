@@ -187,7 +187,14 @@ public sealed partial class ChatService
             throw new InvalidOperationException("group_leader_must_transfer");
         }
 
-        repository.RemoveParticipant(conversationId, playerId, clock.UtcNow);
+        DateTimeOffset now = clock.UtcNow;
+        if (participant.Role == ChatPermissionRole.Leader)
+        {
+            // The last leader's outstanding invitations must not reopen a leaderless room.
+            foreach (ChatGroupInvite invite in repository.ListPendingInvitesForConversation(conversationId))
+                repository.UpdateGroupInviteStatus(invite.InviteId, ChatGroupInviteStatus.Cancelled, now);
+        }
+        repository.RemoveParticipant(conversationId, playerId, now);
     }
 
     public ChatPreferences GetPreferences(PlayerId playerId)

@@ -438,8 +438,29 @@ namespace BeeKingdom.Networking
             this.transport = transport ?? throw new ArgumentNullException(nameof(transport));
         }
 
-        public Task<RemoteMyAllianceOverview> GetMyAllianceAsync(CancellationToken cancellationToken = default(CancellationToken))
-            => SendAsync<RemoteMyAllianceOverview>("GET", BasePath + "/membership/mine", null, cancellationToken);
+        public async Task<RemoteMyAllianceOverview> GetMyAllianceAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            SessionContext context = await RequireSessionAsync(cancellationToken);
+            var request = new AuthenticatedGameRestRequest("GET", BasePath + "/membership/mine");
+            RemoteMyAllianceOverview overview = await SendWithSingleAuthenticationRefreshAsync<RemoteMyAllianceOverview>(request, context, cancellationToken);
+            if (overview == null) throw InvalidResponse("alliance.invalid_response");
+            if (!overview.HasAlliance)
+            {
+                if (overview.Alliance != null || overview.Membership != null) throw InvalidResponse("alliance.invalid_response");
+                return overview;
+            }
+
+            // An incomplete membership must never unlock the no-alliance creation flow.
+            RemoteAllianceEntity alliance = overview.Alliance;
+            RemoteAllianceMembership membership = overview.Membership;
+            if (alliance == null || membership == null || alliance.AllianceId == Guid.Empty ||
+                membership.AllianceId != alliance.AllianceId || membership.PlayerId != context.PlayerId ||
+                alliance.Status != RemoteAllianceStatus.Active || alliance.LeaderPlayerId == Guid.Empty ||
+                !Enum.IsDefined(typeof(RemoteAllianceRole), membership.Role) ||
+                (membership.Role == RemoteAllianceRole.Leader) != (alliance.LeaderPlayerId == membership.PlayerId))
+                throw InvalidResponse("alliance.invalid_response");
+            return overview;
+        }
 
         public async Task<RemoteAllianceEntity> CreateAllianceAsync(string name, string tag, string description, string language, string emblemKey, RemoteAllianceJoinMode joinMode, string clientRequestId, CancellationToken cancellationToken = default(CancellationToken))
         {

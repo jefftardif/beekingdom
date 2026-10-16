@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-    public static class MobileAccountSessionRuntimeBootstrap
+    public static partial class MobileAccountSessionRuntimeBootstrap
     {
         private const string ConfigurationResource = "BeeKingdom/MobileAccountSessionRuntime";
         private const string InstallationKey = "BeeKingdom.MobileAccount.InstallationId.v1";
@@ -148,6 +148,7 @@ namespace BeeKingdom.Playground
         private static IHiveVipClient vipClient;
         private static IHiveSpeedUpClient speedUpClient;
         private static IHiveRewardLedgerClient rewardLedgerClient;
+        private static IRoyalReserveClient royalReserveClient;
         private static HiveSpeedUpPanelController speedUpController;
         private static HiveRewardLedgerPanelController rewardLedgerController;
         private static bool championBeeAndTroopTierGameplayReady;
@@ -157,6 +158,15 @@ namespace BeeKingdom.Playground
         public static IHiveVipClient VipClient => championBeeAndTroopTierGameplayReady ? vipClient : null;
         public static IHiveSpeedUpClient SpeedUpClient => championBeeAndTroopTierGameplayReady ? speedUpClient : null;
         public static IHiveRewardLedgerClient RewardLedgerClient => championBeeAndTroopTierGameplayReady ? rewardLedgerClient : null;
+        public static IRoyalReserveClient RoyalReserveClient => championBeeAndTroopTierGameplayReady ? royalReserveClient : null;
+
+        public static void RefreshStocksAfterBankMutation()
+        {
+            stockController?.Refresh();
+            offlineProductionController?.Refresh();
+            buildingUpgradeController?.Refresh();
+        }
+
         public static Guid GameplayHiveId => gameplayHiveId;
         public static Guid GameplayPlayerId => gameplayPlayerId;
         private static readonly LivingHiveChatSessionCoordinator chatCoordinator = new LivingHiveChatSessionCoordinator();
@@ -186,6 +196,7 @@ namespace BeeKingdom.Playground
                 string.IsNullOrWhiteSpace(configuration.BaseUrl))
                 return;
             activeConfiguration = configuration;
+            startupAuthenticationInitializing = true;
 
             try
             {
@@ -239,6 +250,7 @@ namespace BeeKingdom.Playground
             {
                 Debug.LogWarning("Bee Kingdom official account session remains closed: " + exception.GetType().Name);
             }
+            finally { startupAuthenticationInitializing = false; }
         }
 
         public static string[] ProofRows()
@@ -300,23 +312,33 @@ namespace BeeKingdom.Playground
 
         public static bool TryConfigureGameplayForActiveSession()
         {
-            CloseGameplayForSignedOutSession();
             MobileAccountSessionRuntimeConfiguration configuration = activeConfiguration;
-            Guid hiveId;
+            Guid hiveId, knownPlayerId;
             if (client == null || configuration == null || !configuration.OfficialGameplayEnabled ||
                 !Guid.TryParseExact(configuration.OfficialHiveId, "D", out hiveId) || hiveId == Guid.Empty)
+            {
+                CloseGameplayForSignedOutSession();
                 return false;
-
-            var protectedCacheStore = CreateGameReadCacheStore();
-            Guid knownPlayerId;
+            }
             bool authenticatedAuthority = client.State == MobileAccountSessionState.Authenticated &&
                 client.ServerGameplayAuthorityGranted;
+            var protectedCacheStore = CreateGameReadCacheStore();
             bool protectedOfflineIdentity = protectedCacheStore.IsProtectionAvailable &&
                 client.TryGetKnownPlayerId(out knownPlayerId) && knownPlayerId != Guid.Empty;
-            if (!authenticatedAuthority && !protectedOfflineIdentity) return false;
-            if (!client.TryGetKnownPlayerId(out gameplayPlayerId) ||
-                gameplayPlayerId == Guid.Empty)
+            if ((!authenticatedAuthority && !protectedOfflineIdentity) ||
+                !client.TryGetKnownPlayerId(out knownPlayerId) || knownPlayerId == Guid.Empty)
+            {
+                CloseGameplayForSignedOutSession();
                 return false;
+            }
+            // Opening a screen or changing scene must not sign out, dispose every controller
+            // and erase synchronized data. Rebuild only for an actual binding change.
+            if (CanReuseGameplayBinding(knownPlayerId, hiveId, configuration.BaseUrl, authenticatedAuthority))
+                return true;
+            CloseGameplayForSignedOutSession();
+            gameplayPlayerId = knownPlayerId;
+            gameplayBinding = new HiveGameplayBindingIdentity(client, knownPlayerId, hiveId,
+                configuration.BaseUrl, authenticatedAuthority);
 
             // M059-CL : l'apercu local (niveaux/effectifs de secours) etait partitionne par
             // APPAREIL, jamais par compte - deux comptes sur la meme machine partageaient donc
@@ -417,6 +439,7 @@ namespace BeeKingdom.Playground
             vipClient = new HiveVipClient(client.Gate, client, gameTransport);
             speedUpClient = new HiveSpeedUpClient(client.Gate, client, gameTransport);
             rewardLedgerClient = new HiveRewardLedgerClient(client.Gate, client, gameTransport);
+            royalReserveClient = new RoyalReserveClient(client.Gate, client, gameTransport);
             speedUpController = new HiveSpeedUpPanelController(speedUpClient, hiveId);
             rewardLedgerController = new HiveRewardLedgerPanelController(rewardLedgerClient, hiveId);
             championBeeAndTroopTierGameplayReady = authenticatedAuthority;
@@ -489,7 +512,6 @@ namespace BeeKingdom.Playground
             // Alliance Center - a pending invitation (or an existing membership) sat invisible
             // until then. One real, already-existing fetch at hive load; HiveViewProductUiPresenter
             // reads the resulting Model to surface a real "you have a pending invitation" alert.
-            allianceCenterController.Refresh();
             HiveViewProductUiPresenter.ConfigureHiveStockControllerForRuntime(stockController);
             HiveViewProductUiPresenter.ConfigureDailyRoundControllerForRuntime(dailyRoundController);
             HiveViewProductUiPresenter.ConfigureBroodVitalityControllerForRuntime(
@@ -502,18 +524,7 @@ namespace BeeKingdom.Playground
                     squadReservationController);
             HiveViewProductUiPresenter.ConfigureSpeedUpControllerForRuntime(speedUpController);
             HiveViewProductUiPresenter.ConfigureRewardLedgerControllerForRuntime(rewardLedgerController);
-            combatPatrolController.Refresh();
-            strategicPathController.Refresh();
-            worldResourceCollectionController.Refresh();
-            worldPresenceController.Refresh();
-            bestiaryCodexController.Refresh();
-            milestoneEventController.Refresh();
-            questChainController.Refresh();
-            courierMailboxController.Refresh();
-            speedUpController.Refresh();
-            rewardLedgerController.Refresh();
-            gameplayController.Refresh();
-            squadReservationController.Refresh();
+            BeginStartupDataTracking();
             EnsureHiveThenRefreshGameplayState(vipClient, hiveId);
             return true;
         }
@@ -530,22 +541,29 @@ namespace BeeKingdom.Playground
         // l'etat une fois via /ensure avant de lancer les rafraichissements habituels.
         private static async void EnsureHiveThenRefreshGameplayState(IHiveVipClient vip, Guid hiveId)
         {
+            int generation = startupGeneration;
+            CancellationToken token = startupLifetime.Token;
             try
             {
-                await vip.EnsureHiveAsync(hiveId);
+                if (!championBeeAndTroopTierGameplayReady)
+                {
+                    // Protected offline consultation keeps its cached read paths and never
+                    // attempts a server initialization mutation without an official session.
+                    startupEnsureState = HiveStartupStepState.Ready;
+                    RefreshStartupReads();
+                    return;
+                }
+                // Existing idempotent hive-initialization operation, not an economic action.
+                await vip.EnsureHiveAsync(hiveId, token);
+                if (generation != startupGeneration || token.IsCancellationRequested) return;
+                startupEnsureState = HiveStartupStepState.Ready;
+                RefreshStartupReads();
             }
+            catch (OperationCanceledException) { }
             catch (Exception)
             {
+                if (generation == startupGeneration) startupEnsureState = HiveStartupStepState.Unavailable;
             }
-
-            offlineProductionController.Refresh();
-            buildingUpgradeController.Refresh();
-            researchController.Refresh();
-            allianceCenterController.Refresh();
-            stockController.Refresh();
-            dailyRoundController.Refresh();
-            broodVitalityController.Refresh();
-            doctrineRecruitmentController.Refresh();
         }
 
         public sealed class DisplayNameSubmitResult
@@ -673,6 +691,7 @@ namespace BeeKingdom.Playground
 
         public static void CloseGameplayForSignedOutSession()
         {
+            ResetStartupSession();
             ForgetChatLifecycle(chatCoordinator.SessionEndedAsync());
             cachedChatBinding = null;
             cachedChatBindingKey = null;
@@ -731,6 +750,8 @@ namespace BeeKingdom.Playground
             vipClient = null;
             speedUpClient = null;
             rewardLedgerClient = null;
+            royalReserveClient = null;
+            HiveViewProductUiPresenter.CloseBankOverlayForExternalHost();
             HiveSpeedUpPanelController previousSpeedUp = speedUpController;
             HiveRewardLedgerPanelController previousRewardLedger = rewardLedgerController;
             speedUpController = null;

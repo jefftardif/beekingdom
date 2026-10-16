@@ -44,7 +44,7 @@ namespace BeeKingdom.Tests.Editor.Interaction
         public void FutureBuildingsAreMarkedFuture()
         {
             string[] future = { BuildingTypes.Defense, BuildingTypes.Genetics,
-                BuildingTypes.Infirmary, BuildingTypes.Academy, BuildingTypes.Bank,
+                BuildingTypes.Academy, BuildingTypes.Bank,
                 BuildingTypes.AllianceCenter, BuildingTypes.ChampionHall };
             for (int i = 0; i < future.Length; i++)
             {
@@ -52,6 +52,15 @@ namespace BeeKingdom.Tests.Editor.Interaction
                 Assert.That(definition.State, Is.EqualTo(BuildingState.Future), future[i] + " doit être Future");
                 Assert.That(definition.StateIsFuture, Is.True, future[i] + " StateIsFuture doit être true");
             }
+        }
+
+        [Test]
+        public void InfirmaryHasActiveRecoveryPresentationWithoutInventedActions()
+        {
+            var definition = BuildingCatalog.GetByBuildingType(BuildingTypes.Infirmary);
+            Assert.That(definition.State, Is.EqualTo(BuildingState.Active));
+            Assert.That(definition.StateIsFuture, Is.False);
+            Assert.That(definition.Capabilities, Is.EqualTo(BuildingCapabilities.None));
         }
 
         [Test]

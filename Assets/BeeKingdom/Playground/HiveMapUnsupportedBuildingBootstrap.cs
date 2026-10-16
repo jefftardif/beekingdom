@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
+    // Infirmary now uses its restored Activities recovery ward; the remaining buildings keep this fallback.
     // M008-CX wave 2: Genetics and Infirmary were marked "future" in LivingHive and have
     // no server-authoritative gameplay controller in the current client. HiveMap should
     // still give a clear building-specific response instead of silently falling through to
@@ -21,6 +22,10 @@ namespace BeeKingdom.Playground
 
         public static bool OverlayOpenForExternalHost { get; private set; }
 
+        private HiveMapPremiumBuildingWindow infirmaryWindow;
+        private ICombatPatrolPanelController boundInfirmaryController;
+        private bool IsInfirmarySelection => selectedBuilding != null &&
+            string.Equals(selectedBuilding.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal);
         private BuildingDefinition selectedBuilding;
         private BuildingInteractionController subscribedController;
 
@@ -57,6 +62,16 @@ namespace BeeKingdom.Playground
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            if (OverlayOpenForExternalHost && IsInfirmarySelection && infirmaryWindow != null)
+            {
+                var activeController = MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap;
+                if (!ReferenceEquals(boundInfirmaryController, activeController))
+                {
+                    boundInfirmaryController = activeController;
+                    infirmaryWindow.BindInfirmaryController(activeController);
+                }
+                infirmaryWindow.SetSuppressed(InfirmarySuppressed());
+            }
             if (subscribedController != null) return;
             BuildingInteractionController controller = FindAnyObjectByType<BuildingInteractionController>();
             if (controller == null) return;
@@ -66,6 +81,7 @@ namespace BeeKingdom.Playground
 
         private void OnDestroy()
         {
+            CloseInfirmaryWindow();
             if (subscribedController != null) subscribedController.Selection.BuildingClicked -= OnBuildingClicked;
         }
 
@@ -74,12 +90,63 @@ namespace BeeKingdom.Playground
             if (building == null || !IsTracked(building.BuildingType)) return;
             selectedBuilding = building;
             OverlayOpenForExternalHost = true;
+            if (IsInfirmarySelection)
+            {
+                // Restore the existing recovery ward, not the future-feature placeholder.
+                if (infirmaryWindow == null)
+                {
+                    GameObject root = new GameObject("Infirmary Activities Screen");
+                    root.transform.SetParent(transform, false);
+                    infirmaryWindow = root.AddComponent<HiveMapPremiumBuildingWindow>();
+                }
+                boundInfirmaryController = MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap;
+                infirmaryWindow.BindInfirmaryController(boundInfirmaryController);
+                infirmaryWindow.Show(building, "Infirmerie", "Infirmary", string.Empty, string.Empty,
+                    CloseInfirmaryWindow, UpgradeInfirmary);
+                infirmaryWindow.SetSuppressed(InfirmarySuppressed());
+            }
+            else if (infirmaryWindow != null) infirmaryWindow.Hide();
+        }
+
+        private static bool InfirmarySuppressed()
+        {
+            return HiveMapActivitiesBootstrap.ModalOpenForExternalHost
+                || HiveMapArmyBootstrap.ModalOpenForExternalHost
+                || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.UpgradeProgressOverlayOpenForExternalHost;
+        }
+
+        private void CloseInfirmaryWindow()
+        {
+            OverlayOpenForExternalHost = false;
+            selectedBuilding = null;
+            boundInfirmaryController = null;
+            if (infirmaryWindow != null) infirmaryWindow.Hide();
+        }
+
+        private void UpgradeInfirmary()
+        {
+            string key = selectedBuilding?.LegacyKey;
+            CloseInfirmaryWindow();
+            if (!string.IsNullOrWhiteSpace(key))
+                HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(key);
         }
 
         private void OnGUI()
         {
             if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
             if (!OverlayOpenForExternalHost) return;
+            if (IsInfirmarySelection)
+            {
+                // Retained-mode UI owns rendering and input; do not draw the old popup.
+                if (!InfirmarySuppressed() && Event.current.type == EventType.KeyDown
+                    && Event.current.keyCode == KeyCode.Escape)
+                {
+                    CloseInfirmaryWindow();
+                    Event.current.Use();
+                }
+                return;
+            }
             BuildingDefinition building = selectedBuilding;
             if (building == null)
             {
@@ -127,8 +194,7 @@ namespace BeeKingdom.Playground
             return string.Equals(buildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)
                 || string.Equals(buildingType, BuildingTypes.Genetics, StringComparison.Ordinal)
                 || string.Equals(buildingType, BuildingTypes.Academy, StringComparison.Ordinal)
-                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal)
-                || string.Equals(buildingType, BuildingTypes.Bank, StringComparison.Ordinal);
+                || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal);
         }
 
         private static string BuildingStatus(BuildingDefinition building)

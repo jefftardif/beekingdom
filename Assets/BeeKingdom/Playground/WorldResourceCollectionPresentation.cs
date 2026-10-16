@@ -180,6 +180,12 @@ namespace BeeKingdom.Playground
         private async Task LaunchCoreAsync(string nodeId)
         {
             if (busy || disposed || !Model.CanLaunch(nodeId)) return;
+            if (!WorldMapMarchRegistry.CanLaunchNewMarch())
+            {
+                SetError("max_marches_reached");
+                return;
+            }
+
             int guardians = Model.DraftGuardians, wingrunners = Model.DraftWingrunners, darters = Model.DraftDarters;
             busy = true;
             Model.State = WorldResourceCollectionScreenState.Mutating;
@@ -208,6 +214,8 @@ namespace BeeKingdom.Playground
                 RemoteWorldResourceCollectionSnapshot snapshot = await client.RecallAsync(hiveId, target.FlightId, Model.Revision, NewKey("recall"), lifetime.Token);
                 if (disposed) return;
                 ApplySnapshot(snapshot);
+                var marchId = $"collection_{target.FlightId}";
+                WorldMapMarchRegistry.UnregisterMarch(marchId, Model.AvailableRoster);
             }
             catch (WorldResourceCollectionClientException error) { if (!disposed) SetError(StableError(error)); }
             catch (Exception) { if (!disposed) SetError("unexpected"); }
@@ -237,6 +245,8 @@ namespace BeeKingdom.Playground
                     };
                 }
                 ApplySnapshot(snapshot);
+                var marchId = $"collection_{target.FlightId}";
+                WorldMapMarchRegistry.UnregisterMarch(marchId, Model.AvailableRoster);
                 if (Model.Debrief != null) Model.State = WorldResourceCollectionScreenState.Debrief;
             }
             catch (WorldResourceCollectionClientException error) { if (!disposed) SetError(StableError(error)); }
@@ -266,6 +276,9 @@ namespace BeeKingdom.Playground
                     Model.State = WorldResourceCollectionScreenState.Ready;
                 }
             }
+
+            // M081: Rebuild collection march incrementally (don't clear combat)
+            HiveViewProductUiPresenter.RebuildCollectionMarchRegistry();
         }
 
         private void SetError(string code)

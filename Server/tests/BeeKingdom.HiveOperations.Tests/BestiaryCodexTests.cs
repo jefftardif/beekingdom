@@ -100,11 +100,27 @@ public sealed class BestiaryCodexTests
 
     private static DurableJsonHiveStateRepository Repo(string root, Guid p, Guid h, long guardians, long wingrunners, long darters, int guardPostLevel = 0, long honey = 100_000, long pollen = 100_000)
     {
+        var reserved = new Dictionary<string, long>
+        {
+            ["guardians"] = guardians,
+            ["wingrunners"] = wingrunners,
+            ["darters"] = darters
+        };
         var repo = new DurableJsonHiveStateRepository(root, (_, _) => new PlayerHiveState(
             p, h, HiveStateMigrator.CurrentModelVersion, 0,
             new Dictionary<string, ResourceBalance> { ["honey"] = new(honey, 1_000_000), ["pollen"] = new(pollen, 1_000_000) },
             new Dictionary<string, int> { ["guard_post"] = guardPostLevel }, [], new(),
-            DoctrineRoster: new DoctrineRosterState(0, new() { ["guardians"] = guardians, ["wingrunners"] = wingrunners, ["darters"] = darters }, null, new())));
+            DoctrineRoster: new DoctrineRosterState(0, new() { ["guardians"] = guardians, ["wingrunners"] = wingrunners, ["darters"] = darters }, null, new()),
+            SquadReservation: new SquadReservationState(
+                0,
+                CombatSquadReservationService.ComputeCapacity(new Dictionary<string, int> { ["guard_post"] = guardPostLevel }),
+                reserved,
+                "bestiary-test-reservation",
+                new(),
+                new List<string> { "striga" }),
+            ChampionBees: new ChampionBeeProgressState(
+                new Dictionary<string, int> { ["striga"] = 1 },
+                new List<string> { "striga" })));
         repo.ExecuteAtomicallyAsync(p, h, s => s).GetAwaiter().GetResult();
         return repo;
     }

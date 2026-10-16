@@ -22,6 +22,64 @@ namespace BeeKingdom.Playground.Editor
     // redevient possible et ces tests echouent.
     public sealed class FtuePresentationCleanupTests
     {
+        [TestCase(320, 568, 0, 20, 320, 528)]
+        [TestCase(390, 844, 0, 34, 390, 763)]
+        [TestCase(1170, 2532, 0, 102, 1170, 2289)]
+        [TestCase(844, 390, 47, 21, 750, 369)]
+        [TestCase(1600, 900, 0, 0, 1600, 900)]
+        [TestCase(320, 568, 0, 0, 0, 0)]
+        public void DialogueLayout_KeepsReadableTextAndTouchActionsInsideSafeArea(
+            int width, int height, int x, int y, int safeWidth, int safeHeight)
+        {
+            Rect safe = new Rect(x, y, safeWidth, safeHeight);
+            object layout = typeof(TutorialDialoguePresenter).GetMethod("CalculateLayout", BindingFlags.NonPublic | BindingFlags.Static)
+                .Invoke(null, new object[] { (float)width, (float)height, safe });
+            Rect panel = LayoutRect(layout, "Panel");
+            Rect text = LayoutRect(layout, "Text");
+            Rect action = LayoutRect(layout, "Continue");
+            Rect skip = LayoutRect(layout, "Skip");
+            float scale = (float)layout.GetType().GetField("Scale").GetValue(layout);
+            Rect guiSafe = safeWidth == 0 ? new Rect(0, 0, width, height) : new Rect(x, height - safe.yMax, safeWidth, safeHeight);
+
+            Assert.That(guiSafe.Contains(panel.min) && guiSafe.Contains(panel.max), Is.True);
+            foreach (Rect child in new[] { text, action, skip, LayoutRect(layout, "Name"), LayoutRect(layout, "Portrait") })
+                Assert.That(panel.Contains(child.min) && panel.Contains(child.max), Is.True);
+            Assert.That(text.width / scale, Is.GreaterThanOrEqualTo(248f), "Text must not collapse beside the portrait.");
+            Assert.That(text.height / scale, Is.GreaterThanOrEqualTo(90f));
+            Assert.That(action.height / scale, Is.GreaterThanOrEqualTo(48f));
+            Assert.That(text.Overlaps(action) || text.Overlaps(skip) || action.Overlaps(skip), Is.False);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void DialogueAction_InvokesOnlyItsIntendedCallbackOnce(bool canContinue)
+        {
+            var go = new GameObject("ftue-dialogue-action-test");
+            try
+            {
+                var dialogue = go.AddComponent<TutorialDialoguePresenter>();
+                var arrow = go.AddComponent<TutorialArrowPresenter>();
+                int continued = 0;
+                int dismissed = 0;
+                dialogue.DismissRequested = () => { dismissed++; arrow.Hide(); };
+                arrow.Show("building.test");
+                dialogue.Show("unknown", "Long tutorial dialogue", canContinue ? (Action)(() => continued++) : null);
+                MethodInfo action = typeof(TutorialDialoguePresenter).GetMethod("ContinueOrDismiss", BindingFlags.NonPublic | BindingFlags.Instance);
+                action.Invoke(dialogue, null);
+                action.Invoke(dialogue, null);
+                Assert.That(continued, Is.EqualTo(canContinue ? 1 : 0));
+                Assert.That(dismissed, Is.EqualTo(canContinue ? 0 : 1));
+                Assert.That(TutorialDialoguePresenter.IsAnyDialogueVisible, Is.False);
+                if (!canContinue) Assert.That(arrow.IsVisible, Is.False);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(go); }
+        }
+
+        private static Rect LayoutRect(object layout, string field)
+        {
+            return (Rect)layout.GetType().GetField(field).GetValue(layout);
+        }
+
         [Test]
         public void ArrowHide_ClearsVisiblePresentationState()
         {

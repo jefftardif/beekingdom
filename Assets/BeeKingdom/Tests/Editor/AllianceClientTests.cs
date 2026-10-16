@@ -310,6 +310,79 @@ namespace BeeKingdom.Tests.Editor
             Assert.That(error.Message, Is.EqualTo("alliance.not_found"));
         }
 
+        [Test]
+        public async Task GetMyAllianceAsync_ValidAbsence_RemainsNoAlliance()
+        {
+            var overview = new RemoteMyAllianceOverview { HasAlliance = false };
+            var client = NewClient(new TypeCapturingTransport(overview));
+
+            Assert.That(await client.GetMyAllianceAsync(), Is.SameAs(overview));
+        }
+
+        [TestCase(RemoteAllianceRole.Member)]
+        [TestCase(RemoteAllianceRole.Officer)]
+        [TestCase(RemoteAllianceRole.Leader)]
+        public async Task GetMyAllianceAsync_ValidMembership_PreservesRole(RemoteAllianceRole role)
+        {
+            var overview = ValidOverview(role);
+            var client = NewClient(new TypeCapturingTransport(overview));
+
+            Assert.That(await client.GetMyAllianceAsync(), Is.SameAs(overview));
+        }
+
+        [TestCase("null")]
+        [TestCase("missing_alliance")]
+        [TestCase("missing_membership")]
+        [TestCase("false_with_alliance")]
+        [TestCase("false_with_membership")]
+        [TestCase("empty_id")]
+        [TestCase("different_alliance")]
+        [TestCase("different_player")]
+        [TestCase("invalid_role")]
+        [TestCase("disbanded")]
+        [TestCase("wrong_leader")]
+        [TestCase("leader_as_member")]
+        public void GetMyAllianceAsync_InconsistentResponse_RejectsInsteadOfOfferingCreation(string fault)
+        {
+            var overview = ValidOverview(RemoteAllianceRole.Leader);
+            switch (fault)
+            {
+                case "null": overview = null; break;
+                case "missing_alliance": overview.Alliance = null; break;
+                case "missing_membership": overview.Membership = null; break;
+                case "false_with_alliance": overview.HasAlliance = false; overview.Membership = null; break;
+                case "false_with_membership": overview.HasAlliance = false; overview.Alliance = null; break;
+                case "empty_id": overview.Alliance.AllianceId = Guid.Empty; overview.Membership.AllianceId = Guid.Empty; break;
+                case "different_alliance": overview.Membership.AllianceId = Guid.NewGuid(); break;
+                case "different_player": overview.Membership.PlayerId = TargetPlayerId; break;
+                case "invalid_role": overview.Membership.Role = (RemoteAllianceRole)99; break;
+                case "disbanded": overview.Alliance.Status = RemoteAllianceStatus.Disbanded; break;
+                case "wrong_leader": overview.Alliance.LeaderPlayerId = TargetPlayerId; break;
+                case "leader_as_member": overview.Membership.Role = RemoteAllianceRole.Member; break;
+            }
+            var transport = new TypeCapturingTransport((object)overview);
+            var client = NewClient(transport);
+
+            var error = Assert.ThrowsAsync<HivePerimeterClientException>(async () => await client.GetMyAllianceAsync());
+
+            Assert.That(error.Error, Is.EqualTo(HivePerimeterClientError.InvalidResponse));
+            Assert.That(transport.Requests, Has.Count.EqualTo(1));
+        }
+
+        private static RemoteMyAllianceOverview ValidOverview(RemoteAllianceRole role)
+        {
+            return new RemoteMyAllianceOverview
+            {
+                HasAlliance = true,
+                Alliance = new RemoteAllianceEntity
+                {
+                    AllianceId = AllianceId, Status = RemoteAllianceStatus.Active,
+                    LeaderPlayerId = role == RemoteAllianceRole.Leader ? PlayerId : TargetPlayerId
+                },
+                Membership = new RemoteAllianceMembership { AllianceId = AllianceId, PlayerId = PlayerId, Role = role }
+            };
+        }
+
         private static AllianceClient NewClient(TypeCapturingTransport transport)
         {
             var gate = new MobileAccountSessionGate();

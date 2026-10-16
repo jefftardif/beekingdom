@@ -281,6 +281,24 @@ public sealed class WorldResourceCollectionServiceTests
         // 8 gardiennes suffisent a franchir le seuil de blocage du palier 1 malgre le malus de
         // desavantage (wingrunners > guardians) - aucune n'est laissee libre pour la collecte.
         (Guid p, Guid h, var repo) = NewRepo(guardians: 8, wingrunners: 0, darters: 0);
+        await repo.ExecuteAtomicallyAsync(p, h, state => state with
+        {
+            ChampionBees = new ChampionBeeProgressState(
+                new Dictionary<string, int> { ["striga"] = 1 },
+                new List<string> { "striga" }),
+            SquadReservation = new SquadReservationState(
+                0,
+                CombatSquadReservationService.ComputeCapacity(state.BuildingLevels),
+                new Dictionary<string, long>
+                {
+                    ["guardians"] = 8,
+                    ["wingrunners"] = 0,
+                    ["darters"] = 0
+                },
+                "world-resource-patrol-reservation",
+                new(),
+                new List<string> { "striga" })
+        });
         var patrolService = new CombatPatrolService(repo, new Clock(0));
         CombatPatrolResult patrolLaunch = await patrolService.LaunchAsync(new(p, h, 1, 8, 0, 0, 0, "patrol-launch"), default);
         Assert.True(patrolLaunch.Succeeded, patrolLaunch.Code);

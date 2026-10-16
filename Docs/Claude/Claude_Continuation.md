@@ -40,6 +40,198 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Chat, Alliance et Nurserie rapprochés dans staging (2026-10-16)
+
+Merge de deploy (609401a8) et main (44de32f1 avant rapprochement).
+Deux conflits résolus en conservant les informations Banque et
+Nurserie ainsi que le test de persistance de la réservation.
+Les contrôles de droits Alliance, messagerie, reconnexion Google,
+idempotence Chat, emojis/Unicode et API News déjà en service
+restent présents. Les cohorts Nurserie s'ajoutent, désactivées
+par défaut, comme la vitalité. Aucun changement sur SRVESDT.
+
+Validation staging : compilation serveur Release PASS zéro erreur,
+284 tests métier PASS, 83 Chat PASS, 183 Alliance/Auth PASS,
+106 Nurserie/News/Banque/Combat/Migration PASS. Un processus de la
+suite API complète est resté bloqué, donc la suite entière n'est
+pas encore certifiée; tests ciblés validés. Rapport :
+Docs/AI/Missions/Branch-Reconciliation-Chat-Alliance-Nursery-20261016.md.
+Unity principal encore en Play : laisser main et deploy intactes
+jusqu'à certification et livraison sans régression.
+## Jalon courant - Parite SRVESDT confirmee sans redeploiement (2026-10-16)
+
+Audit comparant main cd8fd289, origin/deploy 609401a8 et DLL live datées
+du 13/10 15:21. Contrats CombatPatrol, CombatSquadReservation,
+HiveTroopDeploymentAccounting et RoyalReserveService : blobs Git identiques
+entre les deux branches. Serveur : HTTP 200 / et /health, HTTP 401 pour les
+lectures sans session des trois routes Caserne/Patrouille/Banque. Drapeaux
+CombatSquadReservation/CombatPatrol actifs, BroodVitality toujours desactive.
+Les DLL n'ont pas ete touchees. Aucun redeploiement necessaire pour ces contrats.
+
+Attention : main et deploy divergent sur Chat, Alliance et Nurserie; ne pas
+publier main:deploy sans reconciliation et tests complets. Le serveur actif
+reste valide. Rapport : Docs/AI/Missions/Production-Contract-Parity-Verification-20261016.md.
+## Jalon courant - Contrats serveur Caserne et Patrouilles reconciliés (2026-10-16)
+
+Git aligné avec les contrats actifs de SRVESDT : réservations associées à une championne, patrouilles préparées, état v13, blessées, comptabilisation, services Banque et Nurserie préservés. Flags Production conformes aux valeurs actives du serveur. 284 tests métier PASS, 35 tests HTTP ciblés PASS, build Release 0 erreur. Aucun déploiement ni mutation des données. Suite HTTP complète restant à revalider avant future publication.
+
+## Jalon courant - Caserne Activites premium restauree (2026-10-16)
+
+La regression Caserne renvoyait a l'ancien ecran. Refonte des deux onglets
+Entrainement/Armees retrouvee dans la sauvegarde 55264b3b. Restauration ciblee
+de 22 membres (3714 intacts, aucune suppression ni changement hors sujet) avec
+les contrats client de reservation et championne, reprises des commandes protegees,
+raccourci Armee vers le bon onglet et garde des ecrans indisponibles.
+Defilement mobile et bouton Carte du Monde accessibles.
+
+150 tests EditMode cibles PASS, 0 echec. Unity 1920x1080, session officielle :
+Caserne niveau 6, 40 Gardiennes, 54 Voltigeuses, 16 Lanceuses; patrouille
+preservee : 32 Gardiennes, 4 Voltigeuses, championne Zephyra. Clic reel et
+retour vers l'onglet Armee verifies; entree monde liberee a la fermeture.
+Aucun recrutement, reservation, release, soin, combat ou debit effectue.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/barrack-recovery-20261016/.
+Rapport : Docs/AI/Missions/Barrack-Activities-Recovery-20261016.md.
+**Risque a suivre** : contrat/configuration serveur dans Git derriere le serveur
+actif qui retourne une reservation championne; audit de parite avant prochain
+deploiement serveur. Aucun serveur modifie maintenant.
+Livraison locale sur main, sans push/build/deploiement. Unity Play Mode Caserne ouverte.
+
+## Jalon courant - Infirmerie fonctionnelle restauree (2026-10-16)
+
+Le clic INFIRMARY ouvrait le vieux panneau futur alors que le Centre de convalescence
+premium et son modele de blesses existaient toujours. Raccordement restaure dans le
+host actuel a la meme instance de controleur combat, sans retoucher les autres routes.
+Catalogue Infirmerie Active retabli. Embleme premium local ajoute au suivi Git.
+Les lectures absentes/erreurs ne sont plus rendues comme zero blessees; rebind de session
+et fermeture liberent l'etat precedent. Aucune mutation serveur ou guerison locale ajoutee.
+
+119 tests Editor cibles PASS. Vue verifiee en Play Mode dans la scene canonique,
+controleur reel ReadyToLaunch et zero blessee actuellement. Actualiser, Retour,
+liberation du monde et reouverture verifies. Tests avec blesses via fixtures Editor
+seulement; aucune perte artificielle infligee et aucune guerison reelle chronometree.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/infirmary-recovery-20261016/.
+Rapport : Docs/AI/Missions/Infirmary-Window-Recovery-20261016.md.
+Livraison locale sans push/build/deploiement. Unity laisse en Play, Infirmerie ouverte.
+
+## Jalon courant - Test Google autorise du chargement synchronise (2026-10-16)
+
+Jeff autorise le parcours habituel : Google, puis le compte tardif.jeff@gmail.com dans
+le navigateur. Connexion reussie. Aucun mot de passe, jeton ni cookie extrait.
+Session reelle : 14/14 verifications terminees, avec Nurserie/Inventaire/Stock detaille
+indisponibles ; les donnees essentielles sont chargees. Cinq configurations successives
+conservent les controleurs et la generation. 15 batiments, 3 lignes de production,
+Banque niveau 2. Capture du jeu avec les ressources puis de la Banque disponible.
+Aucune operation economique effectuee. Pas de duree de demarrage complet revendiquee.
+
+Preuves : authenticated-reuse-proof.txt, authenticated-bank-proof.txt,
+google-login-game-view.png et google-bank-verification.png dans
+C:/BeeKingdom/DEV/BK-Studio/startup-sync-20261016/.
+Details et limites de verification ajoutes au rapport Startup-Data-Synchronization-20261016.md.
+La consommation du prechargement bancaire reste non certifiee par le test runtime.
+
+## Jalon courant - Synchronisation reelle pendant le chargement (2026-10-16)
+
+Demande Jeff : attendre les donnees pendant le loading, meme plus long. La barre purement
+cosmetique est remplacee par une attente des lectures reelles. Avant entree officielle :
+ruche, batiments, ressources/production et population doivent etre disponibles. Dix
+services additionnels sont prepares, ou signales indisponibles sans bloquer ces essentiels.
+Delai de 45 secondes pour les donnees, Reessayer/Connexion en cas de blocage essentiel.
+
+Cause de resynchronisations repetitives corrigee : TryConfigureGameplayForActiveSession
+fermait toute la session gameplay inconditionnellement. Les controleurs sont maintenant
+conserves pour le meme compte/ruche/serveur/source/autorite. Generation et annulation
+protegent contre des retours asynchrones apres deconnexion ou changement de compte.
+Banque utilise une premiere lecture prechargee et conserve les niveaux deja charges.
+
+126 tests Editor cibles PASS. Scene canonique et demo locale verifies. Session authentifiee
+ensuite verifiee : 14/14 controles termines, essentiels disponibles, Nurserie/inventaire/stock
+signales indisponibles. Huit instances preservees apres cinq configurations successives;
+generation identique apres entree dans la ruche et ouverture Banque. Niveau Banque 2 et
+ressources prets. Aucun temps de cold-start ni transaction economique revendique.
+Rapport : Docs/AI/Missions/Startup-Data-Synchronization-20261016.md.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/startup-sync-20261016/.
+Aucune activation serveur, aucune mutation economique de test, aucun deploiement.
+
+## Jalon courant - Tutoriel compact final, Banque et Nurserie (2026-10-16)
+
+Tutoriel reduit a 300 px de haut a 1920x1080, style premium conserve. Banque restauree
+avec son client authentifie, sa feuille de route et sa Reserve Royale dans un fichier
+partial separe. Route batiment, fermeture, input et occlusion recables. Nurserie :
+textures Activites et densite retablies, jauges corrigees et erreur serveur visible au
+lieu d'un chargement infini. Operations et couvees desactivees preservees.
+
+Preuves : 125 tests cibles passes, 0 echec ; 3717 membres du presenter preserves.
+Reserve Royale lue avec succes depuis le serveur ; aucun depot/retrait de test effectue.
+Soins de Nurserie toujours indisponibles : BroodVitality.Enabled=false sur SRVESDT.
+Ce reglage serveur n'a pas ete modifie et aucune couvee experimentale n'a ete activee.
+
+Rapport : Docs/AI/Missions/Compact-Bank-Nursery-Recovery-20261016.md.
+Preuves : C:/BeeKingdom/DEV/BK-Studio/compact-bank-nursery-20261016/.
+Livraison locale, aucun push/build/deploiement. Unity hors Play Mode apres controle.
+
+## Jalon courant - Alliance Activites v4 restauree (2026-10-16)
+
+Retour a l'ancienne UI confirme. Refonte retrouvee dans 55264b3b et recuperee par
+membres syntaxiques, sans ecraser les autres chantiers du grand presenter.
+Sept onglets Alpha retablis, profil membre inclus. Inspection reelle : correction du
+titre du profil superpose a Retour, des compteurs inconnus -1 et du bouton d'amelioration
+qui restait au-dessus du profil. Retour profil -> Alliance -> ruche verifie.
+
+Preuves : 107 tests cibles Alliance + tutoriel passent, 0 echec ; comparaison finale
+3654 membres preexistants preserves et 0 changement hors perimetre.
+Captures : C:/BeeKingdom/DEV/BK-Studio/alliance-recovery-20261016/.
+Rapport : Docs/AI/Missions/Alliance-Activities-Recovery-20261016.md.
+Un ancien test de fondation Colony echoue independamment (fixture de permission
+Leader contradictoire) ; il est documente, pas modifie ni ignore silencieusement.
+
+Controle visuel avec donnees QA explicitement fictives, sans appels serveur. Fixture
+retiree, controleur precedent restaure, Play Mode arrete, scene canonique conservee.
+Les mutations avec un compte officiel restent a revalider. Aucun push ni deploiement.
+
+## Jalon courant - Tutoriel royal compact approuve (2026-10-16)
+
+La fenetre FTUE utilise la composition premium approuvee par Jeff : barre compacte
+centree en paysage (32,2 % de la hauteur a 1920x1080), fond opaque, portrait existant
+sans deformation, ornements or/bleu extraits de la maquette et titre Cinzel.
+Le palais et la navigation basse restent visibles. Portrait : safe area et defilement
+pour les textes longs. Les voix et les callbacks Continuer/Fermer ne changent pas.
+Passer reste une commande QA Editor uniquement, maintenant localisee FR/EN.
+
+Fichiers : TutorialDialoguePresenter.cs, TutorialPremiumSkin.cs,
+Resources/TutorialPremium (atlas 352x256 et copie du Cinzel deja present),
+TutorialPremiumDialogueTests.cs, catalogues FR/EN (common.skip).
+Correction visuelle verifiee : les scaledBackgrounds du skin Unity ne doivent jamais
+recouvrir les boutons dores. L'etat GUI complet est restaure apres le dessin.
+
+Preuves : 34 tests Editor cibles passes, 0 echec (presentation, moteur FTUE,
+resolutions, ressources et fonds des boutons).
+C:/BeeKingdom/DEV/BK-Studio/tutorial-premium-20261016/tutorial-test-results-final.json.
+Controle visuel apres recompilation, Play Mode 1920x1080 dans la scene canonique
+Environment2D5D_HiveMap_Test : tutorial-final.png et tutorial-final-review.jpg.
+Etape active : "Touche le Palais Royal pour l'ouvrir." ; le bouton Fermer est normal
+pour cette etape Require. Aucun reset de progression demande pour la capture.
+Pas de build Windows, de push Git ni de deploiement serveur.
+
+Suite : restaurer Alliance sur le modele Activites v4. La refonte existe dans la
+sauvegarde 55264b3b. Ne pas restaurer le grand presenter en bloc : il contient aussi
+des modifications hors perimetre. Sauvegarde du code courant avant intervention :
+C:/BeeKingdom/DEV/BK-Studio/alliance-recovery-20261016/presenter-before.cs.
+
+## Jalon courant — M080-OC suite : épuisement des tuiles serveur + marche élastique champion + déploiement (2026-09-12)
+
+Suite du rebuild M080 (collecte World Map). Commit `fd51fe6` poussé sur `origin/main` et déployé via `origin/main:deploy`.
+
+- **Serveur** (`WorldResourceCollectionService.cs`) : suivi par tuile `NodeRemaining` — le rendement est plafonné par ce qui reste sur la tuile, la déplétion temps-réel est affichée pendant un vol actif, et une fois épuisée la tuile ne crédite plus (respawn client). Champ `Remaining` exposé dans le read model.
+- **Client World Map** (`WorldMapMmoFullscreenFoundationBootstrap.cs`) : respawn visible de 5 s sur les tuiles épuisées, marche sortante élastique (8 s — champion ~2 s devant les troupes), sélecteur de champion dans le panneau de composition, `DismissWorldResourceCollectionDebrief`, `PeekOwnedChampionBeeIdsForWorldMap`.
+- **Voix** : bark `collection_launch` passe de `move` à `collect`.
+- Exclu volontairement du commit : `Server/artifacts/packages/`, `publish/`, `deploy-opencode.zip`, `TestResults/`, `.meta` de screenshot (transitoires ; la pipeline rebuild en CI, les artefacts du dépôt ne servent pas à déployer).
+
+Preuves : pipeline `Deploy BeeKingdomApi` run `34723695134` — build 48 s ✓, deploy 23 s ✓ (site offline → copie → online), smoke test `GET https://api-ops.beekingdomgame.com/` 200 ✓.
+
+Prochain test utilisateur : retest de la collecte World Map en Play Mode dans `WorldMapWave6Wave5Method12288Preview` — déplétion/épuisement d'une tuile, respawn 5 s, champion en tête de la marche, sélecteur de champion au panneau composition.
+
+---
+
 ## Jalon courant — M076-CX : placements des chutes corrigés et vérifiés (2026-09-09)
 
 M075 annonçait des placements corrects sans preuve suffisante : origine runtime omise et catalogue non chargé. M076 remplace ces coordonnées par 12 configurations mesurées sur le terrain source (`pixel * 25/12 + 3584`), chacune avec ses propres contours. Le renderer commun charge réellement le JSON et gère les RT/caméras, matériaux, animation et OnGUI ; transfert de la même carte sans replacer les instances.

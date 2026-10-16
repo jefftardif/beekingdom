@@ -111,7 +111,7 @@ namespace BeeKingdom.Playground
         // masquer. Sur mobile (compact), l'espace manque pour un 4e panneau : chatGroupMembersOpen
         // continue d'ouvrir le modal plein ecran existant, qui doit donc toujours gater le dessous.
         private static bool ChatRoyalOwnOverlayOpen(bool compact) =>
-            chatNewDiscussionOpen || chatNewGroupOpen || chatSettingsOpen || (compact && chatGroupMembersOpen) || ChatHasPendingInvitation();
+            chatNewDiscussionOpen || chatNewGroupOpen || chatSettingsOpen || ((compact || Screen.width < 1280) && chatGroupMembersOpen) || ChatHasPendingInvitation();
 
         private static LivingHiveChatSnapshot ChatServerSnapshot()
         {
@@ -148,11 +148,8 @@ namespace BeeKingdom.Playground
             }
 
             chatServerStatusLabel = ChatStatusLabel(snapshot);
-            if (!ChatServerConnected())
-            {
-                chatUsingServerData = false;
-                return;
-            }
+            // A configured runtime remains authoritative during reconnect/error states.
+            // Falling back to demo here bypasses the server outbox and simulates sends.
 
             bool firstSwitch = !chatUsingServerData;
             chatUsingServerData = true;
@@ -453,6 +450,7 @@ namespace BeeKingdom.Playground
 
         private static bool ChatGroupMembersPanelVisible() =>
             chatGroupMembersOpen
+            && Screen.width >= 1280
             && chatUsingServerData
             && string.Equals(chatSelectedChannel, ChatGroupsChannelId, StringComparison.Ordinal)
             && !string.IsNullOrWhiteSpace(chatSelectedConversation);
@@ -494,7 +492,7 @@ namespace BeeKingdom.Playground
             else if (chatNewGroupOpen) DrawChatPlayerPickerOverlay(compact, groupMode: true);
             else if (chatSettingsOpen) DrawChatSettingsOverlay(compact);
             // Desktop dessine le panneau Membres ancre a droite depuis DrawChatMainLayout, pas ici.
-            else if (chatGroupMembersOpen && compact) DrawChatGroupMembersOverlay(compact);
+            else if (chatGroupMembersOpen && (compact || Screen.width < 1280)) DrawChatGroupMembersOverlay(compact);
         }
 
         private static Rect ChatOverlayRect(bool compact)

@@ -78,17 +78,12 @@ namespace BeeKingdom.Gameplay.Communication
         {
             try
             {
-                await provider.LeaveGroupAsync(conversationId, ct);
-                lock (gate)
+                if (!await provider.LeaveGroupAsync(conversationId, ct))
                 {
-                    groupDetails.Remove(conversationId ?? string.Empty);
-                    conversations.RemoveAll(value => string.Equals(value.ConversationId, conversationId, StringComparison.Ordinal));
-                    if (string.Equals(selectedConversationId, conversationId, StringComparison.Ordinal))
-                    {
-                        selectedConversationId = conversations.FirstOrDefault()?.ConversationId;
-                        messages.Clear();
-                    }
+                    SetStatus(LivingHiveChatStatus.Error, "group_leave_not_confirmed");
+                    return;
                 }
+                RemoveLocalGroup(conversationId);
                 await RefreshSelectedAsync(ct);
             }
             catch (RemoteChatTransportException exception) { ReportGroupFailure(exception); }
@@ -116,7 +111,11 @@ namespace BeeKingdom.Gameplay.Communication
         {
             if (string.IsNullOrWhiteSpace(conversationId)) return;
             try { StoreGroupDetail(await provider.GetGroupDetailAsync(conversationId, ct)); }
-            catch (RemoteChatTransportException exception) { ReportGroupFailure(exception); }
+            catch (RemoteChatTransportException exception)
+            {
+                if (exception.Error == RemoteChatError.Forbidden) RemoveLocalGroup(conversationId);
+                ReportGroupFailure(exception);
+            }
         }
 
         public async Task RefreshInvitationsAsync(CancellationToken ct)
@@ -176,6 +175,28 @@ namespace BeeKingdom.Gameplay.Communication
         }
 
         // ==================== internals ====================
+
+        private void RemoveLocalGroup(string conversationId)
+        {
+            lock (gate)
+            {
+                groupDetails.Remove(conversationId ?? string.Empty);
+                conversations.RemoveAll(value => string.Equals(value.ConversationId, conversationId, StringComparison.Ordinal));
+                if (string.Equals(selectedConversationId, conversationId, StringComparison.Ordinal))
+                {
+                    selectedConversationId = conversations.FirstOrDefault()?.ConversationId;
+                    messages.Clear();
+                }
+            }
+            PersistRecentCache();
+        }
+
+        // Called under gate after an authoritative conversation list replaces the local one.
+        private void PruneInaccessibleGroupDetails()
+        {
+            foreach (string id in groupDetails.Keys.Where(id => !conversations.Any(value => string.Equals(value.ConversationId, id, StringComparison.Ordinal))).ToArray())
+                groupDetails.Remove(id);
+        }
 
         private async Task RunGroupMutationAsync(Func<Task<RemoteChatGroupDetail>> mutation, string conversationId, CancellationToken ct)
         {

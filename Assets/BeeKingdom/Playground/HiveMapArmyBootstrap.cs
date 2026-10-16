@@ -56,13 +56,11 @@ namespace BeeKingdom.Playground
 
         private void Start()
         {
-            LivingHiveArmyBridge.SetHandlers(() => ModalOpenForExternalHost, OpenModal);
-            // M038C-CL: fallback FTUE target for whenever the Caserne's own Army button
-            // (registered as a screen-rect, takes priority - see HiveViewProductUiPresenter's
-            // DrawBarrackTopBar) isn't currently on screen, e.g. the player is looking at the
-            // "Plus" submenu instead. Lazy Func: re-resolves the real RectTransform on every
-            // lookup, so it stays correct across the submenu opening/closing.
-            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterUi(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetArmyMenu, LivingHiveArmyBridge.GetArmyRowRect); } catch {}
+            // Army is now a tab inside the Barrack. Keep the legacy bridge alive for FTUE and
+            // any old callers, but route it to the Caserne instead of opening a second modal.
+            LivingHiveArmyBridge.SetHandlers(
+                () => HiveViewProductUiPresenter.BarrackArmyTabOpenForExternalHost,
+                OpenModal);
         }
 
         private void OnGUI()
@@ -95,10 +93,8 @@ namespace BeeKingdom.Playground
 
         private static void OpenModal()
         {
-            ModalOpenForExternalHost = true;
-            MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
-            RefreshAllControllers();
-            try { BeeKingdom.Tutorial.TutorialGameplayNotifier.NotifyWindowOpened("army"); } catch {}
+            ModalOpenForExternalHost = false;
+            HiveViewProductUiPresenter.OpenBarrackArmyTabForExternalHost();
         }
 
         private void SyncSelectionFromModel()
@@ -283,19 +279,30 @@ namespace BeeKingdom.Playground
                 }
 
                 DrawSquadRow("guardians", "Gardiennes", "Guardians", m.AvailableGuardians, ref selGuardians, capacity, totalSel);
+                totalSel = selGuardians + selWingrunners + selDarters;
                 DrawSquadRow("wingrunners", "Voltigeuses", "Wingrunners", m.AvailableWingrunners, ref selWingrunners, capacity, totalSel);
+                totalSel = selGuardians + selWingrunners + selDarters;
                 DrawSquadRow("darters", "Lanceuses", "Darters", m.AvailableDarters, ref selDarters, capacity, totalSel);
 
+                totalSel = selGuardians + selWingrunners + selDarters;
                 GUILayout.Label(Text("TOTAL ", "TOTAL ") + totalSel + " / " + capacity, new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, wordWrap = true });
 
-                bool canCommit = !hasReservation && totalSel > 0 && totalSel <= capacity && selGuardians <= m.AvailableGuardians && selWingrunners <= m.AvailableWingrunners && selDarters <= m.AvailableDarters;
-                bool canRelease = hasReservation;
+                var preparedChampions = HiveViewProductUiPresenter.PeekAssignedChampionBeeIdsForWorldMap();
+                string championBeeId = preparedChampions != null && preparedChampions.Count > 0
+                    ? preparedChampions[0]
+                    : string.Empty;
+                bool championReady = !string.IsNullOrWhiteSpace(championBeeId);
+                bool canCommit = championReady && m.CanCommit(new HiveSquadCompositionSnapshot(capacity, selGuardians, selWingrunners, selDarters));
+                bool canRelease = m.CanRelease;
+
+                if (!championReady && !hasReservation)
+                    GUILayout.Label(Text("Assignez une championne avant de confirmer l'escouade.", "Assign a champion before confirming the squad."), new GUIStyle(GUI.skin.label) { wordWrap = true });
 
                 GUILayout.BeginHorizontal();
                 GUI.enabled = canCommit && !ctrl.IsBusy;
                 if (GUILayout.Button(Text("CONFIRMER L'ESCOUADE", "CONFIRM SQUAD"), GUILayout.Height(36f)))
                 {
-                    ctrl.Commit(selGuardians, selWingrunners, selDarters);
+                    ctrl.Commit(selGuardians, selWingrunners, selDarters, championBeeId);
                 }
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
@@ -314,8 +321,14 @@ namespace BeeKingdom.Playground
                 }
                 GUILayout.EndHorizontal();
 
-                if (m.State == HiveSquadReservationScreenState.PendingConfirmation)
-                    GUILayout.Label(Text("En attente de confirmation…", "Pending confirmation…"), new GUIStyle(GUI.skin.label) { wordWrap = true });
+                if (m.IsPending)
+                {
+                    GUILayout.Label(BeeLocalization.Text("formation_readiness.reservation.pending"), new GUIStyle(GUI.skin.label) { wordWrap = true });
+                    GUI.enabled = m.CanRetry && !ctrl.IsBusy;
+                    if (GUILayout.Button(BeeLocalization.Text("formation_readiness.reservation.verify"), GUILayout.Height(36f)))
+                        ctrl.Retry();
+                    GUI.enabled = true;
+                }
             }
             GUILayout.EndVertical();
         }

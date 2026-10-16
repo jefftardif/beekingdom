@@ -65,6 +65,7 @@ public sealed record PlayerHiveState(
      // still defensively sums across every owned hive on read, so the balance stays correct even in
      // the theoretical case a second hive ever appears, without requiring a schema change then.
      long RoyalSeals = 0,
+     NurseryCohortState? NurseryCohorts = null,
      RoyalReserveState? RoyalReserve = null);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
@@ -72,9 +73,6 @@ public sealed record PlayerHiveState(
 // change it documents, so it can never drift out of sync with what actually happened.
 public sealed record AdminAuditEntry(Guid EntryId, DateTimeOffset AtUtc, string Action, string Details, string Reason);
 
-// Banque / Réserve Royale — premier produit bancaire server-authoritative.
-// Les ressources ici ne sont plus liquides dans Resources : un dépôt les déplace atomiquement
-// dans cette réserve; un retrait fait le mouvement inverse. Aucune création de valeur.
 public sealed record RoyalReserveState(
     long Revision,
     Dictionary<string, long> Amounts,
