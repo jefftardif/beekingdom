@@ -55,17 +55,8 @@ namespace BeeKingdom.Playground
 
         private static bool IsBlockedByOverlay()
         {
-            bool researchOpen = HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost;
-            return HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.ConstructionOverlayOpenForExternalHost
-                || LivingHiveResearchRuntime.IsModalOpen || researchOpen
-                || HiveMapActivitiesBootstrap.ModalOpenForExternalHost
-                || HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost
-                || HiveViewProductUiPresenter.PlayerSummaryOverlayOpenForExternalHost
-                || HiveViewProductUiPresenter.PlayerProfileOverlayOpenForExternalHost
-                || HiveMapArmyBootstrap.ModalOpenForExternalHost;
+            // Block timer cards during any fullscreen building, including Nursery.
+            return HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking();
         }
 
         // M016E-CL freeze probe (temporary): once, catches the exact moment the queue sidebar
