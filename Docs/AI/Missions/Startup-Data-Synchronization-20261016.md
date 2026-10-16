@@ -59,3 +59,29 @@ No cold-start performance number or economic transaction is claimed.
 
 Local-only delivery. No build, push or deployment. Unrelated working-tree changes retained.
 Unity is left running in the canonical scene, Bank open on the authenticated session.
+## Authenticated Google verification
+The founder authorized the regular Google sign-in button followed by the saved account
+tardif.jeff@gmail.com. The normal game Google flow was started and authentication succeeded.
+No password, session token, authorization code or browser cookie was extracted or recorded.
+
+Observed with the real session:
+- Startup reached Ready with 14/14 checks settled. This is not 14 successful services:
+  Nursery care, Inventory and the detailed Stock ledger were unavailable.
+- Five repeated gameplay-configuration calls preserved the same controllers and generation.
+- 15 building levels and 3 production/resource lines were present; Bank level was 2.
+- The live hive displayed resource totals rather than startup placeholder zeroes.
+- Bank opened with level 2 and the Royal Reserve entry available. The later visual check
+  confirmed those values remained visible. No deposit, withdrawal, care or reward claim was performed.
+
+Evidence: authenticated-reuse-proof.txt, authenticated-bank-proof.txt,
+google-login-game-view.png and google-bank-verification.png in the existing evidence directory.
+The bank proof reports bankPrefetchConsumed=False; therefore consumption of the prefetched
+bank snapshot is NOT claimed as runtime-certified by this observation.
+One additional introspection check caught a not-ready state during session transitions;
+it does not establish a repeatable regression. No successful full cold-start duration is claimed.
+The independent verification attempted afterward was blocked by a tool safety check;
+private-session introspection was not retried. Verification continued through the visible game UI.
+
+For subsequent play tests, use the normal Google account chooser with the founder-authorized
+account. Do not request or extract saved credentials. Any new consent or MFA requirement
+must remain visible to the user rather than being bypassed.

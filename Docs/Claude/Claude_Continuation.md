@@ -40,6 +40,22 @@ Ouvert / a faire ensuite: <ce qui reste, dans l'ordre de priorite>.
 
 ---
 
+## Jalon courant - Test Google autorise du chargement synchronise (2026-10-16)
+
+Jeff autorise le parcours habituel : Google, puis le compte tardif.jeff@gmail.com dans
+le navigateur. Connexion reussie. Aucun mot de passe, jeton ni cookie extrait.
+Session reelle : 14/14 verifications terminees, avec Nurserie/Inventaire/Stock detaille
+indisponibles ; les donnees essentielles sont chargees. Cinq configurations successives
+conservent les controleurs et la generation. 15 batiments, 3 lignes de production,
+Banque niveau 2. Capture du jeu avec les ressources puis de la Banque disponible.
+Aucune operation economique effectuee. Pas de duree de demarrage complet revendiquee.
+
+Preuves : authenticated-reuse-proof.txt, authenticated-bank-proof.txt,
+google-login-game-view.png et google-bank-verification.png dans
+C:/BeeKingdom/DEV/BK-Studio/startup-sync-20261016/.
+Details et limites de verification ajoutes au rapport Startup-Data-Synchronization-20261016.md.
+La consommation du prechargement bancaire reste non certifiee par le test runtime.
+
 ## Jalon courant - Synchronisation reelle pendant le chargement (2026-10-16)
 
 Demande Jeff : attendre les donnees pendant le loading, meme plus long. La barre purement
