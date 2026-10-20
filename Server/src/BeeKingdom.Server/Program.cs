@@ -147,6 +147,8 @@ builder.Services.AddOptions<WorkshopBatchQualificationOptions>()
     .Bind(builder.Configuration.GetSection(WorkshopBatchQualificationOptions.SectionName));
 builder.Services.AddOptions<LivingHiveResearchOptions>()
     .Bind(builder.Configuration.GetSection(LivingHiveResearchOptions.SectionName));
+builder.Services.AddOptions<AcademyTrainingOptions>()
+    .Bind(builder.Configuration.GetSection(AcademyTrainingOptions.SectionName));
 builder.Services.AddOptions<ChampionBeeProgressionOptions>()
     .Bind(builder.Configuration.GetSection(ChampionBeeProgressionOptions.SectionName));
 builder.Services.AddOptions<VipProgressionOptions>()
@@ -746,6 +748,71 @@ app.MapPost("/game/v1/hives/{hiveId}/research/{operationId}/complete", async (Ht
 });
 
 // M037 — FTUE Tutorial persistence (chapter/step, idempotent, no SQL migration)
+// Academy v1: player-authenticated durable classes; independent from Research.
+app.MapGet("/game/v1/hives/{hiveId}/academy", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<AcademyTrainingOptions> flags, CancellationToken ct) =>
+{
+    if (!flags.Value.Enabled) return GameError(503,"game.academy_disabled","game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context,authentication);
+    if (!auth.IsValid) return GameError(401,"game.session_required","game.error.session_required");
+    if (!TryParseGameResourceId(hiveId,out Guid hive))
+        return GameError(400,"game.invalid_request","game.error.invalid_request");
+    try
+    {
+        return Results.Ok(await new AcademyTrainingService(repository,clock,flags.Value)
+            .ReadAsync(auth.PlayerId!.Value,hive,ct));
+    }
+    catch (KeyNotFoundException) { return GameError(404,"game.not_found","game.error.not_found"); }
+    catch (InvalidDataException) { return GameError(503,"game.unavailable","game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/academy/{courseId}/start", async (
+    HttpContext context, string hiveId, string courseId,
+    AuthenticationManager authentication, IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<AcademyTrainingOptions> flags, AcademyTrainingMutationRequest request,
+    CancellationToken ct) =>
+{
+    if (!flags.Value.Enabled) return GameError(503,"game.academy_disabled","game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context,authentication);
+    if (!auth.IsValid) return GameError(401,"game.session_required","game.error.session_required");
+    if (!TryParseGameResourceId(hiveId,out Guid hive) || request is null)
+        return GameError(400,"game.invalid_request","game.error.invalid_request");
+    try
+    {
+        AcademyTrainingCommandResult result = await new AcademyTrainingService(repository,clock,flags.Value)
+            .StartAsync(auth.PlayerId!.Value,hive,courseId,request,ct);
+        return result.Succeeded ? Results.Ok(result) : GameError(409,result.Code,"game.error.conflict");
+    }
+    catch (ArgumentException) { return GameError(400,"game.invalid_request","game.error.invalid_request"); }
+    catch (KeyNotFoundException) { return GameError(404,"game.not_found","game.error.not_found"); }
+    catch (InvalidDataException) { return GameError(503,"game.unavailable","game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/academy/{operationId}/complete", async (
+    HttpContext context, string hiveId, string operationId,
+    AuthenticationManager authentication, IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<AcademyTrainingOptions> flags, AcademyTrainingMutationRequest request,
+    CancellationToken ct) =>
+{
+    if (!flags.Value.Enabled) return GameError(503,"game.academy_disabled","game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context,authentication);
+    if (!auth.IsValid) return GameError(401,"game.session_required","game.error.session_required");
+    if (!TryParseGameResourceId(hiveId,out Guid hive) ||
+        !Guid.TryParse(operationId,out Guid op) || op == Guid.Empty || request is null)
+        return GameError(400,"game.invalid_request","game.error.invalid_request");
+    try
+    {
+        AcademyTrainingCommandResult result = await new AcademyTrainingService(repository,clock,flags.Value)
+            .CompleteAsync(auth.PlayerId!.Value,hive,op,request,ct);
+        return result.Succeeded ? Results.Ok(result) : GameError(409,result.Code,"game.error.conflict");
+    }
+    catch (ArgumentException) { return GameError(400,"game.invalid_request","game.error.invalid_request"); }
+    catch (KeyNotFoundException) { return GameError(404,"game.not_found","game.error.not_found"); }
+    catch (InvalidDataException) { return GameError(503,"game.unavailable","game.error.unavailable"); }
+});
+
 app.MapGet("/game/v1/hives/{hiveId}/tutorial", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, CancellationToken ct) =>
 {
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);

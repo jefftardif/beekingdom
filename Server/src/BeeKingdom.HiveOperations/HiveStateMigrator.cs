@@ -24,6 +24,11 @@ public static class HiveStateMigrator
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
 
+        // Additive nullable Academy state: old accounts retain their save and
+        // do not receive complimentary certificates on migration.
+        if (state.Academy is { } academy)
+            AcademyTrainingService.ValidateStored(academy,state.Revision);
+
         if (state.RoyalReserve is { } royalReserve)
         {
             string[] allowed = ["honey", "pollen", "wax"];
