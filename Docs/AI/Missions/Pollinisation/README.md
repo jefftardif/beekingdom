@@ -131,3 +131,10 @@ du banc .NET PASS et compilation de six fichiers runtime dans Unity minimal PASS
 Le projet Unity complet exige encore un Unity Package Manager fonctionnel.
 Les quatre tests Unity Editor ajoutés restent non exécutés.
 Rapport : 55-IMPLANTATION-CLIENT-UNITY-P5-20261021.md.
+## P6 — ancrages de carte vérifiés (21 octobre 2026)
+
+Le client Wave6 peut maintenant afficher et sélectionner un marqueur de site
+floral lorsque l'API renvoie explicitement le bon MapSurfaceId et un MapAnchorId
+qui existe déjà dans le monde. Aucune coordonnée arbitraire ni tuile n'a été
+ajoutée. La configuration de deux sites servant aux tests est uniquement un
+exemple QA sous flags OFF. Voir 56-SITES-FLORAUX-MARQUEURS-CARTE-P6-20261021.md.

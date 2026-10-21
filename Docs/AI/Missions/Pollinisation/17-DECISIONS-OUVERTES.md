@@ -113,3 +113,10 @@ Les projets d'alliance sont maintenant persistants et testés localement. Les co
 Politique QA retenue temporairement : compter une mission dans le projet actif du site uniquement si elle était lancée après sa création et si le joueur appartient encore à son alliance de départ au règlement. Une migration d'alliance après départ n'attribue pas la récolte à la nouvelle alliance. Les ressources individuelles sont préservées. Politique de drainage avant coupure du flag obligatoire à définir.
 
 Références et preuves LocalDB : 54-VALIDATION-COLLECTIVE-P4-20261021.md. Aucun changement aux décisions D-001 à D-009.
+## Note de géolocalisation technique QA P6 (non approuvée en Game Design)
+
+Le site floral peut référencer un noeud de ressource stable de la carte existante
+par MapSurfaceId/MapAnchorId, mais ce mécanisme de réutilisation est technique,
+facultatif et réversible. Les deux ancrages du fichier exemple restent des
+fixtures QA, pas des sites ou des positions approuvés pour l'Alpha publique.
+Aucune décision D-xxx n'a été réécrite. Voir le rapport 56.

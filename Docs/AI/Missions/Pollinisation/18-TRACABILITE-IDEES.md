@@ -106,3 +106,10 @@ Une idée reportée n'est pas effacée : elle reste ici avec son statut, une pha
   Tests .NET 33/33 et compilation Unity minimale réussis. **UI finale
   Activités v4, tests Editor/PlayMode, compilation du projet complet et
   déploiement encore en attente**. Voir 55-IMPLANTATION-CLIENT-UNITY-P5-20261021.md.
+- P6, géolocalisation contrôlée : les marqueurs floraux reprennent les positions
+  exactes des noeuds stables de la carte Wave6 (catalogue serveur
+  MapSurfaceId/MapAnchorId), ne déplacent aucun terrain et ne créditent aucune
+  ressource locale. Sélection de site via marqueur, refus des collisions et
+  incohérences, fichier QA avec deux ancrages réellement présents et flags OFF.
+  Les sites/positions définitifs, les captures visuelles Editor et le chrome
+  Activités v4 restent au backlog. Voir 56-SITES-FLORAUX-MARQUEURS-CARTE-P6-20261021.md.
