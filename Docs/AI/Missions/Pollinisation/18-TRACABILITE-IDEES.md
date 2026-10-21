@@ -100,3 +100,9 @@ Une idée reportée n'est pas effacée : elle reste ici avec son statut, une pha
 - Idempotence/anti-triche : journaux MissionId unique, transaction croisée ruche+site+projet+progression, test collision SQL et rollback réalisé. Alliance de départ persistée et revalidée au retour ; test anti-transfert réalisé.
 - Spécialisations, deux sites dans une même route, relais, territoires, génétique, escortes, coalitions, diplomatie et événement Ours : pas encore implémentés, restent au backlog.
 - Voir 54-VALIDATION-COLLECTIVE-P4-20261021.md, status non déployé et paramètres NON approuvés.
+- P5 : vrais clients Unity sécurisés et affichage conditionnel avec
+  PollinationClient, PollinationPresentation, PollinationWorldMapOverlay
+  et hooks de session. Liste de sites officielle sans coordonnées inventées.
+  Tests .NET 33/33 et compilation Unity minimale réussis. **UI finale
+  Activités v4, tests Editor/PlayMode, compilation du projet complet et
+  déploiement encore en attente**. Voir 55-IMPLANTATION-CLIENT-UNITY-P5-20261021.md.

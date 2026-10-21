@@ -122,3 +122,12 @@ L'implantation en branche `feature/pollinisation-alpha-20261021` comprend mainte
 ## État P4 collectif, 21 octobre 2026
 
 Une première boucle serveur SQL de projets de pollinisation **collectifs** est maintenant implantée sur la branche de travail, sous flag OFF : création sécurisée par officiers/chef, contributions durables à deux membres distincts et niveau d'alliance persistent. La preuve d'anti-solo, de rollback SQL et de changement d'alliance après départ a été exécutée sur SQL LocalDB dédié PCJEFF. **Pas de déploiement SRVESDT ni interface Unity branchée.** Détails : 54-VALIDATION-COLLECTIVE-P4-20261021.md.
+## P5 — continuation du 21 octobre 2026
+
+Client Unity et présentation opt-in ajoutés : contrats réseau, contrôleur de
+session, écran Champs / Essaims / Alliance en FR/EN, gardes anti-clic-traversant
+dans la carte existante, sans modifier les sprites ou les tuiles. 33 tests
+du banc .NET PASS et compilation de six fichiers runtime dans Unity minimal PASS.
+Le projet Unity complet exige encore un Unity Package Manager fonctionnel.
+Les quatre tests Unity Editor ajoutés restent non exécutés.
+Rapport : 55-IMPLANTATION-CLIENT-UNITY-P5-20261021.md.
