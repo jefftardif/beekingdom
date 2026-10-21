@@ -54,7 +54,9 @@ public sealed record FloralSiteState(
     string WorldId, string RegionId, string SiteId, string FamilyId,
     string CatalogVersion, long Revision, long PollenRemaining,
     long PollenCapacity, int FertilityBp, int BiodiversityBp,
-    DateTimeOffset LastSettledAtUtc);
+    DateTimeOffset LastSettledAtUtc,
+    long TotalPollinationPoints = 0,
+    Dictionary<string, long>? ContributionPointsByPlayer = null);
 
 public sealed record FloralSiteSnapshot(
     string ContractVersion, string WorldId, string RegionId, string SiteId,
@@ -62,7 +64,8 @@ public sealed record FloralSiteSnapshot(
     string CatalogVersion, long Revision, DateTimeOffset ServerTimeUtc,
     long PollenRemaining, long PollenCapacity,
     int FertilityBp, int BiodiversityBp, string Phase,
-    bool PublicAccess);
+    bool PublicAccess,
+    long TotalPollinationPoints = 0, int DistinctContributors = 0);
 
 public interface IFloralSiteRepository
 {
@@ -120,7 +123,8 @@ public sealed class FloralSiteService(
             state.FamilyId, definition.NameFr, definition.NameEn,
             state.CatalogVersion, state.Revision, now, state.PollenRemaining,
             state.PollenCapacity, state.FertilityBp, state.BiodiversityBp,
-            "blooming", true);
+            "blooming", true, state.TotalPollinationPoints,
+            state.ContributionPointsByPlayer?.Count ?? 0);
     }
 
     public static FloralSiteState InitialState(
@@ -142,7 +146,13 @@ public sealed class FloralSiteService(
             || state.PollenRemaining < 0 || state.PollenRemaining > state.PollenCapacity
             || state.FertilityBp is < 0 or > 10000
             || state.BiodiversityBp is < 0 or > 10000
-            || state.LastSettledAtUtc.Offset != TimeSpan.Zero)
+            || state.LastSettledAtUtc.Offset != TimeSpan.Zero
+            || state.TotalPollinationPoints < 0
+            || (state.ContributionPointsByPlayer is { } contributions
+                && (contributions.Count > 100000
+                    || contributions.Any(x => !Guid.TryParseExact(x.Key, "N", out _) || x.Value <= 0)
+                    || contributions.Values.Aggregate(0L, (sum, x) => checked(sum + x)) != state.TotalPollinationPoints))
+            || (state.ContributionPointsByPlayer is null && state.TotalPollinationPoints != 0))
             throw new InvalidDataException("Invalid persisted shared floral site.");
     }
 

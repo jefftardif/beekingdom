@@ -23,6 +23,8 @@ public static class HiveStateMigrator
             throw new InvalidDataException("Invalid SpeedUp inventory state.");
         if (state.CivilPopulation is { } civilPopulation)
             CivilPopulationService.ValidateStored(civilPopulation);
+        if (state.CivilExpeditions is { } civilExpeditions)
+            CivilExpeditionRules.ValidateStored(civilExpeditions, state.CivilPopulation);
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
 

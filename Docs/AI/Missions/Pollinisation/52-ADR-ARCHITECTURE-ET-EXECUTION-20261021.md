@@ -90,3 +90,31 @@ Garder flags désactivés, ne pas lancer de nouvelles missions sous OFF. Champs 
 - Tests `FloralSiteServiceTests.cs` (6 réussis) et `FloralSiteEndpointTests.cs` (4 réussis).
 
 **Limitations explicites :** pas encore de consommation des réserves, cycles/régénération, expéditions ni API de mutations écologiques ; aucune localisation des deux sites QA sur une scène Unity approuvée. Les identifiants `world-qa` et `clover-qa-01` sont exclusivement des jeux de tests. Les deux dépôts lisent le même agrégat global, mais les transactions entre un champ et des ruches sont le lot suivant. Aucune preuve de migration ni de contention SQL contre une base de test réelle n'a encore été exécutée.
+
+## P3.1 — Expéditions civiles / transaction SQL réelle (2026-10-21)
+
+**Implémenté et compilé en branche isolée** :
+- `CivilExpeditionModels.cs` + `CivilExpeditionService.cs` : mission équilibrée du civil vers un site et retour, reservation des butineuses, quatre phases dérivées de l'horloge serveur, débit champ = crédit pollen réel à la ruche sous limites de stockage. Les soldats ne sont jamais détournés.
+- `SqlCivilExpeditionUnitOfWork.cs` : une transaction SQL Server `SERIALIZABLE` avec verrous `hive:{player}:{hive}` puis `floral:{world}:{site}`, contrôle des révisions, mutation des deux agrégats et insert dans ledger unique au même COMMIT; aucun moteur JSON de mutation autorisé.
+- `097_floral_civil_contributions.sql` (et DatabaseCatalog) : historique de contribution unique par `MissionId`, file `FloralCivilActiveMissions` indexée par date de retour et par propriétaire, deux mises à jour dans la même transaction.
+- `CivilExpeditionDueProcessor.cs` et `CivilExpeditionSettlementWorker.cs` : traitement serveur toutes les ~30 s sous flags ON; reprend les missions à échéance sans requête Unity. SQL garde la mission à traiter après une panne, et les verrous/reçus empêchent de créditer deux fois.
+- Routes `GET /game/v1/hives/{hiveId}/civil-expeditions` et `POST /game/v1/hives/{hiveId}/civil-expeditions/start` ajoutées, avec authentification officielle, contrôle ownership, clé d'idempotence et deux révisions. `CivilExpeditions:Enabled` reste **OFF**.
+- Durée 15 min, rendement 1 pollen/civil, gains +5 bp fertilité et +2 bp biodiversité sont **des fixtures/valeurs QA configurables non approuvées**.
+
+**Preuve SQL réelle sur PCJEFF uniquement** :
+- SQL Server 2025 LocalDB instance `BKPollinationQA`, DB `BeeKingdomPollinationQA`, schémas 070/096/097 installés localement.
+- Console de test reproductible `Server/ops/pollination-sql-qa` (`dotnet run`), sans secret stocké : deux ruches, même réserve de 15 pollen; missions concurrentes 12 + 12, cumul crédité 15, site final 0, deux joueurs distincts, ledger à deux lignes, aucune double récompense.
+- Test d'échec réel : insérer volontairement une contribution unique conflictuelle pendant le règlement -> exception SQL, **rollback commun** des réserves, ressources et effectifs; effacer la ligne de test puis réessayer, sans doublon.
+- Test d'absence de client : deuxième site, mission lancée puis réglée uniquement par `CivilExpeditionDueProcessor` après avancée horloge UTC; index vidé et civils/récompenses récupérés. Nettoyage des comptes/sites QA exécuté.
+- Sur la première exécution, bug SQL `READPAST` avec isolation de connexion réutilisée détecté, corrigé en forçant READ COMMITTED pour le scan de la file; test SQL complet ensuite **PASS**.
+- Distinction essentielle : test réel en **LocalDB**, pas encore d'intégration au SQL distant SRVESDT ni validation Unity.
+
+**Limitations de ce lot, non déclarées livrées** :
+- Une seule destination florale par mission V1. Routes source -> deuxième champ, formation et spécialisations, champions, génétique, alliances/projets, régénération écologique et escorte : à faire selon le cahier.
+- La file d'attente SQL est vérifiée en LocalDB mais le service d'hébergement continu dans une API réellement démarrée avec flags ON n'a pas été testé sur serveur distant; activation interdite avant smoke tests complets et sauvegardes.
+- Le registre des contributions est global par joueur/site, **ce n'est pas encore** un projet d'alliance avec minimum obligatoire de membres distincts.
+- Les clés/réceptions de mission sont stockées dans la ruche avec limite de 10000 éléments, sans purge automatique (fail-safe); politique retention/scalabilité à concevoir avant Beta/charge.
+- Le client Unity premium bilingue n'est pas branché; aucune simulation ne doit prétendre envoyer un essaim officiel.
+- Protéger les modifications encore non commitées sur `main`; merge/rebase à préparer avec Academy, recherches et interfaces actuelles, jamais automatique.
+
+**Prochaine marche** : implantation de deux sites officiels géolocalisés sans toucher aux tuiles du monde et API/client Unity FR/EN, puis projets multi-joueurs d'alliance avec anti-solo et progression persistante. Maintenir flags OFF jusqu'au test d'acceptation E2E et rollback validé.

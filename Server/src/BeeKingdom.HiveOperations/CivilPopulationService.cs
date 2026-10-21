@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace BeeKingdom.HiveOperations;
@@ -217,7 +217,7 @@ public sealed class CivilPopulationService(
     /// delivered once on the next authenticated read or command, even if Unity
     /// was closed during maturation. No manual claim or client timer is used.
     /// </summary>
-    private static PlayerHiveState SettleMatureCohort(
+    internal static PlayerHiveState SettleMatureCohort(
         PlayerHiveState state, DateTimeOffset now)
     {
         CivilPopulationState? civil = state.CivilPopulation;

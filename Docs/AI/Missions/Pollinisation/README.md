@@ -115,3 +115,7 @@ Le statut documentaire historique du 2026-10-20 n'est plus le statut du code : u
 
 
 **Suivi du Lot 2.1 (2026-10-21) :** premières lectures d'états floraux persistants partagés en code serveur sous flag OFF, migration SQL 096 rédigée et routes GET authentifiées. Aucun prélèvement, aucune expédition complète ni rendu Unity n'est encore livré. Détails et limitations dans 52-ADR.
+
+### État réel des lots, mise à jour P3.1 (2026-10-21)
+
+L'implantation en branche `feature/pollinisation-alpha-20261021` comprend maintenant une expédition civile persistante et un règlement SQL atomique ruche + champ + contribution, avec un ordonnanceur de missions dues. **Le test de concurrence et de rollback a été exécuté sur SQL Server LocalDB isolé sur PCJEFF** via `Server/ops/pollination-sql-qa`; aucun déploiement sur SRVESDT. Le mode équilibré et tous ses paramètres restent expérimentaux et sous flag OFF. L'interface Unity, les routes à deux champs et les projets d'alliance ne sont pas encore intégrés. Voir `52-ADR-ARCHITECTURE-ET-EXECUTION-20261021.md`.

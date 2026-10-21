@@ -90,3 +90,5 @@ Une idée reportée n'est pas effacée : elle reste ici avec son statut, une pha
 
 
 - Site floral officiel partagé (première tranche du Lot 2) : `FloralSiteService.cs`, `FloralSiteRepositories.cs`, `096_floral_site_states.sql`, routes GET et tests. **Etat persisté partagé lisible ; extraction/régénération/projets/expéditions non implémentés.** Les familles et ID de test sont des fixtures QA, pas des positions officielles sur la carte.
+
+- P3.1 : expédition civile persistante `CivilExpeditionService.cs`, transaction SQL multi-agrégats `SqlCivilExpeditionUnitOfWork.cs`, migrations 097, index des missions dues, job serveur `CivilExpeditionSettlementWorker.cs`, API GET/POST authentifiée et console QA SQL réelle. **Serveur fonctionnel derrière flag OFF, preuve LocalDB isolée; pas encore de jeu Unity connecté ni de déploiement distant.** Un seul champ par mission; toutes les idées à deux champs, escortes, spécialités, génétique et alliances restent dans le backlog.

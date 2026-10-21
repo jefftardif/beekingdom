@@ -166,6 +166,31 @@ builder.Services.AddSingleton<IFloralSiteRepository>(sp =>
     return new SqlFloralSiteRepository(connectionString, sql.CommandTimeoutSeconds);
 });
 
+// Civil missions have no JSON mutation backend: they must commit hive, floral
+// site, and immutable contribution ledger in the SAME SQL Server transaction.
+builder.Services.AddSingleton<ICivilExpeditionUnitOfWork>(sp =>
+{
+    if (sp.GetRequiredService<IHiveStateRepository>() is not SqlHiveStateRepository)
+        return new UnavailableCivilExpeditionUnitOfWork();
+
+    SqlServerOptions sql = sp.GetRequiredService<IOptions<SqlServerOptions>>().Value;
+    IConfiguration cfg = sp.GetRequiredService<IConfiguration>();
+    string connectionString = sql.RuntimeConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.RuntimeConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = sql.ConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.ConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Civil expedition SQL connection unavailable.");
+    return new SqlCivilExpeditionUnitOfWork(connectionString, sql.CommandTimeoutSeconds);
+});
+
+builder.Services.AddHostedService<BeeKingdom.Server.CivilExpeditionSettlementWorker>();
+builder.Services.AddOptions<CivilExpeditionOptions>()
+    .Bind(builder.Configuration.GetSection(CivilExpeditionOptions.SectionName))
+    .ValidateOnStart();
 builder.Services.AddOptions<FloralSiteOptions>()
     .Bind(builder.Configuration.GetSection(FloralSiteOptions.SectionName))
     .ValidateOnStart();
@@ -1083,6 +1108,67 @@ app.MapPost("/game/v1/hives/{hiveId}/brood/cohorts/start", async (
             repository, clock, options.Value).StartAsync(
                 new NurseryCohortStartCommand(auth.PlayerId!.Value, hive,
                     request.ExpectedRevision, request.IdempotencyKey), ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+});
+// Alpha civilian expedition. Disabled by default; only SQL Server can mutate
+// shared floral sites. GET auto-settles a finished mission after reopening Unity.
+app.MapGet("/game/v1/hives/{hiveId}/civil-expeditions", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository hives, ICivilExpeditionUnitOfWork coordinator,
+    BeeKingdom.HiveOperations.IServerClock clock, IOptions<CivilExpeditionOptions> settings,
+    IOptions<FloralSiteOptions> floral, CancellationToken ct) =>
+{
+    if (!settings.Value.Enabled || !floral.Value.Enabled
+        || coordinator is UnavailableCivilExpeditionUnitOfWork)
+        return GameError(503, "game.civil_expeditions_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilExpeditionService(hives, coordinator, clock,
+            settings.Value, floral.Value);
+        return Results.Ok(await service.ReadAsync(auth.PlayerId!.Value, hive, ct));
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/civil-expeditions/start", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository hives, ICivilExpeditionUnitOfWork coordinator,
+    BeeKingdom.HiveOperations.IServerClock clock, IOptions<CivilExpeditionOptions> settings,
+    IOptions<FloralSiteOptions> floral, StartCivilExpeditionRequest request,
+    CancellationToken ct) =>
+{
+    if (!settings.Value.Enabled || !floral.Value.Enabled
+        || coordinator is UnavailableCivilExpeditionUnitOfWork)
+        return GameError(503, "game.civil_expeditions_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilExpeditionService(hives, coordinator, clock,
+            settings.Value, floral.Value);
+        CivilExpeditionResult result = await service.StartAsync(
+            auth.PlayerId!.Value, hive, request, ct);
         return result.Succeeded ? Results.Ok(result)
             : GameError(409, result.Code, "game.error.conflict");
     }

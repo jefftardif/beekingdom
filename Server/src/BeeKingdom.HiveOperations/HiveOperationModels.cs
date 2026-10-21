@@ -67,7 +67,8 @@ public sealed record PlayerHiveState(
      long RoyalSeals = 0,
      NurseryCohortState? NurseryCohorts = null,
      RoyalReserveState? RoyalReserve = null,
-      CivilPopulationState? CivilPopulation = null);
+      CivilPopulationState? CivilPopulation = null,
+      CivilExpeditionState? CivilExpeditions = null);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
 // adjustments, compensation slot grants). Written inside the SAME atomic mutation as the
