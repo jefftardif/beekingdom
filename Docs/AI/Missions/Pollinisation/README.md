@@ -138,3 +138,14 @@ floral lorsque l'API renvoie explicitement le bon MapSurfaceId et un MapAnchorId
 qui existe déjà dans le monde. Aucune coordonnée arbitraire ni tuile n'a été
 ajoutée. La configuration de deux sites servant aux tests est uniquement un
 exemple QA sous flags OFF. Voir 56-SITES-FLORAUX-MARQUEURS-CARTE-P6-20261021.md.
+
+## P7 — Centre de pollinisation premium (21 octobre 2026)
+
+Le premier panneau IMGUI P5 a été remplacé pour l'utilisation normale par une fenêtre
+uGUI/TMP qui réutilise le Canvas, les dimensions, la safe area, la barre de défilement
+et la typographie d'Activités v4. Les trois onglets Champs/Essaims/Alliance restent
+pilotés exclusivement par les contrats serveur P1–P4. **P7 vérifié** :
+compilation Unity complète sans erreur C#, tests Unity Editor Pollination 8/8,
+tests WorldMap 7/7, contrôle client .NET 36/36.
+Le rendu PlayMode visuel, les tests sur appareils et la fusion dans main ne sont
+pas encore validés. Voir 57-FENETRE-PREMIUM-ACTIVITES-P7-20261021.md.

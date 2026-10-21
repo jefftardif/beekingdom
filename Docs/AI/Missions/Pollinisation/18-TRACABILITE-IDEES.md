@@ -113,3 +113,11 @@ Une idée reportée n'est pas effacée : elle reste ici avec son statut, une pha
   incohérences, fichier QA avec deux ancrages réellement présents et flags OFF.
   Les sites/positions définitifs, les captures visuelles Editor et le chrome
   Activités v4 restent au backlog. Voir 56-SITES-FLORAUX-MARQUEURS-CARTE-P6-20261021.md.
+
+- P7 : fenêtre Pollinisation plein écran sur la carte réutilisant le chrome
+  premium Activités v4 (Cinzel, cartes or, safe-area et scrollbar unique).
+  Les onglets officiels Champs/Essaims/Alliance sont reliés au contrôleur réseau
+  existant; aucun crédit local ajouté. Tests Unity Editor 8/8 (P5+P7),
+  WorldMap 7/7, compilation Unity complète et .NET client 36/36 vérifiés.
+  PlayMode visuel et appareils physiques demeurent à faire.
+  Voir 57-FENETRE-PREMIUM-ACTIVITES-P7-20261021.md.

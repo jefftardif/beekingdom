@@ -120,3 +120,12 @@ par MapSurfaceId/MapAnchorId, mais ce mécanisme de réutilisation est technique
 facultatif et réversible. Les deux ancrages du fichier exemple restent des
 fixtures QA, pas des sites ou des positions approuvés pour l'Alpha publique.
 Aucune décision D-xxx n'a été réécrite. Voir le rapport 56.
+
+## Note technique UX P7, réversible (21 octobre 2026)
+
+La fenêtre a été préparée dans le chrome Activités v4, conformément au design
+UI déjà retenu pour les bâtiments. Ce choix est uniquement une mise en œuvre
+présentielle : il ne fixe ni les coûts, ni la durée des essaims, ni l'expérience
+des alliances, ni les positions finales des champs ou la direction artistique
+finale de leurs symboles. Les décisions du créateur restent inchangées.
+Voir 57-FENETRE-PREMIUM-ACTIVITES-P7-20261021.md.
