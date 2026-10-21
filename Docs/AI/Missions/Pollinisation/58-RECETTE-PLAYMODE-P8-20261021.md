@@ -78,3 +78,21 @@ Ces contrôles précédents ne constituent pas une nouvelle exécution globale P
 3. Staging SQL + vraie API à plusieurs comptes avant tout flag ON.
 4. Audit d'intégration des commits P1-P8 avec modifications officielles
    de main, sans reset, push ni fusion destructrice.
+## Réexécution transversale P8 (preuve finale supplémentaire)
+
+Le Test Runner Unity 6000.5.3f1 a été relancé avec le filtre Pollination
+sur la branche comportant les nouveaux tests et la remise à zéro de
+LogAssert.ignoreFailingMessages dans TearDown.
+
+Résultat XML : Passed, TOTAL=10, PASSED=10, FAILED=0, SKIPPED=0.
+Cela couvre les quatre tests Editor P5, les quatre tests premium Editor P7
+et les deux tests entrant réellement en PlayMode P8.
+
+Le XML et le journal ont été sauvegardés hors du dépôt sous
+C:\BeeKingdom\DEV\BK-Studio\qa\pollinisation-p8-20261021\
+pollinisation-p8-combined-regression.xml.
+
+Cette suite vérifie le comportement, les contrats visuels et l'interception
+des clics sans brancher de compte réel ni ouvrir la pollinisation en production.
+Les captures PNG et la recette visuelle humaine demeurent indisponibles en
+mode batch, et les précédents tests serveur P6 ne sont pas recompilés ici.

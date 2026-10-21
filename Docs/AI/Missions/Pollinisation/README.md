@@ -159,3 +159,11 @@ WorldMapMmoFullscreenFoundation avec tous les flags OFF. Le Test Runner
 batchmode ne produit pas de captures ; l'approbation visuelle GameView
 sur appareil n'est pas encore terminée.
 Voir 58-RECETTE-PLAYMODE-P8-20261021.md.
+## Préparation de la fusion sans perte (P8)
+
+Avant toute tentative sur la version officielle, un audit non destructif
+a identifié cinq fichiers source modifiés dans les deux endroits et 53
+documents du cahier non suivis sur le main local (50 identiques, 3 divergents).
+Les cinq fichiers et les trois documents divergents ont une copie de
+précaution hors Git, avec SHA256. Aucun reset ni merge n'a été lancé.
+Voir 59-AUDIT-FUSION-SANS-REGRESSION-P8-20261021.md.

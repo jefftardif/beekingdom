@@ -25,6 +25,14 @@ namespace BeeKingdom.Playground.Editor
     /// </summary>
     public sealed class PollinationP8PlayModeTests
     {
+        [TearDown]
+        public void RestoreUnityErrorPolicy()
+        {
+            // Do not let the test-only workaround for a third-party
+            // MCP connector influence later or unrelated Unity tests.
+            LogAssert.ignoreFailingMessages=false;
+        }
+
         private const string WorldMapScene =
             "Assets/Scenes/WorldMapMmoFullscreenFoundation.unity";
         private static readonly DateTimeOffset Clock =
