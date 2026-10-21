@@ -149,3 +149,13 @@ compilation Unity complète sans erreur C#, tests Unity Editor Pollination 8/8,
 tests WorldMap 7/7, contrôle client .NET 36/36.
 Le rendu PlayMode visuel, les tests sur appareils et la fusion dans main ne sont
 pas encore validés. Voir 57-FENETRE-PREMIUM-ACTIVITES-P7-20261021.md.
+
+## P8 — Recette PlayMode (21 octobre 2026)
+
+Deux tests fonctionnels exécutés en PlayMode Unity 6000.5.3f1 sont réussis :
+fenêtre royale au-dessus d'un Canvas de carte, clics interceptés, scrollbar
+stable, affichages FR/EN, onglets sans mutation, et chargement de la scène
+WorldMapMmoFullscreenFoundation avec tous les flags OFF. Le Test Runner
+batchmode ne produit pas de captures ; l'approbation visuelle GameView
+sur appareil n'est pas encore terminée.
+Voir 58-RECETTE-PLAYMODE-P8-20261021.md.

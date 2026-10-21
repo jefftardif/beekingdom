@@ -121,3 +121,9 @@ Une idée reportée n'est pas effacée : elle reste ici avec son statut, une pha
   WorldMap 7/7, compilation Unity complète et .NET client 36/36 vérifiés.
   PlayMode visuel et appareils physiques demeurent à faire.
   Voir 57-FENETRE-PREMIUM-ACTIVITES-P7-20261021.md.
+
+- P8 : deux tests PlayMode réussis, confirmant l'interception des clics de la
+  carte, le maintien du scroll, la localisation FR/EN, l'absence d'action serveur
+  sur simple lecture et les flags inactifs dans la vraie scène WorldMap.
+  Les images batchmode ne sont pas générées, et la recette visuelle manuelle
+  reste à compléter. Preuves dans 58-RECETTE-PLAYMODE-P8-20261021.md.
