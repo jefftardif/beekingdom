@@ -143,6 +143,9 @@ builder.Services.AddOptions<FoundationDotationOptions>()
 builder.Services.AddOptions<BroodVitalityOptions>()
     .Bind(builder.Configuration.GetSection(BroodVitalityOptions.SectionName))
     .ValidateOnStart();
+builder.Services.AddOptions<CivilPopulationOptions>()
+    .Bind(builder.Configuration.GetSection(CivilPopulationOptions.SectionName))
+    .ValidateOnStart();
 builder.Services.AddOptions<NurseryCohortOptions>()
     .Bind(builder.Configuration.GetSection(NurseryCohortOptions.SectionName));
 builder.Services.AddOptions<WorkshopBatchQualificationOptions>()
@@ -1054,6 +1057,61 @@ app.MapPost("/game/v1/hives/{hiveId}/brood/cohorts/start", async (
             repository, clock, options.Value).StartAsync(
                 new NurseryCohortStartCommand(auth.PlayerId!.Value, hive,
                     request.ExpectedRevision, request.IdempotencyKey), ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+});
+// Civil Population Alpha: separate from combat recruitment and existing NurseryCohorts.
+// Feature remains OFF by default; no endpoint trusts client-provided player identity.
+app.MapGet("/game/v1/hives/{hiveId}/civil-population", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<CivilPopulationOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.civil_population_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilPopulationService(repository, clock, options.Value);
+        return Results.Ok(await service.ReadAsync(auth.PlayerId!.Value, hive, ct));
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/civil-population/cohorts/start", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<CivilPopulationOptions> options,
+    StartCivilCohortRequest request, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.civil_population_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilPopulationService(repository, clock, options.Value);
+        CivilPopulationCommandResult result = await service.StartAsync(
+            auth.PlayerId!.Value, hive, request, ct);
         return result.Succeeded ? Results.Ok(result)
             : GameError(409, result.Code, "game.error.conflict");
     }
