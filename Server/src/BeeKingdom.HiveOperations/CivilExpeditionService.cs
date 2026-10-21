@@ -56,7 +56,7 @@ public sealed class CivilExpeditionService(
         if (await hiveRepository.ReadAsync(playerId, hiveId, ct) is null)
             throw new KeyNotFoundException("game.not_found");
         CivilExpeditionResult? result = null;
-        await unitOfWork.ExecuteAsync(playerId, hiveId, definition,
+        CivilExpeditionMutation committed = await unitOfWork.ExecuteAsync(playerId, hiveId, definition,
             catalogue.CatalogVersion, (original, site) =>
         {
             DateTimeOffset now = Now();
@@ -139,7 +139,9 @@ public sealed class CivilExpeditionService(
             result = new(true, receipt.Code, CivilExpeditionRules.Snapshot(next, now), receipt);
             return new(next, site);
         }, ct);
-        return result ?? throw new InvalidOperationException("Missing expedition result.");
+        return result is { } outcome
+            ? outcome with { Snapshot = CivilExpeditionRules.Snapshot(committed.Hive, Now()) }
+            : throw new InvalidOperationException("Missing expedition result.");
     }
 
     /// <summary>

@@ -184,9 +184,38 @@ builder.Services.AddSingleton<ICivilExpeditionUnitOfWork>(sp =>
         connectionString = cfg.GetConnectionString(sql.ConnectionStringName) ?? "";
     if (string.IsNullOrWhiteSpace(connectionString))
         throw new InvalidOperationException("Civil expedition SQL connection unavailable.");
-    return new SqlCivilExpeditionUnitOfWork(connectionString, sql.CommandTimeoutSeconds);
+    return new SqlCivilExpeditionUnitOfWork(connectionString, sql.CommandTimeoutSeconds,
+        sp.GetRequiredService<IOptions<FloralAllianceProjectOptions>>().Value);
 });
 
+// Official collective project state never shares data with Alliance Research.
+// Permissions are checked from dbo.AllianceMemberships under SQL locks.
+builder.Services.AddSingleton<IFloralAllianceProjectService>(sp =>
+{
+    if (sp.GetRequiredService<IHiveStateRepository>() is not SqlHiveStateRepository)
+        return new UnavailableFloralAllianceProjectService();
+
+    SqlServerOptions sql = sp.GetRequiredService<IOptions<SqlServerOptions>>().Value;
+    IConfiguration cfg = sp.GetRequiredService<IConfiguration>();
+    string connectionString = sql.RuntimeConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.RuntimeConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = sql.ConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.ConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Floral alliance projects require SQL.");
+    return new SqlFloralAllianceProjectService(
+        connectionString, sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(),
+        sp.GetRequiredService<IOptions<FloralAllianceProjectOptions>>().Value,
+        sp.GetRequiredService<IOptions<FloralSiteOptions>>().Value,
+        sql.CommandTimeoutSeconds);
+});
+
+builder.Services.AddOptions<FloralAllianceProjectOptions>()
+    .Bind(builder.Configuration.GetSection(FloralAllianceProjectOptions.SectionName))
+    .ValidateOnStart();
 builder.Services.AddHostedService<BeeKingdom.Server.CivilExpeditionSettlementWorker>();
 builder.Services.AddOptions<CivilExpeditionOptions>()
     .Bind(builder.Configuration.GetSection(CivilExpeditionOptions.SectionName))
@@ -1118,6 +1147,89 @@ app.MapPost("/game/v1/hives/{hiveId}/brood/cohorts/start", async (
     catch (ArgumentException)
     {
         return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+});
+// Cooperative floral projects: active official alliance membership is checked
+// by the SQL service on every request; leader/officer required for creation.
+app.MapGet("/alliance/v1/alliances/{allianceId}/floral-projects", async (
+    HttpContext context, string allianceId, AuthenticationManager authentication,
+    IFloralAllianceProjectService projects, IOptions<FloralAllianceProjectOptions> options,
+    CancellationToken ct) =>
+{
+    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+        return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(allianceId, out Guid id))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        return Results.Ok(await projects.ListAsync(auth.PlayerId!.Value, id, ct));
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return GameError(403, "game.alliance_member_required", "game.error.forbidden");
+    }
+});
+
+app.MapGet("/alliance/v1/alliances/{allianceId}/floral-projects/{projectId}", async (
+    HttpContext context, string allianceId, string projectId,
+    AuthenticationManager authentication, IFloralAllianceProjectService projects,
+    IOptions<FloralAllianceProjectOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+        return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(allianceId, out Guid alliance)
+        || !TryParseGameResourceId(projectId, out Guid project))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        return Results.Ok(await projects.ReadAsync(auth.PlayerId!.Value, alliance, project, ct));
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return GameError(403, "game.alliance_member_required", "game.error.forbidden");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/alliance/v1/alliances/{allianceId}/floral-projects", async (
+    HttpContext context, string allianceId, AuthenticationManager authentication,
+    IFloralAllianceProjectService projects, IOptions<FloralAllianceProjectOptions> options,
+    CreateFloralAllianceProjectRequest request, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+        return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(allianceId, out Guid alliance) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        FloralAllianceProjectCreateResult result = await projects.CreateAsync(
+            auth.PlayerId!.Value, alliance, request, ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return GameError(403, "game.alliance_permission_denied", "game.error.forbidden");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
     }
 });
 // Alpha civilian expedition. Disabled by default; only SQL Server can mutate

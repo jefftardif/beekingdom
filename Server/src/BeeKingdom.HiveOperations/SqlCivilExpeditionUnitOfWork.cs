@@ -11,7 +11,8 @@ namespace BeeKingdom.HiveOperations;
 /// and the unique contribution ledger share one SERIALIZABLE SQL transaction.
 /// </summary>
 public sealed class SqlCivilExpeditionUnitOfWork(
-    string connectionString, int commandTimeoutSeconds = 15)
+    string connectionString, int commandTimeoutSeconds = 15,
+    FloralAllianceProjectOptions? collectiveOptions = null)
     : ICivilExpeditionUnitOfWork, ICivilExpeditionDueIndex
 {
     private static readonly JsonSerializerOptions JsonOptions =
@@ -65,6 +66,27 @@ public sealed class SqlCivilExpeditionUnitOfWork(
             || result.Site.WorldId != definition.WorldId
             || result.Site.SiteId != definition.SiteId)
             throw new InvalidDataException("Cross-aggregate identity invalid.");
+        // Freeze the player's active alliance at departure. A player cannot
+        // move into a second alliance before returning and donate old pollen
+        // toward a new alliance's project retroactively.
+        if (collectiveOptions?.Enabled == true
+            && hive.CivilExpeditions?.Active is null
+            && result.Hive.CivilExpeditions?.Active is { } started)
+        {
+            Guid? allianceAtStart =
+                await SqlFloralAllianceContributionApplier.MembershipAllianceAsync(
+                    connection, tx, playerId, ct);
+            result = result with
+            {
+                Hive = result.Hive with
+                {
+                    CivilExpeditions = result.Hive.CivilExpeditions with
+                    {
+                        Active = started with { AllianceIdAtStart = allianceAtStart }
+                    }
+                }
+            };
+        }
         if (result.Hive.Revision < hive.Revision
             || result.Site.Revision < site.Revision)
             throw new InvalidDataException("Cross-aggregate revision decreased.");
@@ -72,6 +94,14 @@ public sealed class SqlCivilExpeditionUnitOfWork(
         CivilExpeditionRules.ValidateStored(result.Hive.CivilExpeditions
             ?? CivilExpeditionRules.Empty(), result.Hive.CivilPopulation);
 
+        if (collectiveOptions?.Enabled == true)
+        {
+            collectiveOptions.Validate();
+            await using var schemaCheck = NewCommand(connection, tx);
+            schemaCheck.CommandText = "IF OBJECT_ID(N'dbo.FloralAllianceProjects',N'U') IS NULL "+
+                "THROW 51088,'Missing floral alliance schema 098.',1;";
+            await schemaCheck.ExecuteNonQueryAsync(ct);
+        }
         // Referential audit row, unique by mission ID. Failure rolls back
         // BOTH balances and every civilian reservation without partial payout.
         if (result.Contribution is { } contribution)
@@ -86,6 +116,14 @@ public sealed class SqlCivilExpeditionUnitOfWork(
                 || contribution.PollinationPoints != contribution.PollenRemoved)
                 throw new InvalidDataException("Invalid contribution ledger row.");
             await InsertContributionAsync(connection, tx, contribution, ct);
+            if (collectiveOptions?.Enabled == true)
+            {
+                CivilExpeditionMission flight = hive.CivilExpeditions?.Active
+                    ?? throw new InvalidDataException("Missing active civilian mission.");
+                await SqlFloralAllianceContributionApplier.ApplyAsync(
+                    connection, tx, flight, contribution, collectiveOptions,
+                    commandTimeoutSeconds, ct);
+            }
         }
         CivilExpeditionMission? beforeFlight = hive.CivilExpeditions?.Active;
         CivilExpeditionMission? afterFlight = result.Hive.CivilExpeditions?.Active;

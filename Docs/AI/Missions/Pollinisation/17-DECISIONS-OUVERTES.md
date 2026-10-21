@@ -106,3 +106,10 @@ L'agent peut recommander des choix techniques réversibles ; toute règle toucha
 **ADR-003** : une progression d'alliance générale et durable est à construire séparément de la Recherche d'alliance. Q-33 et les seuils de participants restent ouverts.
 
 Voir `52-ADR-ARCHITECTURE-ET-EXECUTION-20261021.md`. Aucun de ces choix techniques ne modifie les décisions D-001 à D-009.
+## ADR-P4 (technique réversible, NON une approbation produit) — 2026-10-21
+
+Les projets d'alliance sont maintenant persistants et testés localement. Les conditions QA par défaut sont objectif 100 points + 2 membres qualifiés à 5 points chacun; progression d'alliance séparée avec seuils XP 100/300 et slots 1/2. **Aucune valeur n'est approuvée par le créateur.** Garder ouvertes les questions de seuils, niveau, bonus, participation, politique de changement d'alliance et projet actif interrompu.
+
+Politique QA retenue temporairement : compter une mission dans le projet actif du site uniquement si elle était lancée après sa création et si le joueur appartient encore à son alliance de départ au règlement. Une migration d'alliance après départ n'attribue pas la récolte à la nouvelle alliance. Les ressources individuelles sont préservées. Politique de drainage avant coupure du flag obligatoire à définir.
+
+Références et preuves LocalDB : 54-VALIDATION-COLLECTIVE-P4-20261021.md. Aucun changement aux décisions D-001 à D-009.

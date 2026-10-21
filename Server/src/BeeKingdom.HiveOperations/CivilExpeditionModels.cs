@@ -39,7 +39,8 @@ public sealed record CivilExpeditionMission(
     long Workers, string Mode, DateTimeOffset StartedAtUtc,
     DateTimeOffset ArrivesAtUtc, DateTimeOffset WorkEndsAtUtc,
     DateTimeOffset ReturnsAtUtc, long PollenPerWorker,
-    int FertilityGainBp, int BiodiversityGainBp);
+    int FertilityGainBp, int BiodiversityGainBp,
+    Guid? AllianceIdAtStart = null);
 
 public sealed record CivilExpeditionCompletion(
     Guid MissionId, string SiteId, long PollenCredited,
@@ -152,6 +153,7 @@ public static class CivilExpeditionRules
                     && mission.ArrivesAtUtc < mission.WorkEndsAtUtc
                     && mission.WorkEndsAtUtc < mission.ReturnsAtUtc)
                 || mission.ReturnsAtUtc - mission.StartedAtUtc > TimeSpan.FromDays(8)
+                || (mission.AllianceIdAtStart.HasValue && mission.AllianceIdAtStart.Value == Guid.Empty)
                 || mission.PollenPerWorker <= 0
                 || mission.FertilityGainBp is < 0 or > 1000
                 || mission.BiodiversityGainBp is < 0 or > 1000
