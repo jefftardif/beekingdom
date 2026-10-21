@@ -35,6 +35,7 @@ namespace BeeKingdom.Playground
             EntryButtonRect().Contains(guiPoint);
 
         private Texture2D solid;
+        private PollinationPremiumWindow premiumWindow;
         private bool opened;
         private bool firstReadRequested;
         private IPollinationPanelController boundController;
@@ -85,11 +86,17 @@ namespace BeeKingdom.Playground
             MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap
                 .RefreshQuietly();
             MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap.Refresh();
+            premiumWindow?.Show(
+                MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap,
+                Close);
         }
 
         private void Awake()
         {
             current = this;
+            premiumWindow = gameObject.GetComponent<PollinationPremiumWindow>();
+            if (premiumWindow == null)
+                premiumWindow = gameObject.AddComponent<PollinationPremiumWindow>();
             solid = new Texture2D(1,1,TextureFormat.RGBA32,false);
             solid.SetPixel(0,0,Color.white);
             solid.Apply();
@@ -139,6 +146,7 @@ namespace BeeKingdom.Playground
             opened = false;
             IsModalOpen = false;
             requestedSiteId = string.Empty;
+            premiumWindow?.Hide();
         }
 
         private static string T(string fr, string en) =>
@@ -208,6 +216,9 @@ namespace BeeKingdom.Playground
                 return;
             }
             GUI.depth = -2000;
+            // P7 uGUI canvas owns the modal; only the entry remains IMGUI.
+            // This fallback is retained solely if premium canvas fails to open.
+            if (opened && premiumWindow != null && premiumWindow.IsOpen) return;
             if (!opened)
             {
                 Rect entry = EntryButtonRect();
