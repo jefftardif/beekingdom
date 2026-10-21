@@ -19,6 +19,7 @@ public sealed class FloralSiteOptions
         if (!ValidId(CatalogVersion) || Sites.Count is < 1 or > 128)
             throw new InvalidDataException("Invalid floral site catalogue metadata.");
         var keys = new HashSet<string>(StringComparer.Ordinal);
+        var mapAnchors = new HashSet<string>(StringComparer.Ordinal);
         foreach (FloralSiteDefinition site in Sites)
         {
             if (site is null
@@ -30,10 +31,22 @@ public sealed class FloralSiteOptions
                 || site.MaximumPollenUnits is < 1 or > 1_000_000_000
                 || site.InitialFertilityBp is < 0 or > 10000
                 || site.InitialBiodiversityBp is < 0 or > 10000
-                || !keys.Add(site.SiteId))
+                || !keys.Add(site.SiteId)
+                || !ValidMapAnchor(site.MapSurfaceId, site.MapAnchorId)
+                || (!string.IsNullOrEmpty(site.MapSurfaceId)
+                    && !mapAnchors.Add(site.MapSurfaceId + ":" + site.MapAnchorId)))
                 throw new InvalidDataException("Invalid or duplicated floral site definition.");
         }
     }
+
+    // A map anchor is an existing canonical node ID, not a fabricated XY.
+    // Either both values are supplied from server config or neither is.
+    public static bool ValidMapAnchor(string? surfaceId, string? anchorId) =>
+        string.IsNullOrEmpty(surfaceId) && string.IsNullOrEmpty(anchorId)
+        || (!string.IsNullOrEmpty(surfaceId)
+            && surfaceId.Length <= 128
+            && Regex.IsMatch(surfaceId, "^[A-Za-z0-9][A-Za-z0-9._-]*$", RegexOptions.CultureInvariant)
+            && ValidId(anchorId));
 
     public static bool ValidId(string? value) =>
         !string.IsNullOrWhiteSpace(value)
@@ -44,7 +57,8 @@ public sealed class FloralSiteOptions
 public sealed record FloralSiteDefinition(
     string WorldId, string RegionId, string SiteId, string FamilyId,
     string NameFr, string NameEn, long MaximumPollenUnits,
-    int InitialFertilityBp, int InitialBiodiversityBp);
+    int InitialFertilityBp, int InitialBiodiversityBp,
+    string MapSurfaceId = "", string MapAnchorId = "");
 
 /// <summary>
 /// Single global copy of the site's persisted state. Not owned by any player.
@@ -65,7 +79,8 @@ public sealed record FloralSiteSnapshot(
     long PollenRemaining, long PollenCapacity,
     int FertilityBp, int BiodiversityBp, string Phase,
     bool PublicAccess,
-    long TotalPollinationPoints = 0, int DistinctContributors = 0);
+    long TotalPollinationPoints = 0, int DistinctContributors = 0,
+    string MapSurfaceId = "", string MapAnchorId = "");
 
 public interface IFloralSiteRepository
 {
@@ -124,7 +139,8 @@ public sealed class FloralSiteService(
             state.CatalogVersion, state.Revision, now, state.PollenRemaining,
             state.PollenCapacity, state.FertilityBp, state.BiodiversityBp,
             "blooming", true, state.TotalPollinationPoints,
-            state.ContributionPointsByPlayer?.Count ?? 0);
+            state.ContributionPointsByPlayer?.Count ?? 0,
+            definition.MapSurfaceId, definition.MapAnchorId);
     }
 
     public static FloralSiteState InitialState(

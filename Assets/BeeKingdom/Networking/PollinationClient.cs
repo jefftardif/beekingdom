@@ -167,11 +167,15 @@ namespace BeeKingdom.Networking
             if (sites == null || sites.Count > 128)
                 throw InvalidResponse("invalid_floral_catalog");
             var unique = new HashSet<string>(StringComparer.Ordinal);
+            var anchors = new HashSet<string>(StringComparer.Ordinal);
             foreach (RemoteFloralSite site in sites)
             {
                 ValidateSite(site);
                 if (!unique.Add(site.SiteId))
                     throw InvalidResponse("duplicate_floral_site");
+                if (!string.IsNullOrEmpty(site.MapSurfaceId) &&
+                    !anchors.Add(site.MapSurfaceId + ":" + site.MapAnchorId))
+                    throw InvalidResponse("duplicate_floral_map_anchor");
             }
             return sites;
         }
@@ -360,7 +364,8 @@ namespace BeeKingdom.Networking
                 x.TotalPollinationPoints < 0 ||
                 x.DistinctContributors < 0 ||
                 x.DistinctContributors > x.TotalPollinationPoints ||
-                x.Phase != "blooming")
+                x.Phase != "blooming" ||
+                !ValidMapAnchor(x.MapSurfaceId, x.MapAnchorId))
                 throw InvalidResponse("invalid_floral_site");
         }
 
@@ -536,6 +541,21 @@ namespace BeeKingdom.Networking
                     ? PollinationClientError.NetworkUnavailable
                     : PollinationClientError.AuthenticationRequired,
                 ex.SafeCode);
+
+        public static bool ValidMapAnchor(string surface, string anchor)
+        {
+            if (string.IsNullOrEmpty(surface) && string.IsNullOrEmpty(anchor))
+                return true;
+            if (string.IsNullOrWhiteSpace(surface) || surface.Length > 128 ||
+                !ValidId(anchor)) return false;
+            foreach (char c in surface)
+                if (!(c >= 'a' && c <= 'z') &&
+                    !(c >= 'A' && c <= 'Z') &&
+                    !(c >= '0' && c <= '9') &&
+                    c != '-' && c != '_' && c != '.')
+                    return false;
+            return true;
+        }
 
         private static string HivePath(Guid hive)
         {

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using BeeKingdom.Authentication.Providers;
@@ -66,6 +66,10 @@ public sealed class FloralSiteEndpointTests
             Is.EqualTo("White clover"));
         Assert.That(siteA.RootElement.GetProperty("pollenRemaining").GetInt64(),
             Is.EqualTo(100));
+        Assert.That(siteA.RootElement.GetProperty("mapSurfaceId").GetString(),
+            Is.EqualTo("BK-DEMO-WORLD-WAVE6-LOCAL"));
+        Assert.That(siteB.RootElement.GetProperty("mapAnchorId").GetString(),
+            Is.EqualTo("res_pollen_core"));
 
         using var list = await playerB.GetAsync("/game/v1/world/floral-sites");
         Assert.That(list.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -106,6 +110,8 @@ public sealed class FloralSiteEndpointTests
                     ["FloralSites:Sites:0:WorldId"] = "world-qa",
                     ["FloralSites:Sites:0:RegionId"] = "region-qa",
                     ["FloralSites:Sites:0:SiteId"] = siteId,
+                    ["FloralSites:Sites:0:MapSurfaceId"] = "BK-DEMO-WORLD-WAVE6-LOCAL",
+                    ["FloralSites:Sites:0:MapAnchorId"] = "res_pollen_core",
                     ["FloralSites:Sites:0:FamilyId"] = "clover",
                     ["FloralSites:Sites:0:NameFr"] = "Trèfle blanc",
                     ["FloralSites:Sites:0:NameEn"] = "White clover",

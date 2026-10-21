@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-    public sealed class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
+    public sealed partial class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
     {
         private const string OfficialMapPath = "C:/projets/beekingdom/carte.png";
         private const string WorldId = "BK-DEMO-WORLD-WAVE6-LOCAL";
@@ -313,6 +313,7 @@ namespace BeeKingdom.Playground
             if (mapFilterBearDen) DrawBearDenLandmark();
             DrawAerialFlights();
             if (mapFilterResources) DrawResources();
+            DrawOfficialFloralMarkers();
             DrawWorldResourceCollectionMarch();
             if (mapFilterThreats) DrawBestiary();
             if (mapFilterHives) DrawHives();
@@ -6723,6 +6724,7 @@ namespace BeeKingdom.Playground
 
         private void TrySelectAt(Vector2 guiPoint)
         {
+            if (TrySelectOfficialFloralMarker(guiPoint)) return;
             WorldHiveNode nearestHive = null;
             float nearestHiveDistance = float.MaxValue;
             for (int i = 0; i < hives.Count; i++)

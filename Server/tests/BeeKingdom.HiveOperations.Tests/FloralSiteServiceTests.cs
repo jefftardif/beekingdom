@@ -1,4 +1,4 @@
-﻿using BeeKingdom.HiveOperations;
+using BeeKingdom.HiveOperations;
 using Xunit;
 
 namespace BeeKingdom.HiveOperations.Tests;
@@ -152,4 +152,49 @@ public sealed class FloralSiteServiceTests
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
+    [Fact]
+    public async Task Official_anchor_is_read_from_server_catalogue_not_hive_or_local_coordinates()
+    {
+        string root = Temp();
+        try
+        {
+            FloralSiteOptions options = Options();
+            options.Sites[0] = options.Sites[0] with
+            {
+                MapSurfaceId = "BK-DEMO-WORLD-WAVE6-LOCAL",
+                MapAnchorId = "res_pollen_core"
+            };
+            var service = new FloralSiteService(
+                new DurableJsonFloralSiteRepository(root), new FakeClock(Moment), options);
+            FloralSiteSnapshot site = await service.ReadAsync("clover-qa-01");
+            Assert.Equal("BK-DEMO-WORLD-WAVE6-LOCAL", site.MapSurfaceId);
+            Assert.Equal("res_pollen_core", site.MapAnchorId);
+            Assert.Equal(100, site.PollenRemaining);
+            Assert.Equal(0, site.Revision);
+            Assert.Equal("", (await service.ReadAsync("clover-qa-02")).MapAnchorId);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void Catalogue_rejects_unpaired_unsafe_or_overlapping_world_anchors()
+    {
+        FloralSiteOptions half = Options();
+        half.Sites[0] = half.Sites[0] with
+        { MapSurfaceId = "BK-DEMO-WORLD-WAVE6-LOCAL", MapAnchorId = "" };
+        Assert.Throws<InvalidDataException>(() => half.Validate());
+
+        half = Options();
+        half.Sites[0] = half.Sites[0] with
+        { MapSurfaceId = "BK-DEMO-WORLD-WAVE6-LOCAL", MapAnchorId = "../wrong" };
+        Assert.Throws<InvalidDataException>(() => half.Validate());
+
+        half = Options();
+        half.Sites[0] = half.Sites[0] with
+        { MapSurfaceId = "BK-DEMO-WORLD-WAVE6-LOCAL", MapAnchorId = "res_pollen_core" };
+        half.Sites[1] = half.Sites[1] with
+        { MapSurfaceId = "BK-DEMO-WORLD-WAVE6-LOCAL", MapAnchorId = "res_pollen_core" };
+        Assert.Throws<InvalidDataException>(() => half.Validate());
+    }
+
 }

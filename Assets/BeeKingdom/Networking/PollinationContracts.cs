@@ -76,6 +76,8 @@ namespace BeeKingdom.Networking
         public bool PublicAccess { get; set; }
         public long TotalPollinationPoints { get; set; }
         public int DistinctContributors { get; set; }
+        public string MapSurfaceId { get; set; } = string.Empty;
+        public string MapAnchorId { get; set; } = string.Empty;
 
         public string LocalizedName(string locale) =>
             string.Equals(locale, "en-US", StringComparison.OrdinalIgnoreCase)

@@ -37,7 +37,8 @@ static class PollinationSmoke
         CatalogVersion="alpha.qa.v1",Revision=7,ServerTimeUtc=Now,
         PollenCapacity=30,PollenRemaining=20,FertilityBp=7100,
         BiodiversityBp=6400,Phase="blooming",PublicAccess=true,
-        TotalPollinationPoints=10,DistinctContributors=2
+        TotalPollinationPoints=10,DistinctContributors=2,
+        MapSurfaceId="BK-DEMO-WORLD-WAVE6-LOCAL",MapAnchorId="res_pollen_core"
     };
     static RemoteCivilPopulationSnapshot Population() => new()
     {
@@ -83,6 +84,9 @@ static class PollinationSmoke
         Check(decoded.LocalizedName("fr-CA")=="Trèfle blanc" &&
               decoded.LocalizedName("en-US")=="White clover",
               "Unicode FR/EN site roundtrip");
+        Check(decoded.MapSurfaceId=="BK-DEMO-WORLD-WAVE6-LOCAL" &&
+              decoded.MapAnchorId=="res_pollen_core",
+              "server-authoritative map anchor roundtrip");
         var disabledTransport=new FakeTransport();
         await Expect<PollinationClientException>(
             ()=>NewClient(disabledTransport,enabled:false).ReadSitesAsync(),
@@ -110,6 +114,18 @@ static class PollinationSmoke
         await Expect<PollinationClientException>(()=>
             NewClient(new FakeTransport(new List<RemoteFloralSite>{Site(),Site()})).ReadSitesAsync(),
             "duplicate shared site rejected");
+
+        var orphan=Site();orphan.MapAnchorId="";
+        await Expect<PollinationClientException>(()=>
+        {
+            PollinationClient.ValidateSite(orphan);
+            return Task.CompletedTask;
+        }, "missing second half of official map anchor rejected");
+        var copiedAnchor=Site();copiedAnchor.SiteId="other-floral-qa";
+        await Expect<PollinationClientException>(()=>
+            NewClient(new FakeTransport(new List<RemoteFloralSite>
+                { Site(), copiedAnchor })).ReadSitesAsync(),
+            "two official sites cannot claim one visual marker");
 
         var wrong=Population();wrong.PlayerId=Guid.NewGuid();
         await Expect<PollinationClientException>(()=>

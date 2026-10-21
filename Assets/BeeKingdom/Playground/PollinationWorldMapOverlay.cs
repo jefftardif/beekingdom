@@ -16,6 +16,16 @@ namespace BeeKingdom.Playground
     public sealed class PollinationWorldMapOverlay : MonoBehaviour
     {
         public static bool IsModalOpen { get; private set; }
+        private static PollinationWorldMapOverlay current;
+
+        public static bool TryOpenForSite(string siteId)
+        {
+            if (current == null || string.IsNullOrEmpty(siteId) ||
+                !MobileAccountSessionRuntimeBootstrap.PollinationFeatureEnabledForWorldMap)
+                return false;
+            current.OpenPanel(siteId);
+            return true;
+        }
         public static Rect EntryButtonRect() =>
             new Rect(Mathf.Max(12f, Screen.width * 0.5f - 108f), 10f, 216f, 36f);
 
@@ -26,6 +36,9 @@ namespace BeeKingdom.Playground
 
         private Texture2D solid;
         private bool opened;
+        private bool firstReadRequested;
+        private IPollinationPanelController boundController;
+        private string requestedSiteId = string.Empty;
         private int tab;
         private Vector2 scroll;
         private string selectedSiteId = string.Empty;
@@ -60,8 +73,23 @@ namespace BeeKingdom.Playground
             go.AddComponent<PollinationWorldMapOverlay>();
         }
 
+        private void OpenPanel(string siteId)
+        {
+            opened = true;
+            IsModalOpen = true;
+            tab = 0;
+            scroll = Vector2.zero;
+            requestedSiteId = siteId ?? string.Empty;
+            boundController = MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap;
+            firstReadRequested = true;
+            MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap
+                .RefreshQuietly();
+            MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap.Refresh();
+        }
+
         private void Awake()
         {
+            current = this;
             solid = new Texture2D(1,1,TextureFormat.RGBA32,false);
             solid.SetPixel(0,0,Color.white);
             solid.Apply();
@@ -71,11 +99,35 @@ namespace BeeKingdom.Playground
         {
             opened = false;
             IsModalOpen = false;
+            if (ReferenceEquals(current, this)) current = null;
             if (solid != null) Destroy(solid);
         }
 
         private void Update()
         {
+            IPollinationPanelController controller =
+                MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap;
+            if (!ReferenceEquals(boundController, controller))
+            {
+                boundController = controller;
+                firstReadRequested = false;
+                requestedSiteId = string.Empty;
+                if (opened) Close();
+            }
+            if (MobileAccountSessionRuntimeBootstrap.PollinationFeatureEnabledForWorldMap
+                && controller.IsConfigured && !firstReadRequested)
+            {
+                firstReadRequested = true;
+                controller.Refresh();
+            }
+            if (!string.IsNullOrEmpty(requestedSiteId)
+                && controller.Model?.Sites != null
+                && controller.Model.Sites.Any(site => site.SiteId == requestedSiteId)
+                && !controller.IsBusy)
+            {
+                controller.SelectSite(requestedSiteId);
+                requestedSiteId = string.Empty;
+            }
             if (!opened) return;
             if (!MobileAccountSessionRuntimeBootstrap.PollinationFeatureEnabledForWorldMap ||
                 Input.GetKeyDown(KeyCode.Escape))
@@ -86,6 +138,7 @@ namespace BeeKingdom.Playground
         {
             opened = false;
             IsModalOpen = false;
+            requestedSiteId = string.Empty;
         }
 
         private static string T(string fr, string en) =>
@@ -161,14 +214,7 @@ namespace BeeKingdom.Playground
                 if (Button(entry,T("POLLINISATION","POLLINATION"),
                     true,true))
                 {
-                    opened = true;
-                    IsModalOpen = true;
-                    tab = 0;
-                    scroll = Vector2.zero;
-                    MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap
-                        .RefreshQuietly();
-                    MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap
-                        .Refresh();
+                    OpenPanel(string.Empty);
                 }
                 return;
             }
