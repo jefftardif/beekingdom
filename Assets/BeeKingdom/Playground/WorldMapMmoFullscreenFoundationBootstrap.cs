@@ -301,6 +301,8 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            bool previousGuiEnabled = GUI.enabled;
+            if (PollinationWorldMapOverlay.IsModalOpen) GUI.enabled = false;
             EnsurePixel();
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
@@ -350,6 +352,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.DrawCombatPatrolOverlayForWorldMap();
             if (showCompositionPanel && collectionVisualState == CollectionVisualState.Composition)
                 DrawCompositionPanel();
+            GUI.enabled = previousGuiEnabled;
         }
 
         private void OnDestroy()
@@ -3272,6 +3275,14 @@ namespace BeeKingdom.Playground
 
         private void HandleInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen
+                || PollinationWorldMapOverlay.IsEntryHotspot(
+                    ScreenToGui(Input.mousePosition)))
+            {
+                dragging = false;
+                lastTouchDistance = 0f;
+                return;
+            }
             if (HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime())
             {
                 HandleGuidedWorldMapInput();
@@ -3400,6 +3411,9 @@ namespace BeeKingdom.Playground
 
         private void HandleGuidedWorldMapGuiInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen ||
+                PollinationWorldMapOverlay.IsEntryHotspot(
+                    Event.current != null ? Event.current.mousePosition : Vector2.zero)) return;
             if (!HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime()) return;
             Event current = Event.current;
             if (current == null || current.type != EventType.MouseUp) return;
