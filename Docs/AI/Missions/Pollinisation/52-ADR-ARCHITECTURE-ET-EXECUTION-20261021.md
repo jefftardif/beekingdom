@@ -1,4 +1,4 @@
-﻿# 52 — ADR / journal d'exécution de la pollinisation (21 octobre 2026)
+# 52 — ADR / journal d'exécution de la pollinisation (21 octobre 2026)
 
 **Statut : décision technique provisoire, réversible, non approuvée comme équilibrage produit.**
 **Machine :** PCJEFF. **Code de départ :** afc9c31e. **Branche isolée :** feature/pollinisation-alpha-20261021.
@@ -76,3 +76,17 @@ Q-01 à Q-08, Q-31, Q-33 et Q-36 à Q-40 restent ouverts pour lancement. ADR-001
 
 Garder flags désactivés, ne pas lancer de nouvelles missions sous OFF. Champs CivilPopulation nullable et états déjà enregistrés doivent demeurer lisibles. Une fois des missions durables existantes, un retour arrière doit drainer ou régler les missions avant changement de version et préserver les reçus. Aucun DROP ni réécriture automatique de soldes.
 
+
+
+## Incrément P2.1 — sites floraux mondiaux, lecture persistante (2026-10-21)
+
+**Implémenté en branche isolée, toujours OFF en production :**
+- `FloralSiteService.cs` : catalogue versionné côté serveur, identités world/region/site/family, état persistant (réserve pollen, capacité, fertilité et biodiversité en basis points, revision, dernier règlement UTC).
+- `FloralSiteRepositories.cs` : dépôt SQL partagé `dbo.FloralSiteStates` avec transaction Serializable et verrou de site ; dépôt JSON local de développement à initialisation atomique en lecture seule.
+- `DatabaseCatalog.cs` et `Scripts/096_floral_site_states.sql` : migration SQL additive. Migration créée **mais NON appliquée à SRVESDT**.
+- `Program.cs` : feature flag `FloralSites:Enabled=false` par défaut, authentification et deux routes GET :
+  - `/game/v1/world/floral-sites`
+  - `/game/v1/world/floral-sites/{siteId}`
+- Tests `FloralSiteServiceTests.cs` (6 réussis) et `FloralSiteEndpointTests.cs` (4 réussis).
+
+**Limitations explicites :** pas encore de consommation des réserves, cycles/régénération, expéditions ni API de mutations écologiques ; aucune localisation des deux sites QA sur une scène Unity approuvée. Les identifiants `world-qa` et `clover-qa-01` sont exclusivement des jeux de tests. Les deux dépôts lisent le même agrégat global, mais les transactions entre un champ et des ruches sont le lot suivant. Aucune preuve de migration ni de contention SQL contre une base de test réelle n'a encore été exécutée.

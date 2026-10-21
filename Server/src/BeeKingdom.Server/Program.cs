@@ -143,6 +143,32 @@ builder.Services.AddOptions<FoundationDotationOptions>()
 builder.Services.AddOptions<BroodVitalityOptions>()
     .Bind(builder.Configuration.GetSection(BroodVitalityOptions.SectionName))
     .ValidateOnStart();
+// Floral sites P2: one global site document per world/site identity.
+// The JSON provider supports read/create in local development only;
+// cross-hive harvest/rewards require a separate SQL transaction coordinator.
+builder.Services.AddSingleton<IFloralSiteRepository>(sp =>
+{
+    if (sp.GetRequiredService<IHiveStateRepository>() is not SqlHiveStateRepository)
+        return new DurableJsonFloralSiteRepository(
+            Path.Combine(AppContext.BaseDirectory, "data", "floral-sites"));
+
+    SqlServerOptions sql = sp.GetRequiredService<IOptions<SqlServerOptions>>().Value;
+    IConfiguration configuration = sp.GetRequiredService<IConfiguration>();
+    string connectionString = sql.RuntimeConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = configuration.GetConnectionString(sql.RuntimeConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = sql.ConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = configuration.GetConnectionString(sql.ConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Shared floral site storage requires SQL.");
+    return new SqlFloralSiteRepository(connectionString, sql.CommandTimeoutSeconds);
+});
+
+builder.Services.AddOptions<FloralSiteOptions>()
+    .Bind(builder.Configuration.GetSection(FloralSiteOptions.SectionName))
+    .ValidateOnStart();
 builder.Services.AddOptions<CivilPopulationOptions>()
     .Bind(builder.Configuration.GetSection(CivilPopulationOptions.SectionName))
     .ValidateOnStart();
@@ -1069,6 +1095,46 @@ app.MapPost("/game/v1/hives/{hiveId}/brood/cohorts/start", async (
         return GameError(400, "game.invalid_request", "game.error.invalid_request");
     }
 });
+// Global shared flora read APIs. No client is allowed to mutate a site directly.
+app.MapGet("/game/v1/world/floral-sites", async (
+    HttpContext context, AuthenticationManager authentication,
+    IFloralSiteRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<FloralSiteOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.floral_sites_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    return Results.Ok(await new FloralSiteService(repository, clock, options.Value)
+        .ListAsync(ct));
+});
+
+app.MapGet("/game/v1/world/floral-sites/{siteId}", async (
+    HttpContext context, string siteId, AuthenticationManager authentication,
+    IFloralSiteRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<FloralSiteOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.floral_sites_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    try
+    {
+        return Results.Ok(await new FloralSiteService(repository, clock, options.Value)
+            .ReadAsync(siteId, ct));
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.floral_site_not_found", "game.error.not_found");
+    }
+});
+
 // Civil Population Alpha: separate from combat recruitment and existing NurseryCohorts.
 // Feature remains OFF by default; no endpoint trusts client-provided player identity.
 app.MapGet("/game/v1/hives/{hiveId}/civil-population", async (

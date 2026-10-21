@@ -87,3 +87,6 @@ Une idée reportée n'est pas effacée : elle reste ici avec son statut, une pha
 - Sites partagés et transactions multi-ruche : **non encore livré** dans le Lot 1; stratégie ADR-002, à tester avant déploiement.
 - Projets collectifs, niveau d'alliance, génétique, spécialisations, relais, diplomatie, escorts et ours : **restent au backlog**, aucun statut « terminé » inventé.
 - Règles produit provisoires : `52-ADR-ARCHITECTURE-ET-EXECUTION-20261021.md`, aucune nouvelle décision D-xxx ajoutée sans approbation.
+
+
+- Site floral officiel partagé (première tranche du Lot 2) : `FloralSiteService.cs`, `FloralSiteRepositories.cs`, `096_floral_site_states.sql`, routes GET et tests. **Etat persisté partagé lisible ; extraction/régénération/projets/expéditions non implémentés.** Les familles et ID de test sont des fixtures QA, pas des positions officielles sur la carte.

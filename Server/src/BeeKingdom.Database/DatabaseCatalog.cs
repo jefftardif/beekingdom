@@ -890,6 +890,26 @@ public static class DatabaseCatalog
             BEGIN
                 CREATE INDEX IX_ChatGroupInvites_Inviter_Ack ON dbo.ChatGroupInvites (InviterPlayerId, InviterAcknowledged);
             END
+            """),
+        // Pollination P2: world-owned floral site aggregates. No hive-owned copies.
+        // Schema is additive and OFF by default; not applied to production here.
+        new DatabaseScript(
+            "096_floral_site_states.sql",
+            """
+            IF OBJECT_ID(N'dbo.FloralSiteStates', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.FloralSiteStates
+                (
+                    WorldId nvarchar(64) NOT NULL,
+                    SiteId nvarchar(64) NOT NULL,
+                    Revision bigint NOT NULL,
+                    StateJson nvarchar(max) NOT NULL,
+                    UpdatedAtUtc datetime2 NOT NULL
+                        CONSTRAINT DF_FloralSiteStates_UpdatedAtUtc DEFAULT SYSUTCDATETIME(),
+                    CONSTRAINT PK_FloralSiteStates PRIMARY KEY (WorldId, SiteId),
+                    CONSTRAINT CK_FloralSiteStates_Revision CHECK (Revision >= 0)
+                );
+            END
             """)
     ];
 }

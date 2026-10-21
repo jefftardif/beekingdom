@@ -112,3 +112,6 @@ La pollinisation est désormais un pilier stratégique majeur, **au même niveau
 ## État d'implantation — suivi du 2026-10-21
 
 Le statut documentaire historique du 2026-10-20 n'est plus le statut du code : un **lot technique P1, sous flag OFF**, a été créé dans `feature/pollinisation-alpha-20261021` avec population civile persistante et routes API serveur authentifiées. L'équilibrage reste expérimental, et aucune fonction complète de pollinisation n'est déployée. Voir `52-ADR-ARCHITECTURE-ET-EXECUTION-20261021.md` pour les décisions techniques, tests et limitations.
+
+
+**Suivi du Lot 2.1 (2026-10-21) :** premières lectures d'états floraux persistants partagés en code serveur sous flag OFF, migration SQL 096 rédigée et routes GET authentifiées. Aucun prélèvement, aucune expédition complète ni rendu Unity n'est encore livré. Détails et limitations dans 52-ADR.
