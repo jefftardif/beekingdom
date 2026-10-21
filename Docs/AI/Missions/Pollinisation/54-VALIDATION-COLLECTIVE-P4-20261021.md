@@ -86,4 +86,13 @@ Ces tests prouvent le cœur SQL, PAS l'interface Unity et PAS un déploiement MM
 - Régénération écologique avancée, charge multi-instance, sauvegarde/restauration
   SRVESDT et arbitrage économie/XP non validés.
 - Ne jamais fusionner sur main sans audit des modifications hors pollinisation et
-  QA Unity. Aucun déploiement SRVESDT de ce lot, flags OFF.
+  QA Unity. Aucun déploiement SRVESDT de ce lot, flags OFF.## Bilan final des tests, branche P4.1 (21 octobre 2026)
+
+- Compilation de l'API .NET : **0 erreur**, avertissements préexistants dans des modules non liés.
+- Suite complète BeeKingdom.HiveOperations.Tests : **313 réussis, 0 échec, 0 ignoré**.
+- Suite complète BeeKingdom.Tests avec SQL LocalDB intégré activé par BEE_SQL_INTEGRATION_CONNECTION_STRING : **716 réussis, 0 échec, 0 ignoré**, journal TRX PollinationP4FullApi.
+- Test de cohérence fichier SQL / catalogue de migrations : **PASS** ; contraintes de la migration 098 : **PASS**.
+- Test réel Server/ops/pollination-alliance-qa : **PASS**, y compris anti-solo, rôles, idempotence, rollback provoqué, niveau 2 et changement d'alliance.
+- Un premier passage minimal de la suite API avait donné un échec parmi 715 tests. L'exécution détaillée avec SQL activé a ensuite donné 716/716 : surveiller d'éventuelles intermittences et ne pas présenter ce premier échec comme inexistant.
+- Commit source P4 : 1ce2e711, publié sur la branche GitHub feature/pollinisation-alpha-20261021. Pas de fusion dans main.
+- Aucun test Unity visuel, charge MMO multi-instance, restauration SQL SRVESDT ni déploiement officiel effectué.
