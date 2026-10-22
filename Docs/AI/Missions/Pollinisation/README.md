@@ -179,3 +179,15 @@ avant execution; aucune nouvelle victoire Unity n'est declaree.
 ## P10 — Sécurisation du retour des essaims en cas d'arrêt (22 octobre 2026)
 
 Les missions civiles et les projets floraux d'alliance disposent désormais de modes **drainage** distincts, désactivés par défaut. Ils bloquent les nouvelles activités mais continuent de régler les expéditions en cours dans une transaction SQL atomique. En cas de perte d'une ligne florale partagée, l'opération échoue fermée et attend la restauration de l'état d'origine plutôt que de recréer de la ressource. **1 038 tests serveur et API+SQL réussis ; non déployé ; flags OFF.** Détails et procédure : 61-DRAINAGE-EXPEDITIONS-ET-ALLIANCES-P10-20261022.md.
+## P11 — Unity Package Manager et reprise des tests (22 octobre 2026)
+
+Le blocage Unity batchmode provenait de variables de processus Windows
+manquantes (PROGRAMDATA, ALLUSERSPROFILE, TMP, HOME), et non de la
+pollinisation. Les variables ont été fournies uniquement aux processus
+QA ; le gestionnaire des packages a ouvert son IPC et répondu HTTP 200.
+
+Campagnes Unity réellement relancées : Pollination 10/10, WorldMap
+8/8, puis Pollination 10/10 via le nouveau lanceur de tests. Aucun
+échec. La carte officielle et les sessions ouvertes n'ont pas été
+modifiées. Le lanceur : Tooling/Run-PollinationUnityQa-P11.ps1.
+Recette et limites visuelles : 62-RECETTE-UNITY-UPM-P11-20261022.md.
