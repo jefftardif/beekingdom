@@ -167,3 +167,12 @@ documents du cahier non suivis sur le main local (50 identiques, 3 divergents).
 Les cinq fichiers et les trois documents divergents ont une copie de
 précaution hors Git, avec SHA256. Aucun reset ni merge n'a été lancé.
 Voir 59-AUDIT-FUSION-SANS-REGRESSION-P8-20261021.md.
+
+## P9 - Integrite des assets Unity (22 octobre 2026)
+
+Voir 60-INTEGRITE-ASSETS-UNITY-P9-20261022.md et
+Tooling/verify_unity_asset_pairs.py : 7345 couples asset/.meta valides
+sur 7345 dans P8 et P9, apres copie verifiee et recuperation LFS.
+Le worktree P9 visual QA encore ouvert n'a pas ete modifie (5524
+couples absents). Unity Test Runner reste bloque par Package Manager IPC
+avant execution; aucune nouvelle victoire Unity n'est declaree.
