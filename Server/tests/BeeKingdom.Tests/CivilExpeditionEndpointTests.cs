@@ -82,6 +82,54 @@ public sealed class CivilExpeditionEndpointTests
         })).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    [Test]
+    public async Task Drain_only_keeps_authenticated_read_but_never_allows_new_departures()
+    {
+        await using var factory = Factory(
+            enabled: false, fakeSql: true, draining: true, floralEnabled: false);
+        using var client = factory.CreateClient();
+        string url = $"/game/v1/hives/{Guid.NewGuid():D}/civil-expeditions";
+
+        Assert.That((await client.GetAsync(url)).StatusCode,
+            Is.EqualTo(HttpStatusCode.Unauthorized),
+            "Already-launched flights remain available for authenticated settlement.");
+        Assert.That((await client.PostAsJsonAsync(url + "/start", new
+        {
+            siteId = "clover-field-qa", workers = 20,
+            expectedHiveRevision = 0, expectedSiteRevision = 0,
+            idempotencyKey = "drain-http-new-start-01"
+        })).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+
+        client.DefaultRequestHeaders.Authorization = new("Bearer",
+            await Login(factory, client));
+        Assert.That((await client.GetAsync(url)).StatusCode,
+            Is.EqualTo(HttpStatusCode.NotFound),
+            "The normal ownership guard still applies in drain mode.");
+        Assert.That((await client.PostAsJsonAsync(url + "/start", new
+        {
+            siteId = "clover-field-qa", workers = 20,
+            expectedHiveRevision = 0, expectedSiteRevision = 0,
+            idempotencyKey = "drain-auth-new-start-01"
+        })).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+    }
+
+    [Test]
+    public async Task Json_storage_rejects_drain_mode_and_cannot_mutate_shared_economy()
+    {
+        await using var factory = Factory(
+            enabled: false, draining: true, floralEnabled: false);
+        using var client = factory.CreateClient();
+        string url = $"/game/v1/hives/{Guid.NewGuid():D}/civil-expeditions";
+        Assert.That((await client.GetAsync(url)).StatusCode,
+            Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+        Assert.That((await client.PostAsJsonAsync(url + "/start", new
+        {
+            siteId = "clover-field-qa", workers = 10,
+            expectedHiveRevision = 0, expectedSiteRevision = 0,
+            idempotencyKey = "drain-json-rejected-01"
+        })).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+    }
+
     private sealed class TestSqlBoundary : ICivilExpeditionUnitOfWork
     {
         public Task<CivilExpeditionMutation> ExecuteAsync(
@@ -93,7 +141,8 @@ public sealed class CivilExpeditionEndpointTests
                 "Test boundary must reject unauthenticated or nonexistent hive BEFORE coordinator.");
     }
 
-    private static WebApplicationFactory<Program> Factory(bool enabled, bool fakeSql = false) =>
+    private static WebApplicationFactory<Program> Factory(bool enabled, bool fakeSql = false,
+        bool draining = false, bool floralEnabled = true) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Development");
@@ -101,7 +150,8 @@ public sealed class CivilExpeditionEndpointTests
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["CivilExpeditions:Enabled"] = enabled.ToString(),
-                    ["FloralSites:Enabled"] = "true",
+                    ["CivilExpeditions:DrainExistingFlights"] = draining.ToString(),
+                    ["FloralSites:Enabled"] = floralEnabled.ToString(),
                     ["FloralSites:CatalogVersion"] = "alpha-qa-20261021",
                     ["FloralSites:Sites:0:WorldId"] = "world-qa",
                     ["FloralSites:Sites:0:RegionId"] = "region-qa",

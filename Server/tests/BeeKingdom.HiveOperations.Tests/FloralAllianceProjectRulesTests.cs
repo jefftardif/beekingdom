@@ -16,6 +16,21 @@ public sealed class FloralAllianceProjectRulesTests
     }
 
     [Fact]
+    public void Collective_drain_mode_preserves_delivery_processing_without_project_creation()
+    {
+        var opts = new FloralAllianceProjectOptions();
+        Assert.False(opts.Enabled);
+        Assert.False(opts.DrainExistingDeliveries);
+        Assert.False(opts.CanApplyDeliveries);
+        opts.DrainExistingDeliveries = true;
+        Assert.True(opts.CanApplyDeliveries);
+        opts.Validate();
+        opts.DrainExistingDeliveries = false;
+        opts.Enabled = true;
+        Assert.True(opts.CanApplyDeliveries);
+    }
+
+    [Fact]
     public void Collective_level_depends_only_on_persisted_experience_thresholds()
     {
         var options = new FloralAllianceProjectOptions

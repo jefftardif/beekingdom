@@ -23,7 +23,7 @@ public sealed class CivilExpeditionSettlementWorker(
         using var timer = new PeriodicTimer(Interval);
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (settings.Value.Enabled && floral.Value.Enabled
+            if (settings.Value.CanSettle(floral.Value.Enabled)
                 && coordinator is ICivilExpeditionDueIndex dueIndex)
             {
                 try

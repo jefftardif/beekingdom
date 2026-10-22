@@ -15,7 +15,7 @@ internal static class SqlFloralAllianceContributionApplier
         FloralAllianceProjectOptions options, int timeoutSeconds,
         CancellationToken ct)
     {
-        if (!options.Enabled || delivered.PollinationPoints <= 0) return;
+        if (!options.CanApplyDeliveries || delivered.PollinationPoints <= 0) return;
         options.Validate();
         Guid? allianceId = await MembershipAllianceAsync(
             conn, tx, delivered.PlayerId, ct);

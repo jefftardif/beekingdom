@@ -20,7 +20,7 @@ public sealed class CivilExpeditionService(
     public async Task<CivilExpeditionSnapshot> ReadAsync(
         Guid playerId, Guid hiveId, CancellationToken ct = default)
     {
-        EnsureEnabled();
+        EnsureSettlementAllowed();
         EnsureIdentity(playerId, hiveId);
         PlayerHiveState hive = await hiveRepository.ReadAsync(playerId, hiveId, ct)
             ?? throw new KeyNotFoundException("game.not_found");
@@ -40,7 +40,7 @@ public sealed class CivilExpeditionService(
         Guid playerId, Guid hiveId, StartCivilExpeditionRequest request,
         CancellationToken ct = default)
     {
-        EnsureEnabled();
+        EnsureDeparturesAllowed();
         EnsureIdentity(playerId, hiveId);
         if (request is null || request.Workers <= 0
             || request.Workers > rules.MaxWorkers
@@ -247,11 +247,24 @@ public sealed class CivilExpeditionService(
             ?? throw new KeyNotFoundException("game.floral_site_not_found");
     }
 
-    private void EnsureEnabled()
+    private void EnsureSettlementAllowed()
     {
         rules.Validate();
         catalogue.Validate();
-        if (!rules.Enabled || !catalogue.Enabled)
+        if (!rules.CanSettle(catalogue.Enabled))
+            throw new InvalidOperationException("game.civil_expeditions_disabled");
+        if (rules.DrainExistingFlights &&
+            (catalogue.Sites.Count == 0 ||
+             !FloralSiteOptions.ValidId(catalogue.CatalogVersion)))
+            throw new InvalidDataException(
+                "Civil expedition drain requires retained floral site catalogue.");
+    }
+
+    private void EnsureDeparturesAllowed()
+    {
+        rules.Validate();
+        catalogue.Validate();
+        if (!rules.CanStart(catalogue.Enabled))
             throw new InvalidOperationException("game.civil_expeditions_disabled");
     }
 

@@ -47,6 +47,17 @@ public sealed class SqlCivilExpeditionUnitOfWork(
             $"floral:{definition.WorldId}:{definition.SiteId}", 51071, ct);
         FloralSiteState? storedSite = await ReadSiteAsync(connection, tx,
             definition.WorldId, definition.SiteId, ct);
+        // The site row MUST survive every persisted civilian flight. If SQL
+        // storage lost its shared state, seeding a fresh full reserve during
+        // settlement would mint pollen and ecology points after a crash.
+        // Fail closed; retain the due mission and reserved workers until the
+        // original site row is recovered from a verified backup.
+        if (storedSite is null
+            && hive.CivilExpeditions?.Active is { } activeFlight
+            && activeFlight.WorldId == definition.WorldId
+            && activeFlight.SiteId == definition.SiteId)
+            throw new InvalidDataException(
+                "Shared floral site was lost while civilian flight is active.");
         bool siteExists = storedSite is not null;
         FloralSiteState site = storedSite ?? FloralSiteService.InitialState(
             definition, catalogVersion, DateTimeOffset.UtcNow);
@@ -94,7 +105,7 @@ public sealed class SqlCivilExpeditionUnitOfWork(
         CivilExpeditionRules.ValidateStored(result.Hive.CivilExpeditions
             ?? CivilExpeditionRules.Empty(), result.Hive.CivilPopulation);
 
-        if (collectiveOptions?.Enabled == true)
+        if (collectiveOptions?.CanApplyDeliveries == true)
         {
             collectiveOptions.Validate();
             await using var schemaCheck = NewCommand(connection, tx);
@@ -116,7 +127,7 @@ public sealed class SqlCivilExpeditionUnitOfWork(
                 || contribution.PollinationPoints != contribution.PollenRemoved)
                 throw new InvalidDataException("Invalid contribution ledger row.");
             await InsertContributionAsync(connection, tx, contribution, ct);
-            if (collectiveOptions?.Enabled == true)
+            if (collectiveOptions?.CanApplyDeliveries == true)
             {
                 CivilExpeditionMission flight = hive.CivilExpeditions?.Active
                     ?? throw new InvalidDataException("Missing active civilian mission.");

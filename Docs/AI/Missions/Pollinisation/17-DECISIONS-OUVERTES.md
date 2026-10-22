@@ -129,3 +129,6 @@ présentielle : il ne fixe ni les coûts, ni la durée des essaims, ni l'expéri
 des alliances, ni les positions finales des champs ou la direction artistique
 finale de leurs symboles. Les décisions du créateur restent inchangées.
 Voir 57-FENETRE-PREMIUM-ACTIVITES-P7-20261021.md.
+## ADR-P10 — Mode drainage des missions engagées (2026-10-22)
+
+Décision technique de sûreté, **pas un changement des règles de Game Design** : les options CivilExpeditions:DrainExistingFlights et FloralAllianceProjects:DrainExistingDeliveries autorisent l'achèvement exact des missions/projets existants pendant qu'Enabled=false bloque toute nouvelle activité. Ces nouveaux flags sont désactivés par défaut. Le catalogue de sites et les tables SQL d'origine doivent être conservés jusqu'à la dernière livraison; le retrait de la ligne d'un champ empêche toute récompense et nécessite la restauration de l'état historique. Les choix d'indemnisation, d'annulation et d'expiration d'un projet collectif restent ouverts. Voir 61-DRAINAGE-EXPEDITIONS-ET-ALLIANCES-P10-20261022.md.

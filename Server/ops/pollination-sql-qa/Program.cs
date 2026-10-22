@@ -130,12 +130,48 @@ try
         playerA, hiveA, new StartCivilExpeditionRequest(
             dueSiteId, 10, finalA.Revision, 0, "sql-offline-auto-due"));
     Check(dueStart.Succeeded, "second site launched for offline settlement");
+    // Disable new flights and the public flora listing mid-flight.
+    // Explicit draining still settles the persisted SQL due index.
+    rules.Enabled = false;
+    rules.DrainExistingFlights = true;
+    dueFlora.Enabled = false;
+    bool startBlocked = false;
+    try
+    {
+        await dueService.StartAsync(playerA, hiveA,
+            new StartCivilExpeditionRequest(
+                dueSiteId, 5, dueStart.Snapshot.HiveRevision, 0,
+                "sql-drain-new-start-blocked"));
+    }
+    catch (InvalidOperationException)
+    {
+        startBlocked = true;
+    }
+    Check(startBlocked,
+        "drain mode rejects new SQL flights without modifying the due index");
     clock.UtcNow = origin.AddHours(5);
+    // Simulate an unexpectedly missing shared site row while a civilian flight
+    // remains due. The server must NOT mint a new full site by seeding it.
+    FloralSiteState backup = await sites.ReadOrCreateAsync(
+        dueFlora.Sites[0], dueFlora.CatalogVersion, clock.UtcNow);
+    await RemoveQaSiteRow(connection, backup.WorldId, backup.SiteId);
+    CivilExpeditionDueBatch retryRequired = await new CivilExpeditionDueProcessor(
+        coordinator, dueService, clock).ProcessAsync(100);
+    Check(retryRequired.Inspected == 1 && retryRequired.Settled == 0
+        && retryRequired.RetryMissionIds.Count == 1,
+        "missing SQL floral site fails closed and keeps due mission queued");
+    Check((await hives.ReadAsync(playerA, hiveA))!.CivilPopulation!.AssignedWorkers == 10
+        && (await hives.ReadAsync(playerA, hiveA))!.Resources["pollen"].Amount
+           == finalA.Resources["pollen"].Amount,
+        "lost shared site does not mint pollen or release reserved civilians");
+    await RestoreQaSiteExactSnapshot(connection, backup);
     CivilExpeditionDueBatch dueBatch = await new CivilExpeditionDueProcessor(
         coordinator, dueService, clock).ProcessAsync(100);
     Check(dueBatch.Inspected == 1 && dueBatch.Settled == 1
         && dueBatch.RetryMissionIds.Count == 0,
         "indexed SQL server due processor settled without player GET");
+    Check(!rules.Enabled && rules.DrainExistingFlights && !dueFlora.Enabled,
+        "SQL settlement completed with gameplay flags OFF in drain mode");
     Check((await sites.ReadOrCreateAsync(
         dueFlora.Sites[0], dueFlora.CatalogVersion, clock.UtcNow)).PollenRemaining == 10,
         "second field debited by the server processor");
@@ -152,6 +188,44 @@ try
 finally
 {
     await Cleanup(connection, worldId, playerA, hiveA, playerB, hiveB);
+}
+
+static async Task RemoveQaSiteRow(string connection, string worldId, string siteId)
+{
+    await using SqlConnection conn = new(connection);
+    await conn.OpenAsync();
+    await using SqlCommand cmd = conn.CreateCommand();
+    cmd.CommandText =
+        "DELETE dbo.FloralSiteStates WHERE WorldId=@world AND SiteId=@site";
+    cmd.Parameters.Add(new SqlParameter("@world", SqlDbType.NVarChar, 64)
+    { Value = worldId });
+    cmd.Parameters.Add(new SqlParameter("@site", SqlDbType.NVarChar, 64)
+    { Value = siteId });
+    Check(await cmd.ExecuteNonQueryAsync() == 1,
+        "QA removed exactly one synthetic shared-site row");
+}
+
+static async Task RestoreQaSiteExactSnapshot(
+    string connection, FloralSiteState original)
+{
+    await using SqlConnection conn = new(connection);
+    await conn.OpenAsync();
+    await using SqlCommand cmd = conn.CreateCommand();
+    cmd.CommandText =
+        "INSERT dbo.FloralSiteStates(WorldId,SiteId,Revision,StateJson) "
+        + "VALUES(@world,@site,@revision,@json)";
+    cmd.Parameters.Add(new SqlParameter("@world", SqlDbType.NVarChar, 64)
+    { Value = original.WorldId });
+    cmd.Parameters.Add(new SqlParameter("@site", SqlDbType.NVarChar, 64)
+    { Value = original.SiteId });
+    cmd.Parameters.Add(new SqlParameter("@revision", SqlDbType.BigInt)
+    { Value = original.Revision });
+    cmd.Parameters.Add(new SqlParameter("@json", SqlDbType.NVarChar, -1)
+    { Value = System.Text.Json.JsonSerializer.Serialize(
+        original, new System.Text.Json.JsonSerializerOptions(
+            System.Text.Json.JsonSerializerDefaults.Web)) });
+    Check(await cmd.ExecuteNonQueryAsync() == 1,
+        "QA restored exact original shared-site state before retry");
 }
 
 static PlayerHiveState NewHive(Guid player, Guid hive) =>

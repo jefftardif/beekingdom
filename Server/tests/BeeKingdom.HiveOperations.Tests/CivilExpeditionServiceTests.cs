@@ -422,6 +422,111 @@ public sealed class CivilExpeditionServiceTests
         Assert.Equal(20, (await db.ReadAsync(p, h))!.Resources["pollen"].Amount);
     }
     [Fact]
+    public async Task Explicit_drain_mode_releases_reservations_when_both_features_are_off()
+    {
+        var db = new AtomicTestWorld();
+        var clock = new MutableClock(Origin);
+        Guid player = Guid.NewGuid(), hive = Guid.NewGuid();
+        db.AddHive(Hive(player, hive, workers: 45));
+        FloralSiteOptions flora = Flora(30);
+        CivilExpeditionOptions settings = Rules();
+        var service = Service(db, clock, flora, settings);
+
+        Assert.True((await service.StartAsync(player, hive,
+            Start("drain-before-stop-01", workers:20))).Succeeded);
+        Assert.Equal(20, (await db.ReadAsync(player, hive))!.CivilPopulation!.AssignedWorkers);
+
+        // Simulates disabling both gameplay discovery and new departures.
+        // Retain the stable catalogue so the server can recognize in-flight sites.
+        settings.Enabled = false;
+        settings.DrainExistingFlights = true;
+        flora.Enabled = false;
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.StartAsync(player, hive,
+                Start("drain-new-flight-denied", workers:5, hiveRevision:1)));
+        Assert.Equal(20, (await db.ReadAsync(player, hive))!.CivilPopulation!.AssignedWorkers);
+
+        clock.UtcNow = Origin.AddMinutes(30);
+        CivilExpeditionSnapshot settled = await service.ReadAsync(player, hive);
+        Assert.Null(settled.Active);
+        Assert.Equal(45, settled.AvailableWorkers);
+        Assert.Equal(0, settled.AssignedWorkers);
+        Assert.Equal(20, settled.LastCompletion!.PollenCredited);
+        Assert.Equal(10, db.GlobalSite("clover-field-qa")!.PollenRemaining);
+        Assert.Single(db.Ledger);
+
+        await service.ReadAsync(player, hive);
+        Assert.Single(db.Ledger);
+        Assert.Equal(20, (await db.ReadAsync(player, hive))!.Resources["pollen"].Amount);
+    }
+
+    [Fact]
+    public async Task Server_due_sweep_completes_existing_flights_in_drain_only_mode()
+    {
+        var db = new AtomicTestWorld();
+        var clock = new MutableClock(Origin);
+        Guid player = Guid.NewGuid(), hive = Guid.NewGuid();
+        db.AddHive(Hive(player, hive));
+        FloralSiteOptions floral = Flora(12);
+        CivilExpeditionOptions settings = Rules();
+        var service = Service(db, clock, floral, settings);
+        Assert.True((await service.StartAsync(player, hive,
+            Start("drain-worker-flight-01", workers:20))).Succeeded);
+
+        settings.DrainExistingFlights = true;
+        settings.Enabled = false;
+        floral.Enabled = false;
+        clock.UtcNow = Origin.AddHours(2);
+
+        CivilExpeditionDueBatch batch = await new CivilExpeditionDueProcessor(
+            db, service, clock).ProcessAsync();
+        Assert.Equal(1, batch.Inspected);
+        Assert.Equal(1, batch.Settled);
+        Assert.Empty(batch.RetryMissionIds);
+        Assert.Equal(0, (await db.ReadAsync(player, hive))!.CivilPopulation!.AssignedWorkers);
+        Assert.Equal(12, (await db.ReadAsync(player, hive))!.Resources["pollen"].Amount);
+        Assert.Equal(0, db.GlobalSite("clover-field-qa")!.PollenRemaining);
+        Assert.Empty((await new CivilExpeditionDueProcessor(
+            db, service, clock).ProcessAsync()).RetryMissionIds);
+    }
+
+    [Fact]
+    public async Task Drain_mode_with_missing_catalogue_fails_closed_without_losing_civilians()
+    {
+        var db = new AtomicTestWorld();
+        var clock = new MutableClock(Origin);
+        Guid player = Guid.NewGuid(), hive = Guid.NewGuid();
+        db.AddHive(Hive(player, hive));
+        var started = Service(db, clock, Flora());
+        Assert.True((await started.StartAsync(player, hive,
+            Start("drain-catalog-flight-01", workers:20))).Succeeded);
+
+        clock.UtcNow = Origin.AddHours(1);
+        var missing = new FloralSiteOptions { Enabled = false };
+        var settings = new CivilExpeditionOptions { DrainExistingFlights = true };
+        var draining = Service(db, clock, missing, settings);
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            draining.ReadAsync(player, hive));
+        Assert.Equal(20, (await db.ReadAsync(player, hive))!.CivilPopulation!.AssignedWorkers);
+        Assert.Equal(0, (await db.ReadAsync(player, hive))!.Resources["pollen"].Amount);
+    }
+
+    [Fact]
+    public void Drain_mode_defaults_off_and_explicitly_prioritizes_no_new_departures()
+    {
+        var options = new CivilExpeditionOptions { Enabled = true };
+        Assert.False(options.DrainExistingFlights);
+        Assert.True(options.CanStart(true));
+        Assert.True(options.CanSettle(true));
+        options.DrainExistingFlights = true;
+        Assert.False(options.CanStart(true));
+        Assert.True(options.CanSettle(false));
+        options.DrainExistingFlights = false;
+        options.Enabled = false;
+        Assert.False(options.CanSettle(true));
+    }
+
+    [Fact]
     public void Corrupt_expedition_or_contributions_fail_validation()
     {
         var p=Guid.NewGuid();

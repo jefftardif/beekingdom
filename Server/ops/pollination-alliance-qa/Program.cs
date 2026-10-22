@@ -109,8 +109,44 @@ try
     CivilExpeditionResult second = await expeditionService.StartAsync(
         member, memberHive, new(siteId, 15, 0, 1, "member-flight-qa"));
     Check(second.Succeeded, "second distinct member launched expedition");
+    // Shut down new expedition and project creation while the second member
+    // is already returning. Durable deliveries and earned alliance XP must
+    // still settle from the same authoritative SQL transaction.
+    expeditionRules.Enabled = false;
+    expeditionRules.DrainExistingFlights = true;
+    projectOptions.Enabled = false;
+    projectOptions.DrainExistingDeliveries = true;
+    floral.Enabled = false;
+    bool blockedNewFlight = false;
+    try
+    {
+        await expeditionService.StartAsync(member, memberHive,
+            new(siteId, 5, second.Snapshot.HiveRevision, 1,
+                "collective-drain-new-flight"));
+    }
+    catch (InvalidOperationException) { blockedNewFlight = true; }
+    Check(blockedNewFlight,
+        "collective drain rejects new civilian expeditions");
+    bool blockedNewProject = false;
+    try
+    {
+        await projectService.CreateAsync(leader, alliance,
+            new(siteId, soloProject.Progression.Revision,
+                "collective-drain-new-project"));
+    }
+    catch (InvalidOperationException) { blockedNewProject = true; }
+    Check(blockedNewProject,
+        "collective drain rejects new project creation");
     clock.UtcNow = startTime.AddMinutes(40);
     var finishedB = await expeditionService.ReadAsync(member, memberHive);
+    Check(finishedB.LastCompletion!.PollenCredited == 5,
+        "collective delivery credited personal pollen with flags disabled");
+    // Re-enable read APIs only after the delivery was really settled.
+    expeditionRules.DrainExistingFlights = false;
+    expeditionRules.Enabled = true;
+    projectOptions.DrainExistingDeliveries = false;
+    projectOptions.Enabled = true;
+    floral.Enabled = true;
     var completed = await projectService.ReadAsync(member, alliance, projectId);
     Check(finishedB.LastCompletion!.PollenCredited == 5,
         "shared stock clips second player to remaining five");

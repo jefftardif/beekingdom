@@ -8,6 +8,15 @@ public sealed class FloralAllianceProjectOptions
 {
     public const string SectionName = "FloralAllianceProjects";
     public bool Enabled { get; set; }
+    /// <summary>
+    /// No new alliance projects are created while disabled, but already
+    /// launched civil flights may still complete their cooperative deliveries
+    /// and grant the earned project XP in one durable SQL transaction.
+    /// Explicitly OFF by default. Keep the project SQL schema and membership.
+    /// </summary>
+    public bool DrainExistingDeliveries { get; set; }
+    public bool CanApplyDeliveries => Enabled || DrainExistingDeliveries;
+
     public long GoalPoints { get; set; } = 100;
     public int RequiredDistinctMembers { get; set; } = 2;
     public long MinimumPointsPerMember { get; set; } = 5;

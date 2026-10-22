@@ -11,6 +11,20 @@ public sealed class CivilExpeditionOptions
 {
     public const string SectionName = "CivilExpeditions";
     public bool Enabled { get; set; }
+    /// <summary>
+    /// Emergency operations mode: reject ALL new departures, but continue
+    /// to settle already persisted due flights so civilian reservations and
+    /// world resources cannot remain stranded during a feature shutdown.
+    /// Explicitly OFF by default. Keep SQL schema and floral catalogue intact.
+    /// </summary>
+    public bool DrainExistingFlights { get; set; }
+
+    public bool CanSettle(bool floralEnabled) =>
+        DrainExistingFlights || (Enabled && floralEnabled);
+
+    public bool CanStart(bool floralEnabled) =>
+        Enabled && floralEnabled && !DrainExistingFlights;
+
     public int DurationMinutes { get; set; } = 15;
     public long MaxWorkers { get; set; } = 200;
     public long PollenPerWorker { get; set; } = 1;

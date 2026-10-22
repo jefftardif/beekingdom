@@ -1240,7 +1240,7 @@ app.MapGet("/game/v1/hives/{hiveId}/civil-expeditions", async (
     BeeKingdom.HiveOperations.IServerClock clock, IOptions<CivilExpeditionOptions> settings,
     IOptions<FloralSiteOptions> floral, CancellationToken ct) =>
 {
-    if (!settings.Value.Enabled || !floral.Value.Enabled
+    if (!settings.Value.CanSettle(floral.Value.Enabled)
         || coordinator is UnavailableCivilExpeditionUnitOfWork)
         return GameError(503, "game.civil_expeditions_disabled", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
@@ -1267,7 +1267,7 @@ app.MapPost("/game/v1/hives/{hiveId}/civil-expeditions/start", async (
     IOptions<FloralSiteOptions> floral, StartCivilExpeditionRequest request,
     CancellationToken ct) =>
 {
-    if (!settings.Value.Enabled || !floral.Value.Enabled
+    if (!settings.Value.CanStart(floral.Value.Enabled)
         || coordinator is UnavailableCivilExpeditionUnitOfWork)
         return GameError(503, "game.civil_expeditions_disabled", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
