@@ -326,4 +326,3 @@ public sealed class CivilPopulationService(
 
     private DateTimeOffset Now() => clock.UtcNow.ToUniversalTime();
 }
-

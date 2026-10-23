@@ -28,6 +28,11 @@ public static class HiveStateMigrator
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
 
+        // Academy is enabled in the official production version. Preserve its
+        // nullable state and reject corrupted progress without issuing freebies.
+        if (state.Academy is { } academy)
+            AcademyTrainingService.ValidateStored(academy, state.Revision);
+
         if (state.RoyalReserve is { } royalReserve)
         {
             string[] allowed = ["honey", "pollen", "wax"];

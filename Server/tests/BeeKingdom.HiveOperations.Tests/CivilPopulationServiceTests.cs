@@ -223,4 +223,3 @@ public sealed class CivilPopulationServiceTests
             CivilPopulationService.ValidateStored(invalid));
     }
 }
-

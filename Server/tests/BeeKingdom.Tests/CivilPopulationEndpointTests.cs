@@ -201,4 +201,3 @@ public sealed class CivilPopulationEndpointTests
         public DateTimeOffset UtcNow => Now;
     }
 }
-

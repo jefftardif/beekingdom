@@ -67,14 +67,20 @@ public sealed record PlayerHiveState(
      long RoyalSeals = 0,
      NurseryCohortState? NurseryCohorts = null,
      RoyalReserveState? RoyalReserve = null,
-      CivilPopulationState? CivilPopulation = null,
-      CivilExpeditionState? CivilExpeditions = null);
+     // Academy training from the deployed official production baseline.
+     AcademyTrainingState? Academy = null,
+     // Additive civilian population and flights from pollination P1-P10.
+     CivilPopulationState? CivilPopulation = null,
+     CivilExpeditionState? CivilExpeditions = null);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
 // adjustments, compensation slot grants). Written inside the SAME atomic mutation as the
 // change it documents, so it can never drift out of sync with what actually happened.
 public sealed record AdminAuditEntry(Guid EntryId, DateTimeOffset AtUtc, string Action, string Details, string Reason);
 
+// Banque / Réserve Royale — premier produit bancaire server-authoritative.
+// Les ressources ici ne sont plus liquides dans Resources : un dépôt les déplace atomiquement
+// dans cette réserve; un retrait fait le mouvement inverse. Aucune création de valeur.
 public sealed record RoyalReserveState(
     long Revision,
     Dictionary<string, long> Amounts,
