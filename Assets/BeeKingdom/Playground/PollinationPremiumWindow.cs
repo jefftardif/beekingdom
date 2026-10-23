@@ -89,12 +89,15 @@ namespace BeeKingdom.Playground
             activeTab = 0;
             previousSiteId = string.Empty;
             nextRefreshAt = 0f;
+            BeeLocalization.LocaleChanged -= OnRoyalLocaleChanged;
+            BeeLocalization.LocaleChanged += OnRoyalLocaleChanged;
             EnsureEventSystem();
             BuildWindow();
         }
 
         public void Hide()
         {
+            BeeLocalization.LocaleChanged -= OnRoyalLocaleChanged;
             open = false;
             onClose = null;
             controller = null;
@@ -106,11 +109,24 @@ namespace BeeKingdom.Playground
 
         private void OnDestroy()
         {
+            BeeLocalization.LocaleChanged -= OnRoyalLocaleChanged;
             open = false;
             canvas = null;
             ownedEventSystem = null;
             liveLabels.Clear();
             liveButtons.Clear();
+        }
+
+        // Locale changes are an event, not a timer. Refresh immediately so
+        // the premium window never displays stale FR/EN labels after a switch.
+        private void OnRoyalLocaleChanged(string locale)
+        {
+            if (!open || controller == null || !isActiveAndEnabled) return;
+            float previousScroll = scroller != null
+                ? scroller.verticalNormalizedPosition : 1f;
+            BuildWindow();
+            if (scroller != null)
+                scroller.verticalNormalizedPosition = previousScroll;
         }
 
         private void Update()
