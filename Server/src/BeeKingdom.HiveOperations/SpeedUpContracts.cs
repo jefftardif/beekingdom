@@ -111,7 +111,7 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
             if (state.Receipts.TryGetValue(request.IdempotencyKey, out IdempotencyReceipt? stored))
             {
                 result = stored.PayloadHash == payloadHash
-                    ? new SpeedUpCommandResult(stored.Succeeded, stored.Code, Snapshot(state, now))
+                    ? Replay(state, stored, request, now)
                     : new SpeedUpCommandResult(false, "idempotency_conflict", Snapshot(state, now));
                 return state;
             }
@@ -122,6 +122,10 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
                 return RecordFailure(state, request, payloadHash, "inventory_insufficient", now, out result);
 
             string handlerKey = string.Equals(definition.Category, SpeedUpCategories.Universal, StringComparison.Ordinal) ? SpeedUpCategories.Universal : request.Category;
+            // A ready research still occupies its queue until explicit completion; it has no time left to reduce.
+            if (handlerKey is SpeedUpCategories.Research or SpeedUpCategories.Universal &&
+                state.Research?.ActiveOperation is { } research && research.ResearchId == request.TargetId && research.EndsAtUtc <= now)
+                return RecordFailure(state, request, payloadHash, "timer_not_found", now, out result);
             if (!TryApplyByCategory(handlerKey, state, request.TargetId, now, TimeSpan.FromSeconds(definition.DurationSeconds), out PlayerHiveState reducedState, out OperationTimerInfo timer))
                 return RecordFailure(state, request, payloadHash, "timer_not_found", now, out result);
 
@@ -131,6 +135,18 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
             return RecordSuccess(updated, request, payloadHash, code, now, timer.OperationId, out result);
         }, cancellationToken);
         return result ?? Failure(playerId, hiveId, "mutation_failed");
+    }
+
+    private SpeedUpCommandResult Replay(PlayerHiveState state, IdempotencyReceipt stored, ApplySpeedUpRequest request, DateTimeOffset now)
+    {
+        SpeedUpReadSnapshot snapshot = Snapshot(state, now);
+        if (!stored.Succeeded) return new SpeedUpCommandResult(false, stored.Code, snapshot);
+        // The payload hash binds these request fields to the original accepted command.
+        // Keep its receipt revision/time even when the current snapshot has advanced.
+        SpeedUpReceipt receipt = new(state.PlayerId, state.HiveId, request.IdempotencyKey,
+            request.ItemId, request.Category, request.TargetId, 1,
+            stored.RevisionAfter ?? state.Revision, stored.AcceptedAtUtc ?? stored.CreatedAtUtc, stored.Code);
+        return new SpeedUpCommandResult(true, stored.Code, snapshot, new SpeedUpApplyResponse(receipt, snapshot));
     }
 
     private PlayerHiveState RecordFailure(PlayerHiveState state, ApplySpeedUpRequest request, string hash, string code, DateTimeOffset now, out SpeedUpCommandResult? result)
@@ -169,9 +185,9 @@ public sealed class SpeedUpInventoryService(IHiveStateRepository repository, ISe
         if (state.Research?.ActiveOperation is ResearchOperation research)
             timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Research, research.ResearchId, research.OperationId, research.EndsAtUtc, "running"));
         if (state.DoctrineRoster?.ActiveOperation is DoctrineTrainingOperation training)
-            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Training, training.Family, training.OperationId, training.EndsAtUtc, "running"));
+            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Training, training.Family, training.OperationId, training.EndsAtUtc, training.EndsAtUtc <= now ? "awaiting_completion" : "running"));
         if (state.BroodVitality?.ActiveOperation is BroodVitalityOperation healing)
-            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Healing, healing.Type, healing.OperationId, healing.EndsAtUtc, "running"));
+            timers.Add(new SpeedUpTimerSnapshot(SpeedUpCategories.Healing, healing.Type, healing.OperationId, healing.EndsAtUtc, healing.EndsAtUtc <= now ? "awaiting_completion" : "running"));
         List<string> rewards = state.RewardLedger?.Entries
             .Where(entry => !entry.Value.Claimed)
             .OrderBy(entry => entry.Value.GrantedAtUtc)

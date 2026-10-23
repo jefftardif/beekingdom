@@ -65,9 +65,13 @@ public sealed record PlayerHiveState(
      // still defensively sums across every owned hive on read, so the balance stays correct even in
      // the theoretical case a second hive ever appears, without requiring a schema change then.
      long RoyalSeals = 0,
+     NurseryCohortState? NurseryCohorts = null,
      RoyalReserveState? RoyalReserve = null,
-     // Academy training is a nullable additive value; existing saves remain valid.
-     AcademyTrainingState? Academy = null);
+     // Academy training from the deployed official production baseline.
+     AcademyTrainingState? Academy = null,
+     // Additive civilian population and flights from pollination P1-P10.
+     CivilPopulationState? CivilPopulation = null,
+     CivilExpeditionState? CivilExpeditions = null);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
 // adjustments, compensation slot grants). Written inside the SAME atomic mutation as the

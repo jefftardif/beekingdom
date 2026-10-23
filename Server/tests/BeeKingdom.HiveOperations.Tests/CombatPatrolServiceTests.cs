@@ -121,6 +121,10 @@ public sealed class CombatPatrolServiceTests
         try
         {
             var repo = Repo(root, p, h, guardians: 18, wingrunners: 0, darters: 0, guardPostLevel: 2, reservedGuardians: 13);
+            var check = await repo.ReadAsync(p, h, default);
+            Assert.True(check?.SquadReservation is not null, "Missing persisted reservation");
+            Assert.Equal(13, check.SquadReservation!.Reserved["guardians"]);
+            Assert.Equal("reservation", check.SquadReservation.ReservationId);
             var service = new CombatPatrolService(repo, clock);
 
             CombatPatrolResult launch = await service.LaunchAsync(new(p, h, 2, 13, 0, 0, 0, "launch-1"), default);

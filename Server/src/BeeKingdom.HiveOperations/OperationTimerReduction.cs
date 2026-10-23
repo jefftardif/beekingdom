@@ -113,7 +113,7 @@ public static class OperationTimerReduction
         public bool TryReduce(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out PlayerHiveState updatedState, out OperationTimerInfo info)
         {
             DoctrineTrainingOperation? operation = state.DoctrineRoster?.ActiveOperation;
-            if (operation is null || operation.Family != targetId) { updatedState = state; info = default; return false; }
+            if (operation is null || operation.Family != targetId || operation.EndsAtUtc <= now) { updatedState = state; info = default; return false; }
             DateTimeOffset end = operation.EndsAtUtc - duration;
             bool completed = end <= now;
             DoctrineRosterState roster = state.DoctrineRoster! with { ActiveOperation = operation with { EndsAtUtc = end <= now ? now : end } };
@@ -136,7 +136,7 @@ public static class OperationTimerReduction
         public bool TryReduce(PlayerHiveState state, string targetId, DateTimeOffset now, TimeSpan duration, out PlayerHiveState updatedState, out OperationTimerInfo info)
         {
             BroodVitalityOperation? operation = state.BroodVitality?.ActiveOperation;
-            if (operation is null || operation.Type != targetId) { updatedState = state; info = default; return false; }
+            if (operation is null || operation.Type != targetId || operation.EndsAtUtc <= now) { updatedState = state; info = default; return false; }
             DateTimeOffset end = operation.EndsAtUtc - duration;
             bool completed = end <= now;
             BroodVitalityState vitality = state.BroodVitality! with { ActiveOperation = operation with { EndsAtUtc = end <= now ? now : end } };

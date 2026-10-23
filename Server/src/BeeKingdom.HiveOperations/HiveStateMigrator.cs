@@ -21,13 +21,17 @@ public static class HiveStateMigrator
         state = state with { BuildingLevels = buildingLevels, ImplicitBuildingDefaultsApplied = implicitBuildingDefaultsApplied };
         if (state.SpeedUps is { } speedUps && (speedUps.Count > 512 || speedUps.Any(item => string.IsNullOrWhiteSpace(item.Key) || item.Key.Length > 128 || item.Value < 0 || item.Value > 1_000_000_000)))
             throw new InvalidDataException("Invalid SpeedUp inventory state.");
+        if (state.CivilPopulation is { } civilPopulation)
+            CivilPopulationService.ValidateStored(civilPopulation);
+        if (state.CivilExpeditions is { } civilExpeditions)
+            CivilExpeditionRules.ValidateStored(civilExpeditions, state.CivilPopulation);
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
 
-        // Additive nullable Academy state: old accounts retain their save and
-        // do not receive complimentary certificates on migration.
+        // Academy is enabled in the official production version. Preserve its
+        // nullable state and reject corrupted progress without issuing freebies.
         if (state.Academy is { } academy)
-            AcademyTrainingService.ValidateStored(academy,state.Revision);
+            AcademyTrainingService.ValidateStored(academy, state.Revision);
 
         if (state.RoyalReserve is { } royalReserve)
         {
@@ -48,8 +52,34 @@ public static class HiveStateMigrator
         {
             if (vitality.Nutrition is < 0 or > 100 || vitality.Stability is < 0 or > 100 || vitality.Revision < 0 || vitality.Revision > state.Revision || vitality.UpdatedAtUtc.Offset != TimeSpan.Zero)
                 throw new InvalidOperationException("Invalid brood vitality state.");
-            if (vitality.ActiveOperation is { } operation && (operation.OperationId == Guid.Empty || !BroodVitalityOperationTypes.Allowed.Contains(operation.Type) || operation.StartedAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc < operation.StartedAtUtc || operation.EndsAtUtc - operation.StartedAtUtc != (operation.Type == BroodVitalityOperationTypes.Feeding ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(13))))
+            if (vitality.ActiveOperation is { } operation && (operation.OperationId == Guid.Empty || !BroodVitalityOperationTypes.Allowed.Contains(operation.Type) || operation.StartedAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc.Offset != TimeSpan.Zero || operation.EndsAtUtc < operation.StartedAtUtc || operation.EndsAtUtc - operation.StartedAtUtc > (operation.Type == BroodVitalityOperationTypes.Feeding ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(13))))
                 throw new InvalidOperationException("Invalid brood vitality operation.");
+        }
+        // Nullable additive model: old hives remain valid and keep their roster.
+        if (state.NurseryCohorts is { } cohorts)
+        {
+            const long maxReserve = NurseryGrowthRules.InitialReserveCapacity;
+            if (cohorts.Revision < 0 || cohorts.Revision > state.Revision
+                || cohorts.RecruitsInReserve < 0 || cohorts.RecruitsInReserve > maxReserve
+                || cohorts.Receipts is null || cohorts.Receipts.Count > 128
+                || cohorts.Receipts.Any(item =>
+                    string.IsNullOrWhiteSpace(item.Key) || item.Key.Length > 256
+                    || item.Value is null || string.IsNullOrWhiteSpace(item.Value.PayloadHash)))
+                throw new InvalidDataException("Invalid nursery cohort state.");
+            if (cohorts.ActiveCohort is { } growing)
+            {
+                if (growing.CohortId == Guid.Empty
+                    || growing.StartedAtUtc.Offset != TimeSpan.Zero
+                    || growing.ReadyAtUtc.Offset != TimeSpan.Zero
+                    || growing.ReadyAtUtc <= growing.StartedAtUtc
+                    || growing.ReadyAtUtc - growing.StartedAtUtc > TimeSpan.FromDays(9)
+                    || growing.ExpectedRecruits < 1
+                    || growing.ExpectedRecruits > maxReserve
+                    || growing.NutritionAtStart is < 0 or > 100
+                    || growing.StabilityAtStart is < 0 or > 100
+                    || cohorts.RecruitsInReserve > maxReserve - growing.ExpectedRecruits)
+                    throw new InvalidDataException("Invalid nursery active cohort.");
+            }
         }
         if (state.DoctrineRoster is { } roster)
         {

@@ -20,9 +20,9 @@ public sealed class ChatGroupServiceTests
     private static readonly Guid GameServerId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid WorldId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-    private static (ChatService Service, IChatRepository Repository) BuildStack()
+    private static (ChatService Service, IChatRepository Repository) BuildStack(IChatRepository? storedRepository = null)
     {
-        InMemoryChatRepository repository = new();
+        IChatRepository repository = storedRepository ?? new InMemoryChatRepository();
         LocalChatAudienceResolver resolver = new(Options.Create(new ChatOptions { MaxPrivateRecipients = 20 }));
         ChatService service = new(repository, resolver, new NoopChatRealtimeDispatcher(), new SystemClock(), Options.Create(new ChatOptions { Enabled = true, MaxPrivateRecipients = 20 }));
         return (service, repository);
@@ -230,6 +230,95 @@ public sealed class ChatGroupServiceTests
 
         service.LeaveGroup(member, group.Conversation.ConversationId);
         Assert.DoesNotThrow(() => service.LeaveGroup(creator, group.Conversation.ConversationId));
+    }
+
+    [Test]
+    public void LastLeaderLeaving_CancelsPendingInvitationsInsteadOfCreatingALeaderlessGroup()
+    {
+        (ChatService service, IChatRepository repository) = BuildStack();
+        PlayerId leader = PlayerId.New();
+        PlayerId invitee = PlayerId.New();
+        Guid groupId = service.CreateGroup(leader, GroupRequest("g1", invitee.Value)).Conversation.ConversationId;
+        Guid inviteId = service.ListPendingInvitations(invitee).Single().InviteId;
+
+        service.LeaveGroup(leader, groupId);
+        (ChatService reconnected, _) = BuildStack(repository);
+
+        Assert.That(reconnected.ListPendingInvitations(invitee), Is.Empty);
+        Assert.That(repository.GetGroupInvite(inviteId)!.Status, Is.EqualTo(ChatGroupInviteStatus.Cancelled));
+        Assert.Throws<InvalidOperationException>(() => reconnected.RespondToInvitation(invitee, inviteId, true));
+        Assert.That(reconnected.ListConversations(leader, 50).Items, Is.Empty);
+    }
+
+    [Test]
+    public async Task RecreatedService_PreservesGroupRolesInvitationsHistoryAndRevokedAccess()
+    {
+        (ChatService service, IChatRepository repository) = BuildStack();
+        PlayerId leader = PlayerId.New();
+        PlayerId successor = PlayerId.New();
+        PlayerId removed = PlayerId.New();
+        PlayerId pending = PlayerId.New();
+        Guid groupId = service.CreateGroup(leader, GroupRequest("g1", successor.Value, removed.Value)).Conversation.ConversationId;
+        service.RespondToInvitation(successor, service.ListPendingInvitations(successor).Single().InviteId, true);
+        service.RespondToInvitation(removed, service.ListPendingInvitations(removed).Single().InviteId, true);
+        await service.SendMessageAsync(leader, groupId, new SendChatMessageRequest("m1", "Persistant", null, null, null, null, DateTimeOffset.UtcNow));
+        service.TransferGroupLeadership(leader, groupId, successor.Value);
+        service.InviteToGroup(successor, groupId, pending.Value);
+        service.RemoveGroupMember(successor, groupId, removed.Value);
+        service.LeaveGroup(leader, groupId);
+
+        (ChatService reconnected, _) = BuildStack(repository);
+        ChatGroupDetail detail = reconnected.GetGroupDetail(successor, groupId);
+        Assert.That(detail.OwnerPlayerId, Is.EqualTo(successor.Value));
+        Assert.That(detail.Members.Single().PlayerId, Is.EqualTo(successor.Value));
+        Assert.That(detail.PendingInvites.Single().InviteePlayerId, Is.EqualTo(pending.Value));
+        Assert.That(reconnected.GetMessages(successor, groupId, 0, 50).Items.Single().Body, Is.EqualTo("Persistant"));
+        foreach (PlayerId former in new[] { leader, removed })
+        {
+            Assert.That(reconnected.ListConversations(former, 50).Items, Is.Empty);
+            Assert.Throws<UnauthorizedAccessException>(() => reconnected.GetGroupDetail(former, groupId));
+            Assert.Throws<UnauthorizedAccessException>(() => reconnected.GetMessages(former, groupId, 0, 50));
+            Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await reconnected.SendMessageAsync(former, groupId,
+                new SendChatMessageRequest("denied", "Interdit", null, null, null, null, DateTimeOffset.UtcNow)));
+        }
+        reconnected.RespondToInvitation(pending, reconnected.ListPendingInvitations(pending).Single().InviteId, true);
+        Assert.That(reconnected.GetGroupDetail(successor, groupId).Members, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void CancelledInvite_CannotJoinAndRemovedMemberNeedsANewInvitation()
+    {
+        (ChatService service, _) = BuildStack();
+        PlayerId leader = PlayerId.New();
+        PlayerId member = PlayerId.New();
+        Guid groupId = service.CreateGroup(leader, GroupRequest("g1", member.Value)).Conversation.ConversationId;
+        Guid cancelled = service.ListPendingInvitations(member).Single().InviteId;
+        service.RemoveGroupMember(leader, groupId, member.Value);
+        Assert.Throws<InvalidOperationException>(() => service.RespondToInvitation(member, cancelled, true));
+        Guid accepted = service.InviteToGroup(leader, groupId, member.Value).InviteId;
+        service.RespondToInvitation(member, accepted, true);
+        service.RemoveGroupMember(leader, groupId, member.Value);
+        Assert.Throws<InvalidOperationException>(() => service.RespondToInvitation(member, accepted, true));
+        Guid fresh = service.InviteToGroup(leader, groupId, member.Value).InviteId;
+        Assert.That(fresh, Is.Not.EqualTo(accepted));
+        service.RespondToInvitation(member, fresh, true);
+        Assert.That(service.GetGroupDetail(member, groupId).ViewerIsLeader, Is.False);
+    }
+
+    [Test]
+    public void TransferLeadership_RejectsNonMembersPendingInviteesAndNonLeaders()
+    {
+        (ChatService service, _) = BuildStack();
+        PlayerId leader = PlayerId.New();
+        PlayerId member = PlayerId.New();
+        PlayerId pending = PlayerId.New();
+        Guid groupId = service.CreateGroup(leader, GroupRequest("g1", member.Value, pending.Value)).Conversation.ConversationId;
+        service.RespondToInvitation(member, service.ListPendingInvitations(member).Single().InviteId, true);
+        Assert.Throws<UnauthorizedAccessException>(() => service.TransferGroupLeadership(member, groupId, leader.Value));
+        Assert.Throws<KeyNotFoundException>(() => service.TransferGroupLeadership(leader, groupId, pending.Value));
+        service.RemoveGroupMember(leader, groupId, member.Value);
+        Assert.Throws<KeyNotFoundException>(() => service.TransferGroupLeadership(leader, groupId, member.Value));
+        Assert.That(service.GetGroupDetail(leader, groupId).OwnerPlayerId, Is.EqualTo(leader.Value));
     }
 
     [Test]
