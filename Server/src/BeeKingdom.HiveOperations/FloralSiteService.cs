@@ -23,7 +23,7 @@ public sealed class FloralSiteOptions
         foreach (FloralSiteDefinition site in Sites)
         {
             if (site is null
-                || !ValidId(site.WorldId) || !ValidId(site.RegionId)
+                || !ValidWorldId(site.WorldId) || !ValidId(site.RegionId)
                 || !ValidId(site.SiteId) || !ValidId(site.FamilyId)
                 || string.IsNullOrWhiteSpace(site.NameFr)
                 || string.IsNullOrWhiteSpace(site.NameEn)
@@ -48,6 +48,13 @@ public sealed class FloralSiteOptions
             && Regex.IsMatch(surfaceId, "^[A-Za-z0-9][A-Za-z0-9._-]*$", RegexOptions.CultureInvariant)
             && ValidId(anchorId));
 
+    // Official game worlds are UUIDs; keep legacy catalogue slugs valid for
+    // existing test and pilot data while refusing empty or noncanonical UUIDs.
+    public static bool ValidWorldId(string? value) =>
+        ValidId(value)
+        || (Guid.TryParseExact(value, "D", out Guid parsed)
+            && parsed != Guid.Empty
+            && string.Equals(value, parsed.ToString("D"), StringComparison.Ordinal));
     public static bool ValidId(string? value) =>
         !string.IsNullOrWhiteSpace(value)
         && value.Length is >= 2 and <= 64
@@ -153,7 +160,7 @@ public sealed class FloralSiteService(
 
     public static void ValidateStored(FloralSiteState state)
     {
-        if (!FloralSiteOptions.ValidId(state.WorldId)
+        if (!FloralSiteOptions.ValidWorldId(state.WorldId)
             || !FloralSiteOptions.ValidId(state.RegionId)
             || !FloralSiteOptions.ValidId(state.SiteId)
             || !FloralSiteOptions.ValidId(state.FamilyId)

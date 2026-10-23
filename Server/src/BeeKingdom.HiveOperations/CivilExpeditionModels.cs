@@ -156,7 +156,7 @@ public static class CivilExpeditionRules
         {
             if (mission.MissionId == Guid.Empty || mission.Workers <= 0
                 || mission.Mode != "balanced"
-                || !FloralSiteOptions.ValidId(mission.WorldId)
+                || !FloralSiteOptions.ValidWorldId(mission.WorldId)
                 || !FloralSiteOptions.ValidId(mission.RegionId)
                 || !FloralSiteOptions.ValidId(mission.SiteId)
                 || mission.StartedAtUtc.Offset != TimeSpan.Zero
