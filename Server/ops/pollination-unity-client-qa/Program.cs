@@ -81,6 +81,25 @@ static class PollinationSmoke
         RemoteFloralSite decoded=JsonSerializer.Deserialize<RemoteFloralSite>(
             JsonSerializer.Serialize(Site(),codec),codec);
         PollinationClient.ValidateSite(decoded);
+        // A production world is an actual canonical UUID, not the QA slug.
+        const string officialWorld = "00000000-0000-0000-0000-000000000101";
+        var officialSite = Site();
+        officialSite.WorldId = officialWorld;
+        PollinationClient.ValidateSite(officialSite);
+        var officialFlight = Expedition();
+        officialFlight.Active.WorldId = officialWorld;
+        PollinationClient.ValidateExpedition(officialFlight, P, H);
+        var officialProject = Project();
+        officialProject.Project.WorldId = officialWorld;
+        PollinationClient.ValidateProject(officialProject, Alliance);
+        Check(true, "official canonical UUID world passes all three wire projections");
+        var invalidWorld = Site();
+        invalidWorld.WorldId = Guid.Empty.ToString("D");
+        await Expect<PollinationClientException>(() =>
+        {
+            PollinationClient.ValidateSite(invalidWorld);
+            return Task.CompletedTask;
+        }, "empty world UUID stays rejected");
         Check(decoded.LocalizedName("fr-CA")=="Trèfle blanc" &&
               decoded.LocalizedName("en-US")=="White clover",
               "Unicode FR/EN site roundtrip");

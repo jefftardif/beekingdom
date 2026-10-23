@@ -120,6 +120,26 @@ public sealed class FloralSiteServiceTests
     }
 
     [Fact]
+    public void Official_uuid_world_id_roundtrips_without_relaxing_site_identifiers()
+    {
+        const string officialWorld = "00000000-0000-0000-0000-000000000101";
+        FloralSiteOptions options = Options();
+        options.Sites[0] = options.Sites[0] with { WorldId = officialWorld };
+        options.Validate();
+        Assert.True(FloralSiteOptions.ValidWorldId(officialWorld));
+        Assert.True(FloralSiteOptions.ValidWorldId("world-qa"));
+        Assert.False(FloralSiteOptions.ValidWorldId(Guid.Empty.ToString("D")));
+        Assert.True(FloralSiteOptions.ValidWorldId("abcd0000-0000-4000-8000-000000000101"));
+        Assert.False(FloralSiteOptions.ValidWorldId("ABCD0000-0000-4000-8000-000000000101"));
+        FloralSiteState persisted = FloralSiteService.InitialState(
+            options.Sites[0], options.CatalogVersion, Moment);
+        FloralSiteService.ValidateStored(persisted);
+        Assert.Equal(officialWorld, persisted.WorldId);
+
+        options.Sites[0] = options.Sites[0] with { SiteId = officialWorld };
+        Assert.Throws<InvalidDataException>(() => options.Validate());
+    }
+    [Fact]
     public void Invalid_catalogue_and_corrupt_persisted_state_are_rejected()
     {
         FloralSiteOptions duplicate = Options();

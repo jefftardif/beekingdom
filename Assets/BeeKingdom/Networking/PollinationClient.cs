@@ -350,7 +350,7 @@ namespace BeeKingdom.Networking
         public static void ValidateSite(RemoteFloralSite x)
         {
             if (x == null || x.ContractVersion != SiteVersion ||
-                !ValidId(x.SiteId) || !ValidId(x.WorldId) ||
+                !ValidId(x.SiteId) || !ValidWorldId(x.WorldId) ||
                 !ValidId(x.RegionId) || !ValidId(x.FamilyId) ||
                 !ValidId(x.CatalogVersion) ||
                 string.IsNullOrWhiteSpace(x.NameFr) ||
@@ -385,7 +385,7 @@ namespace BeeKingdom.Networking
             if (m != null)
             {
                 if (m.MissionId == Guid.Empty || !ValidId(m.SiteId) ||
-                    !ValidId(m.WorldId) || !ValidId(m.RegionId) ||
+                    !ValidWorldId(m.WorldId) || !ValidId(m.RegionId) ||
                     m.Mode != "balanced" || m.Workers <= 0 ||
                     m.Workers > x.AssignedWorkers ||
                     m.PollenPerWorker <= 0 ||
@@ -425,7 +425,7 @@ namespace BeeKingdom.Networking
             if (allianceId == Guid.Empty || p.AllianceId != allianceId ||
                 progression.AllianceId != allianceId || p.ProjectId == Guid.Empty ||
                 p.CreatedByPlayerId == Guid.Empty ||
-                !ValidId(p.SiteId) || !ValidId(p.WorldId) ||
+                !ValidId(p.SiteId) || !ValidWorldId(p.WorldId) ||
                 !IsUtc(p.CreatedAtUtc) || p.Revision < 0 ||
                 p.GoalPoints < 2 || p.RequiredDistinctMembers < 2 ||
                 p.MinimumPointsPerMember < 1 || p.Points < 0 ||
@@ -582,7 +582,14 @@ namespace BeeKingdom.Networking
         {
             if (!ValidId(id)) throw InvalidRequest("invalid_floral_site_id");
         }
-        private static bool ValidId(string id)
+        private static bool ValidWorldId(string id)
+        {
+            if (ValidId(id)) return true;
+            Guid parsed;
+            return Guid.TryParseExact(id, "D", out parsed) &&
+                   parsed != Guid.Empty &&
+                   string.Equals(id, parsed.ToString("D"), StringComparison.Ordinal);
+        }        private static bool ValidId(string id)
         {
             if (string.IsNullOrWhiteSpace(id) || id.Length < 2 || id.Length > 64 ||
                 id[0] < 'a' || id[0] > 'z') return false;
