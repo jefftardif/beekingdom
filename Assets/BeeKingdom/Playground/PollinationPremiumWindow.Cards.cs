@@ -162,39 +162,67 @@ namespace BeeKingdom.Playground
             return cursor;
         }
 
+        private string CivilCount(long value) =>
+            value.ToString("N0",System.Globalization.CultureInfo.GetCultureInfo(
+                French?"fr-CA":"en-US"));
+
         private float BuildSwarmCards(float cursor,PollinationScreenModel m)
         {
             float width=Mathf.Max(160f,viewportWidth-36f);
             RemoteCivilPopulationSnapshot p=m.Population;
             RemoteCivilExpeditionSnapshot e=m.Expedition;
-            RectTransform roster=CardAt(cursor,183f,
+            bool readOnly=m.FloralSitesOnly;
+            RectTransform roster=CardAt(cursor,readOnly?216f:183f,
                 T("BUTINEUSES CIVILES","CIVILIAN FORAGERS"),"nursery");
             LiveLabel(roster,new Rect(18f,78f,width-36f,32f),
                 ()=>T("Disponibles : ","Available: ")
-                    +(p?.AvailableWorkers.ToString()??"--"),19f,Gold,true);
+                    +(p==null?"--":CivilCount(p.AvailableWorkers)),19f,Gold,true);
             LiveLabel(roster,new Rect(18f,111f,width-36f,26f),
                 ()=>T("En mission : ","Assigned: ")
-                    +(p?.AssignedWorkers.ToString()??"--"),15f,Paper);
+                    +(p==null?"--":CivilCount(p.AssignedWorkers)),15f,Paper);
             LiveLabel(roster,new Rect(18f,139f,width-36f,27f),
-                ()=>T("Capacité : ","Capacity: ")
-                    +(p?.Capacity.ToString()??"--"),14f,Muted);
-            cursor+=203f;
+                ()=>T(readOnly?"Capacité maximale : ":"Capacité : ",
+                       readOnly?"Maximum capacity: ":"Capacity: ")
+                    +(p==null?"--":CivilCount(p.Capacity)),14f,Muted);
+            if(readOnly)
+                Label(roster,new Rect(18f,170f,width-36f,28f),
+                    T("Capacité de la nurserie, pas des butineuses déjà créées.",
+                      "Nursery capacity, not the number of foragers created."),
+                    13f,Muted);
+            cursor+=readOnly?236f:203f;
 
             RectTransform nursery=CardAt(cursor,151f,
-                T("NOUVELLE COHORTE","NEW BROOD COHORT"),"nursery");
-            LiveLabel(nursery,new Rect(18f,75f,width-36f,28f),
-                ()=>p==null
-                    ? T("Formation des butineuses à venir","Forager training coming soon")
-                    : p.Active==null
-                        ? T("Nurserie disponible","Nursery available")
-                        : T("Éclosion prévue : ","Expected emergence: ")
-                            +p.Active.ReadyAtUtc.ToLocalTime().ToString("g"),
-                14f,Paper);
-            ButtonAt(nursery,new Rect(18f,111f,
-                Mathf.Min(260f,width-36f),38f),
-                T("Former une cohorte","Start a cohort"),true,
-                ()=>controller.StartCivilCohort(),()=>m.CanStartCohort &&
-                    !controller.IsBusy);
+                readOnly
+                    ? T("FORMATION À VENIR","TRAINING COMING SOON")
+                    : T("NOUVELLE COHORTE","NEW BROOD COHORT"),"nursery");
+            if(readOnly)
+            {
+                Label(nursery,new Rect(18f,76f,width-36f,30f),
+                    T("APERÇU EN LECTURE SEULE","READ-ONLY PREVIEW"),
+                    15f,Gold,true);
+                Label(nursery,new Rect(18f,109f,width-36f,39f),
+                    T("Formation désactivée. Aucun miel ni pollen dépensé.",
+                      "Training is disabled. No honey or pollen is spent."),
+                    14f,Muted);
+                // Do not draw a dead pay button. The server also forbids POST.
+            }
+            else
+            {
+                LiveLabel(nursery,new Rect(18f,75f,width-36f,28f),
+                    ()=>p==null
+                        ? T("Formation des butineuses à venir","Forager training coming soon")
+                        : p.Active==null
+                            ? T(p.CanStart?"Nurserie disponible":"Formation indisponible",
+                                p.CanStart?"Nursery available":"Training unavailable")
+                            : T("Éclosion prévue : ","Expected emergence: ")
+                                +p.Active.ReadyAtUtc.ToLocalTime().ToString("g"),
+                    14f,Paper);
+                ButtonAt(nursery,new Rect(18f,111f,
+                    Mathf.Min(260f,width-36f),38f),
+                    T("Former une cohorte","Start a cohort"),true,
+                    ()=>controller.StartCivilCohort(),()=>m.CanStartCohort &&
+                        !controller.IsBusy);
+            }
             cursor+=171f;
 
             RectTransform voyage=CardAt(cursor,e?.Active==null?260f:240f,

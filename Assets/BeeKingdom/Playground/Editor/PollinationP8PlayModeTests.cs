@@ -306,6 +306,30 @@ namespace BeeKingdom.Playground.Editor
                 Assert.That(HasText(host,"BUTINEUSES CIVILES"),Is.True);
                 Assert.That(HasText(host,"30"),Is.True);
 
+                // The server can open its read-only civilian census while
+                // expeditions remain gated. Never show a misleading pay button.
+                RemoteCivilExpeditionSnapshot previousFlight=controller.Model.Expedition;
+                Assign(controller.Model,"Expedition",
+                    (RemoteCivilExpeditionSnapshot)null);
+                panel.SelectTabForProof(1);
+                yield return null;
+                Assert.That(HasText(host,"APERÇU EN LECTURE SEULE"),Is.True);
+                Assert.That(HasText(host,"Capacité maximale"),Is.True);
+                Assert.That(HasText(host,"Aucun miel ni pollen dépensé"),Is.True);
+                Assert.That(host.GetComponentsInChildren<Button>()
+                    .Any(button=>button.GetComponentsInChildren<TextMeshProUGUI>()
+                        .Any(text=>text.text=="Former une cohorte")),Is.False,
+                    "Read-only preview must not present a dead paid cohort button.");
+                Assert.That(BeeLocalization.SetLocale("en-US"),Is.True);
+                yield return null;
+                Assert.That(host.GetComponentsInChildren<TextMeshProUGUI>()
+                    .Any(text=>text.text=="READ-ONLY PREVIEW"),Is.True,
+                    "The English preview must be visible.");
+                Assert.That(BeeLocalization.SetLocale("fr-CA"),Is.True);
+                Assign(controller.Model,"Expedition",previousFlight);
+                panel.SelectTabForProof(1);
+                yield return null;
+
                 panel.SelectTabForProof(2);
                 yield return null;
                 Assert.That(HasText(host,"Membres qualifiés"),Is.True);
