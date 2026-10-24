@@ -23,6 +23,7 @@ namespace BeeKingdom.Playground
         private static ChatPlayerPickerController chatPlayerPickerController;
         private static HiveStockPanelController stockController;
         private static HiveDailyRoundPanelController dailyRoundController;
+        private static RewardedAdsQuestPanelController rewardedAdsQuestPanelController;
         private static HiveBroodVitalityPanelController broodVitalityController;
         private static HiveDoctrineRecruitmentPanelController
             doctrineRecruitmentController;
@@ -513,6 +514,15 @@ namespace BeeKingdom.Playground
             // until then. One real, already-existing fetch at hive load; HiveViewProductUiPresenter
             // reads the resulting Model to surface a real "you have a pending invitation" alert.
             HiveViewProductUiPresenter.ConfigureHiveStockControllerForRuntime(stockController);
+            RewardedAdsQuestPanelController previousAdsController = rewardedAdsQuestPanelController;
+            rewardedAdsQuestPanelController = authenticatedAuthority
+                ? new RewardedAdsQuestPanelController(
+                    new RewardedAdsQuestClient(client.Gate, client, gameTransport),
+                    knownPlayerId, hiveId)
+                : null;
+            HiveViewProductUiPresenter.ConfigureRewardedAdsQuestControllerForRuntime(
+                rewardedAdsQuestPanelController);
+            previousAdsController?.Dispose();
             HiveViewProductUiPresenter.ConfigureDailyRoundControllerForRuntime(dailyRoundController);
             HiveViewProductUiPresenter.ConfigureBroodVitalityControllerForRuntime(
                 broodVitalityController);
@@ -795,6 +805,9 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.ResetResearchControllerForRuntime();
             HiveViewProductUiPresenter.ResetAllianceCenterControllerForRuntime();
             HiveViewProductUiPresenter.ResetHiveStockControllerForRuntime();
+            rewardedAdsQuestPanelController?.Dispose();
+            rewardedAdsQuestPanelController = null;
+            HiveViewProductUiPresenter.ResetRewardedAdsQuestControllerForRuntime();
             HiveViewProductUiPresenter.ResetDailyRoundControllerForRuntime();
             HiveViewProductUiPresenter.ResetBroodVitalityControllerForRuntime();
             HiveViewProductUiPresenter

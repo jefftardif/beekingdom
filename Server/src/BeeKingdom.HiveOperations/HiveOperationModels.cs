@@ -66,7 +66,8 @@ public sealed record PlayerHiveState(
      // the theoretical case a second hive ever appears, without requiring a schema change then.
      long RoyalSeals = 0,
      NurseryCohortState? NurseryCohorts = null,
-     RoyalReserveState? RoyalReserve = null);
+     RoyalReserveState? RoyalReserve = null,
+     RewardedAdsQuestState? RewardedAdsQuest = null);
 
 // Append-only trail of manual admin/support mutations against a hive (resource/roster
 // adjustments, compensation slot grants). Written inside the SAME atomic mutation as the

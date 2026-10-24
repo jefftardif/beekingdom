@@ -40,6 +40,11 @@ namespace BeeKingdom.Monetization
             return gameObject.AddComponent<BeeKingdomLevelPlayRewardedBridge>();
         }
 
+        public static bool TryGetExisting(out BeeKingdomLevelPlayRewardedBridge bridge)
+        {
+            bridge = instance;
+            return instance != null;
+        }
         public event Action<bool> AvailabilityChanged;
         // This is only a notification. The server must confirm and credit the reward.
         public event Action RewardPendingServerConfirmation;
@@ -82,7 +87,7 @@ namespace BeeKingdom.Monetization
                 return false;
             }
 
-            authenticatedPlayerId = playerId.ToString("D");
+            authenticatedPlayerId = playerId.ToString("N");
             privacyResolved = true;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -98,7 +103,7 @@ namespace BeeKingdom.Monetization
             initializationStarted = true;
             LevelPlay.OnInitSuccess += OnInitSuccess;
             LevelPlay.OnInitFailed += OnInitFailed;
-            LevelPlay.Init(LevelPlayAppKey);
+            LevelPlay.Init(LevelPlayAppKey, authenticatedPlayerId);
             return true;
 #else
             Diagnostic?.Invoke("ads_android_device_only");

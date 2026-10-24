@@ -21,6 +21,20 @@ public static class HiveStateMigrator
         state = state with { BuildingLevels = buildingLevels, ImplicitBuildingDefaultsApplied = implicitBuildingDefaultsApplied };
         if (state.SpeedUps is { } speedUps && (speedUps.Count > 512 || speedUps.Any(item => string.IsNullOrWhiteSpace(item.Key) || item.Key.Length > 128 || item.Value < 0 || item.Value > 1_000_000_000)))
             throw new InvalidDataException("Invalid SpeedUp inventory state.");
+        if (state.RewardedAdsQuest is { } rewarded &&
+            (rewarded.CountByDay is null || rewarded.ProcessedEvents is null ||
+             rewarded.CountByDay.Count > 15 || rewarded.ProcessedEvents.Count > 512 ||
+             rewarded.LifetimeHoneyCredited < 0 || rewarded.LifetimePollenCredited < 0 ||
+             rewarded.CountByDay.Any(item =>
+                 !DateTime.TryParseExact(item.Key, "yyyy-MM-dd",
+                     System.Globalization.CultureInfo.InvariantCulture,
+                     System.Globalization.DateTimeStyles.None, out _) ||
+                 item.Value < 0 || item.Value > RewardedAdsQuestService.DailyLimit) ||
+             rewarded.ProcessedEvents.Any(item =>
+                 string.IsNullOrWhiteSpace(item.Key) || item.Key.Length > 128 ||
+                 item.Key.Any(c => !char.IsAsciiLetterOrDigit(c)) ||
+                 item.Value.Offset != TimeSpan.Zero)))
+            throw new InvalidDataException("Invalid rewarded advertising state.");
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
 

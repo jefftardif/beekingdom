@@ -111,6 +111,13 @@ builder.Services.AddSingleton<AdminSupportService>(sp => new AdminSupportService
 // Chat and Alliance at once.
 builder.Services.AddSingleton<AccountDeletionService>();
 builder.Services.AddSingleton<RewardLedgerService>(sp => new RewardLedgerService(sp.GetRequiredService<IHiveStateRepository>(), sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(), sp.GetRequiredService<IOptions<RewardLedgerOptions>>().Value));
+builder.Services.AddOptions<RewardedAdsQuestOptions>()
+    .Bind(builder.Configuration.GetSection(RewardedAdsQuestOptions.SectionName));
+builder.Services.AddSingleton<RewardedAdsQuestService>(sp =>
+    new RewardedAdsQuestService(
+        sp.GetRequiredService<IHiveStateRepository>(),
+        sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(),
+        sp.GetRequiredService<IOptions<RewardedAdsQuestOptions>>().Value));
 builder.Services.AddBeeKingdomAllianceHelp(builder.Configuration);
 builder.Services.AddBeeKingdomAllianceResearch(builder.Configuration);
 builder.Services.AddBeeKingdomNews(builder.Configuration);
@@ -585,6 +592,59 @@ app.MapGet("/runtime/world-identity-readiness", (IOptions<BeeKingdomServerOption
 
 app.MapGet("/runtime/chat-readiness", (ChatManager chat) => Results.Ok(chat.GetReadiness()));
 
+app.MapGet("/game/v1/hives/{hiveId}/rewarded-ads", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    RewardedAdsQuestService rewards, CancellationToken ct) =>
+{
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid parsedHive))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    RewardedAdsQuestSnapshot? snapshot =
+        await rewards.ReadAsync(auth.PlayerId!.Value, parsedHive, ct);
+    return snapshot is null
+        ? GameError(404, "game.hive_not_found", "game.error.not_found")
+        : Results.Ok(snapshot);
+});
+
+// The signature is checked against a server-only 32+ character LevelPlay
+// private key. No client-provided "completed" request may award a resource.
+// Required callback URL configuration in Unity LevelPlay:
+// https://api-ops.beekingdomgame.com/monetization/levelplay/reward-callback?applicationUserId=[USER_ID]&rewards=[REWARDS]&eventId=[EVENT_ID]&appKey=[APP_KEY]
+// Unity automatically appends timestamp and signature when a private key
+// is configured in the LevelPlay dashboard.
+app.MapGet("/monetization/levelplay/reward-callback", async (
+    HttpContext context, RewardedAdsQuestService rewards, ILogger<RewardedAdsQuestService> logger,
+    CancellationToken ct) =>
+{
+    IQueryCollection query = context.Request.Query;
+    // Reject duplicate query parameters; ambiguous bindings can defeat
+    // the signature check if URL parsers disagree about which is signed.
+    foreach (string key in new[] { "applicationUserId", "rewards", "eventId", "timestamp", "signature" })
+    {
+        if (!query.TryGetValue(key, out var values) || values.Count != 1)
+            return Results.StatusCode(403);
+    }
+    LevelPlayRewardCallback payload = new(
+        query["timestamp"].ToString(),
+        query["eventId"].ToString(),
+        query["applicationUserId"].ToString(),
+        query["rewards"].ToString(),
+        query["signature"].ToString(),
+        query.TryGetValue("appKey", out var appKeyValues) && appKeyValues.Count == 1
+            ? appKeyValues.ToString() : null);
+    LevelPlayRewardProcessingResult result = await rewards.ProcessAsync(payload, ct);
+    if (!result.Ack)
+    {
+        logger.LogWarning("Rewarded LevelPlay callback rejected: {Code}", result.Code);
+        return Results.StatusCode(result.Code == "not_configured" ||
+            result.Code == "unknown_or_ambiguous_hive" ||
+            result.Code == "hive_not_found" ||
+            result.Code == "event_ledger_full" ? 503 : 403);
+    }
+    return Results.Text(result.EventId + ":OK", "text/plain");
+});
 app.MapGet("/game/v1/hives/{hiveId}/hive-stock", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, IOptions<HiveStockSnapshotOptions> configured, CancellationToken ct) =>
 {
     if (!configured.Value.Enabled) return GameError(503, "game.unavailable", "game.error.unavailable");

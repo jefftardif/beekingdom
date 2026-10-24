@@ -28883,14 +28883,24 @@ if (leftNavigationTexture == null)
 				return;
             }
 
-            Rect actTab = new Rect(panel.x + 18f, panel.y + 56f, (panel.width - 42f) * 0.5f, 44f);
-            Rect dailyTab = new Rect(actTab.xMax + 6f, actTab.y, actTab.width, 44f);
+            float questTabWidth = (panel.width - 48f) / 3f;
+            Rect actTab = new Rect(panel.x + 18f, panel.y + 56f, questTabWidth, 44f);
+            Rect dailyTab = new Rect(actTab.xMax + 6f, actTab.y, questTabWidth, 44f);
+            Rect adsTab = new Rect(dailyTab.xMax + 6f, actTab.y, questTabWidth, 44f);
             bool actMode = string.Equals(localPreviewQuestJournalMode, "act", StringComparison.Ordinal);
+            bool dailyMode = string.Equals(localPreviewQuestJournalMode, "daily", StringComparison.Ordinal);
+            bool adsMode = string.Equals(localPreviewQuestJournalMode, "ads", StringComparison.Ordinal);
             if (GUI.Toggle(actTab, actMode, BeeLocalization.Text("daily_round.tab.act", "Acte I"), "Button") && !actMode)
                 localPreviewQuestJournalMode = "act";
-            if (GUI.Toggle(dailyTab, !actMode, BeeLocalization.Text("daily_round.tab.daily", "Ronde"), "Button") && actMode)
+            if (GUI.Toggle(dailyTab, dailyMode, BeeLocalization.Text("daily_round.tab.daily", "Ronde"), "Button") && !dailyMode)
                 localPreviewQuestJournalMode = "daily";
-
+            if (GUI.Toggle(adsTab, adsMode, BeeLocalization.Text("ads.quest.tab", "Cadeaux"), "Button") && !adsMode)
+                localPreviewQuestJournalMode = "ads";
+            if (string.Equals(localPreviewQuestJournalMode, "ads", StringComparison.Ordinal))
+            {
+                DrawRewardedAdsDailyContent(panel, compact, panel.y + 110f);
+                return;
+            }
             if (string.Equals(localPreviewQuestJournalMode, "daily", StringComparison.Ordinal))
             {
                 DrawDailyRoundContent(panel, compact, panel.y + 110f);
