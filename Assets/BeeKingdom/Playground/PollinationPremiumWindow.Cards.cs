@@ -360,17 +360,29 @@ namespace BeeKingdom.Playground
                     cursor+=248f;
                 }
             }
+            bool readOnlyAlliance = !m.ProjectServiceAvailable ||
+                m.Expedition == null;
             RectTransform action=CardAt(cursor,172f,
                 T("COOPÉRATION","COOPERATION"),"nursery");
             Label(action,new Rect(18f,77f,width-36f,37f),
                 T("La réussite exige plusieurs membres ayant réellement participé.",
                   "Completion requires multiple genuinely contributing members."),
                 14f,Paper);
-            ButtonAt(action,new Rect(18f,121f,
-                Mathf.Min(290f,width-36f),42f),
-                T("Ouvrir un projet floral","Create a floral project"),
-                true,()=>controller.CreateSelectedAllianceProject(),
-                ()=>m.CanCreateProject && !controller.IsBusy);
+            if(readOnlyAlliance)
+            {
+                Label(action,new Rect(18f,120f,width-36f,43f),
+                    T("Consultation seulement : création de projet à venir.",
+                      "Read-only: project creation is coming soon."),
+                    14f,Muted);
+            }
+            else
+            {
+                ButtonAt(action,new Rect(18f,121f,
+                    Mathf.Min(290f,width-36f),42f),
+                    T("Ouvrir un projet floral","Create a floral project"),
+                    true,()=>controller.CreateSelectedAllianceProject(),
+                    ()=>m.CanCreateProject && !controller.IsBusy);
+            }
             cursor+=192f;
             return cursor;
         }

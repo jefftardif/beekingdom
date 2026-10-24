@@ -1223,7 +1223,7 @@ app.MapGet("/alliance/v1/alliances/{allianceId}/floral-projects", async (
     IFloralAllianceProjectService projects, IOptions<FloralAllianceProjectOptions> options,
     CancellationToken ct) =>
 {
-    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+    if (!options.Value.CanRead || projects is UnavailableFloralAllianceProjectService)
         return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid)
@@ -1245,7 +1245,7 @@ app.MapGet("/alliance/v1/alliances/{allianceId}/floral-projects/{projectId}", as
     AuthenticationManager authentication, IFloralAllianceProjectService projects,
     IOptions<FloralAllianceProjectOptions> options, CancellationToken ct) =>
 {
-    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+    if (!options.Value.CanRead || projects is UnavailableFloralAllianceProjectService)
         return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid)
@@ -1272,8 +1272,10 @@ app.MapPost("/alliance/v1/alliances/{allianceId}/floral-projects", async (
     IFloralAllianceProjectService projects, IOptions<FloralAllianceProjectOptions> options,
     CreateFloralAllianceProjectRequest request, CancellationToken ct) =>
 {
-    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+    if (!options.Value.CanRead || projects is UnavailableFloralAllianceProjectService)
         return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    if (!options.Value.CanCreate)
+        return GameError(503, "game.floral_alliance_projects_readonly", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid)
         return GameError(401, "game.session_required", "game.error.session_required");

@@ -326,6 +326,13 @@ namespace BeeKingdom.Playground.Editor
                     .Any(text=>text.text=="READ-ONLY PREVIEW"),Is.True,
                     "The English preview must be visible.");
                 Assert.That(BeeLocalization.SetLocale("fr-CA"),Is.True);
+                panel.SelectTabForProof(2);
+                yield return null;
+                Assert.That(HasText(host,"Consultation seulement"),Is.True);
+                Assert.That(host.GetComponentsInChildren<Button>()
+                    .Any(button=>button.GetComponentsInChildren<TextMeshProUGUI>()
+                        .Any(text=>text.text=="Ouvrir un projet floral")),Is.False,
+                    "Preview may not present a misleading project creation action.");
                 Assign(controller.Model,"Expedition",previousFlight);
                 panel.SelectTabForProof(1);
                 yield return null;

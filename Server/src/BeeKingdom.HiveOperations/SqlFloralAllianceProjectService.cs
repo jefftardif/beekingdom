@@ -20,7 +20,7 @@ public sealed class SqlFloralAllianceProjectService(
         Guid playerId, Guid allianceId, CreateFloralAllianceProjectRequest request,
         CancellationToken ct = default)
     {
-        EnsureEnabled();
+        EnsureWritable();
         EnsureIds(playerId, allianceId);
         if (request is null || request.ExpectedProgressionRevision < 0
             || !CivilExpeditionRules.ValidKey(request.IdempotencyKey)
@@ -112,7 +112,7 @@ public sealed class SqlFloralAllianceProjectService(
         Guid playerId, Guid allianceId, Guid projectId,
         CancellationToken ct = default)
     {
-        EnsureEnabled();
+        EnsureReadable();
         EnsureIds(playerId, allianceId);
         if (projectId == Guid.Empty)
             throw new ArgumentException("game.invalid_request");
@@ -135,7 +135,7 @@ public sealed class SqlFloralAllianceProjectService(
     public async Task<IReadOnlyList<FloralAllianceProjectSnapshot>> ListAsync(
         Guid playerId, Guid allianceId, CancellationToken ct = default)
     {
-        EnsureEnabled();
+        EnsureReadable();
         EnsureIds(playerId, allianceId);
         await using SqlConnection connection = new(connectionString);
         await connection.OpenAsync(ct);
@@ -169,12 +169,19 @@ public sealed class SqlFloralAllianceProjectService(
         DateTimeOffset now) => new(ContractVersion, now, project,
             progress, project.Status == "Completed");
 
-    private void EnsureEnabled()
+    private void EnsureReadable()
     {
         Rules.Validate();
         floral.Validate();
-        if (!Rules.Enabled || !floral.Enabled)
+        if (!Rules.CanRead || !floral.Enabled)
             throw new InvalidOperationException("game.floral_alliance_projects_disabled");
+    }
+
+    private void EnsureWritable()
+    {
+        EnsureReadable();
+        if (!Rules.CanCreate)
+            throw new InvalidOperationException("game.floral_alliance_projects_readonly");
     }
 
     private FloralSiteDefinition RequireSite(string siteId) =>

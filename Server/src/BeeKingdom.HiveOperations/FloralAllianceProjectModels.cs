@@ -8,6 +8,11 @@ public sealed class FloralAllianceProjectOptions
 {
     public const string SectionName = "FloralAllianceProjects";
     public bool Enabled { get; set; }
+    // Safe production preview: current alliance projects may be read,
+    // but players cannot create projects or gain speculative alliance XP.
+    public bool ReadOnlyPilot { get; set; }
+    public bool CanRead => Enabled || ReadOnlyPilot;
+    public bool CanCreate => Enabled && !ReadOnlyPilot;
     /// <summary>
     /// No new alliance projects are created while disabled, but already
     /// launched civil flights may still complete their cooperative deliveries
@@ -15,7 +20,7 @@ public sealed class FloralAllianceProjectOptions
     /// Explicitly OFF by default. Keep the project SQL schema and membership.
     /// </summary>
     public bool DrainExistingDeliveries { get; set; }
-    public bool CanApplyDeliveries => Enabled || DrainExistingDeliveries;
+    public bool CanApplyDeliveries => CanCreate || DrainExistingDeliveries;
 
     public long GoalPoints { get; set; } = 100;
     public int RequiredDistinctMembers { get; set; } = 2;
