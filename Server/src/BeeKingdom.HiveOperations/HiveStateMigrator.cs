@@ -21,8 +21,17 @@ public static class HiveStateMigrator
         state = state with { BuildingLevels = buildingLevels, ImplicitBuildingDefaultsApplied = implicitBuildingDefaultsApplied };
         if (state.SpeedUps is { } speedUps && (speedUps.Count > 512 || speedUps.Any(item => string.IsNullOrWhiteSpace(item.Key) || item.Key.Length > 128 || item.Value < 0 || item.Value > 1_000_000_000)))
             throw new InvalidDataException("Invalid SpeedUp inventory state.");
+        if (state.CivilPopulation is { } civilPopulation)
+            CivilPopulationService.ValidateStored(civilPopulation);
+        if (state.CivilExpeditions is { } civilExpeditions)
+            CivilExpeditionRules.ValidateStored(civilExpeditions, state.CivilPopulation);
         if (state.RoyalSeals < 0)
             throw new InvalidDataException("Invalid Royal Seals wallet balance.");
+
+        // Academy is enabled in the official production version. Preserve its
+        // nullable state and reject corrupted progress without issuing freebies.
+        if (state.Academy is { } academy)
+            AcademyTrainingService.ValidateStored(academy, state.Revision);
 
         if (state.RoyalReserve is { } royalReserve)
         {
