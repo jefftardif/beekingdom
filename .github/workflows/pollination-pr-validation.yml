@@ -1,0 +1,72 @@
+name: BeeKingdom PR Server Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Server/**"
+      - ".github/workflows/pollination-pr-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pollination-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build BeeKingdom API (Release)
+        run: dotnet build Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release --nologo
+
+      - name: HiveOperations floral and academy tests
+        run: dotnet test Server/tests/BeeKingdom.HiveOperations.Tests/BeeKingdom.HiveOperations.Tests.csproj -c Release --nologo --filter "FullyQualifiedName~CivilPopulationServiceTests|FullyQualifiedName~CivilExpeditionServiceTests|FullyQualifiedName~FloralSiteServiceTests|FullyQualifiedName~FloralAllianceProjectRulesTests|FullyQualifiedName~AcademyTrainingServiceTests" --logger "trx;LogFileName=hive.trx"
+
+      - name: API floral and academy tests
+        run: dotnet test Server/tests/BeeKingdom.Tests/BeeKingdom.Tests.csproj -c Release --nologo --filter "FullyQualifiedName~CivilPopulationEndpointTests|FullyQualifiedName~CivilExpeditionEndpointTests|FullyQualifiedName~FloralSiteEndpointTests|FullyQualifiedName~FloralAllianceProjectEndpointTests|FullyQualifiedName~AcademyTrainingEndpointTests|FullyQualifiedName~FloralSiteMigrationContractTests|FullyQualifiedName~FloralAllianceProjectMigrationContractTests" --logger "trx;LogFileName=api.trx"
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beekingdom-pr-server-tests
+          path: |
+            Server/tests/**/TestResults/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
+  api-readonly-candidate:
+    # Compilation independently of slower integration tests. Contains only
+    # two code DLLs and PDBs, no production configuration or secrets.
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build code-only deployment candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release -o candidate-publish --nologo
+          mkdir -p deploy-candidate
+          for file in BeeKingdom.Server.dll BeeKingdom.HiveOperations.dll BeeKingdom.Server.pdb BeeKingdom.HiveOperations.pdb; do
+            test -s "candidate-publish/$file"
+            cp "candidate-publish/$file" "deploy-candidate/$file"
+          done
+          (cd deploy-candidate && sha256sum * > SHA256SUMS.txt)
+          test "$(find deploy-candidate -maxdepth 1 -type f | wc -l)" -eq 5
+      - name: Package SHA-verified code artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bk-civil-readonly-server-candidate
+          path: deploy-candidate/
+          if-no-files-found: error
+          retention-days: 2

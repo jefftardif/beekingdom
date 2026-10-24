@@ -75,7 +75,7 @@ jobs:
       - name: Copy published files
         shell: powershell
         run: |
-          $exclude = @('app_offline.htm', 'web.config')
+          $exclude = @('app_offline.htm', 'web.config', 'appsettings.Production.json')
           Get-ChildItem -Path "publish-output" -Recurse -File |
             Where-Object { $exclude -notcontains $_.Name } |
             ForEach-Object {

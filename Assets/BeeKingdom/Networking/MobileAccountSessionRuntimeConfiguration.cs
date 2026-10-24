@@ -15,9 +15,11 @@ namespace BeeKingdom.Networking
         [SerializeField, Range(5, 120)] private int timeoutSeconds = 20;
         [SerializeField] private bool allowInsecureLoopbackForDevelopment;
         [SerializeField] private string googleOAuthClientId = string.Empty;
+        [SerializeField] private bool pollinationFeatureEnabled;
 
         public bool OfficialAccountsEnabled => officialAccountsEnabled;
         public bool OfficialGameplayEnabled => officialGameplayEnabled;
+        public bool PollinationFeatureEnabled => pollinationFeatureEnabled;
         public string BaseUrl => baseUrl == null ? string.Empty : baseUrl.Trim();
         public string OfficialHiveId => officialHiveId == null ? string.Empty : officialHiveId.Trim();
         public string Region => string.IsNullOrWhiteSpace(region) ? "unknown" : region.Trim();
