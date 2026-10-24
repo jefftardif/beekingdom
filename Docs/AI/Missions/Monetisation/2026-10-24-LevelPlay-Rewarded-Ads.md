@@ -72,3 +72,16 @@ Etat : PREPARATION EN BRANCHE ISOLEE (aucun deploiement en production)
 - Developper la route S2S cote SRVESDT, la migration SQL transactionnelle, l'idempotence EVENT_ID, la verification MD5 utilisant une cle privee protegee, et le verrouillage 3 credits par joueur/jour UTC.
 - Activer les callbacks S2S dans LevelPlay uniquement apres tests fonctionnels du serveur.
 - Ne PAS declarer le produit monetise tant que les etapes precedentes ne sont pas validees.
+
+## Verification Android reelle (2026-10-24)
+- Unity 6000.5.3f1, package LevelPlay 9.5.1 et EDM officiel 2.1.1 : importation PASS.
+- Unity LevelPlay Native SDK 9.5.0 : IronSourceSDKDependencies.xml provenant du depot officiel Unity.
+- Adaptateur AdMob 5.34.0.0 : ISAdMobAdapterDependencies.xml officiel, dependance Android admob-adapter 5.19.0.
+- Gradle : mediation-sdk:9.5.0, admob-adapter:5.19.0, play-services-ads-identifier:18.1.0 confirmes dans unityLibrary/build.gradle.
+- Build Android scene de test : PASS ; APK 101474376 octets.
+- APK test : Builds/Android/BeeKingdom-LevelPlay-Smoke.apk (non publiable / non inclus dans Git).
+- Correctif de compilation Android annexe : TutorialPremiumSkin.scaledBackgrounds uniquement UNITY_EDITOR.
+- Log de build Android : C:\BeeKingdom\staging\logs\levelplay-android-smoke-core-20261024.log
+C:\BeeKingdom\staging\logs\levelplay-android-smoke-core-20261024.log
+- Important : aucune publicite reelle affichee, aucun S2S ni quete FR/EN en production. Le smoke test ne valide pas les annonces sur telephone.
+- Unity principal sur PCJEFF et SRVESDT ne sont pas modifies.

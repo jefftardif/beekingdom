@@ -159,7 +159,9 @@ namespace BeeKingdom.Tutorial
             foreach (GUIStyleState state in states)
             {
                 state.background = null;
+#if UNITY_EDITOR
                 state.scaledBackgrounds = System.Array.Empty<Texture2D>();
+#endif
                 state.textColor = text;
             }
             return style;
