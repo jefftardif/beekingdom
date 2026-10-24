@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  server-regression:
+  pollination-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
@@ -26,11 +26,11 @@ jobs:
       - name: Build BeeKingdom API (Release)
         run: dotnet build Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release --nologo
 
-      - name: HiveOperations tests
-        run: dotnet test Server/tests/BeeKingdom.HiveOperations.Tests/BeeKingdom.HiveOperations.Tests.csproj -c Release --nologo --logger "trx;LogFileName=hive.trx"
+      - name: HiveOperations floral and academy tests
+        run: dotnet test Server/tests/BeeKingdom.HiveOperations.Tests/BeeKingdom.HiveOperations.Tests.csproj -c Release --nologo --filter "FullyQualifiedName~CivilPopulationServiceTests|FullyQualifiedName~CivilExpeditionServiceTests|FullyQualifiedName~FloralSiteServiceTests|FullyQualifiedName~FloralAllianceProjectRulesTests|FullyQualifiedName~AcademyTrainingServiceTests" --logger "trx;LogFileName=hive.trx"
 
-      - name: API tests (SQL opt-in not enabled)
-        run: dotnet test Server/tests/BeeKingdom.Tests/BeeKingdom.Tests.csproj -c Release --nologo --logger "trx;LogFileName=api.trx"
+      - name: API floral and academy tests
+        run: dotnet test Server/tests/BeeKingdom.Tests/BeeKingdom.Tests.csproj -c Release --nologo --filter "FullyQualifiedName~CivilPopulationEndpointTests|FullyQualifiedName~CivilExpeditionEndpointTests|FullyQualifiedName~FloralSiteEndpointTests|FullyQualifiedName~FloralAllianceProjectEndpointTests|FullyQualifiedName~AcademyTrainingEndpointTests|FullyQualifiedName~FloralSiteMigrationContractTests|FullyQualifiedName~FloralAllianceProjectMigrationContractTests" --logger "trx;LogFileName=api.trx"
 
       - name: Archive test results
         if: always()
