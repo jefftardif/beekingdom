@@ -1,0 +1,43 @@
+name: BeeKingdom PR Server Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Server/**"
+      - ".github/workflows/pollination-pr-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server-regression:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build BeeKingdom API (Release)
+        run: dotnet build Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release --nologo
+
+      - name: HiveOperations tests
+        run: dotnet test Server/tests/BeeKingdom.HiveOperations.Tests/BeeKingdom.HiveOperations.Tests.csproj -c Release --nologo --logger "trx;LogFileName=hive.trx"
+
+      - name: API tests (SQL opt-in not enabled)
+        run: dotnet test Server/tests/BeeKingdom.Tests/BeeKingdom.Tests.csproj -c Release --nologo --logger "trx;LogFileName=api.trx"
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beekingdom-pr-server-tests
+          path: |
+            Server/tests/**/TestResults/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
