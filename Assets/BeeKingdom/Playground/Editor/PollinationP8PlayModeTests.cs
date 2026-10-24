@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -156,6 +156,7 @@ namespace BeeKingdom.Playground.Editor
             Assign(controller.Model,"DraftWorkers",10L);
             Assign(controller.Model,"AllianceId",Alliance);
             Assign(controller.Model,"MayManageAllianceProjects",true);
+            Assign(controller.Model,"ProjectServiceAvailable",true);
             Assign(controller.Model,"State",PollinationScreenState.Ready);
             return controller;
         }

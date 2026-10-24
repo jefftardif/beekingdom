@@ -89,6 +89,34 @@ internal static class PollinationPanelSmoke
                 "signout disposes sensitive client projections");
         }
 
+        // Production rollout: the public floral catalogue opens before
+        // civilian training, expeditions and alliance project services.
+        // No phantom workers/rewards and no POSTs may become available.
+        var siteOnlyClient = new MockPollinationClient
+        {
+            CivilServicesDisabled = true,
+            ProjectServiceDisabled = true
+        };
+        using (var preview = new PollinationPanelController(siteOnlyClient, Hive))
+        {
+            preview.Refresh();
+            Check(preview.Model.State == PollinationScreenState.Ready &&
+                preview.Model.Sites.Count == 2 &&
+                preview.Model.FloralSitesOnly &&
+                preview.Model.Population == null &&
+                preview.Model.Expedition == null &&
+                preview.Model.DraftWorkers == 0 &&
+                !preview.Model.CanStartCohort &&
+                !preview.Model.CanLaunch,
+                "floral catalogue remains readable with civil services disabled");
+            preview.ConfigureAlliance(Alliance, true);
+            Check(preview.Model.Sites.Count == 2 &&
+                !preview.Model.ProjectServiceAvailable &&
+                !preview.Model.CanCreateProject &&
+                siteOnlyClient.LaunchKeys.Count == 0,
+                "read-only preview cannot create projects or civilian missions");
+        }
+
         // The display must never display a completed solo project even when
         // its points exceed the goal. This invariant is validated by Client.
         var project=new RemoteFloralAllianceProjectSnapshot
@@ -121,6 +149,8 @@ internal static class PollinationPanelSmoke
         public int ReadCalls{get;private set;}
         public int ProjectReads{get;private set;}
         public bool FailNextLaunch{get;set;}
+        public bool CivilServicesDisabled{get;set;}
+        public bool ProjectServiceDisabled{get;set;}
         public List<string> LaunchKeys{get;}=new();
         private RemoteCivilExpeditionSnapshot expedition=new()
         {
@@ -149,7 +179,12 @@ internal static class PollinationPanelSmoke
         };
         public Task<RemoteCivilPopulationSnapshot> ReadPopulationAsync(Guid id,CancellationToken ct=default)
         {
-            ReadCalls++;return Task.FromResult(population);
+            ReadCalls++;
+            if(CivilServicesDisabled)
+                throw new PollinationClientException(
+                    PollinationClientError.ServerRejected,
+                    "game.civil_population_disabled");
+            return Task.FromResult(population);
         }
         public Task<RemoteCivilCohortResult> StartCohortAsync(Guid hive,long revision,string key,CancellationToken ct=default)
             => throw new NotImplementedException();
@@ -161,7 +196,12 @@ internal static class PollinationPanelSmoke
             => Task.FromResult(sites.Find(x=>x.SiteId==id));
         public Task<RemoteCivilExpeditionSnapshot> ReadExpeditionAsync(Guid hive,CancellationToken ct=default)
         {
-            ReadCalls++;return Task.FromResult(expedition);
+            ReadCalls++;
+            if(CivilServicesDisabled)
+                throw new PollinationClientException(
+                    PollinationClientError.ServerRejected,
+                    "game.civil_expeditions_disabled");
+            return Task.FromResult(expedition);
         }
         public Task<RemoteCivilExpeditionResult> StartExpeditionAsync(Guid hive,
             string site,long workers,long hiveRevision,long siteRevision,
@@ -199,6 +239,10 @@ internal static class PollinationPanelSmoke
             Guid allianceId,CancellationToken ct=default)
         {
             ProjectReads++;
+            if(ProjectServiceDisabled)
+                throw new PollinationClientException(
+                    PollinationClientError.ServerRejected,
+                    "game.floral_alliance_projects_disabled");
             return Task.FromResult<IReadOnlyList<RemoteFloralAllianceProjectSnapshot>>(
                 Array.Empty<RemoteFloralAllianceProjectSnapshot>());
         }

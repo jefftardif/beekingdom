@@ -86,6 +86,16 @@ namespace BeeKingdom.Playground
                       "No floral field is currently available."),14f,Paper);
                 return cursor+168f;
             }
+            if(m.FloralSitesOnly)
+            {
+                RectTransform preview = CardAt(cursor,118f,
+                    T("APERÇU DES CHAMPS","FIELDS PREVIEW"),"nursery");
+                Label(preview,new Rect(18f,73f,width-36f,43f),
+                    T("Les prairies sont réelles. Les essaims et expéditions ouvriront plus tard.",
+                      "These fields are real. Swarms and expeditions will open later."),
+                    14f,Paper);
+                cursor+=138f;
+            }
             RectTransform overview=CardAt(cursor,138f,
                 T("ÉCOSYSTÈME PARTAGÉ","SHARED ECOSYSTEM"),"nursery");
             Label(overview,new Rect(18f,78f,width-36f,48f),
@@ -173,10 +183,12 @@ namespace BeeKingdom.Playground
             RectTransform nursery=CardAt(cursor,151f,
                 T("NOUVELLE COHORTE","NEW BROOD COHORT"),"nursery");
             LiveLabel(nursery,new Rect(18f,75f,width-36f,28f),
-                ()=>p?.Active==null
-                    ? T("Nurserie disponible","Nursery available")
-                    : T("Éclosion prévue : ","Expected emergence: ")
-                        +p.Active.ReadyAtUtc.ToLocalTime().ToString("g"),
+                ()=>p==null
+                    ? T("Formation des butineuses à venir","Forager training coming soon")
+                    : p.Active==null
+                        ? T("Nurserie disponible","Nursery available")
+                        : T("Éclosion prévue : ","Expected emergence: ")
+                            +p.Active.ReadyAtUtc.ToLocalTime().ToString("g"),
                 14f,Paper);
             ButtonAt(nursery,new Rect(18f,111f,
                 Mathf.Min(260f,width-36f),38f),
@@ -191,8 +203,8 @@ namespace BeeKingdom.Playground
             if(e == null)
             {
                 Label(voyage,new Rect(18f,76f,width-36f,61f),
-                    T("Les données du royaume se préparent.",
-                      "Kingdom data is being prepared."),14f,Paper);
+                    T("Les expéditions ouvriront avec les essaims civils.",
+                      "Expeditions will open with civilian swarms."),14f,Paper);
                 return cursor+280f;
             }
             if(e.Active!=null)
@@ -270,7 +282,18 @@ namespace BeeKingdom.Playground
                 return cursor+171f;
             }
             var projectList=m.Projects;
-            if(projectList==null || projectList.Count==0)
+            if(!m.ProjectServiceAvailable)
+            {
+                RectTransform preview=CardAt(cursor,151f,
+                    T("PROJETS FLORAUX À VENIR","FLORAL PROJECTS COMING SOON"),
+                    "nursery");
+                Label(preview,new Rect(18f,77f,width-36f,60f),
+                    T("Les missions collectives ouvriront avec les alliances.",
+                      "Cooperative missions will open with alliances."),
+                    14f,Paper);
+                cursor+=171f;
+            }
+            else if(projectList==null || projectList.Count==0)
             {
                 RectTransform empty=CardAt(cursor,157f,
                     T("PROJETS FLORAUX","FLORAL PROJECTS"),"nursery");

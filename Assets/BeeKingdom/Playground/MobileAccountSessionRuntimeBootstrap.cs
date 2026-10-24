@@ -199,6 +199,7 @@ namespace BeeKingdom.Playground
             // Optional, Editor-only local staging override. The serialized
             // production resource is never altered and builds ignore the file.
             configuration = ResolveLocalAcademyStagingConfig(configuration);
+            configuration = ResolveEditorPollinationReadOnlyConfig(configuration);
 #endif
             if (configuration == null || !configuration.OfficialAccountsEnabled ||
                 string.IsNullOrWhiteSpace(configuration.BaseUrl))
