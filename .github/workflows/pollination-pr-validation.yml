@@ -14,8 +14,8 @@ permissions:
 
 jobs:
   server-regression:
-    runs-on: windows-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -41,3 +41,32 @@ jobs:
             Server/tests/**/TestResults/*.trx
           if-no-files-found: ignore
           retention-days: 7
+  api-readonly-candidate:
+    # Compilation independently of slower integration tests. Contains only
+    # two code DLLs and PDBs, no production configuration or secrets.
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build code-only deployment candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish Server/src/BeeKingdom.Server/BeeKingdom.Server.csproj -c Release -o candidate-publish --nologo
+          mkdir -p deploy-candidate
+          for file in BeeKingdom.Server.dll BeeKingdom.HiveOperations.dll BeeKingdom.Server.pdb BeeKingdom.HiveOperations.pdb; do
+            test -s "candidate-publish/$file"
+            cp "candidate-publish/$file" "deploy-candidate/$file"
+          done
+          (cd deploy-candidate && sha256sum * > SHA256SUMS.txt)
+          test "$(find deploy-candidate -maxdepth 1 -type f | wc -l)" -eq 5
+      - name: Package SHA-verified code artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bk-civil-readonly-server-candidate
+          path: deploy-candidate/
+          if-no-files-found: error
+          retention-days: 2

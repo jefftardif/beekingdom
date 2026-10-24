@@ -1433,6 +1433,8 @@ app.MapPost("/game/v1/hives/{hiveId}/civil-population/cohorts/start", async (
 {
     if (!options.Value.Enabled)
         return GameError(503, "game.civil_population_disabled", "game.error.unavailable");
+    if (options.Value.ReadOnlyPilot)
+        return GameError(503, "game.civil_population_readonly", "game.error.unavailable");
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
     if (!auth.IsValid)
         return GameError(401, "game.session_required", "game.error.session_required");
