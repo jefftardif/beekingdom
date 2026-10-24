@@ -16,10 +16,18 @@ namespace BeeKingdom.Playground
         public const string HiveMapScenePath = "Assets/Experiments/Environment2D5D/Scenes/Environment2D5D_HiveMap_Test.unity";
         public const string Wave5PremiumMapModeKey = "BeeKingdom.Dev.WorldMapMode.Wave5Premium25x25";
 
+        // Private QA tooling is opt-in, including inside the Unity Editor.
+        // A Development Build does not grant permission to display debug
+        // controls to players who are testing an alpha APK.
+        public const string DeveloperMenuPreferenceKey =
+            "BeeKingdom.DeveloperControlsVisible";
+
         public static bool IsDevelopmentMenuVisible()
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            return true;
+#if UNITY_EDITOR
+            return UnityEditor.EditorPrefs.GetBool(DeveloperMenuPreferenceKey, false);
+#elif DEVELOPMENT_BUILD
+            return UnityEngine.PlayerPrefs.GetInt(DeveloperMenuPreferenceKey, 0) == 1;
 #else
             return false;
 #endif
@@ -94,7 +102,7 @@ namespace BeeKingdom.Playground
             return new[]
             {
                 "dev_splash_scene_selector:true",
-                "dev_splash_visible_only_editor_or_development:true",
+                "dev_splash_visible_only_explicit_opt_in:true",
                 "dev_splash_worldmap_scene_path:" + WorldMapScenePath,
                 "dev_splash_worldmap_wave6_exact_crop:true",
                 "dev_splash_worldmap_legacy_scene_path:" + LegacyWorldMapScenePath,
