@@ -50,10 +50,10 @@ namespace BeeKingdom.Playground
                (m.State==PollinationScreenState.Unavailable && m.Population==null))
             {
                 RectTransform message=CardAt(cursor,158f,
-                    T("UN MONDE EN ÉVEIL","A WORLD AWAKENING"),"nursery");
+                    T("LE ROYAUME FLEURIT","THE KINGDOM BLOOMS"),"nursery");
                 Label(message,new Rect(18f,78f,cardWidth-36f,57f),
-                    T("La pollinisation se prépare. Votre ruche et vos ressources restent protégées.",
-                        "Pollination is being prepared. Your hive and resources remain protected."),
+                    T("Les prairies du royaume s'éveillent. Revenez découvrir les champs et les butineuses.",
+                        "The kingdom's meadows are waking. Return to discover fields and foragers."),
                     14f,Paper);
                 cursor+=178f;
             }
@@ -86,11 +86,21 @@ namespace BeeKingdom.Playground
                       "No floral field is currently available."),14f,Paper);
                 return cursor+168f;
             }
+            if(m.FloralSitesOnly)
+            {
+                RectTransform preview = CardAt(cursor,118f,
+                    T("PRAIRIES DU ROYAUME","KINGDOM MEADOWS"),"nursery");
+                Label(preview,new Rect(18f,73f,width-36f,43f),
+                    T("Découvrez les champs et leur fertilité. Les départs de butineuses ouvriront bientôt.",
+                      "Explore the fields and their fertility. Forager expeditions will open soon."),
+                    14f,Paper);
+                cursor+=138f;
+            }
             RectTransform overview=CardAt(cursor,138f,
                 T("ÉCOSYSTÈME PARTAGÉ","SHARED ECOSYSTEM"),"nursery");
             Label(overview,new Rect(18f,78f,width-36f,48f),
-                T("Chaque champ possède une réserve commune à tous les joueurs. Les gains sont validés par le serveur.",
-                  "Every field has one shared reserve. All rewards are validated by the server."),
+                T("La réserve de pollen de chaque champ est partagée par toutes les ruches du royaume.",
+                  "Each field's pollen reserves are shared by all hives in the kingdom."),
                 14f,Muted);
             cursor+=158f;
             foreach(RemoteFloralSite site in m.Sites)
@@ -152,37 +162,67 @@ namespace BeeKingdom.Playground
             return cursor;
         }
 
+        private string CivilCount(long value) =>
+            value.ToString("N0",System.Globalization.CultureInfo.GetCultureInfo(
+                French?"fr-CA":"en-US"));
+
         private float BuildSwarmCards(float cursor,PollinationScreenModel m)
         {
             float width=Mathf.Max(160f,viewportWidth-36f);
             RemoteCivilPopulationSnapshot p=m.Population;
             RemoteCivilExpeditionSnapshot e=m.Expedition;
-            RectTransform roster=CardAt(cursor,183f,
+            bool readOnly=m.FloralSitesOnly;
+            RectTransform roster=CardAt(cursor,readOnly?216f:183f,
                 T("BUTINEUSES CIVILES","CIVILIAN FORAGERS"),"nursery");
             LiveLabel(roster,new Rect(18f,78f,width-36f,32f),
                 ()=>T("Disponibles : ","Available: ")
-                    +(p?.AvailableWorkers.ToString()??"--"),19f,Gold,true);
+                    +(p==null?"--":CivilCount(p.AvailableWorkers)),19f,Gold,true);
             LiveLabel(roster,new Rect(18f,111f,width-36f,26f),
                 ()=>T("En mission : ","Assigned: ")
-                    +(p?.AssignedWorkers.ToString()??"--"),15f,Paper);
+                    +(p==null?"--":CivilCount(p.AssignedWorkers)),15f,Paper);
             LiveLabel(roster,new Rect(18f,139f,width-36f,27f),
-                ()=>T("Capacité : ","Capacity: ")
-                    +(p?.Capacity.ToString()??"--"),14f,Muted);
-            cursor+=203f;
+                ()=>T(readOnly?"Capacité maximale : ":"Capacité : ",
+                       readOnly?"Maximum capacity: ":"Capacity: ")
+                    +(p==null?"--":CivilCount(p.Capacity)),14f,Muted);
+            if(readOnly)
+                Label(roster,new Rect(18f,170f,width-36f,28f),
+                    T("La nurserie prépare l'arrivée de vos futures butineuses.",
+                      "The nursery prepares for your future foragers."),
+                    13f,Muted);
+            cursor+=readOnly?236f:203f;
 
             RectTransform nursery=CardAt(cursor,151f,
-                T("NOUVELLE COHORTE","NEW BROOD COHORT"),"nursery");
-            LiveLabel(nursery,new Rect(18f,75f,width-36f,28f),
-                ()=>p?.Active==null
-                    ? T("Nurserie disponible","Nursery available")
-                    : T("Éclosion prévue : ","Expected emergence: ")
-                        +p.Active.ReadyAtUtc.ToLocalTime().ToString("g"),
-                14f,Paper);
-            ButtonAt(nursery,new Rect(18f,111f,
-                Mathf.Min(260f,width-36f),38f),
-                T("Former une cohorte","Start a cohort"),true,
-                ()=>controller.StartCivilCohort(),()=>m.CanStartCohort &&
-                    !controller.IsBusy);
+                readOnly
+                    ? T("FUTURES BUTINEUSES","FUTURE FORAGERS")
+                    : T("NOUVELLE COHORTE","NEW BROOD COHORT"),"nursery");
+            if(readOnly)
+            {
+                Label(nursery,new Rect(18f,76f,width-36f,30f),
+                    T("BIENTÔT DISPONIBLE","COMING SOON"),
+                    15f,Gold,true);
+                Label(nursery,new Rect(18f,109f,width-36f,39f),
+                    T("Les premières cohortes pourront bientôt éclore dans votre nurserie.",
+                      "Your first cohorts will soon be able to emerge from the nursery."),
+                    14f,Muted);
+                // Do not draw a dead pay button. The server also forbids POST.
+            }
+            else
+            {
+                LiveLabel(nursery,new Rect(18f,75f,width-36f,28f),
+                    ()=>p==null
+                        ? T("Formation des butineuses à venir","Forager training coming soon")
+                        : p.Active==null
+                            ? T(p.CanStart?"Nurserie disponible":"Formation indisponible",
+                                p.CanStart?"Nursery available":"Training unavailable")
+                            : T("Éclosion prévue : ","Expected emergence: ")
+                                +p.Active.ReadyAtUtc.ToLocalTime().ToString("g"),
+                    14f,Paper);
+                ButtonAt(nursery,new Rect(18f,111f,
+                    Mathf.Min(260f,width-36f),38f),
+                    T("Former une cohorte","Start a cohort"),true,
+                    ()=>controller.StartCivilCohort(),()=>m.CanStartCohort &&
+                        !controller.IsBusy);
+            }
             cursor+=171f;
 
             RectTransform voyage=CardAt(cursor,e?.Active==null?260f:240f,
@@ -191,8 +231,8 @@ namespace BeeKingdom.Playground
             if(e == null)
             {
                 Label(voyage,new Rect(18f,76f,width-36f,61f),
-                    T("Les données du royaume se préparent.",
-                      "Kingdom data is being prepared."),14f,Paper);
+                    T("Les expéditions ouvriront avec les essaims civils.",
+                      "Expeditions will open with civilian swarms."),14f,Paper);
                 return cursor+280f;
             }
             if(e.Active!=null)
@@ -259,18 +299,53 @@ namespace BeeKingdom.Playground
         private float BuildAllianceCards(float cursor,PollinationScreenModel m)
         {
             float width=Mathf.Max(160f,viewportWidth-36f);
+            AllianceCenterScreenModel membership =
+                MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap.Model;
             if(m.AllianceId==Guid.Empty)
             {
+                bool confirmedNone =
+                    membership?.State == AllianceCenterScreenState.NoAlliance;
+                bool interrupted =
+                    membership?.State == AllianceCenterScreenState.Error ||
+                    membership?.State == AllianceCenterScreenState.NotConfigured;
                 RectTransform empty=CardAt(cursor,151f,
-                    T("L'ESSAIM FAIT LA FORCE","STRENGTH IN THE SWARM"),"nursery");
+                    confirmedNone
+                        ? T("L'ESSAIM FAIT LA FORCE","STRENGTH IN THE SWARM")
+                        : T("VOTRE ALLIANCE","YOUR ALLIANCE"),"nursery");
                 Label(empty,new Rect(18f,77f,width-36f,67f),
-                    T("Rejoignez une alliance pour participer aux projets floraux collectifs.",
-                      "Join an alliance to participate in collective floral projects."),
+                    confirmedNone
+                        ? T("Rejoignez une alliance pour participer aux projets floraux collectifs.",
+                            "Join an alliance to take part in collective floral projects.")
+                        : interrupted
+                            ? T("Impossible de consulter votre alliance pour le moment. Réessayez dans un instant.",
+                                "Your alliance information is temporarily unavailable. Please try again shortly.")
+                            : T("Nous retrouvons votre alliance et ses membres…",
+                                "Connecting to your alliance and its members…"),
                     15f,Paper);
                 return cursor+171f;
             }
+            AllianceOverviewModel overview = membership?.Overview;
+            string label = overview != null && overview.AllianceId == m.AllianceId
+                ? (string.IsNullOrWhiteSpace(overview.Tag)
+                    ? overview.Name : "[" + overview.Tag + "] " + overview.Name)
+                : T("Alliance reconnue","Alliance recognized");
+            RectTransform identity=CardAt(cursor,139f,
+                T("VOTRE ALLIANCE","YOUR ALLIANCE"),"alliance");
+            Label(identity,new Rect(18f,78f,width-36f,40f),label,17f,Gold,true);
+            cursor+=159f;
             var projectList=m.Projects;
-            if(projectList==null || projectList.Count==0)
+            if(!m.ProjectServiceAvailable)
+            {
+                RectTransform preview=CardAt(cursor,151f,
+                    T("PROJETS FLORAUX À VENIR","FLORAL PROJECTS COMING SOON"),
+                    "nursery");
+                Label(preview,new Rect(18f,77f,width-36f,60f),
+                    T("Votre alliance est prête. Les projets de pollinisation collectifs ouvriront bientôt.",
+                      "Your alliance is ready. Cooperative pollination projects will open soon."),
+                    14f,Paper);
+                cursor+=171f;
+            }
+            else if(projectList==null || projectList.Count==0)
             {
                 RectTransform empty=CardAt(cursor,157f,
                     T("PROJETS FLORAUX","FLORAL PROJECTS"),"nursery");
@@ -309,17 +384,29 @@ namespace BeeKingdom.Playground
                     cursor+=248f;
                 }
             }
+            bool readOnlyAlliance = !m.ProjectServiceAvailable ||
+                m.Expedition == null;
             RectTransform action=CardAt(cursor,172f,
                 T("COOPÉRATION","COOPERATION"),"nursery");
             Label(action,new Rect(18f,77f,width-36f,37f),
                 T("La réussite exige plusieurs membres ayant réellement participé.",
                   "Completion requires multiple genuinely contributing members."),
                 14f,Paper);
-            ButtonAt(action,new Rect(18f,121f,
-                Mathf.Min(290f,width-36f),42f),
-                T("Ouvrir un projet floral","Create a floral project"),
-                true,()=>controller.CreateSelectedAllianceProject(),
-                ()=>m.CanCreateProject && !controller.IsBusy);
+            if(readOnlyAlliance)
+            {
+                Label(action,new Rect(18f,120f,width-36f,43f),
+                    T("Les projets floraux seront bientôt accessibles à votre alliance.",
+                      "Floral projects will soon be available to your alliance."),
+                    14f,Muted);
+            }
+            else
+            {
+                ButtonAt(action,new Rect(18f,121f,
+                    Mathf.Min(290f,width-36f),42f),
+                    T("Ouvrir un projet floral","Create a floral project"),
+                    true,()=>controller.CreateSelectedAllianceProject(),
+                    ()=>m.CanCreateProject && !controller.IsBusy);
+            }
             cursor+=192f;
             return cursor;
         }

@@ -46,6 +46,10 @@ namespace BeeKingdom.Playground
         private RemoteCivilPopulationSnapshot previousPopulation;
         private RemoteCivilExpeditionSnapshot previousExpedition;
         private PollinationScreenState previousState;
+        private Guid previousAllianceId;
+        private bool previousMayManage;
+        private bool previousProjectAvailable;
+        private AllianceCenterScreenState previousAllianceLookupState;
         private readonly List<LiveText> liveLabels = new List<LiveText>();
         private readonly List<LiveButton> liveButtons = new List<LiveButton>();
 
@@ -88,6 +92,10 @@ namespace BeeKingdom.Playground
             open = true;
             activeTab = 0;
             previousSiteId = string.Empty;
+            previousAllianceId = Guid.Empty;
+            previousMayManage = false;
+            previousProjectAvailable = false;
+            previousAllianceLookupState = AllianceCenterScreenState.NotConfigured;
             nextRefreshAt = 0f;
             BeeLocalization.LocaleChanged -= OnRoyalLocaleChanged;
             BeeLocalization.LocaleChanged += OnRoyalLocaleChanged;
@@ -160,7 +168,11 @@ namespace BeeKingdom.Playground
                 || !ReferenceEquals(previousPopulation,m.Population)
                 || !ReferenceEquals(previousExpedition,m.Expedition)
                 || previousSiteId != m.SelectedSiteId
-                || previousState != m.State;
+                || previousState != m.State
+                || previousAllianceId != m.AllianceId
+                || previousMayManage != m.MayManageAllianceProjects
+                || previousProjectAvailable != m.ProjectServiceAvailable
+                || previousAllianceLookupState != CurrentAllianceLookupState();
         }
 
         private void CaptureReferences()
@@ -172,6 +184,17 @@ namespace BeeKingdom.Playground
             previousExpedition = m.Expedition;
             previousSiteId = m.SelectedSiteId;
             previousState = m.State;
+            previousAllianceId = m.AllianceId;
+            previousMayManage = m.MayManageAllianceProjects;
+            previousProjectAvailable = m.ProjectServiceAvailable;
+            previousAllianceLookupState = CurrentAllianceLookupState();
+        }
+
+        private static AllianceCenterScreenState CurrentAllianceLookupState()
+        {
+            IAllianceCenterPanelController alliance =
+                MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap;
+            return alliance?.Model?.State ?? AllianceCenterScreenState.NotConfigured;
         }
 
         private void EnsureEventSystem()

@@ -105,6 +105,59 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
+        public void PollinationOnlyShowsJoinPromptAfterAuthoritativeNoAlliance()
+        {
+            var host = new GameObject("Pollination Membership QA");
+            try
+            {
+                var window = host.AddComponent<PollinationPremiumWindow>();
+                var fake = new FakeController();
+                typeof(PollinationScreenModel).GetProperty(nameof(PollinationScreenModel.State)).GetSetMethod(true).Invoke(fake.Model, new object[] { PollinationScreenState.Ready });
+                window.Show(fake, () => { });
+                FindButton(host, "Alliance").onClick.Invoke();
+                string text = string.Join(" ", host.GetComponentsInChildren<TextMeshProUGUI>(true)
+                    .Select(label => label.text));
+                StringAssert.DoesNotContain("Rejoignez une alliance", text);
+                StringAssert.DoesNotContain("Join an alliance", text);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(host); }
+        }
+
+        [Test]
+        public void AllianceMembershipProjectionNeverTreatsLoadingOrErrorAsNoAlliance()
+        {
+            Guid id = Guid.NewGuid();
+            var entity = new RemoteAllianceEntity
+            {
+                AllianceId = id, Name = "QA Collective", Tag = "QA",
+                LeaderPlayerId = Guid.NewGuid(),
+                JoinMode = RemoteAllianceJoinMode.Open
+            };
+            var member = new RemoteAllianceMembership
+            {
+                AllianceId = id, PlayerId = entity.LeaderPlayerId,
+                Role = RemoteAllianceRole.Leader
+            };
+            AllianceCenterScreenModel confirmed = AllianceCenterPresentation.Ready(
+                entity, member, Array.Empty<RemoteAllianceMemberSummary>(), null, null);
+            Assert.That(PollinationWorldMapOverlay.ResolveAllianceMembershipForProof(
+                confirmed, out Guid actual, out bool canManage), Is.True);
+            Assert.That(actual, Is.EqualTo(id));
+            Assert.That(canManage, Is.True);
+            Assert.That(PollinationWorldMapOverlay.ResolveAllianceMembershipForProof(
+                AllianceCenterPresentation.Loading(confirmed), out _, out _),
+                Is.False);
+            Assert.That(PollinationWorldMapOverlay.ResolveAllianceMembershipForProof(
+                AllianceCenterPresentation.Error(confirmed, "timeout"), out _, out _),
+                Is.False);
+            Assert.That(PollinationWorldMapOverlay.ResolveAllianceMembershipForProof(
+                AllianceCenterPresentation.NoAlliance(null, null),
+                out Guid empty, out bool mayManage), Is.True);
+            Assert.That(empty, Is.EqualTo(Guid.Empty));
+            Assert.That(mayManage, Is.False);
+        }
+
+        [Test]
         public void ActivitiesV4SafeAreaGeometryIsSharedWithoutChangingExistingWindow()
         {
             foreach(Vector2 size in new[]

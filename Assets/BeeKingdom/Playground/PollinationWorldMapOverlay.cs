@@ -38,6 +38,7 @@ namespace BeeKingdom.Playground
         private PollinationPremiumWindow premiumWindow;
         private bool opened;
         private bool firstReadRequested;
+        private float nextAllianceReadAt;
         private IPollinationPanelController boundController;
         private string requestedSiteId = string.Empty;
         private int tab;
@@ -83,9 +84,13 @@ namespace BeeKingdom.Playground
             requestedSiteId = siteId ?? string.Empty;
             boundController = MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap;
             firstReadRequested = true;
-            MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap
-                .RefreshQuietly();
-            MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap.Refresh();
+            // Revalidate player-scoped membership independently of the floral
+            // catalogue. The signed-in user's Alliance endpoint is authoritative.
+            var alliance = MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap;
+            if (alliance.IsConfigured && !alliance.IsBusy)
+                alliance.RefreshQuietly();
+            nextAllianceReadAt = Time.unscaledTime + 25f;
+            boundController.Refresh();
             premiumWindow?.Show(
                 MobileAccountSessionRuntimeBootstrap.PollinationControllerForWorldMap,
                 Close);
@@ -136,9 +141,48 @@ namespace BeeKingdom.Playground
                 requestedSiteId = string.Empty;
             }
             if (!opened) return;
+            SynchronizeCurrentAlliance(controller);
             if (!MobileAccountSessionRuntimeBootstrap.PollinationFeatureEnabledForWorldMap ||
                 Input.GetKeyDown(KeyCode.Escape))
                 Close();
+        }
+
+        // One shared membership source for the premium Canvas and its fallback.
+        // In particular, an initial Loading/Error must NEVER be interpreted as
+        // "not a member". A verified NoAlliance is the only reason to clear it.
+        public static bool ResolveAllianceMembershipForProof(
+            AllianceCenterScreenModel snapshot, out Guid allianceId,
+            out bool mayManage)
+        {
+            allianceId = Guid.Empty;
+            mayManage = false;
+            if (snapshot == null) return false;
+            if (snapshot.State == AllianceCenterScreenState.NoAlliance) return true;
+            if (snapshot.State != AllianceCenterScreenState.Ready ||
+                snapshot.Overview == null ||
+                snapshot.Overview.AllianceId == Guid.Empty) return false;
+            allianceId = snapshot.Overview.AllianceId;
+            mayManage = snapshot.Overview.IsOfficerOrLeader;
+            return true;
+        }
+
+        private void SynchronizeCurrentAlliance(IPollinationPanelController controller)
+        {
+            if (controller == null || !controller.IsConfigured) return;
+            IAllianceCenterPanelController alliance =
+                MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap;
+            if (ResolveAllianceMembershipForProof(alliance.Model,
+                out Guid allianceId, out bool mayManage))
+                controller.ConfigureAlliance(allianceId, mayManage);
+
+            // Reconfirm membership while this panel is open, but never poll
+            // every frame and never use an unverified response to unlock actions.
+            if (Time.unscaledTime >= nextAllianceReadAt &&
+                alliance.IsConfigured && !alliance.IsBusy)
+            {
+                nextAllianceReadAt = Time.unscaledTime + 25f;
+                alliance.RefreshQuietly();
+            }
         }
 
         private void Close()
@@ -216,9 +260,14 @@ namespace BeeKingdom.Playground
                 return;
             }
             GUI.depth = -2000;
-            // P7 uGUI canvas owns the modal; only the entry remains IMGUI.
-            // This fallback is retained solely if premium canvas fails to open.
+            // The legacy IMGUI fallback contains development-only copy.
+            // Never expose it to a player when the premium Canvas cannot open.
             if (opened && premiumWindow != null && premiumWindow.IsOpen) return;
+            if (opened)
+            {
+                Close();
+                return;
+            }
             if (!opened)
             {
                 Rect entry = EntryButtonRect();
@@ -238,11 +287,6 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            AllianceCenterScreenModel alliance =
-                MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap.Model;
-            Guid allianceId = alliance?.Overview?.AllianceId ?? Guid.Empty;
-            bool canManage = alliance?.Overview?.IsOfficerOrLeader == true;
-            controller.ConfigureAlliance(allianceId,canManage);
             PollinationScreenModel model = controller.Model;
 
             // Full viewport glass layer, with input captured before base map

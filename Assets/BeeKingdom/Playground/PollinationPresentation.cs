@@ -30,6 +30,10 @@ namespace BeeKingdom.Playground
         public long DraftWorkers { get; internal set; } = 1;
         public Guid AllianceId { get; internal set; }
         public bool MayManageAllianceProjects { get; internal set; }
+        public bool ProjectServiceAvailable { get; internal set; }
+        public bool FloralSitesOnly =>
+            Sites != null && Sites.Count > 0 &&
+            (Population == null || Expedition == null);
         public string InternalErrorCode { get; internal set; } = string.Empty;
 
         public RemoteFloralSite SelectedSite =>
@@ -48,6 +52,8 @@ namespace BeeKingdom.Playground
             SelectedSite.PollenRemaining > 0;
         public bool CanCreateProject =>
             State == PollinationScreenState.Ready &&
+            Population != null && Expedition != null &&
+            ProjectServiceAvailable &&
             MayManageAllianceProjects && AllianceId != Guid.Empty &&
             SelectedSite != null &&
             Projects != null && !Projects.Any(x =>
@@ -130,6 +136,7 @@ namespace BeeKingdom.Playground
             Model.Population = null;
             Model.Expedition = null;
             Model.AllianceId = Guid.Empty;
+            Model.ProjectServiceAvailable = false;
             Model.State = PollinationScreenState.NotConfigured;
         }
 
@@ -169,7 +176,10 @@ namespace BeeKingdom.Playground
             if (Model.AllianceId == allianceId &&
                 Model.MayManageAllianceProjects == mayManage) return;
             if (Model.AllianceId != allianceId)
+            {
                 Model.Projects = Array.Empty<RemoteFloralAllianceProjectSnapshot>();
+                Model.ProjectServiceAvailable = false;
+            }
             Model.AllianceId = allianceId;
             Model.MayManageAllianceProjects = mayManage && allianceId != Guid.Empty;
             // A changed membership must never leave stale project data visible.
@@ -205,22 +215,46 @@ namespace BeeKingdom.Playground
             {
                 IReadOnlyList<RemoteFloralSite> sites =
                     await client.ReadSitesAsync(lifetime.Token);
-                RemoteCivilPopulationSnapshot population =
-                    await client.ReadPopulationAsync(hiveId, lifetime.Token)
-                        ;
-                RemoteCivilExpeditionSnapshot expedition =
-                    await client.ReadExpeditionAsync(hiveId, lifetime.Token)
-                        ;
+                // During a phased production launch the public floral
+                // catalogue can be available while paid civilian operations
+                // are still OFF. Treat only the explicit 503 feature gates
+                // as a read-only preview; never swallow auth/network faults.
+                RemoteCivilPopulationSnapshot population = null;
+                RemoteCivilExpeditionSnapshot expedition = null;
+                try
+                {
+                    population = await client.ReadPopulationAsync(
+                        hiveId, lifetime.Token);
+                }
+                catch (PollinationClientException ex) when (
+                    ex.Error == PollinationClientError.ServerRejected &&
+                    ex.SafeCode == "game.civil_population_disabled")
+                {
+                    // No civil population is invented or cached.
+                }
+                try
+                {
+                    expedition = await client.ReadExpeditionAsync(
+                        hiveId, lifetime.Token);
+                }
+                catch (PollinationClientException ex) when (
+                    ex.Error == PollinationClientError.ServerRejected &&
+                    ex.SafeCode == "game.civil_expeditions_disabled")
+                {
+                    // No mission, reward or worker state is invented.
+                }
                 if (disposed) return;
                 IReadOnlyList<RemoteFloralAllianceProjectSnapshot> projects =
                     Array.Empty<RemoteFloralAllianceProjectSnapshot>();
                 Guid allianceAtRequest = Model.AllianceId;
+                bool projectServiceAvailable = false;
                 if (allianceAtRequest != Guid.Empty)
                 {
                     try
                     {
                         projects = await client.ReadProjectsAsync(
                             allianceAtRequest, lifetime.Token);
+                        projectServiceAvailable = true;
                     }
                     catch (OperationCanceledException) { throw; }
                     catch (PollinationClientException)
@@ -235,15 +269,18 @@ namespace BeeKingdom.Playground
                 Model.Expedition = expedition;
                 Model.Projects = allianceAtRequest == Model.AllianceId
                     ? projects : Array.Empty<RemoteFloralAllianceProjectSnapshot>();
+                Model.ProjectServiceAvailable =
+                    allianceAtRequest == Model.AllianceId && projectServiceAvailable;
                 if (Model.SelectedSite == null)
                     Model.SelectedSiteId = sites.Count > 0 ? sites[0].SiteId : string.Empty;
                 if (Model.DraftWorkers < 1) Model.DraftWorkers = 1;
-                Model.DraftWorkers = Math.Min(
-                    Math.Min(population.AvailableWorkers, expedition.AvailableWorkers),
-                    Model.DraftWorkers);
+                Model.DraftWorkers = population != null && expedition != null
+                    ? Math.Min(Math.Min(population.AvailableWorkers,
+                        expedition.AvailableWorkers), Model.DraftWorkers)
+                    : 0;
                 Model.InternalErrorCode = string.Empty;
                 Model.State = PollinationScreenState.Ready;
-                if (expedition.Active != null &&
+                if (expedition?.Active != null &&
                     !string.IsNullOrEmpty(pendingFingerprint))
                     ClearPending();
             }
