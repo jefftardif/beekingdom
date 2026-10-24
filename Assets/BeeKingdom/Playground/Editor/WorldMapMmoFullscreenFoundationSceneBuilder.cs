@@ -136,7 +136,7 @@ namespace BeeKingdom.Playground.Editor
 
             string[] splash = HiveViewProductUiPresenter.SplashAuthDemoForProof();
             Require(splash, "dev_splash_scene_selector:true");
-            Require(splash, "dev_splash_visible_only_editor_or_development:true");
+            Require(splash, "dev_splash_visible_only_explicit_opt_in:true");
             Require(splash, "dev_splash_worldmap_scene_path:Assets/Scenes/WorldMapWave6Wave5Method12288Preview.unity");
             Require(splash, "dev_splash_worldmap_wave6_exact_crop:true");
             Require(splash, "dev_splash_scene_config_centralized:true");
