@@ -306,8 +306,16 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            // IMGUI world-map drawing can cover the ScreenSpaceOverlay royal
+            // Canvas, even when GUI.enabled is false. Suppress the map render
+            // while the dedicated pollination modal is open; preserve the
+            // server-authoritative courier notification tick.
+            if (PollinationWorldMapOverlay.IsModalOpen)
+            {
+                HiveViewProductUiPresenter.TickCourierAlertsForExternalHost();
+                return;
+            }
             bool previousGuiEnabled = GUI.enabled;
-            if (PollinationWorldMapOverlay.IsModalOpen) GUI.enabled = false;
             EnsurePixel();
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
