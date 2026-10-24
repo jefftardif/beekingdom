@@ -166,14 +166,26 @@ namespace BeeKingdom.Playground
             return true;
         }
 
+        // Uses only confirmed membership from the authenticated alliance API.
+        // Loading and connection failures never revoke or fabricate membership.
+        public static bool ApplyVerifiedAllianceMembershipForProof(
+            IPollinationPanelController controller,
+            AllianceCenterScreenModel membership)
+        {
+            if (controller == null || !controller.IsConfigured ||
+                !ResolveAllianceMembershipForProof(membership,
+                    out Guid allianceId, out bool mayManage))
+                return false;
+            controller.ConfigureAlliance(allianceId, mayManage);
+            return true;
+        }
+
         private void SynchronizeCurrentAlliance(IPollinationPanelController controller)
         {
             if (controller == null || !controller.IsConfigured) return;
             IAllianceCenterPanelController alliance =
                 MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap;
-            if (ResolveAllianceMembershipForProof(alliance.Model,
-                out Guid allianceId, out bool mayManage))
-                controller.ConfigureAlliance(allianceId, mayManage);
+            ApplyVerifiedAllianceMembershipForProof(controller, alliance.Model);
 
             // Reconfirm membership while this panel is open, but never poll
             // every frame and never use an unverified response to unlock actions.

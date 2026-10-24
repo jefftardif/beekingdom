@@ -16,10 +16,18 @@ namespace BeeKingdom.Playground.Editor
             public bool IsConfigured {get;set;} = true;
             public bool IsBusy {get;set;}
             public int RefreshCalls {get; private set;}
+            public int AllianceConfigurationCalls {get; private set;}
+            public Guid LastAllianceId {get; private set;}
+            public bool LastCanManage {get; private set;}
             public void Refresh() => RefreshCalls++;
             public void SelectSite(string siteId) {}
             public void AdjustWorkers(long delta) {}
-            public void ConfigureAlliance(Guid id,bool mayManage) {}
+            public void ConfigureAlliance(Guid id,bool mayManage)
+            {
+                AllianceConfigurationCalls++;
+                LastAllianceId = id;
+                LastCanManage = mayManage;
+            }
             public void LaunchSelectedExpedition() {}
             public void StartCivilCohort() {}
             public void CreateSelectedAllianceProject() {}
@@ -155,6 +163,51 @@ namespace BeeKingdom.Playground.Editor
                 out Guid empty, out bool mayManage), Is.True);
             Assert.That(empty, Is.EqualTo(Guid.Empty));
             Assert.That(mayManage, Is.False);
+        }
+
+        [Test]
+        public void OnlyConfirmedMembershipIsBoundToPollinationController()
+        {
+            var target = new FakeController();
+            Guid allianceId = Guid.NewGuid();
+            Guid playerId = Guid.NewGuid();
+            var alliance = new RemoteAllianceEntity
+            {
+                AllianceId = allianceId, Name = "Verified Alliance", Tag = "QA",
+                LeaderPlayerId = playerId,
+                JoinMode = RemoteAllianceJoinMode.Open
+            };
+            var membership = new RemoteAllianceMembership
+            {
+                AllianceId = allianceId, PlayerId = playerId,
+                Role = RemoteAllianceRole.Leader
+            };
+            AllianceCenterScreenModel verified = AllianceCenterPresentation.Ready(
+                alliance, membership,
+                Array.Empty<RemoteAllianceMemberSummary>(), null, null);
+
+            Assert.That(PollinationWorldMapOverlay.ApplyVerifiedAllianceMembershipForProof(
+                target, verified), Is.True);
+            Assert.That(target.LastAllianceId, Is.EqualTo(allianceId));
+            Assert.That(target.LastCanManage, Is.True);
+            Assert.That(target.AllianceConfigurationCalls, Is.EqualTo(1));
+
+            Assert.That(PollinationWorldMapOverlay.ApplyVerifiedAllianceMembershipForProof(
+                target, AllianceCenterPresentation.Loading(verified)), Is.False);
+            Assert.That(PollinationWorldMapOverlay.ApplyVerifiedAllianceMembershipForProof(
+                target, AllianceCenterPresentation.Error(verified, "unavailable")), Is.False);
+            Assert.That(target.AllianceConfigurationCalls, Is.EqualTo(1));
+
+            Assert.That(PollinationWorldMapOverlay.ApplyVerifiedAllianceMembershipForProof(
+                target, AllianceCenterPresentation.NoAlliance(null, null)), Is.True);
+            Assert.That(target.AllianceConfigurationCalls, Is.EqualTo(2));
+            Assert.That(target.LastAllianceId, Is.EqualTo(Guid.Empty));
+            Assert.That(target.LastCanManage, Is.False);
+
+            target.IsConfigured = false;
+            Assert.That(PollinationWorldMapOverlay.ApplyVerifiedAllianceMembershipForProof(
+                target, verified), Is.False);
+            Assert.That(target.AllianceConfigurationCalls, Is.EqualTo(2));
         }
 
         [Test]

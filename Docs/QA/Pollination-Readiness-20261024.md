@@ -52,3 +52,13 @@ Il peut subsister d'autres libellés techniques dans les prototypes hors pollini
 5. Ensuite seulement, ouvrir `CivilExpeditions` et `FloralAllianceProjects` de manière contrôlée, avec retour arrière défini. **Ces deux flags ne sont pas activés dans ce lot.**
 
 État : **P18 lecture autoritaire opérationnelle ; P19 SQL locale prouvée ; activation production conditionnée à la revue SQL/live multijoueur.**
+
+## Vérification authentifiée et tests Unity du 24 octobre
+
+- Avec la session de jeu réelle dans Unity Editor, une interrogation directe **en lecture seule** a confirmé : joueur authentifié, ruche identifiée, service Alliance configuré et état **Ready**, adhésion présente à « Alliance Test ».
+- Lors de cette lecture la scène était Environment2D5D_HiveMap_Test et Unity était **en pause** : le modèle de pollinisation était encore en chargement, et son AllianceId non initialisé. Le branchement se fait à l'ouverture de la fenêtre de pollinisation **sur la carte du monde**. Ne pas interpréter l'AllianceId vide de la scène Ruche comme une perte d'adhésion.
+- Le créateur a autorisé l'arrêt du mode Play. Le mode Play a été arrêté pour les tests, **sans supprimer ni modifier son adhésion**.
+- Unity 6000.5.3f1, tests EditMode exécutés par l'API de tests Unity : **7/7** PollinationPremiumWindowEditorTests réussis (dont l'assertion positive liant l'alliance confirmée au contrôleur), **4/4** PollinationP5EditorTests réussis. Total : **11/11 sans échec**.
+- Le garde-fou interdit de traiter Loading ou Error comme une adhésion absente et ne réinitialise l'identifiant d'alliance qu'après un état NoAlliance confirmé par le serveur. Les droits d'officier/chef proviennent exclusivement de la réponse officielle.
+- Le parcours visuel réel **Carte du monde → Pollinisation → Alliance** reste à confirmer après connexion et ouverture : les tests EditMode ne remplacent pas une recette visuelle.
+- Les outils de test temporaires créés dans Unity ont été retirés ; les résultats de test sont archivés dans C:\projets\beekingdomgame-master\Temp\BKPollinationMcpTest2.results.txt et BKPollinationMcpTestP5.results.txt.
