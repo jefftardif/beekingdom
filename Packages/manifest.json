@@ -10,6 +10,7 @@
     }
   ],
   "dependencies": {
+    "com.unity.services.levelplay": "9.5.1",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#v10.0.0",
     "com.ivanmurzak.unity.mcp": "0.86.1",
     "com.unity.2d.animation": "15.1.0",
