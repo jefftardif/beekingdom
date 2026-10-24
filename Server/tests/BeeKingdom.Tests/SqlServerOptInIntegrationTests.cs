@@ -150,7 +150,11 @@ public sealed class SqlServerOptInIntegrationTests
         Assert.That(persisted.Resources["honey"].Amount, Is.EqualTo(10));
         OfflineProductionCollectionResult replay = await service2.CollectAsync(playerId, hiveId, "honey_storage", new(0, "sql-offline"));
         Assert.That(replay.Code, Is.EqualTo("game.idempotency_replay"));
-        Assert.That(replay.Response, Is.EqualTo(first.Response));
+        Assert.That(replay.Response!.Receipt, Is.EqualTo(first.Response!.Receipt));
+        Assert.That(System.Text.Json.Nodes.JsonNode.DeepEquals(
+            JsonSerializer.SerializeToNode(replay.Response.Snapshot),
+            JsonSerializer.SerializeToNode(first.Response.Snapshot)), Is.True,
+            "SQL deserialization can use List instead of array, but wire snapshot must be identical.");
         Assert.That((await repository2.ReadAsync(playerId, hiveId))!.Resources["honey"].Amount, Is.EqualTo(10));
     }
 

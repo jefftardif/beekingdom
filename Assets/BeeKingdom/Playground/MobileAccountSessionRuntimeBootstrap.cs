@@ -19,6 +19,9 @@ namespace BeeKingdom.Playground
         private static HiveOfflineProductionPanelController offlineProductionController;
         private static HiveBuildingUpgradePanelController buildingUpgradeController;
         private static HiveResearchPanelController researchController;
+        private static AcademyTrainingPanelController academyTrainingController;
+        public static AcademyTrainingPanelController AcademyControllerForHiveMap =>
+            academyTrainingController;
         private static AllianceCenterPanelController allianceCenterController;
         private static ChatPlayerPickerController chatPlayerPickerController;
         private static HiveStockPanelController stockController;
@@ -192,6 +195,11 @@ namespace BeeKingdom.Playground
         {
             MobileAccountSessionRuntimeConfiguration configuration =
                 Resources.Load<MobileAccountSessionRuntimeConfiguration>(ConfigurationResource);
+#if UNITY_EDITOR
+            // Optional, Editor-only local staging override. The serialized
+            // production resource is never altered and builds ignore the file.
+            configuration = ResolveLocalAcademyStagingConfig(configuration);
+#endif
             if (configuration == null || !configuration.OfficialAccountsEnabled ||
                 string.IsNullOrWhiteSpace(configuration.BaseUrl))
                 return;
@@ -372,6 +380,9 @@ namespace BeeKingdom.Playground
                 client,
                 gameTransport);
             strategicPathController = new StrategicPathPanelController(strategicPathClient, hiveId);
+            ConfigurePollinationForActiveSession(
+                client.Gate, client, gameTransport, hiveId,
+                configuration, authenticatedAuthority);
             var worldResourceCollectionClient = new WorldResourceCollectionClient(
                 client.Gate,
                 client,
@@ -420,6 +431,12 @@ namespace BeeKingdom.Playground
                 gameTransport,
                 cache);
             researchController = new HiveResearchPanelController(researchClient, hiveId);
+            // Academy belongs to the authenticated hive session. Never create a
+            // second independent player/hive identity or a local training queue.
+            var academyClient = new AcademyTrainingClient(
+                client.Gate,client,gameTransport,cache);
+            academyTrainingController = new AcademyTrainingPanelController(
+                academyClient,hiveId);
             // M043-CL: alliance membership is player-scoped, not hive-scoped - no hiveId argument,
             // same session/transport plumbing as every other client above (client.Gate, client,
             // gameTransport), no cache (AllianceClient has no offline-read support today).
@@ -691,6 +708,7 @@ namespace BeeKingdom.Playground
 
         public static void CloseGameplayForSignedOutSession()
         {
+            ClosePollinationForSignedOutSession();
             ResetStartupSession();
             ForgetChatLifecycle(chatCoordinator.SessionEndedAsync());
             cachedChatBinding = null;
@@ -699,6 +717,7 @@ namespace BeeKingdom.Playground
             HiveOfflineProductionPanelController previousProduction = offlineProductionController;
             HiveBuildingUpgradePanelController previousBuildingUpgrade = buildingUpgradeController;
             HiveResearchPanelController previousResearch = researchController;
+            AcademyTrainingPanelController previousAcademy = academyTrainingController;
             AllianceCenterPanelController previousAllianceCenter = allianceCenterController;
             HiveStockPanelController previousStock = stockController;
             HiveDailyRoundPanelController previousDailyRound = dailyRoundController;
@@ -730,6 +749,7 @@ namespace BeeKingdom.Playground
             offlineProductionController = null;
             buildingUpgradeController = null;
             researchController = null;
+            academyTrainingController = null;
             allianceCenterController = null;
             if (chatPlayerPickerController != null)
             {
@@ -761,6 +781,7 @@ namespace BeeKingdom.Playground
             if (previousProduction != null) previousProduction.Dispose();
             if (previousBuildingUpgrade != null) previousBuildingUpgrade.Dispose();
             if (previousResearch != null) previousResearch.Dispose();
+            if (previousAcademy != null) previousAcademy.Dispose();
             if (previousAllianceCenter != null) previousAllianceCenter.Dispose();
             if (previousStock != null) previousStock.Dispose();
             if (previousDailyRound != null) previousDailyRound.Dispose();

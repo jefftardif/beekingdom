@@ -143,12 +143,97 @@ builder.Services.AddOptions<FoundationDotationOptions>()
 builder.Services.AddOptions<BroodVitalityOptions>()
     .Bind(builder.Configuration.GetSection(BroodVitalityOptions.SectionName))
     .ValidateOnStart();
+// Floral sites P2: one global site document per world/site identity.
+// The JSON provider supports read/create in local development only;
+// cross-hive harvest/rewards require a separate SQL transaction coordinator.
+builder.Services.AddSingleton<IFloralSiteRepository>(sp =>
+{
+    if (sp.GetRequiredService<IHiveStateRepository>() is not SqlHiveStateRepository)
+        return new DurableJsonFloralSiteRepository(
+            Path.Combine(AppContext.BaseDirectory, "data", "floral-sites"));
+
+    SqlServerOptions sql = sp.GetRequiredService<IOptions<SqlServerOptions>>().Value;
+    IConfiguration configuration = sp.GetRequiredService<IConfiguration>();
+    string connectionString = sql.RuntimeConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = configuration.GetConnectionString(sql.RuntimeConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = sql.ConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = configuration.GetConnectionString(sql.ConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Shared floral site storage requires SQL.");
+    return new SqlFloralSiteRepository(connectionString, sql.CommandTimeoutSeconds);
+});
+
+// Civil missions have no JSON mutation backend: they must commit hive, floral
+// site, and immutable contribution ledger in the SAME SQL Server transaction.
+builder.Services.AddSingleton<ICivilExpeditionUnitOfWork>(sp =>
+{
+    if (sp.GetRequiredService<IHiveStateRepository>() is not SqlHiveStateRepository)
+        return new UnavailableCivilExpeditionUnitOfWork();
+
+    SqlServerOptions sql = sp.GetRequiredService<IOptions<SqlServerOptions>>().Value;
+    IConfiguration cfg = sp.GetRequiredService<IConfiguration>();
+    string connectionString = sql.RuntimeConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.RuntimeConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = sql.ConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.ConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Civil expedition SQL connection unavailable.");
+    return new SqlCivilExpeditionUnitOfWork(connectionString, sql.CommandTimeoutSeconds,
+        sp.GetRequiredService<IOptions<FloralAllianceProjectOptions>>().Value);
+});
+
+// Official collective project state never shares data with Alliance Research.
+// Permissions are checked from dbo.AllianceMemberships under SQL locks.
+builder.Services.AddSingleton<IFloralAllianceProjectService>(sp =>
+{
+    if (sp.GetRequiredService<IHiveStateRepository>() is not SqlHiveStateRepository)
+        return new UnavailableFloralAllianceProjectService();
+
+    SqlServerOptions sql = sp.GetRequiredService<IOptions<SqlServerOptions>>().Value;
+    IConfiguration cfg = sp.GetRequiredService<IConfiguration>();
+    string connectionString = sql.RuntimeConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.RuntimeConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = sql.ConnectionString;
+    if (string.IsNullOrWhiteSpace(connectionString))
+        connectionString = cfg.GetConnectionString(sql.ConnectionStringName) ?? "";
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Floral alliance projects require SQL.");
+    return new SqlFloralAllianceProjectService(
+        connectionString, sp.GetRequiredService<BeeKingdom.HiveOperations.IServerClock>(),
+        sp.GetRequiredService<IOptions<FloralAllianceProjectOptions>>().Value,
+        sp.GetRequiredService<IOptions<FloralSiteOptions>>().Value,
+        sql.CommandTimeoutSeconds);
+});
+
+builder.Services.AddOptions<FloralAllianceProjectOptions>()
+    .Bind(builder.Configuration.GetSection(FloralAllianceProjectOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddHostedService<BeeKingdom.Server.CivilExpeditionSettlementWorker>();
+builder.Services.AddOptions<CivilExpeditionOptions>()
+    .Bind(builder.Configuration.GetSection(CivilExpeditionOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddOptions<FloralSiteOptions>()
+    .Bind(builder.Configuration.GetSection(FloralSiteOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddOptions<CivilPopulationOptions>()
+    .Bind(builder.Configuration.GetSection(CivilPopulationOptions.SectionName))
+    .ValidateOnStart();
 builder.Services.AddOptions<NurseryCohortOptions>()
     .Bind(builder.Configuration.GetSection(NurseryCohortOptions.SectionName));
 builder.Services.AddOptions<WorkshopBatchQualificationOptions>()
     .Bind(builder.Configuration.GetSection(WorkshopBatchQualificationOptions.SectionName));
 builder.Services.AddOptions<LivingHiveResearchOptions>()
     .Bind(builder.Configuration.GetSection(LivingHiveResearchOptions.SectionName));
+builder.Services.AddOptions<AcademyTrainingOptions>()
+    .Bind(builder.Configuration.GetSection(AcademyTrainingOptions.SectionName));
 builder.Services.AddOptions<ChampionBeeProgressionOptions>()
     .Bind(builder.Configuration.GetSection(ChampionBeeProgressionOptions.SectionName));
 builder.Services.AddOptions<VipProgressionOptions>()
@@ -748,6 +833,71 @@ app.MapPost("/game/v1/hives/{hiveId}/research/{operationId}/complete", async (Ht
 });
 
 // M037 — FTUE Tutorial persistence (chapter/step, idempotent, no SQL migration)
+// Academy v1: player-authenticated durable classes; independent from Research.
+app.MapGet("/game/v1/hives/{hiveId}/academy", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<AcademyTrainingOptions> flags, CancellationToken ct) =>
+{
+    if (!flags.Value.Enabled) return GameError(503,"game.academy_disabled","game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context,authentication);
+    if (!auth.IsValid) return GameError(401,"game.session_required","game.error.session_required");
+    if (!TryParseGameResourceId(hiveId,out Guid hive))
+        return GameError(400,"game.invalid_request","game.error.invalid_request");
+    try
+    {
+        return Results.Ok(await new AcademyTrainingService(repository,clock,flags.Value)
+            .ReadAsync(auth.PlayerId!.Value,hive,ct));
+    }
+    catch (KeyNotFoundException) { return GameError(404,"game.not_found","game.error.not_found"); }
+    catch (InvalidDataException) { return GameError(503,"game.unavailable","game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/academy/{courseId}/start", async (
+    HttpContext context, string hiveId, string courseId,
+    AuthenticationManager authentication, IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<AcademyTrainingOptions> flags, AcademyTrainingMutationRequest request,
+    CancellationToken ct) =>
+{
+    if (!flags.Value.Enabled) return GameError(503,"game.academy_disabled","game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context,authentication);
+    if (!auth.IsValid) return GameError(401,"game.session_required","game.error.session_required");
+    if (!TryParseGameResourceId(hiveId,out Guid hive) || request is null)
+        return GameError(400,"game.invalid_request","game.error.invalid_request");
+    try
+    {
+        AcademyTrainingCommandResult result = await new AcademyTrainingService(repository,clock,flags.Value)
+            .StartAsync(auth.PlayerId!.Value,hive,courseId,request,ct);
+        return result.Succeeded ? Results.Ok(result) : GameError(409,result.Code,"game.error.conflict");
+    }
+    catch (ArgumentException) { return GameError(400,"game.invalid_request","game.error.invalid_request"); }
+    catch (KeyNotFoundException) { return GameError(404,"game.not_found","game.error.not_found"); }
+    catch (InvalidDataException) { return GameError(503,"game.unavailable","game.error.unavailable"); }
+});
+app.MapPost("/game/v1/hives/{hiveId}/academy/{operationId}/complete", async (
+    HttpContext context, string hiveId, string operationId,
+    AuthenticationManager authentication, IHiveStateRepository repository,
+    BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<AcademyTrainingOptions> flags, AcademyTrainingMutationRequest request,
+    CancellationToken ct) =>
+{
+    if (!flags.Value.Enabled) return GameError(503,"game.academy_disabled","game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context,authentication);
+    if (!auth.IsValid) return GameError(401,"game.session_required","game.error.session_required");
+    if (!TryParseGameResourceId(hiveId,out Guid hive) ||
+        !Guid.TryParse(operationId,out Guid op) || op == Guid.Empty || request is null)
+        return GameError(400,"game.invalid_request","game.error.invalid_request");
+    try
+    {
+        AcademyTrainingCommandResult result = await new AcademyTrainingService(repository,clock,flags.Value)
+            .CompleteAsync(auth.PlayerId!.Value,hive,op,request,ct);
+        return result.Succeeded ? Results.Ok(result) : GameError(409,result.Code,"game.error.conflict");
+    }
+    catch (ArgumentException) { return GameError(400,"game.invalid_request","game.error.invalid_request"); }
+    catch (KeyNotFoundException) { return GameError(404,"game.not_found","game.error.not_found"); }
+    catch (InvalidDataException) { return GameError(503,"game.unavailable","game.error.unavailable"); }
+});
+
 app.MapGet("/game/v1/hives/{hiveId}/tutorial", async (HttpContext context, string hiveId, AuthenticationManager authentication, IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock, CancellationToken ct) =>
 {
     TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
@@ -1054,6 +1204,245 @@ app.MapPost("/game/v1/hives/{hiveId}/brood/cohorts/start", async (
             repository, clock, options.Value).StartAsync(
                 new NurseryCohortStartCommand(auth.PlayerId!.Value, hive,
                     request.ExpectedRevision, request.IdempotencyKey), ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+});
+// Cooperative floral projects: active official alliance membership is checked
+// by the SQL service on every request; leader/officer required for creation.
+app.MapGet("/alliance/v1/alliances/{allianceId}/floral-projects", async (
+    HttpContext context, string allianceId, AuthenticationManager authentication,
+    IFloralAllianceProjectService projects, IOptions<FloralAllianceProjectOptions> options,
+    CancellationToken ct) =>
+{
+    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+        return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(allianceId, out Guid id))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        return Results.Ok(await projects.ListAsync(auth.PlayerId!.Value, id, ct));
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return GameError(403, "game.alliance_member_required", "game.error.forbidden");
+    }
+});
+
+app.MapGet("/alliance/v1/alliances/{allianceId}/floral-projects/{projectId}", async (
+    HttpContext context, string allianceId, string projectId,
+    AuthenticationManager authentication, IFloralAllianceProjectService projects,
+    IOptions<FloralAllianceProjectOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+        return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(allianceId, out Guid alliance)
+        || !TryParseGameResourceId(projectId, out Guid project))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        return Results.Ok(await projects.ReadAsync(auth.PlayerId!.Value, alliance, project, ct));
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return GameError(403, "game.alliance_member_required", "game.error.forbidden");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/alliance/v1/alliances/{allianceId}/floral-projects", async (
+    HttpContext context, string allianceId, AuthenticationManager authentication,
+    IFloralAllianceProjectService projects, IOptions<FloralAllianceProjectOptions> options,
+    CreateFloralAllianceProjectRequest request, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled || projects is UnavailableFloralAllianceProjectService)
+        return GameError(503, "game.floral_alliance_projects_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(allianceId, out Guid alliance) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        FloralAllianceProjectCreateResult result = await projects.CreateAsync(
+            auth.PlayerId!.Value, alliance, request, ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return GameError(403, "game.alliance_permission_denied", "game.error.forbidden");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+// Alpha civilian expedition. Disabled by default; only SQL Server can mutate
+// shared floral sites. GET auto-settles a finished mission after reopening Unity.
+app.MapGet("/game/v1/hives/{hiveId}/civil-expeditions", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository hives, ICivilExpeditionUnitOfWork coordinator,
+    BeeKingdom.HiveOperations.IServerClock clock, IOptions<CivilExpeditionOptions> settings,
+    IOptions<FloralSiteOptions> floral, CancellationToken ct) =>
+{
+    if (!settings.Value.CanSettle(floral.Value.Enabled)
+        || coordinator is UnavailableCivilExpeditionUnitOfWork)
+        return GameError(503, "game.civil_expeditions_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilExpeditionService(hives, coordinator, clock,
+            settings.Value, floral.Value);
+        return Results.Ok(await service.ReadAsync(auth.PlayerId!.Value, hive, ct));
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/civil-expeditions/start", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository hives, ICivilExpeditionUnitOfWork coordinator,
+    BeeKingdom.HiveOperations.IServerClock clock, IOptions<CivilExpeditionOptions> settings,
+    IOptions<FloralSiteOptions> floral, StartCivilExpeditionRequest request,
+    CancellationToken ct) =>
+{
+    if (!settings.Value.CanStart(floral.Value.Enabled)
+        || coordinator is UnavailableCivilExpeditionUnitOfWork)
+        return GameError(503, "game.civil_expeditions_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilExpeditionService(hives, coordinator, clock,
+            settings.Value, floral.Value);
+        CivilExpeditionResult result = await service.StartAsync(
+            auth.PlayerId!.Value, hive, request, ct);
+        return result.Succeeded ? Results.Ok(result)
+            : GameError(409, result.Code, "game.error.conflict");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+});
+// Global shared flora read APIs. No client is allowed to mutate a site directly.
+app.MapGet("/game/v1/world/floral-sites", async (
+    HttpContext context, AuthenticationManager authentication,
+    IFloralSiteRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<FloralSiteOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.floral_sites_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    return Results.Ok(await new FloralSiteService(repository, clock, options.Value)
+        .ListAsync(ct));
+});
+
+app.MapGet("/game/v1/world/floral-sites/{siteId}", async (
+    HttpContext context, string siteId, AuthenticationManager authentication,
+    IFloralSiteRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<FloralSiteOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.floral_sites_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    try
+    {
+        return Results.Ok(await new FloralSiteService(repository, clock, options.Value)
+            .ReadAsync(siteId, ct));
+    }
+    catch (ArgumentException)
+    {
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.floral_site_not_found", "game.error.not_found");
+    }
+});
+
+// Civil Population Alpha: separate from combat recruitment and existing NurseryCohorts.
+// Feature remains OFF by default; no endpoint trusts client-provided player identity.
+app.MapGet("/game/v1/hives/{hiveId}/civil-population", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<CivilPopulationOptions> options, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.civil_population_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive))
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilPopulationService(repository, clock, options.Value);
+        return Results.Ok(await service.ReadAsync(auth.PlayerId!.Value, hive, ct));
+    }
+    catch (KeyNotFoundException)
+    {
+        return GameError(404, "game.not_found", "game.error.not_found");
+    }
+});
+
+app.MapPost("/game/v1/hives/{hiveId}/civil-population/cohorts/start", async (
+    HttpContext context, string hiveId, AuthenticationManager authentication,
+    IHiveStateRepository repository, BeeKingdom.HiveOperations.IServerClock clock,
+    IOptions<CivilPopulationOptions> options,
+    StartCivilCohortRequest request, CancellationToken ct) =>
+{
+    if (!options.Value.Enabled)
+        return GameError(503, "game.civil_population_disabled", "game.error.unavailable");
+    TokenValidationResult auth = AuthenticateGameRequest(context, authentication);
+    if (!auth.IsValid)
+        return GameError(401, "game.session_required", "game.error.session_required");
+    if (!TryParseGameResourceId(hiveId, out Guid hive) || request is null)
+        return GameError(400, "game.invalid_request", "game.error.invalid_request");
+    try
+    {
+        var service = new CivilPopulationService(repository, clock, options.Value);
+        CivilPopulationCommandResult result = await service.StartAsync(
+            auth.PlayerId!.Value, hive, request, ct);
         return result.Succeeded ? Results.Ok(result)
             : GameError(409, result.Code, "game.error.conflict");
     }
