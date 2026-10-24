@@ -9,8 +9,8 @@ Etat : PREPARATION EN BRANCHE ISOLEE (aucun deploiement en production)
 - Unity LevelPlay : Beekingdom Android.
 - LevelPlay ad unit : BK_DailyQuest_3Ads (Rewarded).
 - Google Bidding Rewarded lie a All Countries et affiche comme active.
-- LevelPlay App Key : A RECUPERER depuis le tableau Apps (distinct de l'AdMob App ID).
-- LevelPlay Rewarded Ad Unit ID : copier depuis Setup > Ad units (ne pas retranscrire depuis une capture).
+- LevelPlay App Key : 28f6cc45d (fourni par le proprietaire).
+- LevelPlay Rewarded Ad Unit ID : na3phetjxrlsnnax (lu sur la capture Setup > Ad units, a confronter au presse-papiers lors du test reel).
 
 ## Integration SDK
 1. Ajouter le package officiel com.unity.services.levelplay version 9.5.1 (fait dans ce worktree).
@@ -52,7 +52,23 @@ Etat : PREPARATION EN BRANCHE ISOLEE (aucun deploiement en production)
 - Validation sur appareil Android avant toute activation en production.
 
 ## Conditions avant mise en production
-- Obtenir la veritable LevelPlay App Key et copier l'ID Rewarded.
+- App Key recue; verifier l'ID Rewarded copiable sur le dashboard en cas de no-fill.
 - Finaliser le profil de paiement et approbation de l'application AdMob.
 - Mettre a jour politique de confidentialite / consentement et app-ads.txt si requis.
 - Terminer les tests Unity + API et un audit Git avant integration a main.
+
+## Travaux realises sur la branche d'integration (non publies en jeu)
+- Package Unity com.unity.services.levelplay 9.5.1 ajoute au manifest isole.
+- Assets/BeeKingdom/Monetization/BeeKingdomLevelPlayRewardedBridge.cs : initialization Android explicite apres login et choix de confidentialite; chargement, affichage, evenements; callbacks client ne donnent AUCUNE ressource.
+- Assets/Editor/BeeKingdomAdMobAndroidManifestPostprocessor.cs : ajout idempotent du metadata AdMob Android sans remplacer les activity Unity.
+- Tests locaux avec simulation du SDK via dotnet 10 : PASS (authentification, confidentialite, quota avant visionnement, ID S2S joueur, deconnexion, rechargement, manifeste).
+- Les tests ont ete realises sur des simulateurs C# et NON sur le vrai SDK ni sur un Android reel.
+- Le module est inactif tant que le code du jeu ne l'appelle pas explicitement. Le jeu Unity en production et SRVESDT n'ont pas ete modifies.
+
+## Travaux restants indispensables
+- Ouvrir la branche isolee dans Unity et resoudre le package; installer l'adaptateur Google via Ads Mediation > Network Manager.
+- Valider le build Android avec SDK reel, init, consentement et publicites de test (ne pas utiliser les annonces de production pour le QA).
+- Raccorder l'identifiant du joueur de la session BeeKingdom au module et creer l'interface quete FR/EN.
+- Developper la route S2S cote SRVESDT, la migration SQL transactionnelle, l'idempotence EVENT_ID, la verification MD5 utilisant une cle privee protegee, et le verrouillage 3 credits par joueur/jour UTC.
+- Activer les callbacks S2S dans LevelPlay uniquement apres tests fonctionnels du serveur.
+- Ne PAS declarer le produit monetise tant que les etapes precedentes ne sont pas validees.
