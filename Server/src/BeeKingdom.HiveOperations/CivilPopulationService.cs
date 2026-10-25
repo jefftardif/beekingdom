@@ -11,6 +11,9 @@ public sealed class CivilPopulationOptions
 {
     public const string SectionName = "CivilPopulation";
     public bool Enabled { get; set; }
+    // Production preview: GET may read the real hive without mutating SQL,
+    // while ALL paid cohort starts remain blocked. Disabled by default.
+    public bool ReadOnlyPilot { get; set; }
     public long WorkersPerCohort { get; set; } = 20;
     public long HoneyCost { get; set; } = 50;
     public long PollenCost { get; set; } = 10;
@@ -79,8 +82,15 @@ public sealed class CivilPopulationService(
     {
         EnsureEnabled();
         EnsureIdentity(playerId, hiveId);
-        if (await repository.ReadAsync(playerId, hiveId, ct) is null)
+        PlayerHiveState? stored = await repository.ReadAsync(playerId, hiveId, ct);
+        if (stored is null)
             throw new KeyNotFoundException("game.not_found");
+        if (settings.ReadOnlyPilot)
+        {
+            // Crucial: no settlement and no repository mutation in preview.
+            // Never grant unpaid civilians, touch revisions or change wallets.
+            return Snapshot(RequireScope(stored, playerId, hiveId), Now());
+        }
         PlayerHiveState updated = await repository.ExecuteAtomicallyAsync(
             playerId, hiveId,
             state => SettleMatureCohort(RequireScope(state, playerId, hiveId), Now()),
@@ -93,6 +103,8 @@ public sealed class CivilPopulationService(
         CancellationToken ct = default)
     {
         EnsureEnabled();
+        if (settings.ReadOnlyPilot)
+            throw new InvalidOperationException("game.civil_population_readonly");
         EnsureIdentity(playerId, hiveId);
         if (request is null || request.ExpectedRevision < 0
             || request.ExpectedRevision == long.MaxValue
@@ -242,7 +254,8 @@ public sealed class CivilPopulationService(
         long capacity = Capacity(state);
         long occupied = checked(civil.AvailableWorkers + civil.AssignedWorkers
             + civil.RecoveringWorkers);
-        bool canStart = state.BuildingLevels.GetValueOrDefault(NurseryKey) >= 1
+        bool canStart = !settings.ReadOnlyPilot
+            && state.BuildingLevels.GetValueOrDefault(NurseryKey) >= 1
             && civil.Active is null
             && occupied <= capacity
             && settings.WorkersPerCohort <= capacity - occupied

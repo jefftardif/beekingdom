@@ -31,6 +31,27 @@ public sealed class FloralAllianceProjectRulesTests
     }
 
     [Fact]
+    public void Project_read_only_pilot_never_allows_creation_or_new_delivery_credit()
+    {
+        var options = new FloralAllianceProjectOptions();
+        Assert.False(options.CanRead);
+        Assert.False(options.CanCreate);
+        options.ReadOnlyPilot = true;
+        Assert.True(options.CanRead);
+        Assert.False(options.CanCreate);
+        Assert.False(options.CanApplyDeliveries);
+        options.Enabled = true;
+        Assert.True(options.CanRead);
+        Assert.False(options.CanCreate);
+        Assert.False(options.CanApplyDeliveries);
+        options.DrainExistingDeliveries = true;
+        Assert.True(options.CanApplyDeliveries);
+        options.ReadOnlyPilot = false;
+        Assert.True(options.CanCreate);
+        options.Validate();
+    }
+
+    [Fact]
     public void Collective_level_depends_only_on_persisted_experience_thresholds()
     {
         var options = new FloralAllianceProjectOptions

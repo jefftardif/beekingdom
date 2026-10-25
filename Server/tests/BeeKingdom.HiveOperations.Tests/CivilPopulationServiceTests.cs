@@ -66,6 +66,42 @@ public sealed class CivilPopulationServiceTests
     }
 
     [Fact]
+    public async Task Read_only_preview_reads_real_hive_without_charge_settlement_or_start()
+    {
+        string root = Temp();
+        try
+        {
+            Guid p = Guid.NewGuid(), h = Guid.NewGuid();
+            var repo = Repo(root);
+            await repo.ExecuteAtomicallyAsync(p, h, state => state);
+            PlayerHiveState original = (await repo.ReadAsync(p, h))!;
+            var previewOptions = Options();
+            previewOptions.ReadOnlyPilot = true;
+            var preview = new CivilPopulationService(repo, new FakeClock(Origin), previewOptions);
+            CivilPopulationSnapshot snapshot = await preview.ReadAsync(p, h);
+            Assert.Equal(p, snapshot.PlayerId);
+            Assert.Equal(h, snapshot.HiveId);
+            Assert.Equal(0, snapshot.AvailableWorkers);
+            Assert.False(snapshot.CanStart);
+            Assert.Equal(original.Revision, snapshot.HiveRevision);
+            PlayerHiveState afterRead = (await repo.ReadAsync(p, h))!;
+            Assert.Equal(original.Revision, afterRead.Revision);
+            Assert.Equal(original.Resources["honey"].Amount, afterRead.Resources["honey"].Amount);
+            Assert.Equal(original.Resources["pollen"].Amount, afterRead.Resources["pollen"].Amount);
+            Assert.Null(afterRead.CivilPopulation);
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => preview.StartAsync(p, h, new(0, "pilot-no-charge-0001")));
+            PlayerHiveState afterStart = (await repo.ReadAsync(p, h))!;
+            Assert.Equal(original.Revision, afterStart.Revision);
+            Assert.Equal(original.Resources["honey"].Amount,
+                afterStart.Resources["honey"].Amount);
+            Assert.Equal(original.Resources["pollen"].Amount,
+                afterStart.Resources["pollen"].Amount);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task Old_hive_stays_intact_and_paid_civilians_never_use_military_or_nursery_reserve()
     {
         string root = Temp();

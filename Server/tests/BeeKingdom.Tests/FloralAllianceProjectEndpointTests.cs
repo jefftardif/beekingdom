@@ -28,6 +28,34 @@ public sealed class FloralAllianceProjectEndpointTests
     }
 
     [Test]
+    public async Task Read_only_alliance_pilot_requires_auth_and_forbids_project_creation()
+    {
+        await using var factory = Factory(enabled: false, withBoundary: true,
+            readOnlyPilot: true);
+        using var client = factory.CreateClient();
+        string route = $"/alliance/v1/alliances/{Guid.NewGuid():D}/floral-projects";
+        Assert.That((await client.GetAsync(route)).StatusCode,
+            Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await client.GetAsync(route + "/" + Guid.NewGuid().ToString("D")))
+            .StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        client.DefaultRequestHeaders.Authorization = new("Bearer",
+            await Login(factory, client));
+        Assert.That((await client.GetAsync(route)).StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+        var boundary = (EmptyAuthorizedBoundary)factory.Services
+            .GetRequiredService<IFloralAllianceProjectService>();
+        using HttpResponseMessage denied = await client.PostAsJsonAsync(route,
+            new { siteId = "clover-qa", expectedProgressionRevision = 0,
+                idempotencyKey = "readonly-project-no-write-01" });
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+        using var json = JsonDocument.Parse(await denied.Content.ReadAsStringAsync());
+        Assert.That(json.RootElement.GetProperty("code").GetString(),
+            Is.EqualTo("game.floral_alliance_projects_readonly"));
+        Assert.That(boundary.CreateCalls, Is.Zero,
+            "No request in preview may reach a mutating alliance service.");
+    }
+
+    [Test]
     public async Task Json_storage_cannot_activate_collective_economy()
     {
         await using var factory = Factory(enabled: true);
@@ -68,6 +96,7 @@ public sealed class FloralAllianceProjectEndpointTests
 
     private sealed class EmptyAuthorizedBoundary : IFloralAllianceProjectService
     {
+        public int CreateCalls { get; private set; }
         public Task<IReadOnlyList<FloralAllianceProjectSnapshot>> ListAsync(
             Guid playerId, Guid allianceId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<FloralAllianceProjectSnapshot>>(
@@ -81,11 +110,14 @@ public sealed class FloralAllianceProjectEndpointTests
         public Task<FloralAllianceProjectCreateResult> CreateAsync(
             Guid playerId, Guid allianceId, CreateFloralAllianceProjectRequest request,
             CancellationToken ct = default)
-            => throw new UnauthorizedAccessException();
+        {
+            CreateCalls++;
+            throw new UnauthorizedAccessException();
+        }
     }
 
     private static WebApplicationFactory<Program> Factory(
-        bool enabled, bool withBoundary = false) =>
+        bool enabled, bool withBoundary = false, bool readOnlyPilot = false) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Development");
@@ -93,6 +125,7 @@ public sealed class FloralAllianceProjectEndpointTests
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["FloralAllianceProjects:Enabled"] = enabled.ToString(),
+                    ["FloralAllianceProjects:ReadOnlyPilot"] = readOnlyPilot.ToString(),
                     ["FloralSites:Enabled"] = "true"
                 }));
             if (withBoundary)
