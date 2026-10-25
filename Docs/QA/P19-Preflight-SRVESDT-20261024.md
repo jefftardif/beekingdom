@@ -31,7 +31,7 @@ Le diagnostic officiel `/ops/readiness` est protégé (HTTP 401 sans l'authentif
 - Deux scénarios d'intégration SQL sur la branche unifiée : `SQL_QA_PASS` (transactions, concurrence, rollbacks, index d'échéances) et `P4_SQL_QA_PASS` (2 membres, anti-solo, expérience d'alliance idempotente). Les deux ont confirmé leur nettoyage final.
 - Suite complète métier sur la branche unifiée : **328/328 tests réussis**.
 - Tests Unity Editor sur la reconnaissance d'alliance : **11/11 réussis** lors de la reprise précédente. L'interface a été vérifiée visuellement avec **[BKT] Alliance Test**.
-- La suite API générale lancée lors de cette reprise n'avait pas encore produit son bilan final au moment de ce rapport. Ne pas l'annoncer comme réussie sans preuve.
+- Suite API générale : **714 tests réussis, 0 échec, 9 ignorés, 723 au total**, durée 4 min 40 s. Les 9 tests ignorés ne sont pas comptés comme réussis. Journal PCJEFF : C:\BeeKingdom\RECOVERY\P19-FullApiTests-20261024.log.
 
 ## Garde de mise en production
 
