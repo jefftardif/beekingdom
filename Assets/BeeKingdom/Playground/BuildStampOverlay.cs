@@ -55,8 +55,24 @@ namespace BeeKingdom.Playground
     {
         private GUIStyle _style;
 
+        // Keep the build identifier in Player.log for support, but reserve the
+        // visible watermark for an explicitly enabled developer session.
+        // DEVELOPMENT_BUILD by itself must not expose technical build strings.
+        internal static bool DeveloperStampVisible()
+        {
+#if UNITY_EDITOR
+            return UnityEditor.EditorPrefs.GetBool(
+                "BeeKingdom.DeveloperControlsVisible", false);
+#elif DEVELOPMENT_BUILD
+            return PlayerPrefs.GetInt("BeeKingdom.DeveloperControlsVisible", 0) == 1;
+#else
+            return false;
+#endif
+        }
+
         private void OnGUI()
         {
+            if (!DeveloperStampVisible()) return;
             // M087-CL : masque le filigrane pendant l'evaluation visuelle de Chat Royal (demande
             // CEO explicite) - le filigrane reste actif partout ailleurs pour la tracabilite des
             // rapports de bug externes, seule raison d'etre de ce fichier (voir commentaire de
