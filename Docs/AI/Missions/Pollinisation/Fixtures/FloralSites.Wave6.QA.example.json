@@ -1,0 +1,43 @@
+{
+  "FloralSites": {
+    "Enabled": false,
+    "CatalogVersion": "wave6.qa.v1",
+    "Sites": [
+      {
+        "WorldId": "world-wave6-qa",
+        "RegionId": "region-qa-core",
+        "SiteId": "old-oak-clover-qa",
+        "FamilyId": "clover",
+        "NameFr": "Trèfles du Vieux Chêne (QA)",
+        "NameEn": "Old Oak Clover (QA)",
+        "MaximumPollenUnits": 100,
+        "InitialFertilityBp": 7000,
+        "InitialBiodiversityBp": 6000,
+        "MapSurfaceId": "BK-DEMO-WORLD-WAVE6-LOCAL",
+        "MapAnchorId": "res_pollen_core"
+      },
+      {
+        "WorldId": "world-wave6-qa",
+        "RegionId": "region-qa-core",
+        "SiteId": "nectar-meadow-qa",
+        "FamilyId": "wildflowers",
+        "NameFr": "Prairie des fleurs (QA)",
+        "NameEn": "Wildflower Meadow (QA)",
+        "MaximumPollenUnits": 120,
+        "InitialFertilityBp": 7500,
+        "InitialBiodiversityBp": 6200,
+        "MapSurfaceId": "BK-DEMO-WORLD-WAVE6-LOCAL",
+        "MapAnchorId": "res_nectar_core"
+      }
+    ]
+  },
+  "CivilPopulation": {
+    "Enabled": false
+  },
+  "CivilExpeditions": {
+    "Enabled": false
+  },
+  "FloralAllianceProjects": {
+    "Enabled": false
+  }
+}

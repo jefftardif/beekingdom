@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-    public sealed class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
+    public sealed partial class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
     {
         private const string OfficialMapPath = "C:/projets/beekingdom/carte.png";
         private const string WorldId = "BK-DEMO-WORLD-WAVE6-LOCAL";
@@ -301,6 +301,8 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            bool previousGuiEnabled = GUI.enabled;
+            if (PollinationWorldMapOverlay.IsModalOpen) GUI.enabled = false;
             EnsurePixel();
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
@@ -311,6 +313,7 @@ namespace BeeKingdom.Playground
             if (mapFilterBearDen) DrawBearDenLandmark();
             DrawAerialFlights();
             if (mapFilterResources) DrawResources();
+            DrawOfficialFloralMarkers();
             DrawWorldResourceCollectionMarch();
             if (mapFilterThreats) DrawBestiary();
             if (mapFilterHives) DrawHives();
@@ -350,6 +353,7 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.DrawCombatPatrolOverlayForWorldMap();
             if (showCompositionPanel && collectionVisualState == CollectionVisualState.Composition)
                 DrawCompositionPanel();
+            GUI.enabled = previousGuiEnabled;
         }
 
         private void OnDestroy()
@@ -3272,6 +3276,14 @@ namespace BeeKingdom.Playground
 
         private void HandleInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen
+                || PollinationWorldMapOverlay.IsEntryHotspot(
+                    ScreenToGui(Input.mousePosition)))
+            {
+                dragging = false;
+                lastTouchDistance = 0f;
+                return;
+            }
             if (HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime())
             {
                 HandleGuidedWorldMapInput();
@@ -3400,6 +3412,9 @@ namespace BeeKingdom.Playground
 
         private void HandleGuidedWorldMapGuiInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen ||
+                PollinationWorldMapOverlay.IsEntryHotspot(
+                    Event.current != null ? Event.current.mousePosition : Vector2.zero)) return;
             if (!HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime()) return;
             Event current = Event.current;
             if (current == null || current.type != EventType.MouseUp) return;
@@ -6709,6 +6724,7 @@ namespace BeeKingdom.Playground
 
         private void TrySelectAt(Vector2 guiPoint)
         {
+            if (TrySelectOfficialFloralMarker(guiPoint)) return;
             WorldHiveNode nearestHive = null;
             float nearestHiveDistance = float.MaxValue;
             for (int i = 0; i < hives.Count; i++)
