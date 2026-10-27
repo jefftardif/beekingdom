@@ -116,7 +116,7 @@ namespace BeeKingdom.Playground
             EnsureLocalWorldReservations();
             var envelope=Claim(family,id,previous,
                 LegacyEnvelope(family),LegacyOffset(family));
-            if(localWorldReservations.TryGet(envelope.Id,out _))return previous;
+            if(localWorldReservations.TryGet(envelope.Id,out var existing))return existing.WorldPoint;
             if(immutable)
             {
                 if(!localWorldReservations.TryPin(envelope))
@@ -126,7 +126,7 @@ namespace BeeKingdom.Playground
                 }
                 return previous;
             }
-'            // Unverified or unavailable mask: retain clean historical anchors,
+            // Unverified or unavailable mask: retain clean historical anchors,
             // but never manufacture a replacement from random terrain pixels.
             if(!useWave5Method12288PreviewRuntimePackageForPlayMode ||
                 !runtimePlacementMaskLoaded)
@@ -136,7 +136,7 @@ namespace BeeKingdom.Playground
                 unresolvedLegacyWorldPositions.Add(envelope.Id);
                 return previous;
             }
-'            var candidates=ReviewedLocalLandAnchors(home,previous,family,kind);
+            var candidates=ReviewedLocalLandAnchors(home,previous,family,kind);
             var answer=localWorldReservations.Reserve(envelope,candidates,
                 point=>bearDenLandmark==null||!bearDenLandmark.ExcludesSpawn(point));
             if(answer.Accepted) return answer.Position;
