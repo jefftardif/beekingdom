@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-    public sealed class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
+    public sealed partial class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
     {
         private const string OfficialMapPath = "C:/projets/beekingdom/carte.png";
         private const string WorldId = "BK-DEMO-WORLD-WAVE6-LOCAL";
@@ -3566,6 +3566,8 @@ namespace BeeKingdom.Playground
 
             data = new WorldChunkData(chunk);
             GenerateChunkData(data);
+            // Stable, local-only reservations before the chunk becomes visible.
+            ReserveLegacyChunkInWorld(data);
             chunkCache[chunk] = data;
             return data;
         }
