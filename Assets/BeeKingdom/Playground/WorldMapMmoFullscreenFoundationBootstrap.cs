@@ -8548,6 +8548,8 @@ namespace BeeKingdom.Playground
             public float land_score;
             public float water_score;
             public float hive_score;
+            public bool hive_safe;
+            public int audit_borrowed_hive_anchor;
             public float threat_score;
         }
 

@@ -136,6 +136,17 @@ namespace BeeKingdom.Playground
                 unresolvedLegacyWorldPositions.Add(envelope.Id);
                 return previous;
             }
+            // Old masks promoted borrowed pollen anchors to hive_safe=true.
+            // Refuse that provenance; retaining the existing visual is not a
+            // declaration that its terrain is valid, nor a server relocation.
+            if (family == "hive" &&
+                (!runtimePlacementMask.TryGetValue(home, out RuntimePlacementMaskEntry source) ||
+                 !source.hive_safe || source.audit_borrowed_hive_anchor != 0))
+            {
+                localWorldReservations.ObserveUnresolved(envelope);
+                unresolvedLegacyWorldPositions.Add(envelope.Id);
+                return previous;
+            }
             var candidates=ReviewedLocalLandAnchors(home,previous,family,kind);
             var answer=localWorldReservations.Reserve(envelope,candidates,
                 point=>bearDenLandmark==null||!bearDenLandmark.ExcludesSpawn(point));

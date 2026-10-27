@@ -371,17 +371,10 @@ def repair_unsafe_anchors(entries: list[dict[str, object]]) -> None:
         )
 
     for entry in entries:
-        if not bool(entry["hive_safe"]):
-            donor = nearest(entry, "land")
-            if donor is not None:
-                entry["hive_x"] = round((int(donor["column"]) + float(donor["pollen_x"])) - int(entry["column"]), 4)
-                entry["hive_y"] = round((int(donor["row"]) + float(donor["pollen_y"])) - int(entry["row"]), 4)
-                entry["hive_safe"] = True
-                entry["audit_borrowed_hive_anchor"] = 1
-            else:
-                entry["audit_borrowed_hive_anchor"] = 0
-        else:
-            entry["audit_borrowed_hive_anchor"] = 0
+        # A rejected hive anchor stays rejected, at its previous coordinates.
+        # A pollen anchor and its colour score cannot authorize a hive footprint.
+        # Keep the old schema's audit field, but never promote a borrowed point.
+        entry["audit_borrowed_hive_anchor"] = 0
 
         if not bool(entry["threat_safe"]):
             donor = nearest(entry, "land")
