@@ -7294,6 +7294,12 @@ namespace BeeKingdom.Playground
 
         private float ResourceSpriteScreenSize(WorldResourceNode resource)
         {
+            // Honey artwork occupies a fixed world envelope. A pixel floor made
+            // its drawn size stop following the map at low zoom; hit reservation
+            // and rendering both use this same size without moving the node.
+            if (resource.Kind == ResourceKind.Honey)
+                return WorldSizeToScreen(ResourceSpriteSize(resource));
+
             string tier = ResourceTierToken(resource);
             float minimum = tier == "rich" ? 148f : (tier == "medium" ? 124f : 104f);
             return Mathf.Max(minimum, WorldSizeToScreen(ResourceSpriteSize(resource)));
