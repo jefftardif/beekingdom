@@ -7502,7 +7502,7 @@ namespace BeeKingdom.Playground
         private Texture2D RuntimeEntityTexture(string resourcePath)
         {
             if (runtimeEntityTextureCache.TryGetValue(resourcePath, out Texture2D cached)) return cached;
-            Texture2D texture = Resources.Load<Texture2D>(resourcePath);
+            Texture2D texture = LoadApprovedWorldMapVisual(resourcePath);
             if (texture != null)
             {
                 texture.wrapMode = TextureWrapMode.Clamp;
