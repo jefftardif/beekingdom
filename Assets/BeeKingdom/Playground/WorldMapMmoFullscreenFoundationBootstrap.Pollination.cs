@@ -73,6 +73,26 @@ namespace BeeKingdom.Playground
             return true;
         }
 
+        // A floral site refers to the resource's server anchor. Display its
+        // annotation above that resource instead of painting a second icon on it.
+        // This changes neither the anchor nor a placement/reward request.
+        private const float FloralWorldWidth = 112f;
+        private Vector2 FloralDisplayPoint(WorldResourceNode anchor)
+        {
+            // A fixed WORLD annotation offset. Reserve the resource's largest
+            // world envelope across the supported zoom range, including its
+            // existing minimum-pixel artwork. Never shift the canonical node.
+            string tier = ResourceTierToken(anchor);
+            float minimum = tier == "rich" ? 148f : (tier == "medium" ? 124f : 104f);
+            float envelope = Mathf.Max(ResourceSpriteSize(anchor), minimum / MinZoom);
+            float top = anchor.WorldCoord.y - envelope * .58f;
+            if (requireOfficialResourcePlacements &&
+                officialPlacementView.TryGet(anchor.Id, out var placement))
+                top = (float)placement.Top.Value;
+            return WorldToScreen(new Vector2(anchor.WorldCoord.x,
+                top - 12f - (FloralWorldWidth * .74f * .42f + 23f)));
+        }
+
         private void DrawOfficialFloralMarkers()
         {
             if (PollinationWorldMapOverlay.IsModalOpen) return;
@@ -84,14 +104,14 @@ namespace BeeKingdom.Playground
                 if (!CanMapFloralSite(site)) continue;
                 WorldResourceNode anchor=ResourceById(site.MapAnchorId);
                 if (anchor == null) continue;
-                Vector2 original=WorldToScreen(anchor.WorldCoord);
-                Vector2 center=VisualPoint("floral",site.SiteId,original);
+                Vector2 center=FloralDisplayPoint(anchor);
                 if (!IsOnScreen(center,FloralMarkerRadius*2f)) continue;
-                DrawVisualAttachment("floral",site.SiteId,original,center);
+                // No decorative anchor connector; the server reserve gauge below remains.
 
                 bool live=OwnCivilMissionAt(site,out bool atField);
                 Texture2D art=ArtworkFor(site);
-                float w=Screen.width < 650 ? 91f : 112f;
+                float scale = currentZoom;
+                float w=WorldSizeToScreen(FloralWorldWidth);
                 float h=w*.74f;
                 // Transparent flower sprites preserve the existing terrain
                 // texture; the server alone decides whether a habitat exists.
@@ -105,9 +125,9 @@ namespace BeeKingdom.Playground
                 else
                 {
                     // Graceful fallback when a client misses optional artwork.
-                    DrawCircle(center,FloralMarkerRadius*.53f,FloralGreen,18);
+                    DrawCircle(center,FloralMarkerRadius*.53f*scale,FloralGreen,18);
                     RegisterDrawnMapHit(WorldMapHitKind.PointOfInterest,
-                        "floral:"+site.SiteId,new Rect(center.x-27f,center.y-27f,54f,54f));
+                        "floral:"+site.SiteId,new Rect(center.x-27f*scale,center.y-27f*scale,54f*scale,54f*scale));
                 }
 
                 if (live && floralBee!=null)
@@ -121,9 +141,9 @@ namespace BeeKingdom.Playground
                         float a=t*(atField?1.33f:.72f)+n*2.0944f;
                         Vector2 pos=center+
                             new Vector2(Mathf.Cos(a)*w*.37f,
-                                        Mathf.Sin(a)*h*.29f-7f);
-                        float bob=Mathf.Sin(t*4f+n)*2f;
-                        GUI.DrawTexture(new Rect(pos.x-14f,pos.y-11f+bob,28f,24f),
+                                        Mathf.Sin(a)*h*.29f-7f*scale);
+                        float bob=Mathf.Sin(t*4f+n)*2f*scale;
+                        GUI.DrawTexture(new Rect(pos.x-14f*scale,pos.y-11f*scale+bob,28f*scale,24f*scale),
                             floralBee,ScaleMode.ScaleToFit,true);
                     }
                 }
@@ -131,8 +151,8 @@ namespace BeeKingdom.Playground
                 Color status=site.PollenRemaining>0 ? FloralGold : FloralRest;
                 string title=site.LocalizedName(
                     BeeKingdom.Localization.BeeLocalization.CurrentLocale);
-                Rect floralCaption=new Rect(center.x-80f,center.y-h*.54f-25f,160f,22f);
-                GUI.Label(floralCaption,title,MiniLabel(status,12,TextAnchor.MiddleCenter));
+                Rect floralCaption=new Rect(center.x-80f*scale,center.y-h*.54f-25f*scale,160f*scale,22f*scale);
+                GUI.Label(floralCaption,title,MiniLabel(status,Mathf.Max(1,Mathf.RoundToInt(12f*scale)),TextAnchor.MiddleCenter));
                 RegisterDrawnMapHit(WorldMapHitKind.PointOfInterest,
                     "floral:"+site.SiteId,floralCaption,true);
 
@@ -141,7 +161,7 @@ namespace BeeKingdom.Playground
                 float ratio=site.PollenCapacity>0 ?
                     Mathf.Clamp01((float)((double)site.PollenRemaining/site.PollenCapacity))
                     : 0f;
-                Rect track=new Rect(center.x-37f,center.y+h*.40f,74f,4f);
+                Rect track=new Rect(center.x-37f*scale,center.y+h*.40f,74f*scale,4f*scale);
                 Color previous=GUI.color;
                 GUI.color=new Color(.10f,.21f,.14f,.92f);
                 GUI.DrawTexture(track,Texture2D.whiteTexture);
@@ -151,13 +171,13 @@ namespace BeeKingdom.Playground
                 GUI.color=previous;
                 if (live)
                 {
-                    GUI.Label(new Rect(center.x-65f,center.y+h*.42f+4f,130f,19f),
+                    GUI.Label(new Rect(center.x-65f*scale,center.y+h*.42f+4f*scale,130f*scale,19f*scale),
                         atField ?
                             (BeeKingdom.Localization.BeeLocalization.CurrentLocale=="en-US"
                                 ?"FORAGING":"BUTINAGE") :
                             (BeeKingdom.Localization.BeeLocalization.CurrentLocale=="en-US"
                                 ?"ON MISSION":"EN MISSION"),
-                        MiniLabel(FloralGold,10,TextAnchor.MiddleCenter));
+                        MiniLabel(FloralGold,Mathf.Max(1,Mathf.RoundToInt(10f*scale)),TextAnchor.MiddleCenter));
                 }
             }
         }
@@ -172,12 +192,12 @@ namespace BeeKingdom.Playground
                 if (!CanMapFloralSite(site)) continue;
                 WorldResourceNode anchor=ResourceById(site.MapAnchorId);
                 if (anchor==null) continue;
-                Vector2 center=WorldToScreen(anchor.WorldCoord);
+                Vector2 center=FloralDisplayPoint(anchor);
                 if(HasDrawnMapHitAreas)
                 {
                     if(!IsFloralHit(site.SiteId,guiPoint))continue;
                 }
-                else if(Vector2.Distance(guiPoint,center)>FloralMarkerRadius+7f)
+                else if(Vector2.Distance(guiPoint,center)>WorldSizeToScreen(FloralMarkerRadius+7f))
                     continue;
                 if (PollinationWorldMapOverlay.TryOpenForSite(site.SiteId))
                     return true;

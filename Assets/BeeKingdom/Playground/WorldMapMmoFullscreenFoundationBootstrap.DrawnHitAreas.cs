@@ -63,9 +63,9 @@ namespace BeeKingdom.Playground
                     if(!CanMapFloralSite(site))continue;
                     var node=ResourceById(site.MapAnchorId);
                     if(node==null)continue;
-                    Vector2 p=WorldToScreen(node.WorldCoord);
+                    Vector2 p=FloralDisplayPoint(node);
                     if(!IsOnScreen(p,155f))continue;
-                    float w=Screen.width<650?91f:112f,h=w*.74f;
+                    float w=WorldSizeToScreen(FloralWorldWidth),h=w*.74f;
                     Texture2D tex=ArtworkFor(site);
                     RegisterDrawnMapHit(WorldMapHitKind.PointOfInterest,"floral:"+site.SiteId,
                         OpaqueArtHitRect(new Rect(p.x-w*.5f,p.y-h*.52f,w,h),tex));

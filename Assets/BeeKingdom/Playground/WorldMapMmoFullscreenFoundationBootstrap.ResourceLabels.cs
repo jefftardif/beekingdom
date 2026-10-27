@@ -206,6 +206,21 @@ namespace BeeKingdom.Playground
                 preferred.width, preferred.height);
             if (IsResourceLabelPlacementClear(above, trailingHeight, ignoreLegacyHiveCaptions)) return above;
 
+            // Hive captions stay on the visible hive's vertical axis. Searching
+            // sideways made another entity appear to own the player's caption.
+            if (ignoreLegacyHiveCaptions)
+            {
+                for (float distance = 16f; distance <= 160f; distance += 16f)
+                {
+                    Rect below = new Rect(preferred.x, preferred.y + distance,
+                        preferred.width, preferred.height);
+                    if (IsResourceLabelPlacementClear(below, trailingHeight, true)) return below;
+                    Rect higher = new Rect(above.x, above.y - distance, above.width, above.height);
+                    if (IsResourceLabelPlacementClear(higher, trailingHeight, true)) return higher;
+                }
+                return preferred;
+            }
+
             float sideY = Mathf.Clamp(visibleArt.center.y - (preferred.height + trailingHeight) * 0.5f,
                 8f, Mathf.Max(8f, Screen.height - preferred.height - trailingHeight - 8f));
             Rect leftSide = new Rect(visibleArt.xMin - preferred.width - 4f, sideY, preferred.width, preferred.height);
