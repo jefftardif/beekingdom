@@ -12,6 +12,7 @@ namespace BeeKingdom.Playground
 {
     public sealed partial class WorldMapMmoFullscreenFoundationBootstrap : MonoBehaviour
     {
+        private static string MapText(string key,string fallback) => BeeKingdom.Localization.BeeLocalization.Text("worldmap.ui."+key,fallback);
         private const string OfficialMapPath = "C:/projets/beekingdom/carte.png";
         private const string WorldId = "BK-DEMO-WORLD-WAVE6-LOCAL";
         private const string GameServerId = "GS-DEMO-WAVE6-READINESS";
@@ -282,6 +283,7 @@ namespace BeeKingdom.Playground
 
         private void Update()
         {
+            RefreshOfficialResourcePlacements();
             animatedTime += Time.deltaTime;
             HandleInput();
             UpdateResourceRespawns();
@@ -301,6 +303,7 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen) return;
             EnsurePixel();
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
@@ -310,9 +313,13 @@ namespace BeeKingdom.Playground
             if (debugChunkOverlay) DrawChunkDebugOverlay();
             if (mapFilterBearDen) DrawBearDenLandmark();
             DrawAerialFlights();
+            drawnMapLabelPanels.Clear();
+            ClearDrawnMapHitAreas();
+            ReserveFutureMapArtwork();
             if (mapFilterResources) DrawResources();
+            DrawOfficialFloralMarkers();
             DrawWorldResourceCollectionMarch();
-            if (mapFilterThreats) DrawBestiary();
+            if (mapFilterThreats) { DrawBestiary(); DrawBestiary(true); }
             if (mapFilterHives) DrawHives();
             DrawPointsOfInterest();
             DrawRegionLabels();
@@ -3272,6 +3279,14 @@ namespace BeeKingdom.Playground
 
         private void HandleInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen
+                || PollinationWorldMapOverlay.IsEntryHotspot(
+                    ScreenToGui(Input.mousePosition)))
+            {
+                dragging = false;
+                lastTouchDistance = 0f;
+                return;
+            }
             if (HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime())
             {
                 HandleGuidedWorldMapInput();
@@ -3400,6 +3415,9 @@ namespace BeeKingdom.Playground
 
         private void HandleGuidedWorldMapGuiInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen ||
+                PollinationWorldMapOverlay.IsEntryHotspot(
+                    Event.current != null ? Event.current.mousePosition : Vector2.zero)) return;
             if (!HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime()) return;
             Event current = Event.current;
             if (current == null || current.type != EventType.MouseUp) return;
@@ -3555,6 +3573,7 @@ namespace BeeKingdom.Playground
                 }
             }
 
+            AppendOfficialResourcesInView();
             EnsureSelectionStillValid();
             status = "Chunks actifs: " + activeChunks.Count.ToString(CultureInfo.InvariantCulture) + " autour de " + ChunkId(center);
         }
@@ -3566,6 +3585,7 @@ namespace BeeKingdom.Playground
 
             data = new WorldChunkData(chunk);
             GenerateChunkData(data);
+            ApplyOfficialResourceCoordinates(data);
             // Stable, local-only reservations before the chunk becomes visible.
             ReserveLegacyChunkInWorld(data);
             chunkCache[chunk] = data;
@@ -4139,6 +4159,7 @@ namespace BeeKingdom.Playground
                     float spriteSize = size * 2.6f;
                     Rect spriteRect = new Rect(p.x - spriteSize * 0.5f, p.y - spriteSize * 0.58f, spriteSize, spriteSize);
                     GUI.DrawTexture(spriteRect, texture, ScaleMode.ScaleToFit, true);
+                    RegisterDrawnMapHit(WorldMapHitKind.Hive,hive.Id,OpaqueArtHitRect(spriteRect,texture));
                     if (selected)
                     {
                         float pulse = 0.5f + 0.3f * Mathf.PingPong(Time.time * 0.7f, 1f);
@@ -4153,14 +4174,10 @@ namespace BeeKingdom.Playground
                     DrawHex(p, size * 0.22f, new Color(1f, 0.86f, 0.20f, 0.95f), WorldStrokeToScreen(2f));
                 }
 
-                Rect badge = new Rect(p.x - 42f, p.y - size - 30f, 84f, 20f);
-                DrawSolid(badge, new Color(0.02f, 0.018f, 0.012f, 0.86f));
-                DrawFrame(badge, selected ? new Color(0.18f, 0.85f, 1f, 0.86f) : new Color(color.r, color.g, color.b, 0.70f), 1.2f);
-                GUI.Label(badge, hive.Badge, MiniLabel(Color.white, 10, TextAnchor.MiddleCenter));
-
-                Rect labelRect = new Rect(p.x - 82f, p.y + size + 6f, 164f, 38f);
-                DrawSolid(labelRect, new Color(0.02f, 0.018f, 0.012f, 0.78f));
-                GUI.Label(labelRect, hive.Label + "\n" + (selected ? "selectionnee" : StageLabel(hive.Stage)), MiniLabel(Color.white, 11, TextAnchor.MiddleCenter));
+                Rect caption = DrawPremiumMapLabel(hive.Label,
+                    hive.Badge + " - " + StageLabel(hive.Stage), p,
+                    texture != null ? size * 2.6f : size, texture, 1f, 0f, true);
+                RegisterDrawnMapHit(WorldMapHitKind.Hive,hive.Id,caption,true);
             }
         }
 
@@ -4183,7 +4200,8 @@ namespace BeeKingdom.Playground
             for (int i = 0; i < pointsOfInterest.Count; i++)
             {
                 WorldPointOfInterestNode poi = pointsOfInterest[i];
-                Vector2 p = WorldToScreen(poi.WorldCoord);
+                Vector2 original = WorldToScreen(poi.WorldCoord);
+                Vector2 p = original;
                 if (!IsOnScreen(p, 100f)) continue;
 
                 bool selected = poi.Id == selectedPointOfInterestId;
@@ -4192,6 +4210,8 @@ namespace BeeKingdom.Playground
 
                 DrawTerrainTileShadow(p, size * 1.5f, size * 0.40f, selected ? 0.30f : 0.20f);
                 DrawPointOfInterestGlyph(p, size, poi.Kind, accent);
+                RegisterDrawnMapHit(WorldMapHitKind.PointOfInterest,poi.Id,
+                    new Rect(p.x-size*.5f,p.y-size*.5f,size,size));
 
                 if (selected)
                 {
@@ -4202,7 +4222,8 @@ namespace BeeKingdom.Playground
 
                 Rect labelRect = new Rect(p.x - 82f, p.y + size + 6f, 164f, 18f);
                 DrawSolid(labelRect, new Color(0.02f, 0.018f, 0.012f, 0.78f));
-                GUI.Label(labelRect, "◆ " + poi.Label, MiniLabel(accent, 11, TextAnchor.MiddleCenter));
+                GUI.Label(labelRect, "◆ " + MapText("poi." + poi.Kind + ".label", poi.Label), MiniLabel(accent, 11, TextAnchor.MiddleCenter));
+                RegisterDrawnMapHit(WorldMapHitKind.PointOfInterest,poi.Id,labelRect,true);
 
                 if (selected)
                 {
@@ -4219,18 +4240,18 @@ namespace BeeKingdom.Playground
                     float textX = descriptionRect.x + 8f;
                     float textWidth = descriptionRect.width - 16f;
                     float y = descriptionRect.y + 4f;
-                    GUI.Label(new Rect(textX, y, textWidth, 16f), poi.Family, MiniLabel(accent, 10, TextAnchor.UpperLeft));
+                    GUI.Label(new Rect(textX, y, textWidth, 16f), MapText("poi." + poi.Kind + ".family", poi.Family), MiniLabel(accent, 10, TextAnchor.UpperLeft));
                     y += 18f;
-                    GUI.Label(new Rect(textX, y, textWidth, 34f), poi.Description, new GUIStyle(MiniLabel(Color.white, 10, TextAnchor.UpperLeft)) { wordWrap = true });
+                    GUI.Label(new Rect(textX, y, textWidth, 34f), MapText("poi." + poi.Kind + ".description", poi.Description), new GUIStyle(MiniLabel(Color.white, 10, TextAnchor.UpperLeft)) { wordWrap = true });
                     if (hasHistory)
                     {
                         y += 36f;
-                        GUI.Label(new Rect(textX, y, textWidth, 40f), poi.History, new GUIStyle(MiniLabel(new Color(0.82f, 0.80f, 0.74f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true });
+                        GUI.Label(new Rect(textX, y, textWidth, 40f), MapText("poi." + poi.Kind + ".history", poi.History), new GUIStyle(MiniLabel(new Color(0.82f, 0.80f, 0.74f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true });
                     }
                     if (hasBoss)
                     {
                         y += hasHistory ? 42f : 36f;
-                        GUI.Label(new Rect(textX, y, textWidth, 30f), "⚔ " + poi.BossTeaser, new GUIStyle(MiniLabel(new Color(0.92f, 0.62f, 0.30f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true, fontStyle = FontStyle.Italic });
+                        GUI.Label(new Rect(textX, y, textWidth, 30f), "⚔ " + MapText("poi." + poi.Kind + ".boss", poi.BossTeaser), new GUIStyle(MiniLabel(new Color(0.92f, 0.62f, 0.30f, 1f), 9, TextAnchor.UpperLeft)) { wordWrap = true, fontStyle = FontStyle.Italic });
                     }
                 }
             }
@@ -4296,7 +4317,8 @@ namespace BeeKingdom.Playground
             for (int i = 0; i < resources.Count; i++)
             {
                 WorldResourceNode resource = resources[i];
-                Vector2 p = WorldToScreen(resource.WorldCoord);
+                Vector2 original = WorldToScreen(resource.WorldCoord);
+                Vector2 p = original;
                 if (!IsOnScreen(p, 74f)) continue;
 
                 Color color = ResourceColor(resource.Kind);
@@ -4343,21 +4365,40 @@ namespace BeeKingdom.Playground
                 {
                     size = ResourceSpriteScreenSize(resource);
                     GUI.color = tint;
-                    GUI.DrawTexture(new Rect(p.x - size * 0.5f, p.y - size * 0.58f, size, size), texture, ScaleMode.ScaleToFit, true);
+                    Rect resourceDrawRect=OfficialResourceDrawRect(resource,new Rect(p.x - size * 0.5f, p.y - size * 0.58f, size, size));
+                    GUI.DrawTexture(resourceDrawRect, texture, ScaleMode.ScaleToFit, true);
+                    if(tint.a>.05f)
+                        RegisterDrawnMapHit(WorldMapHitKind.Resource,resource.Id,
+                            OpaqueArtHitRect(resourceDrawRect,texture));
                     GUI.color = previousGuiColor;
                 }
                 else
                 {
                     size = WorldSizeToScreen(24f);
-                    DrawDiamond(p, size * 0.36f, color * tint, WorldStrokeToScreen(2f));
+                    Rect fallbackRect=OfficialResourceDrawRect(resource,new Rect(p.x-size/2,p.y-size/2,size,size));
+                    GUI.BeginGroup(fallbackRect);
+                    float effectiveSize=Mathf.Min(fallbackRect.width,fallbackRect.height);
+                    DrawDiamond(new Vector2(fallbackRect.width/2,fallbackRect.height/2),effectiveSize*0.36f,color*tint,Mathf.Min(WorldStrokeToScreen(2f),effectiveSize*0.1f));
+                    GUI.EndGroup();
+                    if(tint.a>.05f)RegisterDrawnMapHit(WorldMapHitKind.Resource,resource.Id,
+                        fallbackRect);
                 }
 
-                if (official) DrawResourceLifeIndicators(p, size, resource, life, officialModel, presenceModel);
-
-                if (selected && !official)
+                bool collectingHere = collectionVisualState == CollectionVisualState.Collecting
+                    && collectionVisualTargetNodeId == resource.Id;
+                Vector2 indicatorPoint = p;
+                if (selected && !collectingHere && !(requireOfficialResourcePlacements && officialPlacementView.Contains(resource.Id)))
                 {
-                    GUI.Label(new Rect(p.x - 72f, p.y + ResourceSpriteScreenSize(resource) * 0.42f, 144f, 34f), resource.Label + "\n" + ResourceQuantityLabel(resource), MiniLabel(Color.white, 10, TextAnchor.MiddleCenter));
+                    Rect labelRect = DrawPremiumResourceLabel(resource, p, size, texture,
+                        ResourceQuantityLabel(resource), tint.a, 0f,
+                        null);
+                    if(tint.a>.05f)
+                        RegisterDrawnMapHit(WorldMapHitKind.Resource,resource.Id,labelRect,true);
+                    if (labelRect.y >= p.y)
+                        indicatorPoint.y = Mathf.Max(p.y, labelRect.yMax + 18f - size * 0.25f);
                 }
+                if (official && !collectingHere && !(requireOfficialResourcePlacements && officialPlacementView.Contains(resource.Id)))
+                    DrawResourceLifeIndicators(indicatorPoint, size, resource, life, officialModel, presenceModel);
             }
         }
 
@@ -4488,26 +4529,38 @@ namespace BeeKingdom.Playground
                 GUI.Label(new Rect(p.x - 60f, bar.y - 15f, 120f, 14f), marker, MiniLabel(new Color(1f, 0.82f, 0.42f, 1f), 9, TextAnchor.MiddleCenter));
         }
 
-        private void DrawBestiary()
+        private void DrawBestiary(bool selectedOnly = false)
         {
             for (int i = 0; i < bestiary.Count; i++)
             {
                 WorldBestiaryNode beast = bestiary[i];
-                Vector2 p = WorldToScreen(beast.WorldCoord);
+                // Shared anchors exist: keep the selected creature visible above hives.
+                if ((beast.Id == selectedBestiaryId) != selectedOnly) continue;
+                Vector2 anchor = WorldToScreen(beast.WorldCoord);
+                Vector2 p = BestiaryDisplayPoint(beast);
                 if (!IsOnScreen(p, 120f)) continue;
+
+                if (Vector2.Distance(p, anchor) > 0.01f)
+                    DrawLine(anchor, p, new Color(0.75f, 0.85f, 0.55f, 0.65f), 1.5f);
 
                 Texture2D texture = RuntimeEntityTexture(BestiaryTexturePath(beast));
                 float size = WorldSizeToScreen(48f + beast.Tier * 7.5f);
+                if (beast.Tier == 2 && beast.Variant == 2) size *= 1.15f;
                 Color color = BestiaryTierColor(beast.Tier);
                 bool selected = beast.Id == selectedBestiaryId;
                 bool rareSighting = IsRareSighting(beast, out string rareSightingEventKey);
                 DrawTerrainTileShadow(p, size * 0.90f, size * 0.24f, selected ? 0.28f : 0.18f);
                 if (texture != null)
                 {
-                    GUI.DrawTexture(new Rect(p.x - size * 0.5f, p.y - size * 0.58f, size, size), texture, ScaleMode.ScaleToFit, true);
+                    Rect beastArt=new Rect(p.x-size*.5f,p.y-size*.58f,size,size);
+                    GUI.DrawTexture(beastArt, texture, ScaleMode.ScaleToFit, true);
+                    RegisterDrawnMapHit(WorldMapHitKind.Bestiary,beast.Id,
+                        OpaqueArtHitRect(beastArt,texture));
                 }
                 else
                 {
+                    RegisterDrawnMapHit(WorldMapHitKind.Bestiary,beast.Id,
+                        new Rect(p.x-size*.34f,p.y-size*.34f,size*.68f,size*.68f));
                     DrawTriangle(p, size * 0.34f, color, WorldStrokeToScreen(3f));
                 }
 
@@ -4518,10 +4571,12 @@ namespace BeeKingdom.Playground
                     DrawFrame(ring, new Color(0.98f, 0.72f, 0.20f, pulse), WorldStrokeToScreen(3f));
                 }
 
-                string label = BestiaryAccessibilityWord(beast) + " T" + beast.Tier.ToString(CultureInfo.InvariantCulture) + " " + beast.Label + "\nPV " + BestiaryVirtualHp(beast).ToString(CultureInfo.InvariantCulture);
-                if (rareSighting) label = "★ " + HiveViewProductUiPresenter.WorldEventDisplayName(rareSightingEventKey) + "\n" + label;
-                GUI.Label(new Rect(p.x - 72f, p.y + size * 0.38f, 144f, rareSighting ? 50f : 34f), label,
-                    MiniLabel(rareSighting ? new Color(1f, 0.80f, 0.30f, 1f) : new Color(1f, 0.90f, 0.62f, 1f), 10, TextAnchor.MiddleCenter));
+                string name = BestiaryAccessibilityWord(beast) + " T" + beast.Tier.ToString(CultureInfo.InvariantCulture) + " " + beast.Label;
+                if (rareSighting) name = "? " + HiveViewProductUiPresenter.WorldEventDisplayName(rareSightingEventKey) + "\n" + name;
+                Rect beastCaption=DrawPremiumMapLabel(name,
+                    "PV "+BestiaryVirtualHp(beast).ToString(CultureInfo.InvariantCulture),
+                    p,size,texture,1f,0f,false,null);
+                RegisterDrawnMapHit(WorldMapHitKind.Bestiary,beast.Id,beastCaption,true);
             }
         }
 
@@ -5014,6 +5069,7 @@ namespace BeeKingdom.Playground
 
         private void ConfirmCollectionLaunch()
         {
+            if(requireOfficialResourcePlacements&&!officialPlacementReady){status="Positions officielles indisponibles pour un nouveau depart";return;}
             WorldResourceNode resource = ResourceById(compositionTargetNodeId);
             if (resource == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
 
@@ -6402,14 +6458,7 @@ namespace BeeKingdom.Playground
         {
             if (hive == null || resource == null) return;
 
-            // M080 — If in composition state for this resource, this is a confirm action
-            if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
-            {
-                ConfirmCollectionLaunch();
-                return;
-            }
-
-            // M080 — Recall during collecting (same resource)
+            // M080 â€” Recall during collecting (same resource)
             if (collectionVisualState == CollectionVisualState.Collecting && collectionVisualTargetNodeId == resource.Id)
             {
                 WorldResourceCollectionScreenModel recallModel = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
@@ -6429,7 +6478,7 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            // M080 — Non-official resources: launch directly (local simulation, no server)
+            // M080 â€” Non-official resources: launch directly (local simulation, no server)
             if (!IsOfficialResource(resource))
             {
                 collectionVisualState = CollectionVisualState.Outbound;
@@ -6445,7 +6494,7 @@ namespace BeeKingdom.Playground
             WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
             if (model == null) { status = "Serveur monde indisponible"; return; }
 
-            // M080 — Stale expired flight: auto-claim in background to unblock
+            // M080 â€” Stale expired flight: auto-claim in background to unblock
             if (model.Active != null && DateTimeOffset.UtcNow >= model.Active.EndsAtUtc)
             {
                 HiveViewProductUiPresenter.ClaimOfficialWorldResourceCollectionForWorldMap();
@@ -6456,7 +6505,7 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            // M080 — Flight active here: recall it (recall button shown during Collecting via visual state)
+            // M080 â€” Flight active here: recall it (recall button shown during Collecting via visual state)
             if (IsOfficialFlightActiveHere(model, resource.Id))
             {
                 HiveViewProductUiPresenter.RecallOfficialWorldResourceCollectionForWorldMap();
@@ -6464,14 +6513,24 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            // M080 — Flight active on another node: refuse
+            // M080 â€” Flight active on another node: refuse
             if (model.Active != null) { status = "Un vol officiel est deja en cours"; return; }
+
+            if(requireOfficialResourcePlacements&&!officialPlacementReady){status="Positions officielles indisponibles pour un nouveau depart";return;}
+
+            // M080 â€” If in composition state for this resource, this is a confirm action
+            if (collectionVisualState == CollectionVisualState.Composition && compositionTargetNodeId == resource.Id)
+            {
+                if(requireOfficialResourcePlacements&&IsOfficialResource(resource)&&!officialPlacementReady)return;
+                ConfirmCollectionLaunch();
+                return;
+            }
 
             // If no troops available, refuse
             if (model.AvailableRoster == null || model.AvailableRoster.Values.All(v => v <= 0))
             { status = "Aucune troupe disponible pour escorter la collecte"; return; }
 
-            // M080 — Open composition panel instead of directly launching
+            // M080 â€” Open composition panel instead of directly launching
             collectionVisualState = CollectionVisualState.Composition;
             compositionTargetNodeId = resource.Id;
             showCompositionPanel = true;
@@ -6711,6 +6770,7 @@ namespace BeeKingdom.Playground
 
         private void TrySelectAt(Vector2 guiPoint)
         {
+            if (TrySelectOfficialFloralMarker(guiPoint)) return;
             WorldHiveNode nearestHive = null;
             float nearestHiveDistance = float.MaxValue;
             for (int i = 0; i < hives.Count; i++)
@@ -6722,8 +6782,59 @@ namespace BeeKingdom.Playground
                     nearestHive = hives[i];
                 }
             }
+            WorldResourceNode nearestResource = null;
+            float nearestResourceDistance = float.MaxValue;
+            for (int i = 0; i < resources.Count; i++)
+            {
+                float distance = Vector2.Distance(guiPoint, WorldToScreen(resources[i].WorldCoord));
+                if (distance < nearestResourceDistance)
+                {
+                    nearestResourceDistance = distance;
+                    nearestResource = resources[i];
+                }
+            }
+            WorldBestiaryNode nearestBestiary = null;
+            float nearestBestiaryDistance = float.MaxValue;
+            for (int i = 0; i < bestiary.Count; i++)
+            {
+                float distance = Vector2.Distance(guiPoint, WorldToScreen(bestiary[i].WorldCoord));
+                if (distance < nearestBestiaryDistance)
+                {
+                    nearestBestiaryDistance = distance;
+                    nearestBestiary = bestiary[i];
+                }
+            }
+            WorldPointOfInterestNode nearestPoi = null;
+            float nearestPoiDistance = float.MaxValue;
+            for (int i = 0; i < pointsOfInterest.Count; i++)
+            {
+                float distance = Vector2.Distance(guiPoint, WorldToScreen(pointsOfInterest[i].WorldCoord));
+                if (distance < nearestPoiDistance)
+                {
+                    nearestPoiDistance = distance;
+                    nearestPoi = pointsOfInterest[i];
+                }
+            }
 
-            if (nearestHive != null && nearestHiveDistance <= 58f)
+            bool guidedSelection = HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime();
+            WorldMapHitKind closestHit = WorldMapHitKind.None;
+            if (guidedSelection)
+            {
+                lastHitKind = WorldMapHitKind.None;
+                lastHitId = null;
+            }
+            else
+            {
+                closestHit = ChooseMapHit(guiPoint);
+                if (closestHit == WorldMapHitKind.Hive) nearestHive = HiveById(lastHitId);
+                if (closestHit == WorldMapHitKind.Resource) nearestResource = ResourceById(lastHitId);
+                if (closestHit == WorldMapHitKind.Bestiary) nearestBestiary = BestiaryById(lastHitId);
+                if (closestHit == WorldMapHitKind.PointOfInterest) nearestPoi = PointOfInterestById(lastHitId);
+            }
+
+
+            if (nearestHive != null && (guidedSelection
+                ? nearestHiveDistance <= 58f : closestHit == WorldMapHitKind.Hive))
             {
                 if (HiveViewProductUiPresenter.GuidedWorldMapTutorialHiveSelectionStepForRuntime()
                     && !HiveViewProductUiPresenter.SelectGuidedWorldMapHiveForRuntime(nearestHive.Id))
@@ -6751,19 +6862,9 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            WorldResourceNode nearestResource = null;
-            float nearestResourceDistance = float.MaxValue;
-            for (int i = 0; i < resources.Count; i++)
-            {
-                float distance = Vector2.Distance(guiPoint, WorldToScreen(resources[i].WorldCoord));
-                if (distance < nearestResourceDistance)
-                {
-                    nearestResourceDistance = distance;
-                    nearestResource = resources[i];
-                }
-            }
 
-            if (nearestResource != null && nearestResourceDistance <= 48f)
+            if (nearestResource != null && (guidedSelection
+                ? nearestResourceDistance <= 48f : closestHit == WorldMapHitKind.Resource))
             {
                 if (HiveViewProductUiPresenter.GuidedWorldMapTutorialResourceSelectionStepForRuntime()
                     && !HiveViewProductUiPresenter.SelectGuidedWorldMapResourceForRuntime(nearestResource.Id))
@@ -6784,19 +6885,9 @@ namespace BeeKingdom.Playground
                 return;
             }
 
-            WorldBestiaryNode nearestBestiary = null;
-            float nearestBestiaryDistance = float.MaxValue;
-            for (int i = 0; i < bestiary.Count; i++)
-            {
-                float distance = Vector2.Distance(guiPoint, WorldToScreen(bestiary[i].WorldCoord));
-                if (distance < nearestBestiaryDistance)
-                {
-                    nearestBestiaryDistance = distance;
-                    nearestBestiary = bestiary[i];
-                }
-            }
 
-            if (nearestBestiary != null && nearestBestiaryDistance <= 62f)
+            if (nearestBestiary != null && (guidedSelection
+                ? nearestBestiaryDistance <= 62f : closestHit == WorldMapHitKind.Bestiary))
             {
                 selectedBestiaryId = nearestBestiary.Id;
                 // Carnet du Bestiaire (demande de Jeff, 2026-08-01) : la selection sur la carte EST
@@ -6809,19 +6900,9 @@ namespace BeeKingdom.Playground
 
             // Points d'Interet (demande de Jeff, 2026-08-01) : selectionnables comme les trois
             // autres types de noeuds, mais purement informationnels - aucune action associee.
-            WorldPointOfInterestNode nearestPoi = null;
-            float nearestPoiDistance = float.MaxValue;
-            for (int i = 0; i < pointsOfInterest.Count; i++)
-            {
-                float distance = Vector2.Distance(guiPoint, WorldToScreen(pointsOfInterest[i].WorldCoord));
-                if (distance < nearestPoiDistance)
-                {
-                    nearestPoiDistance = distance;
-                    nearestPoi = pointsOfInterest[i];
-                }
-            }
 
-            if (nearestPoi != null && nearestPoiDistance <= 66f)
+            if (nearestPoi != null && (guidedSelection
+                ? nearestPoiDistance <= 66f : closestHit == WorldMapHitKind.PointOfInterest))
             {
                 selectedPointOfInterestId = nearestPoi.Id;
                 status = "Point d'interet selectionne: " + nearestPoi.Label + " @ " + CoordLabel(nearestPoi.WorldCoord);

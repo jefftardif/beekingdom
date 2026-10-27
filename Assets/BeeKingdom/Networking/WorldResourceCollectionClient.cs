@@ -35,6 +35,7 @@ namespace BeeKingdom.Networking
     // points d'interet) - miroir du meme patron deja utilise par CombatPatrolLaunchRequest.
     public sealed class WorldResourceCollectionLaunchMutationRequest
     {
+        public long? ExpectedPlacementRevision { get; set; }
         public long Guardians { get; set; }
         public long Wingrunners { get; set; }
         public long Darters { get; set; }
@@ -44,6 +45,9 @@ namespace BeeKingdom.Networking
 
     public sealed class RemoteWorldResourceNode
     {
+        public string PlacementStatus {get;set;}
+        public BeeKingdom.MapPlacement.ResourcePlacementScope PlacementScope {get;set;}
+        public BeeKingdom.MapPlacement.MapPlacementSnapshot Placement { get; set; }
         public string NodeId { get; set; }
         public string ResourceKey { get; set; }
         public string Tier { get; set; }
@@ -106,7 +110,11 @@ namespace BeeKingdom.Networking
         Task<RemoteWorldResourceCollectionSnapshot> RecallAsync(Guid hiveId, Guid flightId, long expectedRevision, string idempotencyKey, CancellationToken cancellationToken = default);
     }
 
-    public sealed class WorldResourceCollectionClient : IWorldResourceCollectionClient
+    public interface IPlacementAwareWorldResourceClient
+    {
+        Task<RemoteWorldResourceCollectionSnapshot> LaunchAtPlacementAsync(Guid hiveId,string nodeId,long guardians,long wingrunners,long darters,long expectedRevision,string idempotencyKey,long expectedPlacementRevision,CancellationToken cancellationToken=default);
+    }
+    public sealed class WorldResourceCollectionClient : IWorldResourceCollectionClient, IPlacementAwareWorldResourceClient
     {
         public const string ContractVersion = "living-hive-world-resource-collection-v1";
 
@@ -128,6 +136,10 @@ namespace BeeKingdom.Networking
         }
 
         public Task<RemoteWorldResourceCollectionSnapshot> LaunchAsync(Guid hiveId, string nodeId, long guardians, long wingrunners, long darters, long expectedRevision, string idempotencyKey, CancellationToken cancellationToken = default)
+            =>LaunchCoreAsync(hiveId,nodeId,guardians,wingrunners,darters,expectedRevision,idempotencyKey,null,cancellationToken);
+        public Task<RemoteWorldResourceCollectionSnapshot> LaunchAtPlacementAsync(Guid hiveId,string nodeId,long guardians,long wingrunners,long darters,long expectedRevision,string idempotencyKey,long expectedPlacementRevision,CancellationToken cancellationToken=default)
+            =>LaunchCoreAsync(hiveId,nodeId,guardians,wingrunners,darters,expectedRevision,idempotencyKey,expectedPlacementRevision,cancellationToken);
+        private Task<RemoteWorldResourceCollectionSnapshot> LaunchCoreAsync(Guid hiveId,string nodeId,long guardians,long wingrunners,long darters,long expectedRevision,string idempotencyKey,long? expectedPlacementRevision,CancellationToken cancellationToken)
         {
             RequireHive(hiveId);
             RequireNodeId(nodeId);
@@ -139,6 +151,7 @@ namespace BeeKingdom.Networking
                 Wingrunners = Math.Max(0, wingrunners),
                 Darters = Math.Max(0, darters),
                 ExpectedRevision = expectedRevision,
+                ExpectedPlacementRevision = expectedPlacementRevision,
                 IdempotencyKey = idempotencyKey
             });
             return SendAsync(hiveId, request, cancellationToken);

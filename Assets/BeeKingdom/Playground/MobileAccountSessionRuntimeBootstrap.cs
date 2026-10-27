@@ -434,6 +434,7 @@ namespace BeeKingdom.Playground
             // separate result lists so a chat search never overwrites what Alliance is showing.
             chatPlayerPickerController = new ChatPlayerPickerController(playerDirectoryClient);
             gameplayHiveId = hiveId;
+            ConfigurePollinationForActiveSession(client.Gate, client, gameTransport, hiveId, configuration, authenticatedAuthority);
             championBeeClient = new HiveChampionBeeClient(client.Gate, client, gameTransport);
             troopTierClient = new HiveTroopTierClient(client.Gate, client, gameTransport);
             vipClient = new HiveVipClient(client.Gate, client, gameTransport);
@@ -691,6 +692,7 @@ namespace BeeKingdom.Playground
 
         public static void CloseGameplayForSignedOutSession()
         {
+            ClosePollinationForSignedOutSession();
             ResetStartupSession();
             ForgetChatLifecycle(chatCoordinator.SessionEndedAsync());
             cachedChatBinding = null;

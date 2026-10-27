@@ -191,7 +191,14 @@ namespace BeeKingdom.Playground
             Model.State = WorldResourceCollectionScreenState.Mutating;
             try
             {
-                RemoteWorldResourceCollectionSnapshot snapshot = await client.LaunchAsync(hiveId, nodeId, guardians, wingrunners, darters, Model.Revision, NewKey("launch"), lifetime.Token);
+                var placement=Model.Nodes.FirstOrDefault(n=>n.NodeId==nodeId)?.Placement;
+                RemoteWorldResourceCollectionSnapshot snapshot;
+                if(placement!=null)
+                {
+                    if(!(client is IPlacementAwareWorldResourceClient spatial))throw new InvalidOperationException("resource_placement_client_required");
+                    snapshot=await spatial.LaunchAtPlacementAsync(hiveId,nodeId,guardians,wingrunners,darters,Model.Revision,NewKey("launch"),placement.Revision,lifetime.Token);
+                }
+                else snapshot=await client.LaunchAsync(hiveId,nodeId,guardians,wingrunners,darters,Model.Revision,NewKey("launch"),lifetime.Token);
                 if (disposed) return;
                 Model.DraftGuardians = 0;
                 Model.DraftWingrunners = 0;

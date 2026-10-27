@@ -173,7 +173,8 @@ namespace BeeKingdom.Playground
             for(int i=0;i<data.Resources.Count;i++)
             {
                 WorldResourceNode r=data.Resources[i];
-                bool official=IsOfficialResource(r);
+                bool official=IsOfficialResource(r) ||
+                    (requireOfficialResourcePlacements&&officialPlacementView.Contains(r.Id));
                 // The current prototype has no reviewed hydrology polygon for
                 // relocating water. Preserve its original anchor until that
                 // spatial registry can certify a different location.
