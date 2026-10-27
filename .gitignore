@@ -159,3 +159,13 @@ Assets/BeeKingdom/Buildings/Resources/BuildingRuntimeView/*.bytes
 *.hdr
 *.tif
 *.tiff
+
+# Reviewed map dependencies: only these eight PNG assets may be versioned.
+!/Assets/BeeKingdom/Playground/Resources/Pollination/field_bloom.png
+!/Assets/BeeKingdom/Playground/Resources/Pollination/field_recovering.png
+!/Assets/BeeKingdom/Playground/Resources/Pollination/field_resting.png
+!/Assets/BeeKingdom/Playground/Resources/Pollination/forager.png
+!/Assets/BeeKingdom/Playground/Resources/WorldMapRuntimeEntitiesWave6Premium/R1/resource_honey_poor.png
+!/Assets/BeeKingdom/Playground/Resources/WorldMapRuntimeEntitiesWave6Premium/R2/resource_honey_medium.png
+!/Assets/BeeKingdom/Playground/Resources/WorldMapRuntimeEntitiesWave6Premium/R3/resource_honey_rich.png
+!/Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/honey-medium.png
