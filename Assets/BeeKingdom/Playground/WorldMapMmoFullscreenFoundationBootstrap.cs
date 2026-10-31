@@ -350,6 +350,11 @@ namespace BeeKingdom.Playground
             HiveViewProductUiPresenter.DrawCombatPatrolOverlayForWorldMap();
             if (showCompositionPanel && collectionVisualState == CollectionVisualState.Composition)
                 DrawCompositionPanel();
+            // Foreground shared panel for the World Map's IMGUI rendering path.
+            // In the current gameplay HUD the earlier SharedMenuOpen return
+            // invokes this same renderer before leaving OnGUI.
+            var moreForeground = GetComponent<WorldMapSharedPanelForeground>();
+            if (moreForeground != null) moreForeground.DrawFromMapOnGUI();
         }
 
         private void OnDestroy()
