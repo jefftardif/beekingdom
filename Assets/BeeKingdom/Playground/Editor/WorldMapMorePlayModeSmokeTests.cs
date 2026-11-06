@@ -21,6 +21,11 @@ namespace BeeKingdom.Playground.Editor
 
         private static bool IsMcpTransportCancellation(string message,string stack)
         {
+            // Unity MCP connection to its own test collector is not gameplay.
+            // Filter only this identifiable handshake error; preserve every
+            // other log error, including networking/gameplay exceptions.
+            if (message.Contains("McpManagerClientHub") &&
+                message.Contains("Version handshake failed")) return true;
             return (message.Contains("OperationCanceledException")
                     || message.Contains("TaskCanceledException")
                     || message.Contains("HttpRequestException"))
@@ -68,6 +73,20 @@ namespace BeeKingdom.Playground.Editor
                 name, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(field, Is.Not.Null, "Missing shared-menu field " + name);
             return (T)field.GetValue(subject);
+        }
+
+        private static string PanelAnimDiagnostic(LivingHiveMenuCanvas m,string id)
+        {
+            var animations=ReadMenuField<System.Collections.IDictionary>(m,"panelAnimStates");
+            object anim=animations[id];
+            if(anim==null)return "anim=missing";
+            Type t=anim.GetType();
+            bool closing=(bool)t.GetField("Closing").GetValue(anim);
+            float started=(float)t.GetField("StartedAt").GetValue(anim);
+            CanvasGroup group=(CanvasGroup)t.GetField("Group").GetValue(anim);
+            return "animClosing="+closing+";animAge="+(Time.unscaledTime-started).ToString("F3")+
+                   ";animAlpha="+group.alpha.ToString("F3")+
+                   ";menuEnabled="+m.isActiveAndEnabled;
         }
 
         [UnityTest]
@@ -152,7 +171,7 @@ namespace BeeKingdom.Playground.Editor
                     yield return new WaitForSecondsRealtime(.22f);
                     Assert.That(menu.SharedPanelOpen, Is.False,
                         "Panel failed to close in cycle "+cycle+" ("+target+"): BagVisible="+
-                        menu.PanelShown("Bag")+", MoreVisible="+menu.PanelShown("More"));
+                        menu.PanelShown("Bag")+", MoreVisible="+menu.PanelShown("More")+";"+MenuDiagnostic(menu)+";"+PanelAnimDiagnostic(menu,target));
                 }
                 Assert.That(unexpectedErrors,Is.Empty,
                     "Unexpected gameplay errors during More/Bag lifecycle.");

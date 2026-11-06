@@ -66,6 +66,22 @@ namespace BeeKingdom.LivingHiveMenu
             SharedClosingGesture?.Invoke();
             state.CloseActiveMenuPanel();
             RefreshAll();
+            // A panel that has not yet reached its first visible fade frame
+            // can still have activeSelf=true while alpha=0. Closing it would
+            // otherwise leave an invisible popup alive until a later Update,
+            // which is not guaranteed during a PlayMode/UI handoff.
+            // Keep the existing 0.12s fade for panels that are actually visible.
+            if (sharedPanelsOnly)
+            {
+                foreach (PanelAnimState animation in panelAnimStates.Values)
+                {
+                    if (animation.Root == null || !animation.Root.activeSelf ||
+                        !animation.Closing || animation.Group == null ||
+                        animation.Group.alpha > 0.001f) continue;
+                    animation.Root.SetActive(false);
+                }
+                if (sharedBackdrop != null) sharedBackdrop.SetActive(SharedPanelOpen);
+            }
         }
 
         private Canvas canvas;
