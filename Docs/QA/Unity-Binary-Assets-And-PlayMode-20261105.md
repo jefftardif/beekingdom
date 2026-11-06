@@ -54,3 +54,20 @@ Journaux et XML conservés hors Git dans `C:\BeeKingdom\staging`. Aucun APK Andr
 - Vérifier en GameView les panneaux Plus/Chat, les différents zooms, le terrain et les placements réels, puis sur Android.
 - Le serveur SRVESDT, ses drapeaux, SQL et son API n'ont pas été modifiés pendant ce lot.
 - Ne pas fusionner dans `main` sans ces contrôles; les changements non commités du projet principal restent protégés.
+
+## Vérification supplémentaire du menu Plus
+
+Test WorldMapMorePlayModeSmokeTests dans la scène officielle World Map,
+sans connexion aux comptes des joueurs :
+
+- Ouverture de More, identité du panneau et présence du renderer premium.
+- Fermeture logique immédiate puis attente du fondu de 0,12 s.
+- Réouverture du Sac, puis fermeture sans perdre l'état du menu.
+- Filtrage limité aux annulations de transport MCP lors de la sortie du PlayMode;
+  les autres erreurs de jeu restent signalées.
+
+**Résultat final : 1/1 PlayMode réussi, 0 échec.** Le rendu pixel à pixel du
+HUD, le Chat connecté, le terrain et les contrôles tactiles Android
+nécessitent toujours une vérification visuelle complète.
+
+Rapport : C:\BeeKingdom\staging\BK-HudChat-Reconcile-20261105-plus-playmode-diagnostic2.xml.
