@@ -71,3 +71,16 @@ HUD, le Chat connecté, le terrain et les contrôles tactiles Android
 nécessitent toujours une vérification visuelle complète.
 
 Rapport : C:\BeeKingdom\staging\BK-HudChat-Reconcile-20261105-plus-playmode-diagnostic2.xml.
+
+## Reprise du 6 novembre 2026 — fermeture des panneaux
+
+- Travail dans le worktree isole client `integration/bk-hud-chat-20261105`.
+- Défaut reproduit par `WorldMapMorePlayModeSmokeTests` : après une réouverture rapide, `More` pouvait etre logiquement fermé et totalement transparent (`CanvasGroup.alpha=0`), mais son GameObject demeurait `activeSelf=true`.
+- Correctif `LivingHiveMenuCanvas.CloseSharedPanel()` : si le panneau partage est déjà invisible au moment de sa fermeture, le désactiver immédiatement; conserver le fondu de 0,12 s pour les panneaux visibles.
+- Test de régression enrichi avec douze cycles alternés More / Bag, et filtre très restreint des erreurs de handshake du plugin MCP Unity (sans masquer les erreurs du jeu).
+- Resultat Unity `BK-PlayMode-12cycle-fixed-transport.xml` : **1/1 test PlayMode réussi, 0 échec**, comprenant les 12 cycles; code de sortie de Unity = 0.
+- Correction des traductions de `bag.data_unavailable` en `fr-CA` et `en-US` dans le commit `41507ead`.
+- Vérification du manifeste `Unity-Asset-Checksums-20261105.json` : **5 685/5 685 SHA-256 conformes**, 0 manquant, 0 divergence, 7 630 métadonnées Unity contrôlées, 0 collision GUID; rapport `C:\BeeKingdom\qa\BK-Assets-Contract-withSHA-20261106.json`.
+- Commits `be25e101` (correctif + test) et `41507ead` (FR/EN) pousses sur la branche d'integration.
+- Pour lancer le test Unity a distance sur PCJEFF, définir uniquement dans le processus courant `HOME=$env:USERPROFILE`, `TMP=$env:TEMP`, `PROGRAMDATA=C:\ProgramData`, `ALLUSERSPROFILE=C:\ProgramData`, `XDG_CONFIG_HOME=$env:APPDATA`. Sans ces variables, le Package Manager Unity peut échouer sur `getLocalConfigFolder`.
+- **Non livrés** : aucune fusion dans `main` (53 modifications préexistantes protégées), aucun déploiement de client ou de serveur, aucun build APK. Validation GameView, Chat réel, zoom et collisions, puis tactile Android encore à faire. Les images hors Git doivent toujours être fournies par une source autorisee.
