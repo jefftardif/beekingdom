@@ -143,3 +143,44 @@ encore épingler la version et son empreinte, puis autoriser les actions.
 Ni `main`, ni SRVESDT, ni la base SQL, ni le build Android n'ont été
 modifiés pour activer ces règles. Ce lot fournit la **fondation vérifiée**
 pour remplacer le masque, pas une migration de positions déjà publiée.
+
+## Production gate — 6 novembre 2026
+
+Après la demande d'activation en production, une vérification **réelle
+et en lecture seule** a été exécutée sur SRVESDT. Le service officiel
+`https://api-ops.beekingdomgame.com/health` a répondu Healthy,
+mais `/runtime/world-map-readiness` confirme que le gameplay carte
+est encore `PreparationOnly`, `readOnly=true`, `nonLive=true`,
+`mapGameplayEnabled=false`, `realTimeSynchronizationEnabled=false`,
+et `productionRouteProven=false`.
+
+Garde-fou livré dans
+`Server/ops/world-map-semantic/Test-ProductionActivationGate.ps1`.
+Copie identique sur SRVESDT :
+`C:\BeeKingdom\TOOLS\WorldMapSemantic-ProductionActivationGate-20261106.ps1`.
+SHA-256 des deux scripts :
+`7AEC681CAAE5A9F665CC50E7733AB792139C174DDD268A98C1C789D6A1BC322A`.
+
+Exécution SRVESDT : `WORLD_MAP_ACTIVATION=BLOCKED`,
+`API_HEALTH=PASS`, code de sortie `2` (**échec attendu**).
+Rapport :
+`C:\BeeKingdom\staging\WorldMapSemantic-ProductionGate-20261106.json`.
+
+Le garde a détecté notamment **aucun manifeste de terrain
+révisé et lié à une révision**, **aucune configuration de réservations
+SQL atomiques imposées par le serveur**, et **aucun endpoint de
+production prouvant que le moteur d'admission est réellement appelé**.
+
+**Aucune activation effective des placements n'a eu lieu :**
+- `C:\inetpub\BeeKingdomApi` et la configuration IIS n'ont pas
+  été modifiés.
+- Aucun changement SQL, aucun déplacement de joueur, aucune
+  réapparition de ressource modifiée.
+- Aucune fusion vers `main`, aucun build Android distribué.
+- La branche de la solution reste un prototype validé par tests,
+  mais pas une fonctionnalité actuellement exécutée par l'API officielle.
+
+Le script de contrôle ne possède **aucune commande d'activation**.
+Il ne suffira pas de modifier les indicateurs booléens; le moteur
+de réservations doit être relié aux transactions serveur, avec
+preuve de capacité et tuiles officiellement revues, avant publication.
