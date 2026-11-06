@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/BeeKingdom/Networking/PollinationContracts.cs" Link="PollinationContracts.cs"/>
+    <Compile Include="../../../Assets/BeeKingdom/Networking/PollinationClient.cs" Link="PollinationClient.cs"/>
+    <Compile Include="../../../Assets/BeeKingdom/Playground/PollinationPresentation.cs" Link="PollinationPresentation.cs"/>
+  </ItemGroup>
+</Project>

@@ -79,6 +79,8 @@ public sealed class SqlHiveStateRepository(string connectionString, Func<Guid, G
         command.Transaction = transaction;
         command.CommandTimeout = commandTimeoutSeconds;
         command.CommandText = """
+            IF OBJECT_ID(N'dbo.FloralCivilActiveMissions', N'U') IS NOT NULL
+                DELETE FROM dbo.FloralCivilActiveMissions WHERE PlayerId=@playerId AND HiveId=@hiveId;
             DELETE FROM dbo.HiveCommandReceipts WHERE PlayerId=@playerId AND HiveId=@hiveId;
             DELETE FROM dbo.HiveOperationQueue WHERE PlayerId=@playerId AND HiveId=@hiveId;
             DELETE FROM dbo.HivePlayerStates WHERE PlayerId=@playerId AND HiveId=@hiveId;
