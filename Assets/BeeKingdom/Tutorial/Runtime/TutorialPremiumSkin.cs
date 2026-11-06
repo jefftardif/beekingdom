@@ -159,7 +159,12 @@ namespace BeeKingdom.Tutorial
             foreach (GUIStyleState state in states)
             {
                 state.background = null;
+                // scaledBackgrounds is an Editor-only GUIStyleState property.
+                // The player runtime already has no background, so keep
+                // the editor-specific cleanup behind its platform guard.
+#if UNITY_EDITOR
                 state.scaledBackgrounds = System.Array.Empty<Texture2D>();
+#endif
                 state.textColor = text;
             }
             return style;

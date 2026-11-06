@@ -401,9 +401,12 @@ namespace BeeKingdom.Playground
             // Reutilise exclusivement WorldEventCatalog (fonction pure du temps, deja server-side,
             // simplement miroitee cote client) - aucun nouvel appel reseau, aucune nouvelle donnee.
             DrawWorldEventAmbiance();
+            // The underlying HUD is visible, but cannot intercept taps while
+            // a premium target or squad modal owns input.
+            GUI.enabled = GUI.enabled && !premiumTarget.Visible &&
+                !(showCompositionPanel && collectionVisualState == CollectionVisualState.Composition);
             DrawFixedHud();
             DrawCenterCoordinates();
-            DrawActionPanel();
             DrawFlightJournal();
             DrawMiniMap();
             DrawWorldMapReturnBar();
@@ -411,6 +414,8 @@ namespace BeeKingdom.Playground
             if (spawnDiagnosticOverlayEnabled) DrawSpawnDiagnosticOverlay();
             if (localLab != null) localLab.DrawHud();
             DrawGuidedWorldTransitionTutorial();
+            GUI.enabled = previousGuiEnabled && !SharedMenuOpen &&
+                !HiveViewProductUiPresenter.WorldChatInputBlocked;
             // M076J-CL : la World Map est chargee en LoadSceneMode.Single (scene separee de
             // Environment2D5D_HiveMap_Test) - TickCourierAlertsForExternalHost() (qui transforme un
             // receipt de combat resolu en courrier reel) ne tournait jusqu'ici que dans
@@ -435,8 +440,17 @@ namespace BeeKingdom.Playground
                 if (foreground != null) foreground.DrawFromMapOnGUI();
                 return;
             }
+            // The premium window owns touch input above Chat and all HUD panels.
+            // Fullscreen Chat has already returned before this point.
+            GUI.enabled=previousGuiEnabled && !premiumTarget.Visible;
             HiveViewProductUiPresenter.DrawChatOverlayForWorldMap();
-            if(HiveViewProductUiPresenter.WorldChatInputBlocked)return;
+            if(HiveViewProductUiPresenter.WorldChatInputBlocked)
+            {
+                GUI.enabled=previousGuiEnabled;
+                return;
+            }
+            GUI.enabled=previousGuiEnabled;
+            DrawActionPanel();
             HiveViewProductUiPresenter.DrawCombatPatrolOverlayForWorldMap();
             if (showCompositionPanel && collectionVisualState == CollectionVisualState.Composition)
                 DrawCompositionPanel();
@@ -449,6 +463,7 @@ namespace BeeKingdom.Playground
             if (wave6Provider != null) wave6Provider.Dispose();
             if (bearDenLandmark != null) bearDenLandmark.Dispose();
             UnloadRuntimeEntityTextures();
+            DisposePremiumTargetSkins();
             if (pixel != null) Destroy(pixel);
         }
 
@@ -4456,7 +4471,7 @@ namespace BeeKingdom.Playground
                 DrawVisualAttachment("resource",resource.Id,original,p);
 
                 Color color = ResourceColor(resource.Kind);
-                bool selected = resource.Id == selectedResourceId;
+                bool selected = resource.Id == selectedResourceId && (!premiumTarget.Visible || premiumTarget.Mode == WorldTargetPanelMode.Resource);
                 bool official = IsOfficialResource(resource);
                 ResourceLifeState life = official ? ResolveResourceLifeState(resource, officialModel, presenceModel) : ResourceLifeState.Free;
                 Color tint = official ? ResourceLifeTint(life) : Color.white;
@@ -4687,7 +4702,8 @@ namespace BeeKingdom.Playground
             {
                 WorldBestiaryNode beast = bestiary[i];
                 // Shared anchors exist: keep the selected creature visible above hives.
-                if ((beast.Id == selectedBestiaryId) != selectedOnly) continue;
+                bool targetSelected = beast.Id == selectedBestiaryId && (!premiumTarget.Visible || premiumTarget.Mode == WorldTargetPanelMode.Enemy);
+                if (targetSelected != selectedOnly) continue;
                 Vector2 anchor = WorldToScreen(beast.WorldCoord);
                 Vector2 p = VisualPoint("bestiary",beast.Id,BestiaryDisplayPoint(beast));
                 if (!IsOnScreen(p, 120f)) continue;
@@ -4699,7 +4715,7 @@ namespace BeeKingdom.Playground
                 float size = WorldSizeToScreen(48f + beast.Tier * 7.5f);
                 if (beast.Tier == 2 && beast.Variant == 2) size *= 1.15f;
                 Color color = BestiaryTierColor(beast.Tier);
-                bool selected = beast.Id == selectedBestiaryId;
+                bool selected = targetSelected;
                 bool rareSighting = IsRareSighting(beast, out string rareSightingEventKey);
                 DrawTerrainTileShadow(p, size * 0.90f, size * 0.24f, selected ? 0.28f : 0.18f);
                 if (texture != null)
@@ -5115,104 +5131,8 @@ namespace BeeKingdom.Playground
 
         private void DrawCompositionPanel()
         {
-            WorldResourceNode resource = ResourceById(compositionTargetNodeId);
-            if (resource == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
-
-            WorldResourceCollectionScreenModel model = HiveViewProductUiPresenter.OfficialWorldResourceCollectionModelForWorldMap();
-            if (model == null) { collectionVisualState = CollectionVisualState.Idle; showCompositionPanel = false; return; }
-
-            // Catch-all: consume all clicks behind the composition panel
-            GUI.Box(new Rect(0, 0, Screen.width, Screen.height), "", new GUIStyle());
-            DrawSolid(new Rect(0, 0, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.6f));
-
-            float panelW = 320f;
-            float panelH = 310f;
-            Rect panel = new Rect(Screen.width * 0.5f - panelW * 0.5f, Screen.height * 0.5f - panelH * 0.5f, panelW, panelH);
-
-            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 1f));
-            DrawFrame(panel, new Color(0.18f, 0.85f, 1f, 0.86f), 2f);
-
-            float y = panel.y + 12f;
-
-            GUIStyle titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 24f), "Composition de l'escouade", titleStyle);
-            y += 28f;
-
-            // M081: Show error from controller (e.g., max_marches_reached)
-            if (!string.IsNullOrEmpty(model.ErrorCode))
-            {
-                GUIStyle errorStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = new Color(1f, 0.5f, 0.5f, 1f) }, alignment = TextAnchor.MiddleCenter, wordWrap = true };
-                string errorMsg = model.ErrorCode == "max_marches_reached" ? "Toutes vos marches sont actuellement deployees (max 3)." : model.ErrorCode;
-                GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 40f), errorMsg, errorStyle);
-                y += 44f;
-            }
-
-            GUIStyle infoStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = new Color(0.86f, 0.92f, 1f, 1f) } };
-            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Cible: " + resource.Label, infoStyle);
-            y += 26f;
-
-            DrawCollectionDraftRow(panel, ref y, "guardians", "Gardiennes", model.DraftGuardians, model.AvailableRoster);
-            DrawCollectionDraftRow(panel, ref y, "wingrunners", "Voltigeuses", model.DraftWingrunners, model.AvailableRoster);
-            DrawCollectionDraftRow(panel, ref y, "darters", "Lanceuses", model.DraftDarters, model.AvailableRoster);
-            y += 4f;
-
-            GUIStyle totalStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = new Color(1f, 0.88f, 0.38f, 1f) } };
-            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 24f, 20f), "Total: " + model.DraftTotal, totalStyle);
-            y += 22f;
-
-            GUIStyle champStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = Color.white } };
-            IReadOnlyList<string> ownedChamps = HiveViewProductUiPresenter.PeekOwnedChampionBeeIdsForWorldMap();
-            int champOptionsCount = ownedChamps.Count + 1; // +1 for "Aucune"
-            string champLabel = "Aucune";
-            if (compositionChampionIndex == 0)
-            {
-                champLabel = "Aucune";
-            }
-            else if (ownedChamps.Count > 0)
-            {
-                int champIdx = Mathf.Clamp(compositionChampionIndex - 1, 0, ownedChamps.Count - 1);
-                string champId = ownedChamps[champIdx];
-                if (ChampionBeeCatalog.TryResolve(champId, out ChampionBeeDefinition def))
-                    champLabel = def.FallbackName + " (" + def.Role + ")";
-                else
-                    champLabel = champId;
-            }
-            GUI.Label(new Rect(panel.x + 12f, y, panel.width - 120f, 20f), "Championne: " + champLabel, champStyle);
-            if (GUI.Button(new Rect(panel.xMax - 52f, y, 20f, 20f), "<"))
-            {
-                compositionChampionIndex = (compositionChampionIndex - 1 + champOptionsCount) % champOptionsCount;
-            }
-            if (GUI.Button(new Rect(panel.xMax - 28f, y, 20f, 20f), ">"))
-            {
-                compositionChampionIndex = (compositionChampionIndex + 1) % champOptionsCount;
-            }
-            y += 24f;
-
-            bool canLaunch = model.CanLaunch(compositionTargetNodeId) && WorldMapMarchRegistry.CanLaunchNewMarch();
-            string launchLabel = WorldMapMarchRegistry.CanLaunchNewMarch() ? "Envoyer les abeilles" : "3/3 marches actives";
-            GUI.enabled = canLaunch;
-            if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 32f), launchLabel))
-            {
-                ConfirmCollectionLaunch();
-                return;
-            }
-            GUI.enabled = true;
-            // M081: Show march limit error even when canLaunch false due to limit (not server)
-            if (!WorldMapMarchRegistry.CanLaunchNewMarch() && model.CanLaunch(compositionTargetNodeId))
-            {
-                GUIStyle limitStyle = new GUIStyle(GUI.skin.label) { fontSize = 10, normal = { textColor = new Color(1f, 0.6f, 0.6f, 1f) }, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(panel.x + 12f, y - 6f, panel.width - 24f, 20f), "Toutes vos marches sont actuellement déployées (max 3).", limitStyle);
-            }
-            y += 36f;
-
-            if (GUI.Button(new Rect(panel.x + 12f, y, panel.width - 24f, 28f), "Annuler"))
-            {
-                collectionVisualState = CollectionVisualState.Idle;
-                showCompositionPanel = false;
-                compositionTargetNodeId = null;
-            }
+            DrawPremiumCompositionPanel();
         }
-
         private void DrawCollectionDraftRow(Rect panel, ref float y, string family, string label, int value, IReadOnlyDictionary<string, long> availableRoster)
         {
             Rect row = new Rect(panel.x + 12f, y, panel.width - 24f, 30f);
@@ -6144,118 +6064,8 @@ namespace BeeKingdom.Playground
 
         private void DrawActionPanel()
         {
-            if (IsPortraitLayout())
-            {
-                DrawActionPanelPortrait();
-                return;
-            }
-
-            WorldHiveNode hive = SelectedHive();
-            WorldResourceNode resource = SelectedResource();
-            Rect panel = ActionPanelRect();
-            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 0.90f));
-            DrawFrame(panel, new Color(0.18f, 0.85f, 1f, 0.86f), 2f);
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 10f, panel.width - 28f, 24f), MapText("expedition.title", "Expedition"), LabelStyle(Color.white, 15, FontStyle.Bold, TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 42f, panel.width - 28f, 20f), MapText("expedition.hive_prefix", "Ruche: ") + (hive != null ? LocalizedHiveName(hive) : selectedHiveId + " hors chunks actifs"), MiniLabel(Color.white, 12, TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 66f, panel.width - 28f, 20f), MapText("expedition.resource_prefix", "Ressource: ") + (resource != null ? ResourceLabel(resource.Kind) + " " + ResourceQuantityLabel(resource) : selectedResourceId + " hors chunks actifs"), MiniLabel(Color.white, 12, TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 88f, panel.width - 28f, 20f), resource != null ? MapText("expedition.coord_prefix", "Coord cible: ") + CoordLabel(resource.WorldCoord) : MapText("expedition.select_active_resource", "Selectionner une ressource active"), MiniLabel(new Color(0.86f, 0.92f, 1f, 1f), 11, TextAnchor.MiddleLeft));
-            bool officialResource = IsOfficialResource(resource);
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 112f, panel.width - 28f, 20f), MapText("expedition.state_prefix", "Etat: ") + (officialResource ? OfficialStateLabel(resource) : CollectionStateLabel()), MiniLabel(new Color(1f, 0.88f, 0.38f, 1f), 12, TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 136f, panel.width - 28f, 20f), MapText("expedition.reward_prefix", "Gain: ") + (officialResource ? MapText("expedition.history", "voir historique officiel") : localRewardText), MiniLabel(Color.white, 12, TextAnchor.MiddleLeft));
-
-            bool canCollect = CanCollectOrLaunch(hive, resource);
-            GUI.enabled = canCollect;
-            if (GUI.Button(new Rect(panel.x + 14f, panel.y + 166f, panel.width - 28f, 34f), CollectionActionLabel(resource)))
-            {
-                TryCollectOrLaunch(hive, resource);
-            }
-
-            GUI.enabled = true;
-            WorldBestiaryNode beast = SelectedBestiary();
-            string beastRareSightingEventKey = string.Empty;
-            bool beastIsRareSighting = beast != null && IsRareSighting(beast, out beastRareSightingEventKey);
-            float rareSightingOffset = 0f;
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 208f, panel.width - 28f, 20f), MapText("expedition.bestiary_prefix", "Bestiaire: ") + (beast != null ? "T" + beast.Tier.ToString(CultureInfo.InvariantCulture) + " " + LocalizedBestiaryName(beast.Label) + " | " + LocalizedBestiaryRole(beast.Role) : MapText("expedition.select_beast", "selectionner une cible")), MiniLabel(new Color(1f, 0.90f, 0.62f, 1f), 11, TextAnchor.MiddleLeft));
-            if (beastIsRareSighting)
-            {
-                GUI.Label(new Rect(panel.x + 14f, panel.y + 226f, panel.width - 28f, 16f),
-                    MapText("expedition.rare_sighting", "Reperage rare : ") + HiveViewProductUiPresenter.WorldEventDisplayName(beastRareSightingEventKey) + " +25%",
-                    MiniLabel(new Color(1f, 0.80f, 0.30f, 1f), 10, TextAnchor.MiddleLeft));
-                rareSightingOffset = 16f;
-            }
-            var squadForAttack = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
-            bool hasSquadForAttack = squadForAttack != null && squadForAttack.HasReservation;
-            bool canAttack = beast != null && hasSquadForAttack;
-            string attackLabel = !hasSquadForAttack ? MapText("combat.no_squad", "Aucune escouade prête") : MapText("combat.attack", "ATTAQUER");
-            GUI.enabled = canAttack;
-            if (GUI.Button(new Rect(panel.x + 14f, panel.y + 232f + rareSightingOffset, panel.width - 28f, 30f), attackLabel))
-            {
-                pendingCombatPatrolLaunchTarget = beast.WorldCoord;
-                HiveViewProductUiPresenter.OpenCombatPatrolOverlayForWorldMap(beast.Tier);
-            }
-            if (beast != null && !hasSquadForAttack)
-            {
-                GUI.Label(new Rect(panel.x + 14f, panel.y + 266f + rareSightingOffset, panel.width - 28f, 20f), MapText("combat.prepare", "Préparez une escouade avant d'attaquer."), MiniLabel(new Color(1f, 0.70f, 0.30f, 1f), 10, TextAnchor.MiddleLeft));
-                if (GUI.Button(new Rect(panel.x + 14f, panel.y + 288f + rareSightingOffset, panel.width - 28f, 24f), MapText("combat.open_army", "Ouvrir Armée")))
-                {
-                    if (SplashDevelopmentSceneConfig.IsSceneEnabledInBuildSettings(SplashDevelopmentSceneConfig.HiveMapScenePath))
-                        SplashDevelopmentSceneConfig.TryOpenScene(SplashDevelopmentSceneConfig.HiveMapScenePath, out _);
-                }
-            }
-
-            GUI.enabled = true;
-            if (!officialResource)
-            {
-                GUI.Label(new Rect(panel.x + 14f, panel.y + 266f + rareSightingOffset, panel.width - 28f, 48f), MapText("expedition.scouting", "Repérage seulement · rien à récolter ici pour l'instant"), MiniLabel(new Color(0.86f, 0.92f, 1f, 1f), 11, TextAnchor.UpperLeft));
-            }
+            DrawPremiumTargetPanel();
         }
-
-        private void DrawActionPanelPortrait()
-        {
-            WorldHiveNode hive = SelectedHive();
-            WorldResourceNode resource = SelectedResource();
-            Rect panel = ActionPanelRect();
-            DrawSolid(panel, new Color(0.025f, 0.022f, 0.016f, 1f));
-            DrawFrame(panel, new Color(0.18f, 0.85f, 1f, 0.86f), 2f);
-            GUI.Label(new Rect(panel.x + 12f, panel.y + 8f, panel.width - 24f, 22f), MapText("expedition.title", "Expedition"), LabelStyle(Color.white, 14, FontStyle.Bold, TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(panel.x + 12f, panel.y + 33f, panel.width - 24f, 18f), MapText("expedition.hive_prefix", "Ruche: ") + (hive != null ? LocalizedHiveName(hive) : MapText("common.outside", "hors zone")), MiniLabel(Color.white, 11, TextAnchor.MiddleLeft));
-            GUI.Label(new Rect(panel.x + 12f, panel.y + 54f, panel.width - 24f, 18f), MapText("expedition.target_prefix", "Cible: ") + (resource != null ? ResourceLabel(resource.Kind) + " " + ResourceQuantityLabel(resource) : MapText("expedition.select_resource", "selectionner ressource")), MiniLabel(Color.white, 11, TextAnchor.MiddleLeft));
-            bool officialResourcePortrait = IsOfficialResource(resource);
-            GUI.Label(new Rect(panel.x + 12f, panel.y + 75f, panel.width - 24f, 18f), MapText("expedition.state_prefix", "Etat: ") + (officialResourcePortrait ? OfficialStateLabel(resource) : CollectionStateLabel() + " | " + localRewardText), MiniLabel(new Color(1f, 0.88f, 0.38f, 1f), 11, TextAnchor.MiddleLeft));
-
-            bool canCollect = CanCollectOrLaunch(hive, resource);
-            GUI.enabled = canCollect;
-            if (GUI.Button(new Rect(panel.x + 12f, panel.y + 102f, panel.width - 24f, 34f), CollectionActionLabel(resource)))
-            {
-                TryCollectOrLaunch(hive, resource);
-            }
-
-            GUI.enabled = true;
-            WorldBestiaryNode beast = SelectedBestiary();
-            bool beastIsRareSightingPortrait = beast != null && IsRareSighting(beast, out _);
-            string bestiaryLabelPortrait = beast != null
-                ? (beastIsRareSightingPortrait ? "★ " : string.Empty) + "T" + beast.Tier.ToString(CultureInfo.InvariantCulture) + " " + LocalizedBestiaryName(beast.Label)
-                : MapText("common.none", "aucun");
-            GUI.Label(new Rect(panel.x + 12f, panel.y + 140f, panel.width - 24f, 18f), MapText("expedition.bestiary_prefix", "Bestiaire: ") + bestiaryLabelPortrait,
-                MiniLabel(beastIsRareSightingPortrait ? new Color(1f, 0.80f, 0.30f, 1f) : new Color(1f, 0.90f, 0.62f, 1f), 10, TextAnchor.MiddleLeft));
-            var squadForAttackPortrait = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
-            bool hasSquadForAttackPortrait = squadForAttackPortrait != null && squadForAttackPortrait.HasReservation;
-            bool canAttackPortrait = beast != null && hasSquadForAttackPortrait;
-            string attackLabelPortrait = !hasSquadForAttackPortrait ? MapText("combat.no_squad", "Aucune escouade prête") : MapText("combat.attack", "ATTAQUER");
-            GUI.enabled = canAttackPortrait;
-            if (GUI.Button(new Rect(panel.x + 12f, panel.y + 160f, panel.width - 24f, 30f), attackLabelPortrait))
-            {
-                pendingCombatPatrolLaunchTarget = beast.WorldCoord;
-                HiveViewProductUiPresenter.OpenCombatPatrolOverlayForWorldMap(beast.Tier);
-            }
-            if (beast != null && !hasSquadForAttackPortrait)
-            {
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 194f, panel.width - 24f, 16f), MapText("combat.prepare", "Préparez une escouade avant d'attaquer."), MiniLabel(new Color(1f, 0.70f, 0.30f, 1f), 9, TextAnchor.MiddleLeft));
-            }
-
-            GUI.enabled = true;
-        }
-
         private void DrawFlightJournal()
         {
             if (IsPortraitLayout())
@@ -7813,6 +7623,7 @@ namespace BeeKingdom.Playground
 
         private bool IsPointerOverFixedUi(Vector2 guiPoint)
         {
+            if (premiumTarget.Visible || (showCompositionPanel && collectionVisualState == CollectionVisualState.Composition)) return true;
             if (HiveViewProductUiPresenter.IsWorldChatPointBlocked(guiPoint)) return true;
             if (WorldMapHudLayout.CurrentBar.Contains(guiPoint)) return true;
             if (localLab != null && localLab.IsPointerOverUi(guiPoint)) return true;
@@ -7823,7 +7634,7 @@ namespace BeeKingdom.Playground
             {
                 if (new Rect(0f, 0f, Screen.width, 118f).Contains(guiPoint)) return true;
                 if (BearDenToggleRect().Contains(guiPoint)) return true;
-                if (ActionPanelRect().Contains(guiPoint)) return true;
+                if (premiumTarget.Visible && ActionPanelRect().Contains(guiPoint)) return true;
                 if (FlightJournalRect().Contains(guiPoint)) return true;
                 if (new Rect(Screen.width - 128f, 204f, 118f, 86f).Contains(guiPoint)) return true;
                 return false;
@@ -7832,7 +7643,7 @@ namespace BeeKingdom.Playground
             if (new Rect(0f, 0f, Screen.width, 124f).Contains(guiPoint)) return true;
             if (new Rect(Screen.width - 292f, 12f, 278f, 150f).Contains(guiPoint)) return true;
             if (BearDenToggleRect().Contains(guiPoint)) return true;
-            if (ActionPanelRect().Contains(guiPoint)) return true;
+            if (premiumTarget.Visible && ActionPanelRect().Contains(guiPoint)) return true;
             if (FlightJournalRect().Contains(guiPoint)) return true;
             if (debugChunkOverlay && new Rect(14f, Screen.height - 112f, Mathf.Min(760f, Screen.width - 28f), 96f).Contains(guiPoint)) return true;
             if (MiniMapHudRect().Contains(guiPoint)) return true;
@@ -7841,8 +7652,7 @@ namespace BeeKingdom.Playground
 
         private Rect ActionPanelRect()
         {
-            if (IsPortraitLayout()) return WorldMapHudLayout.WithinSafeArea(new Rect(WorldMapHudLayout.CurrentBar.x, (HiveViewProductUiPresenter.WorldChatFeedVisibleForMap?WorldMapHudLayout.CurrentChatFeed.y:WorldMapHudLayout.CurrentBar.y) - 186f, WorldMapHudLayout.CurrentBar.width, 178f));
-            return new Rect(Screen.width - 320f, 176f, 304f, 286f);
+            return PremiumTargetRect();
         }
 
         private Rect FlightJournalRect()

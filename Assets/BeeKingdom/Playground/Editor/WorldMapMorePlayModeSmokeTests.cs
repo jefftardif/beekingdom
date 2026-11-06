@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEditor;
 
 namespace BeeKingdom.Playground.Editor
 {
@@ -18,6 +19,8 @@ namespace BeeKingdom.Playground.Editor
     public sealed class WorldMapMorePlayModeSmokeTests
     {
         private readonly List<string> unexpectedErrors=new List<string>();
+        private bool previousEnterModeEnabled;
+        private EnterPlayModeOptions previousEnterModeOptions;
 
         private static bool IsMcpTransportCancellation(string message,string stack)
         {
@@ -47,6 +50,8 @@ namespace BeeKingdom.Playground.Editor
         {
             Application.logMessageReceived -= CaptureUnexpectedLogs;
             LogAssert.ignoreFailingMessages=false;
+            EditorSettings.enterPlayModeOptions=previousEnterModeOptions;
+            EditorSettings.enterPlayModeOptionsEnabled=previousEnterModeEnabled;
         }
 
         private static string MenuDiagnostic(LivingHiveMenuCanvas m)
@@ -93,6 +98,12 @@ namespace BeeKingdom.Playground.Editor
         public IEnumerator WorldMapMoreAndBagOpenAndCloseWithoutLosingMenuState()
         {
             LogAssert.ignoreFailingMessages = true;
+            previousEnterModeEnabled=EditorSettings.enterPlayModeOptionsEnabled;
+            previousEnterModeOptions=EditorSettings.enterPlayModeOptions;
+            // Prevent a Unity MCP assembly-reload handshake from blocking
+            // this independent HUD/Chat lifecycle smoke test in batch mode.
+            EditorSettings.enterPlayModeOptionsEnabled=true;
+            EditorSettings.enterPlayModeOptions=EnterPlayModeOptions.DisableDomainReload;
             yield return new EnterPlayMode();
             unexpectedErrors.Clear();
             Application.logMessageReceived += CaptureUnexpectedLogs;
