@@ -323,8 +323,20 @@ namespace BeeKingdom.Playground
             UpdateWorldPresencePolling();
             UpdateCombatPatrolPolling();
             if (localLab != null) localLab.Update(Time.deltaTime);
-            currentZoom = Mathf.Lerp(currentZoom, targetZoom, 1f - Mathf.Exp(-ZoomDamping * Time.deltaTime));
-            currentWorldCenter = Vector2.Lerp(currentWorldCenter, targetWorldCenter, 1f - Mathf.Exp(-PanDamping * Time.deltaTime));
+            // When zooming, interpolate the projected camera offset (center * zoom)
+            // together with zoom using the SAME easing. Independent pan/zoom easing
+            // makes world objects drift away from the pointer while scrolling.
+            // Plain panning retains its faster existing damping.
+            if (Mathf.Abs(targetZoom - currentZoom) > .00001f)
+                WorldMapZoomAnchor.Step(ref currentWorldCenter, ref currentZoom,
+                    targetWorldCenter, targetZoom, ZoomDamping, Time.deltaTime);
+            else
+            {
+                currentZoom = targetZoom;
+                currentWorldCenter = Vector2.Lerp(currentWorldCenter,
+                    targetWorldCenter, 1f - Mathf.Exp(-PanDamping * Time.deltaTime));
+            }
+
             if (wave6Provider != null)
             {
                 wave6Provider.UpdateStreaming(targetWorldCenter, targetZoom, Screen.width, Screen.height);
@@ -7085,10 +7097,13 @@ namespace BeeKingdom.Playground
             nextZoom = Mathf.Clamp(nextZoom, MinZoom, MaxZoom);
             if (Mathf.Approximately(previous, nextZoom)) return;
 
-            Vector2 worldAtPointer = ScreenToWorld(guiPoint, targetWorldCenter, previous);
+            // Read the visible camera, not the unfinished target. Repeated scroll
+            // input during interpolation must not make the cursor's world point jump.
+            Vector2 worldAtPointer = ScreenToWorld(guiPoint, currentWorldCenter, currentZoom);
             targetZoom = nextZoom;
-            Vector2 worldAfter = ScreenToWorld(guiPoint, targetWorldCenter, targetZoom);
-            targetWorldCenter += worldAtPointer - worldAfter;
+            targetWorldCenter = WorldMapZoomAnchor.CenterForCursor(
+                worldAtPointer, guiPoint, targetZoom,
+                new Vector2(Screen.width, Screen.height));
             ClampTargetWorldCenter();
         }
 
