@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -6,4 +6,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Single implementation for Unity and server-side read-only placement
+       validation. No API endpoint or mutation is enabled by these links. -->
+  <ItemGroup>
+    <Compile Include="../../../Assets/BeeKingdom/Networking/MapPlacement.cs"
+             Link="WorldMap/MapPlacement.cs" />
+    <Compile Include="../../../Assets/BeeKingdom/Networking/SemanticTerrain.cs"
+             Link="WorldMap/SemanticTerrain.cs" />
+    <Compile Include="../../../Assets/BeeKingdom/Networking/ReviewedSemanticPlacementPlanner.cs"
+             Link="WorldMap/ReviewedSemanticPlacementPlanner.cs" />
+  </ItemGroup>
 </Project>

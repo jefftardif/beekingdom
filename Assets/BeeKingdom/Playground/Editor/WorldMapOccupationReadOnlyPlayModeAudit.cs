@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -78,6 +80,19 @@ namespace BeeKingdom.Playground.Editor
             Assert.That(map,Is.Not.Null);
 
             OccupationRead read=MapOccupationReadOnlySnapshot.Read(map,null);
+            // Optional external, read-only QA inventory. Never write to the
+            // Unity Assets folder, game data, SQL or the production server.
+            string exportPath=Environment.GetEnvironmentVariable("BK_OCCUPATION_QA_EXPORT");
+            if(!string.IsNullOrWhiteSpace(exportPath))
+            {
+                string path=Path.GetFullPath(exportPath);
+                if(!Path.IsPathRooted(path) || !path.EndsWith(".json",StringComparison.OrdinalIgnoreCase) ||
+                   path.IndexOf("Assets",StringComparison.OrdinalIgnoreCase)>=0)
+                    throw new InvalidOperationException("QA audit export path invalid");
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path,JsonUtility.ToJson(read,true));
+                Debug.Log("BK_WORLD_OCCUPATION_QA_EXPORT="+path);
+            }
             var visible=new List<OccupationNode>();
             foreach(var node in read.nodes)
                 if(node.source.StartsWith("visible:")) visible.Add(node);
