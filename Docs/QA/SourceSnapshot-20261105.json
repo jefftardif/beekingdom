@@ -1,0 +1,754 @@
+{
+  "asof_local": "2026-11-05T22:33:11-05:00",
+  "base_main": "d74d8aa95c579ce8610e89dcfaa11216ede4bec8",
+  "source_worktree": "C:/projets/beekingdomgame-master",
+  "selected": {
+    "tracked_uncommitted_csharp": 30,
+    "untracked_csharp": 77,
+    "matching_untracked_meta": 77,
+    "localization_json": 2
+  },
+  "excluded": {
+    "server_and_sql_changes": "not included",
+    "unity_fonts_and_plugin_binaries": "not included",
+    "project_packages_and_settings": "not included",
+    "untracked_artwork_assets": "not included",
+    "source_of_truth_git_branch": "main remains untouched"
+  },
+  "files": [
+    {
+      "path": "Assets/BeeKingdom/Buildings/Interaction/BuildingInteractionController.cs",
+      "sha256": "885d85c9937046644b00e05c18d778653f8357fd583b7db237dcfd88f523da61"
+    },
+    {
+      "path": "Assets/BeeKingdom/Buildings/Interaction/BuildingRuntimeViewBootstrap.cs",
+      "sha256": "afc2a7e17e65636fb4beb38fd7d196971c3b27b561c02d61d9a07bb4d4900011"
+    },
+    {
+      "path": "Assets/BeeKingdom/Editor/AcademyEditModeTestOneShot.cs",
+      "sha256": "d1c914d2f2668a591424fd0f4a089926e1baaacfe6c5efd1399934ac50b3d2d3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Editor/AcademyEditModeTestOneShot.cs.meta",
+      "sha256": "10aae80a3447c8679015d0ac2528f94ea13656d610610bdb19aae1e24c8d1ff1"
+    },
+    {
+      "path": "Assets/BeeKingdom/Gameplay/Communication/LivingHiveChatController.cs",
+      "sha256": "9148534257cf47f02356035c295302c757d1650109650a47860d201c98b9ac66"
+    },
+    {
+      "path": "Assets/BeeKingdom/Gameplay/Communication/LivingHiveChatFeed.cs",
+      "sha256": "81bbeb7fbf1c8d918b19ee32622cd5d66c3c505ab8f8a14040a9139ce25f45d0"
+    },
+    {
+      "path": "Assets/BeeKingdom/Gameplay/Communication/LivingHiveChatFeed.cs.meta",
+      "sha256": "7f7428649312091c1e53fc5a444b2eff111c3f266be11799f4c7ec278580b584"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AcademyTrainingClient.cs",
+      "sha256": "67d01bb0b062bff0e812aab9dddc4533e238c2d284d24a261d90fbcffd69b43d"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AcademyTrainingClient.cs.meta",
+      "sha256": "d86b6a7592c521d7fdd05b8b9fe6b55608896d742b6f5dd8e27ace42812f2882"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersClient.cs",
+      "sha256": "f93980306f35d1eef0f330a949ac9309a173fb5f5ef5513dc2e0f0201c48dced"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersClient.cs.meta",
+      "sha256": "0e7c86a183fa586d91b7ade8b5b7a6a8c69397fc2985348dfb9b041075df1973"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersContracts.cs",
+      "sha256": "70cbb293af765f276d7ff1a3fbd321a24a466ae71921ae597bb096b5505a3450"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersContracts.cs.meta",
+      "sha256": "81ee8bfce56d83820dbe2f01244d31f057328601a442270d6ffc4bade27e8292"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersPresentation.cs",
+      "sha256": "4bd926b02bfac930d5a040297965f27ec959c3c719f53470443c10975a425c4f"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersPresentation.cs.meta",
+      "sha256": "707f6c8d8d3e675bec56913eee85dfbb96ee8f585c86740896ca62d3045fa49b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersResponseGate.cs",
+      "sha256": "f19e201b7b940e43402df04496f406b66c27cb668271bd4a9ba7118e8d335f94"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceHeadquartersResponseGate.cs.meta",
+      "sha256": "d685a1a54034c6aea15086c74a0b656392eb762f74ae04863741ffce0066e3db"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceTerritoryClient.cs",
+      "sha256": "91e344c091c8442e26d634e8a8db70d85e07339835cfe5fa51337672a9c502b9"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceTerritoryClient.cs.meta",
+      "sha256": "6f982069ac0817259700c01bb6a8db2e4a4a1e1dfc8a6a2b9f2d92883e737a4e"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceTerritoryContracts.cs",
+      "sha256": "06d12458d4dacbf616ded5c8840881a6805434de5f53e1f3d75f0bada20f616b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceTerritoryContracts.cs.meta",
+      "sha256": "f0feece5913e17de03de9809edf60c214f96c98121af4bf24665d5cd385a0f8b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceTerritoryRuntimeSettings.cs",
+      "sha256": "dc04576366006ea30027497c8f7f2d732987db69300b397223f838d7ee3bf1d7"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/AllianceTerritoryRuntimeSettings.cs.meta",
+      "sha256": "fdac6a2ef7bd02bae4fc14a1774cf5baff8ab31e7e103179789155ef86795686"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/CanonicalHivePositionClient.cs",
+      "sha256": "98eb87a4f780b64bba7ea5c06625f73b5832ceb0b5840791f1e9e402c724100a"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/CanonicalHivePositionClient.cs.meta",
+      "sha256": "e23ac196fd73fc5f05a3fb67a3b52124e76428224691355a1845da254dc01c7d"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/MapPlacement.cs",
+      "sha256": "3851478f951f6db766b1bf797793458132131bec36bceb25d176474e33ae13bb"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/MapPlacement.cs.meta",
+      "sha256": "940a847db845432cce6416e84bd9a7c4eaf0c25a808d9521341a2d6a06a662c7"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/MobileAccountSessionRuntimeConfiguration.cs",
+      "sha256": "a67ce3a64e71c80ec65fcd33b29f122c2a2656f681ad91a415695330afbe133c"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/PollinationClient.cs",
+      "sha256": "722e6c84b11a321baf45a5150175233102f132e8c8299f56953a67c026af5b75"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/PollinationClient.cs.meta",
+      "sha256": "b2160daada82336f1f9e08044da83ec75bb4d7d4bae3d781f93cc20774a77c12"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/PollinationContracts.cs",
+      "sha256": "adc5dc5e0ed38dbac6d139cc3b3ae805b1afbb0b4f071e2ba97c04104555fe02"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/PollinationContracts.cs.meta",
+      "sha256": "9f0a615933dad93f4fd73bbafd8e3b8cea3bd94f14d16216057a2d7e995ff467"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/ResourcePlacementScope.cs",
+      "sha256": "c68496e72315da510342dfcdb8c16bc7ca50f27324584d96ffa3c48d493084b2"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/ResourcePlacementScope.cs.meta",
+      "sha256": "96663d09cef33980b42c4adc95bae5361c4953c63300efbf7a0a6fc5c88265e3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/SemanticTerrain.cs",
+      "sha256": "97f3a333550281ed46b5e25b2a020975e4045eb3468d2459386b868e85f6bf41"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/SemanticTerrain.cs.meta",
+      "sha256": "031f33947d87284d1e2b7ace61c53572254f0c97792ee580cee5af56e68e0e7d"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/TerritoryOutlineValidation.cs",
+      "sha256": "475ee2e2673584f57fbb3a6e6a043ed228409bfcfd5d6a8b1384dd12f93cd1f3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/TerritoryOutlineValidation.cs.meta",
+      "sha256": "56cf87aac6096de12a5271324106d4de8340b875f7c657fea6d2a4c6824789c2"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/WorldResourceCollectionClient.cs",
+      "sha256": "e5b176dd6d9aeba4922e23303a3997831e570314c82646c5bc5a2ea0425c41f4"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/WorldResourcePlacementView.cs",
+      "sha256": "3f53169e2b247ffac469d6a95338cb08a3ad803e18a0852d8f9c52dea25e68e3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Networking/WorldResourcePlacementView.cs.meta",
+      "sha256": "2c5d00812ef2740842cca56a94f43ad976e8f9847f41ea5d5cebc96a44cde6b2"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/AcademyTrainingPresentation.cs",
+      "sha256": "d04c5bac5d136aaac065dc81d06d4bdec541a7e77f379e4a6e89a6aa6fd2527b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/AcademyTrainingPresentation.cs.meta",
+      "sha256": "1b9f7763ccc3e2137bd297fee9ac5562ec06ea64dd41f2e39a0d3232ac5185ba"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/CanonicalHivePositionRuntimeSettings.cs",
+      "sha256": "f4f8f47a26f243d3eb9a43d5edcc53ccd7e282828eaf2beec3b25fb5b7ff9795"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/CanonicalHivePositionRuntimeSettings.cs.meta",
+      "sha256": "25c6d0ed9c8849c33d88ad43d31c109d508396a76707e9fc436b5469593099bc"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/AllianceActivitiesRecoveryTests.cs",
+      "sha256": "b9e9d48ad813d16e76890a0a9c84e06661b021c360b2242e3c31343b572d135a"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioAcademyPremiumWindowTests.cs",
+      "sha256": "4ea9742a8adadee4e86ae582d80c84588c5bcd059a696702d8715cc57368f779"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioAcademyPremiumWindowTests.cs.meta",
+      "sha256": "57c2090c303e7c9655edb627eba534eccccc8291e420f257f59987e1ceacd6b3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioAcademyTrainingContractTests.cs",
+      "sha256": "5560114af1e8891e31234efc84b66b63b587d58eb75cdbcf5c29075965b1005c"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioAcademyTrainingContractTests.cs.meta",
+      "sha256": "e687f8f20291416de37f51624db9d58e30fba5c6eb70aed6ebf97a238f6758bb"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioGeneticsPremiumWindowTests.cs",
+      "sha256": "449b11e0ceaa50d317461c96aaff796d739d03058474c9279ec6ca48d1c159b3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioGeneticsPremiumWindowTests.cs.meta",
+      "sha256": "52c30d7d331520556ef562e2c275b29498552ee0f195e8ed396426add6236a93"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BKStudioInfirmaryRecoveryTests.cs",
+      "sha256": "f64cb58bcbea4dc6a3e90b69536cc5e278b64962c644f8116b81dde9d5527c25"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/BarrackActivitiesRestorationTests.cs",
+      "sha256": "5f2b2d67f64be680b2978233ff8a6f7030be49a5e26b954ca465dc779603d3ea"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/InfirmaryEntryRecoveryTests.cs",
+      "sha256": "d8a6393944dff0644d6260ccf1f7851d27b73e77354a77173b438199aaa82225"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/OccupationAudit/MapOccupationReadOnlyExporter.cs",
+      "sha256": "480b98624411d9adbc38b81f1ad42169487af97a9729d273c373d4b67c5e01b6"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/OccupationAudit/MapOccupationReadOnlyExporter.cs.meta",
+      "sha256": "1c85d79a71449fa81bc3b826efec11d8a7bfd453c96b23f21325fb7ceaa2c2cd"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/OccupationAudit/MapOccupationReadOnlySnapshot.cs",
+      "sha256": "e25a807cdca316992392c7d129744d696b08f2536c8813d503bc14038d1f237d"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/OccupationAudit/MapOccupationReadOnlySnapshot.cs.meta",
+      "sha256": "351e84acb58ae2d21254555fac07d51c1855ae03812cc1054fcb892df56b5fa8"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/OccupationAudit/MapOccupationRuntimeEvidenceExporter.cs",
+      "sha256": "4994fbd17c60e63b4a9e5d713e97b5243767e84926c8bec5e0784df62feee415"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/OccupationAudit/MapOccupationRuntimeEvidenceExporter.cs.meta",
+      "sha256": "0247befc9229d67256bd2df4c5fe3dfd11189fdbefb39a1e1360b3888f9b483d"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationFloralArtworkEditorTests.cs",
+      "sha256": "42be49f7ecff923259d27e3ed4e5bde1084288db7fb5e7e643db5f891c73464c"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationFloralArtworkEditorTests.cs.meta",
+      "sha256": "f905c9b9cf62c5c348fc1b5b66a51f79d0f89c93c28ffdeea92a05bd4226d402"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationP5EditorTests.cs",
+      "sha256": "8a210a117a864d9188155cc741fefe614a0d899e89f6905f20f62e72ce06bbe6"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationP5EditorTests.cs.meta",
+      "sha256": "52f74c066573071e5bbf0599109f771da2918a9ac941f0fa72214ae13d8c6332"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationP8PlayModeTests.cs",
+      "sha256": "89506cbf112c44e11e873b71e12706cacfc2c365bce7c4fe0f559b78afac9824"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationP8PlayModeTests.cs.meta",
+      "sha256": "01ee8c481ac97493debc4685b65f733277062db5231964fcc6727114f26a8d71"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationPremiumWindowEditorTests.cs",
+      "sha256": "0e4fd20462a25aa3a0f518caacf1aea7ed2340514b48ac10815afe4672afdf17"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PollinationPremiumWindowEditorTests.cs.meta",
+      "sha256": "04132ecdd84d24144787dfa3c988cb3a5bc43d7a66499291ba3d4d2309f62159"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PremiumBuildingPolishTests.cs",
+      "sha256": "d8041fe9be890e6871cae51dbb43e781db750d3820162f16ea6fda4b01741da3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/PremiumBuildingPolishTests.cs.meta",
+      "sha256": "5bd303b81e4a54bcaf662b15ecab69feb453bc23e05d34d5a60c924f0d3888e6"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/RoyalPalacePremiumWindowTests.cs",
+      "sha256": "b7b5e273d33a1b26fc53964c7174314c07b0614cc2591d8537a1da02b8e6f98a"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/RoyalPalacePremiumWindowTests.cs.meta",
+      "sha256": "4ff5c47eaad0bc3372e7e4c4ef7ebbe14b4f95f2d0a833b46cb5ca7cbb9a5e40"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/SandboxDefensePremiumWindowTests.cs",
+      "sha256": "37474498d659e5eb4b069e2500b71e542b3953d7de8e446b3b1ed80f0e890083"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/SandboxDefensePremiumWindowTests.cs.meta",
+      "sha256": "d75e1c6edfb83b64970dfb9d39f7c598bca4f28da7d23dfcc30ca87fd668d93f"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/SandboxLivingHiveOfficialDoctrineRecruitmentTests.cs",
+      "sha256": "f935caad75d7fb9c8fe0164cce7677dbf0151f3367e47fe898c0bfe5890b6a28"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/SandboxLivingHiveOfficialResearchTests.cs",
+      "sha256": "dcb7e49960d423129fa635669046436d4ea4f1bed404b0c549d238b5a0222f54"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/WorldMapLocalWorldOccupancyTests.cs",
+      "sha256": "d7bf6f5ac03598cbc5191495135eb92c38ecc64780e6189ac72954003e16b118"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/WorldMapLocalWorldOccupancyTests.cs.meta",
+      "sha256": "1653c4cb94cd48ce449c891655039fdb78740ce3a3931786a82349915df7ce27"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/WorldMapVisualSeparationTests.cs",
+      "sha256": "a88953c54b61eb02bf6795f9e3e5e5481b1db745f1136f45ffc2f88730281fac"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Editor/WorldMapVisualSeparationTests.cs.meta",
+      "sha256": "90787ed13f8290e6ce50fada923dc71cc59e9d57761913e27c1104ff31b79b55"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveDefenseOverviewPresentation.cs",
+      "sha256": "f33c9a71e5d466d3d8a4fd4da1134658697d99c9b781e9a96b9f4ee9868e1c0b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveDefenseOverviewPresentation.cs.meta",
+      "sha256": "f6d9c524e8bcbbc26f9a5ff8653f252fe288aace801ac51d4b376077619e9ff0"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapAllianceBootstrap.cs",
+      "sha256": "fd9f07c6e680289a341e2ac3e10c69304604c8d9cc384937cc123488d86a1c87"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapBankBootstrap.cs",
+      "sha256": "f04b66c06c9ee09b64496a506b8532a1fcaba9478981edf8791ffd912713b88e"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapChampionHallBootstrap.cs",
+      "sha256": "dc0fb2e1c0e899b0e7d9198c01df0d0802a60111354d02761cf2bf830c0b1664"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapOverlayInputGateBootstrap.cs",
+      "sha256": "e0554613d0483315dfb61d1e0154a278a13e7b31dafec7f8101d088484db99fb"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapPremiumBuildingWindow.Academy.cs",
+      "sha256": "bf81f05954d238e709ce6faf191c1c102eb01a84fadc9b453bb436aa578168e8"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapPremiumBuildingWindow.Academy.cs.meta",
+      "sha256": "d16049b2fe961bf9f56868b206183d08e5b928cca4ee8eb5cbf611c65c90c05e"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapPremiumBuildingWindow.cs",
+      "sha256": "bce7a57eae9c740bc734de6cb24abf397973bd53ce88115cc2103926513c460b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapRoyalPalaceBootstrap.cs",
+      "sha256": "f19c02214f178784a9484f60ed3417d98d3abc98f39c00f311fcb1b52edcb155"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapRoyalPalacePremiumWindow.cs",
+      "sha256": "4ca0a2d911244314786a3ce83231812a993b85682de291b0ea8c3323fa721ec9"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapRoyalPalacePremiumWindow.cs.meta",
+      "sha256": "0786be3014bc931a5b365822a95b72c5a162f37639de6ac69e186b68673048c7"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveMapUnsupportedBuildingBootstrap.cs",
+      "sha256": "416fc30e5ee81ff668283cf9d50a397e29fb54fce1206ad14e13f86a59012faa"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveOfficialDoctrineRecruitmentPresentation.cs",
+      "sha256": "68bb6680d0c48493d99413d3cb9870cbc8e9245e4e31c75448edd07a1455faba"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveResearchPresentation.cs",
+      "sha256": "0756ed43ca42b825015472a162369d6f049c7c254a50733555e0ab4e2ad8b360"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.AcademyBridge.cs",
+      "sha256": "73840d9202d2ef66ea44e60e7d7c3bbb30217baaea43c5059aa11dbc61bda04f"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.AcademyBridge.cs.meta",
+      "sha256": "c488bdece7f7707c3ef379d62e9a7deba6ca7b63e7e9d38383ba56d183b04348"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.Bank.cs",
+      "sha256": "e157e6de50d8ca884f674039970dc4cc49e650df138866a2ad2492b44a069b37"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.BuildingChrome.cs",
+      "sha256": "e7d0f3262ab799cfb0b5ed0f527888385bbcf5bd2efaf047aa0e6d09f6ef54da"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.BuildingChrome.cs.meta",
+      "sha256": "b9a5cf93bd33be601ed2c83394e8ba7ca069957d2759a31c0254e473b3f46dc1"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.ChatRoyal.cs",
+      "sha256": "3ce422601324361935675e5735096e8665932ec38cc4ddcc9a942375646e593a"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.DefenseBridge.cs",
+      "sha256": "c15984e89069026bf4481744d10e326d8ccb4c5221208857595ec210c80735b3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.DefenseBridge.cs.meta",
+      "sha256": "b500ce64e7cd64db96bf20fe8e4bd07d729f4f6da965f5e2ab1dbf9056ea53a9"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.GeneticsBridge.cs",
+      "sha256": "afb5ea42097b6c922f335baee3032e22714973cf53dba251e3d43aa90541972e"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.GeneticsBridge.cs.meta",
+      "sha256": "71c05a20e879992a82243e1d2a290e6a77fbd06e08ecf93f6ddfd706ab560d99"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.PalaceBridge.cs",
+      "sha256": "2ddd593eb26aaeeb3580daed41e702d7e40a78d10977f19d551c8b0d440f5c40"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.PalaceBridge.cs.meta",
+      "sha256": "dbbae3935d31b75812907c671f0c6f7eb9e0d312b73363b485ba9ce040d4b850"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.ResearchPremium.cs",
+      "sha256": "97e8e4f01f4a5322a74b51a849d3ab4b2cfe6ad66fbe93c697035bd15898d7c3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.ResearchPremium.cs.meta",
+      "sha256": "f26b49d3406f750856eed04756ed7ce23df6815d456d0469f76e552c8f01d308"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.WorldChatFeed.cs",
+      "sha256": "73d40ceb445e8007d92acd259d46f1f6496cb3b3defb9fc3b9bbcfa7d2094767"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.WorldChatFeed.cs.meta",
+      "sha256": "a994ff620a308a7c558b3071fed1ce28dd931a6feb5bb8fdfe43d85c781206e8"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/HiveViewProductUiPresenter.cs",
+      "sha256": "b9460aeda3d22392f5b2634ab0c1ba871876955e6f5f8de3c6b6cd7da263b97e"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.AcademyStaging.cs",
+      "sha256": "7d25e594fb634875865277eb6c94a04d677964d7cf9a857410d797b8c29d7d31"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.AcademyStaging.cs.meta",
+      "sha256": "06b780dcaafbeed8002ae47bd3ab65b04d608c3e94a7e8eac20e4373c4d0d25a"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.CanonicalHivePosition.cs",
+      "sha256": "81bee48577e327fd6f90c74f7f02f960b45a4649917597e63b5ae52642a92fe5"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.CanonicalHivePosition.cs.meta",
+      "sha256": "3362be5f83ea380c5ba441a0d82a208a37d2973824fe9238c6f54fce0bfdb513"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.MapHiveCaption.cs",
+      "sha256": "eaf8781c2e7fcf914231216c0a9de86705aee7c6f8c452d44f33e741da39d358"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.MapHiveCaption.cs.meta",
+      "sha256": "ee0050b2aa01e7e874e3eb65dcc539eb1a68f0af9fd79beea97f2b65e5707810"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.OccupationEvidence.cs",
+      "sha256": "e602d7499881fa6a01247913d5a505f8bcfc76dddc4e4105a11a798c3b9208f0"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.OccupationEvidence.cs.meta",
+      "sha256": "d03f6d3df4832adb6aadc74c5b168bb32d469e33732860b29880afe450abfe74"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.Pollination.cs",
+      "sha256": "647b8b8a7a4aa09b4e4b028345ba7fc56a04e10b09500b48564bee957d2ef9b4"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.Pollination.cs.meta",
+      "sha256": "eb89a2a8e6750ff87ef24b2040e2facd3ed05e77a2bd3d7d1419419632da4b54"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.Territories.cs",
+      "sha256": "2d4f7ae9ad71404986dffcdd3edcb0f844ff4454e70cfde850350a666071da96"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.Territories.cs.meta",
+      "sha256": "ac9ddf942f7bb9b19097d785219a8cb65568954e82223dfd82c87197dd74af28"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/MobileAccountSessionRuntimeBootstrap.cs",
+      "sha256": "9d4e252bac9a0eb6226454c10a2f720a373ec1141f93230018a598f2174f2fdf"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/ModalGestureBarrier.cs",
+      "sha256": "14e3dbc6fdd880ec3e92ea34c65c362ab6544043019b8a97ce22fecb573aab09"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/ModalGestureBarrier.cs.meta",
+      "sha256": "1199c664454bf835a541ece78146096514e5671a2b927dc676c104f4d4ab6165"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PlayerHiveCaption.cs",
+      "sha256": "59e090c73d13470097ad714601e986c6eb61b2611440e6f9da75a5bdeca4244b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PlayerHiveCaption.cs.meta",
+      "sha256": "e46798a400c2ad4e218b206343f07f87417c4d3ef2b566c18027fc9b5b9e15cf"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationPremiumWindow.Cards.cs",
+      "sha256": "5f8464462aa5775ab114f7fbe450b20166456907aa895777c91057bc5be195ac"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationPremiumWindow.Cards.cs.meta",
+      "sha256": "2813ef6b1d139746bfceb292dd4cdf0a7f204ac4aac6fef8084aefc8594244c7"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationPremiumWindow.cs",
+      "sha256": "8087306da315773a265f1572e39d83b1516e2f310a7b38379bde383f7f9ce388"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationPremiumWindow.cs.meta",
+      "sha256": "c30002b51e7a4454532b49ba02735948d353367e9ffea72628d61357bb21227b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationPresentation.cs",
+      "sha256": "361689c8ddda67d5b0a98a9d6ca59b62d4407bb6762f91fcf7c3cb1c670c2073"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationPresentation.cs.meta",
+      "sha256": "cf9158ceb829beca8ddfe261ec33b6090b0c7bc201e6a5fd4c9dece4550af34b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationWorldMapOverlay.cs",
+      "sha256": "aeca86476a123b224bbd41baffa166ee2601c4202892a6348a5c67016c3085f9"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/PollinationWorldMapOverlay.cs.meta",
+      "sha256": "3cc0acb63a578c4443787b4dd57abcac11334f3eb75f1d513caaeb811e230508"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/TerritoryGamePortraitTest.cs",
+      "sha256": "bebb74124c48a5e993150746735cf09dab2ef2667cfc51c875194dd5f1e1740b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/TerritoryGamePortraitTest.cs.meta",
+      "sha256": "a5c9c0f09e33a7dad7046ee73f66dd5e151277d7b011b1d307e203522b6940a2"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapHitSelection.cs",
+      "sha256": "b1c36cce446a36122c2b935fb7c9fef37ccfd0e43331de5efd0e93c7161ef491"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapHitSelection.cs.meta",
+      "sha256": "50df1490ac9b59ae45efcaea77de57a4138a5ee98c5e6c3953e21901f903c1d5"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapHudLayout.cs",
+      "sha256": "a6599332073da16132dce950d471423aa89e2d6235a5999d82ee47f160e4e57d"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapHudLayout.cs.meta",
+      "sha256": "66303f5f77c82d1f48d77bae9ca858936ca9c1f10cfb8ac78e251fa5fa3a54da"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapLocalWorldOccupancy.cs",
+      "sha256": "53cefbaf76542d65d639d6a23838636e5f4902394cc3ac4e67f2e332362b3d67"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapLocalWorldOccupancy.cs.meta",
+      "sha256": "f3834255958e54e07d7936f38da60eee371c0866beb53c5d2c11ab60209b2657"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.ApprovedVisuals.cs",
+      "sha256": "d09b0f98f115e26490ec2dc48810e145f252cf0928aaa3b0781aacbcb2ba6bd5"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.ApprovedVisuals.cs.meta",
+      "sha256": "8b47fd0a8450d6bd8122f026ba1e4af817e6b2bbd1a2f6727e70d3cfc2884a45"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.AuthoritativeResources.cs",
+      "sha256": "13a37a4cc94f821dec58840e16233ac880b0d74bb45b86b84dec99eb16c17864"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.AuthoritativeResources.cs.meta",
+      "sha256": "12d136481fb4a085ea782f5734af425e7f4396196d7235dfc6acdc8397856702"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.DrawnHitAreas.cs",
+      "sha256": "ecd9f69d4700bd5bdd4bb632d8f7f31c7f0674206e175d796f7e349c4667fb9a"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.DrawnHitAreas.cs.meta",
+      "sha256": "d30161f05093009681c96551ece8eeacfb464e4073235774aa94d87e15e238a3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.HitSelection.cs",
+      "sha256": "8c63156d784f01bffc41cd89efb0329ac66864fb71da0cfa5ff3ac930e0862e5"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.HitSelection.cs.meta",
+      "sha256": "788842c2052e446abae9fafd5fb622799b4a6c91097b42d9aa1a84e3ec83f195"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.LegacyWorldOccupation.cs",
+      "sha256": "fb73e7cbc621cf1666a01119d54c98a4302965dcdb4754bbbf57087647fe6c24"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.LegacyWorldOccupation.cs.meta",
+      "sha256": "3a83e35e38bb32272b8709155cbd849ec370ccc4e1f66b216efb27416fedd498"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.OccupationEvidence.cs",
+      "sha256": "ba0001c049eebd419ef483d43332c8ac8ca4c3b1852e5a142fa855bef3b95744"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.OccupationEvidence.cs.meta",
+      "sha256": "0834fe1bc5ba37a089b30d53b68fb82f64a9115fc3b2726fb77f6eeb6070826b"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.Pollination.cs",
+      "sha256": "40c0137b1670ff6fc8f74f552667fdd9da6d76dbcd69d8791c5e8817c8e35bd6"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.Pollination.cs.meta",
+      "sha256": "d78c139f9004db709fe007cbab946ea234433afcc5a09fc8a96fbaf8fce64eb2"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.ResourceLabels.cs",
+      "sha256": "cd4d7ea4feb7c29ddcc62408acea043765cb98ab497e4a05e601c5e89671ad24"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.ResourceLabels.cs.meta",
+      "sha256": "9d2285565d97fcddf493210b26c40400b5ed5f2927737ce6afea760104790fa2"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.Territories.cs",
+      "sha256": "889fb37b8aeaf1824dea757f1208b4bcf033e89c813e0ecd3ed1956da067edcd"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.Territories.cs.meta",
+      "sha256": "43526b86d0ced313a5b135e6510dda8ac7111f78f56268eba850d37d44ef6100"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.VisualOccupation.cs",
+      "sha256": "a8be7eb4c1cb2342588356bcf646e397aa204af5dc724f03d6c2a990041c8c99"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.VisualOccupation.cs.meta",
+      "sha256": "19929647727d51cf49c8905b722ea8c4305620c65a88573cbf16162faa9b20a3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapMmoFullscreenFoundationBootstrap.cs",
+      "sha256": "c74cc10b707db63ec44c6ed944ec2b16717976fb3583a2cb1369c8cd72b3e8cf"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapVisualSeparation.cs",
+      "sha256": "009a827b368b77ccfea2a0a8bdf4bafae77d8ed4f0e5f38e14e1d544f3a9ff65"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldMapVisualSeparation.cs.meta",
+      "sha256": "a19591d584ea0d74e0459ddd51be307417633a2b2cc4d39ad64bed1d6f62c0f3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/WorldResourceCollectionPresentation.cs",
+      "sha256": "151eced1119845742a573e333b7057f7515f5b065f1c0d93aefc86e2a571c766"
+    },
+    {
+      "path": "Assets/BeeKingdom/Tutorial/Runtime/TutorialDialoguePresenter.cs",
+      "sha256": "6e0430d962df51286294ba230c15f06fbe00ac5ddae9a7be71f27bece74f09a3"
+    },
+    {
+      "path": "Assets/BeeKingdom/Tutorial/Tests/Editor/TutorialPremiumDialogueTests.cs",
+      "sha256": "ad7563f2eef017eec048daa5c9b352a992d66571c607e1917f2a5878c990f08e"
+    },
+    {
+      "path": "Assets/Editor/TerritoryHttpTestPreview.cs",
+      "sha256": "78f61752232344754a26bdc2a80a834f62f03ece54f645bff78bdf62580285bb"
+    },
+    {
+      "path": "Assets/Editor/TerritoryHttpTestPreview.cs.meta",
+      "sha256": "84d76054eef93e004d893915686d1d91a24fdd296873995596589bdeba779f90"
+    },
+    {
+      "path": "Assets/Editor/TerritoryMmoRendererTest.cs",
+      "sha256": "19fee27a5dcb2b031881555832d0bc310ab9eadd61674fcb0539daa0fa8e512e"
+    },
+    {
+      "path": "Assets/Editor/TerritoryMmoRendererTest.cs.meta",
+      "sha256": "38919c2cdc43a5b8faef77af94d99407d63553a5e3993db833c294d1da50d7df"
+    },
+    {
+      "path": "Assets/Experiments/Environment2D5D/LivingHiveMenu/LivingHiveMenuCanvas.cs",
+      "sha256": "2a6bb69826cf8da2e541566b32050cd11c68694326a565e9ad04c98b5a3bb0c7"
+    },
+    {
+      "path": "Assets/Experiments/Environment2D5D/LivingHiveMenu/LivingHiveMenuSpec.cs",
+      "sha256": "9a333f80e05a8fa702d515baca7af38b0f3ba82c3a766dbf5e001696cb8025d9"
+    },
+    {
+      "path": "Assets/Experiments/Environment2D5D/LivingHiveMenu/PremiumNavigationStyle.cs",
+      "sha256": "91b23b831857e4ed08a8ad61b7fc59724643c7622785e75e482b8c0e6678f219"
+    },
+    {
+      "path": "Assets/Experiments/Environment2D5D/LivingHiveMenu/PremiumNavigationStyle.cs.meta",
+      "sha256": "8f3c3065c6df5e399ca94d59bc601c7ef3ebc6118128e35e2519dee703fea094"
+    },
+    {
+      "path": "Assets/_Project/Data/Localization/Resources/Localization/strings.en-US.json",
+      "sha256": "95a40da476ca336743d6cef56dc08973f6f4f847a0abe25a176763fb87e8cd16"
+    },
+    {
+      "path": "Assets/_Project/Data/Localization/Resources/Localization/strings.fr-CA.json",
+      "sha256": "c68fdc8f8b505448bb80b7658f3e5cf4d0dd3f0c38c853929e875528e7cff4ad"
+    }
+  ],
+  "preserved_tested_plus_commit_paths": [
+    "Assets/BeeKingdom/Playground/Editor/WorldMapSharedPanelForegroundTests.cs",
+    "Assets/BeeKingdom/Playground/Editor/WorldMapSharedPanelForegroundTests.cs.meta",
+    "Assets/BeeKingdom/Playground/WorldMapSharedPanelForeground.cs",
+    "Assets/BeeKingdom/Playground/WorldMapSharedPanelForeground.cs.meta"
+  ]
+}
