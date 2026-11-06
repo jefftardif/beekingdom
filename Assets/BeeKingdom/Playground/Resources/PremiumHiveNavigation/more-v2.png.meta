@@ -1,0 +1,1534 @@
+fileFormatVersion: 2
+guid: 2f5581ee9e9c2784592179d9b85fcfab
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4992042689939847986
+    second: more-v2_0
+  - first:
+      213: -5503654329204678169
+    second: more-v2_1
+  - first:
+      213: 2078490205686186581
+    second: more-v2_2
+  - first:
+      213: -3630335028121379369
+    second: more-v2_3
+  - first:
+      213: 8873695218079207892
+    second: more-v2_4
+  - first:
+      213: 4026224137961515268
+    second: more-v2_5
+  - first:
+      213: 4761861298485259039
+    second: more-v2_6
+  - first:
+      213: 5935669762843115624
+    second: more-v2_7
+  - first:
+      213: -357334180368476654
+    second: more-v2_8
+  - first:
+      213: 977866246545191383
+    second: more-v2_9
+  - first:
+      213: 3318730598099026588
+    second: more-v2_10
+  - first:
+      213: -8184174487318845554
+    second: more-v2_11
+  - first:
+      213: -6321560610594133846
+    second: more-v2_12
+  - first:
+      213: -9101239034662114099
+    second: more-v2_13
+  - first:
+      213: -883890351930704059
+    second: more-v2_14
+  - first:
+      213: -7883047683104237081
+    second: more-v2_15
+  - first:
+      213: 6676675716748678617
+    second: more-v2_16
+  - first:
+      213: 5910022275093849926
+    second: more-v2_17
+  - first:
+      213: 1856813477522294791
+    second: more-v2_18
+  - first:
+      213: -6372510553311245061
+    second: more-v2_19
+  - first:
+      213: 946013588636140175
+    second: more-v2_20
+  - first:
+      213: -696844454924442787
+    second: more-v2_21
+  - first:
+      213: 8247610753300772087
+    second: more-v2_22
+  - first:
+      213: -888550131054699626
+    second: more-v2_23
+  - first:
+      213: -3539366746645334716
+    second: more-v2_24
+  - first:
+      213: 7514836747109048255
+    second: more-v2_25
+  - first:
+      213: 3620123617476312880
+    second: more-v2_26
+  - first:
+      213: -5860507852562199639
+    second: more-v2_27
+  - first:
+      213: 1826679794366679075
+    second: more-v2_28
+  - first:
+      213: 3002553763901863430
+    second: more-v2_29
+  - first:
+      213: 365934799630641654
+    second: more-v2_30
+  - first:
+      213: 3608081487135468102
+    second: more-v2_31
+  - first:
+      213: 8200524007593914
+    second: more-v2_32
+  - first:
+      213: -8828391541740607529
+    second: more-v2_33
+  - first:
+      213: 1651323278517379649
+    second: more-v2_34
+  - first:
+      213: 6787375022362702643
+    second: more-v2_35
+  - first:
+      213: -1002189222838726678
+    second: more-v2_36
+  - first:
+      213: 6674924399857071767
+    second: more-v2_37
+  - first:
+      213: -4936763726724266147
+    second: more-v2_38
+  - first:
+      213: 1564499797218141119
+    second: more-v2_39
+  - first:
+      213: 3643030018091909785
+    second: more-v2_40
+  - first:
+      213: -5732013346429814494
+    second: more-v2_41
+  - first:
+      213: 8277158422161617182
+    second: more-v2_42
+  - first:
+      213: 3572719309811377293
+    second: more-v2_43
+  - first:
+      213: 8228395850623758848
+    second: more-v2_44
+  - first:
+      213: 2824344335231922082
+    second: more-v2_45
+  - first:
+      213: 4909738748119080712
+    second: more-v2_46
+  - first:
+      213: 8679315099265172975
+    second: more-v2_47
+  - first:
+      213: -4889670861658769986
+    second: more-v2_48
+  - first:
+      213: -6713034131081640555
+    second: more-v2_49
+  - first:
+      213: 2209712179478008757
+    second: more-v2_50
+  - first:
+      213: 6310219478971599606
+    second: more-v2_51
+  - first:
+      213: -7174596370618371893
+    second: more-v2_52
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: more-v2_0
+      rect:
+        serializedVersion: 2
+        x: 123
+        y: 1059
+        width: 300
+        height: 151
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 23b3375a06c474540800000000000000
+      internalID: 4992042689939847986
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_1
+      rect:
+        serializedVersion: 2
+        x: 520
+        y: 1072
+        width: 88
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7e1e6351c871f93b0800000000000000
+      internalID: -5503654329204678169
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_2
+      rect:
+        serializedVersion: 2
+        x: 577
+        y: 1155
+        width: 37
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 552cd0b64d748dc10800000000000000
+      internalID: 2078490205686186581
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_3
+      rect:
+        serializedVersion: 2
+        x: 659
+        y: 1050
+        width: 285
+        height: 138
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7ddda29b6857e9dc0800000000000000
+      internalID: -3630335028121379369
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_4
+      rect:
+        serializedVersion: 2
+        x: 715
+        y: 1173
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d191b639c2b52b70800000000000000
+      internalID: 8873695218079207892
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_5
+      rect:
+        serializedVersion: 2
+        x: 1043
+        y: 1065
+        width: 104
+        height: 141
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 409ac49858500e730800000000000000
+      internalID: 4026224137961515268
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_6
+      rect:
+        serializedVersion: 2
+        x: 422
+        y: 1082
+        width: 71
+        height: 88
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f1be4ed1f97851240800000000000000
+      internalID: 4761861298485259039
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_7
+      rect:
+        serializedVersion: 2
+        x: 514
+        y: 1161
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8608a46633cbf5250800000000000000
+      internalID: 5935669762843115624
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_8
+      rect:
+        serializedVersion: 2
+        x: 490
+        y: 1131
+        width: 26
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2161809c47e7a0bf0800000000000000
+      internalID: -357334180368476654
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_9
+      rect:
+        serializedVersion: 2
+        x: 502
+        y: 1150
+        width: 12
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d1bb279b24129d00800000000000000
+      internalID: 977866246545191383
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_10
+      rect:
+        serializedVersion: 2
+        x: 599
+        y: 1126
+        width: 33
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c9289e445ef7e0e20800000000000000
+      internalID: 3318730598099026588
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_11
+      rect:
+        serializedVersion: 2
+        x: 631
+        y: 1132
+        width: 31
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e87ab875aa8fb6e80800000000000000
+      internalID: -8184174487318845554
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_12
+      rect:
+        serializedVersion: 2
+        x: 633
+        y: 1149
+        width: 13
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa86f632e1e4548a0800000000000000
+      internalID: -6321560610594133846
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_13
+      rect:
+        serializedVersion: 2
+        x: 1165
+        y: 1126
+        width: 36
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dccab038157e1b180800000000000000
+      internalID: -9101239034662114099
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_14
+      rect:
+        serializedVersion: 2
+        x: 496
+        y: 1120
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 54f76c0786acbb3f0800000000000000
+      internalID: -883890351930704059
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_15
+      rect:
+        serializedVersion: 2
+        x: 504
+        y: 1108
+        width: 14
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7e91b1df5e9c99290800000000000000
+      internalID: -7883047683104237081
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_16
+      rect:
+        serializedVersion: 2
+        x: 609
+        y: 1114
+        width: 11
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d51849903158ac50800000000000000
+      internalID: 6676675716748678617
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_17
+      rect:
+        serializedVersion: 2
+        x: 374
+        y: 1098
+        width: 15
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6476d9152fd940250800000000000000
+      internalID: 5910022275093849926
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_18
+      rect:
+        serializedVersion: 2
+        x: 458
+        y: 1074
+        width: 35
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 708cfdd150ab4c910800000000000000
+      internalID: 1856813477522294791
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_19
+      rect:
+        serializedVersion: 2
+        x: 482
+        y: 1092
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bfc847e2a6b4097a0800000000000000
+      internalID: -6372510553311245061
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_20
+      rect:
+        serializedVersion: 2
+        x: 490
+        y: 1084
+        width: 11
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f82895fb85ae02d00800000000000000
+      internalID: 946013588636140175
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_21
+      rect:
+        serializedVersion: 2
+        x: 611
+        y: 1085
+        width: 35
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d53278809af4456f0800000000000000
+      internalID: -696844454924442787
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_22
+      rect:
+        serializedVersion: 2
+        x: 715
+        y: 1082
+        width: 9
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7f43f2c4846657270800000000000000
+      internalID: 8247610753300772087
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_23
+      rect:
+        serializedVersion: 2
+        x: 716
+        y: 1080
+        width: 14
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 69b9b511d5c3ba3f0800000000000000
+      internalID: -888550131054699626
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_24
+      rect:
+        serializedVersion: 2
+        x: 778
+        y: 1076
+        width: 17
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 445ff5042b4a1eec0800000000000000
+      internalID: -3539366746645334716
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_25
+      rect:
+        serializedVersion: 2
+        x: 858
+        y: 1099
+        width: 9
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbf9c78c4301a4860800000000000000
+      internalID: 7514836747109048255
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_26
+      rect:
+        serializedVersion: 2
+        x: 621
+        y: 1055
+        width: 39
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 03f7da6ff334d3230800000000000000
+      internalID: 3620123617476312880
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_27
+      rect:
+        serializedVersion: 2
+        x: 691
+        y: 1066
+        width: 17
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ab84ac882b4baea0800000000000000
+      internalID: -5860507852562199639
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_28
+      rect:
+        serializedVersion: 2
+        x: 713
+        y: 1054
+        width: 8
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3280c95489ba95910800000000000000
+      internalID: 1826679794366679075
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_29
+      rect:
+        serializedVersion: 2
+        x: 856
+        y: 1036
+        width: 15
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 606f1647db63ba920800000000000000
+      internalID: 3002553763901863430
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_30
+      rect:
+        serializedVersion: 2
+        x: 1190
+        y: 1047
+        width: 33
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f920fee2cf041500800000000000000
+      internalID: 365934799630641654
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_31
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 0
+        width: 1213
+        height: 1055
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 64a6f510ffa721230800000000000000
+      internalID: 3608081487135468102
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_32
+      rect:
+        serializedVersion: 2
+        x: 498
+        y: 1052
+        width: 22
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab7d17845522d1000800000000000000
+      internalID: 8200524007593914
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_33
+      rect:
+        serializedVersion: 2
+        x: 518
+        y: 1052
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d7ec78eaa04b7580800000000000000
+      internalID: -8828391541740607529
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_34
+      rect:
+        serializedVersion: 2
+        x: 717
+        y: 1053
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 142ac51d5cdaae610800000000000000
+      internalID: 1651323278517379649
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_35
+      rect:
+        serializedVersion: 2
+        x: 723
+        y: 1036
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 333b94d2f99913e50800000000000000
+      internalID: 6787375022362702643
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_36
+      rect:
+        serializedVersion: 2
+        x: 728
+        y: 1036
+        width: 13
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aef09fe26328712f0800000000000000
+      internalID: -1002189222838726678
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_37
+      rect:
+        serializedVersion: 2
+        x: 818
+        y: 1034
+        width: 9
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 796711c506812ac50800000000000000
+      internalID: 6674924399857071767
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_38
+      rect:
+        serializedVersion: 2
+        x: 1188
+        y: 280
+        width: 17
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d570190fb871d7bb0800000000000000
+      internalID: -4936763726724266147
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_39
+      rect:
+        serializedVersion: 2
+        x: 1178
+        y: 250
+        width: 11
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb3ab58c64836b510800000000000000
+      internalID: 1564499797218141119
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_40
+      rect:
+        serializedVersion: 2
+        x: 649
+        y: 131
+        width: 9
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9920476ff74ae8230800000000000000
+      internalID: 3643030018091909785
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_41
+      rect:
+        serializedVersion: 2
+        x: 553
+        y: 95
+        width: 19
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 229b04e1b3cc370b0800000000000000
+      internalID: -5732013346429814494
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_42
+      rect:
+        serializedVersion: 2
+        x: 747
+        y: 120
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e11739e0bbf5ed270800000000000000
+      internalID: 8277158422161617182
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_43
+      rect:
+        serializedVersion: 2
+        x: 948
+        y: 109
+        width: 22
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d846c7f7849d49130800000000000000
+      internalID: 3572719309811377293
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_44
+      rect:
+        serializedVersion: 2
+        x: 295
+        y: 87
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0023ab32e62213270800000000000000
+      internalID: 8228395850623758848
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_45
+      rect:
+        serializedVersion: 2
+        x: 311
+        y: 93
+        width: 14
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2afa2e87536123720800000000000000
+      internalID: 2824344335231922082
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_46
+      rect:
+        serializedVersion: 2
+        x: 324
+        y: 95
+        width: 13
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 80fdb95e065e22440800000000000000
+      internalID: 4909738748119080712
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_47
+      rect:
+        serializedVersion: 2
+        x: 764
+        y: 77
+        width: 23
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fe58269091f137870800000000000000
+      internalID: 8679315099265172975
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_48
+      rect:
+        serializedVersion: 2
+        x: 840
+        y: 79
+        width: 31
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb530460246642cb0800000000000000
+      internalID: -4889670861658769986
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_49
+      rect:
+        serializedVersion: 2
+        x: 536
+        y: 52
+        width: 42
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5954ec3660386d2a0800000000000000
+      internalID: -6713034131081640555
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_50
+      rect:
+        serializedVersion: 2
+        x: 795
+        y: 79
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5b314a905897aae10800000000000000
+      internalID: 2209712179478008757
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_51
+      rect:
+        serializedVersion: 2
+        x: 890
+        y: 79
+        width: 9
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6fa4ad2ee27629750800000000000000
+      internalID: 6310219478971599606
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: more-v2_52
+      rect:
+        serializedVersion: 2
+        x: 342
+        y: 49
+        width: 13
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc03c721d96be6c90800000000000000
+      internalID: -7174596370618371893
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    outline: []
+    customData:
+    physicsShape: []
+    bones: []
+    spriteID:
+    internalID: 0
+    vertices: []
+    indices:
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      more-v2_0: 4992042689939847986
+      more-v2_1: -5503654329204678169
+      more-v2_10: 3318730598099026588
+      more-v2_11: -8184174487318845554
+      more-v2_12: -6321560610594133846
+      more-v2_13: -9101239034662114099
+      more-v2_14: -883890351930704059
+      more-v2_15: -7883047683104237081
+      more-v2_16: 6676675716748678617
+      more-v2_17: 5910022275093849926
+      more-v2_18: 1856813477522294791
+      more-v2_19: -6372510553311245061
+      more-v2_2: 2078490205686186581
+      more-v2_20: 946013588636140175
+      more-v2_21: -696844454924442787
+      more-v2_22: 8247610753300772087
+      more-v2_23: -888550131054699626
+      more-v2_24: -3539366746645334716
+      more-v2_25: 7514836747109048255
+      more-v2_26: 3620123617476312880
+      more-v2_27: -5860507852562199639
+      more-v2_28: 1826679794366679075
+      more-v2_29: 3002553763901863430
+      more-v2_3: -3630335028121379369
+      more-v2_30: 365934799630641654
+      more-v2_31: 3608081487135468102
+      more-v2_32: 8200524007593914
+      more-v2_33: -8828391541740607529
+      more-v2_34: 1651323278517379649
+      more-v2_35: 6787375022362702643
+      more-v2_36: -1002189222838726678
+      more-v2_37: 6674924399857071767
+      more-v2_38: -4936763726724266147
+      more-v2_39: 1564499797218141119
+      more-v2_4: 8873695218079207892
+      more-v2_40: 3643030018091909785
+      more-v2_41: -5732013346429814494
+      more-v2_42: 8277158422161617182
+      more-v2_43: 3572719309811377293
+      more-v2_44: 8228395850623758848
+      more-v2_45: 2824344335231922082
+      more-v2_46: 4909738748119080712
+      more-v2_47: 8679315099265172975
+      more-v2_48: -4889670861658769986
+      more-v2_49: -6713034131081640555
+      more-v2_5: 4026224137961515268
+      more-v2_50: 2209712179478008757
+      more-v2_51: 6310219478971599606
+      more-v2_52: -7174596370618371893
+      more-v2_6: 4761861298485259039
+      more-v2_7: 5935669762843115624
+      more-v2_8: -357334180368476654
+      more-v2_9: 977866246545191383
+  mipmapLimitGroupName:
+  pSDRemoveMatte: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:

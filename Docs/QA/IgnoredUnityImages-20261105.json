@@ -1,0 +1,1326 @@
+{
+  "time_local": "2026-11-05T22:53:42-05:00",
+  "ignored_images": 188,
+  "total_bytes": 149367178,
+  "lfs_attribute_summary": {
+    "lfs": 188
+  },
+  "images": [
+    {
+      "path": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/border_001_master.jpg",
+      "bytes": 109154,
+      "meta": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/border_001_master.jpg.meta",
+      "guid": "06c66b2c1d4d1b247b68e985d1dd5724",
+      "filter": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/border_001_master.jpg: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/laurel_001_master.jpg",
+      "bytes": 135452,
+      "meta": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/laurel_001_master.jpg.meta",
+      "guid": "5ed2784911a3e2244894fd6d85b249c7",
+      "filter": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/laurel_001_master.jpg: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/ornament_001_master.jpg",
+      "bytes": 155668,
+      "meta": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/ornament_001_master.jpg.meta",
+      "guid": "e598faaf10ea47145be7024e455e5ddf",
+      "filter": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/ornament_001_master.jpg: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/symbol_001_master.jpg",
+      "bytes": 150152,
+      "meta": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/symbol_001_master.jpg.meta",
+      "guid": "4f8c30405978f0a48af1bac1b168cb96",
+      "filter": "Assets/BeeKingdom/Art/HeraldrySource/PremiumGenerated/symbol_001_master.jpg: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_001.png",
+      "bytes": 2813152,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_001.png.meta",
+      "guid": "da0e0319e242f8547b1b7977a4393f13",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_002.png",
+      "bytes": 3085992,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_002.png.meta",
+      "guid": "ae45f139595fbb8428ddbc4dae5c2fb8",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_003.png",
+      "bytes": 2962484,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_003.png.meta",
+      "guid": "043e056880702a44f83084ad64b0f64d",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_004.png",
+      "bytes": 2782305,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_004.png.meta",
+      "guid": "b9e4e93a4755cee498d108f4d04ff43a",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_005.png",
+      "bytes": 2613631,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_005.png.meta",
+      "guid": "3c8a09175096e664d804c88baf21bdcd",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_006.png",
+      "bytes": 866865,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_006.png.meta",
+      "guid": "0f7b5703f3bd2c94699d0e92cd618303",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_007.png",
+      "bytes": 1047421,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_007.png.meta",
+      "guid": "6409cbd5e4062f94c867c5e4c2710403",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_008.png",
+      "bytes": 984083,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_008.png.meta",
+      "guid": "d7ed041a19a176b48a4180c356515d5f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_009.png",
+      "bytes": 990281,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_009.png.meta",
+      "guid": "fa89c7db4432c4b4eb8585e043a706a4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_010.png",
+      "bytes": 995152,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_010.png.meta",
+      "guid": "d247ad4c50ddb9e4bb66644afd139eaf",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_010.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_011.png",
+      "bytes": 1041571,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_011.png.meta",
+      "guid": "84513b0a293b805498a13ec6c055784c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_011.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_012.png",
+      "bytes": 1057992,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_012.png.meta",
+      "guid": "1b0dad4078590fc4fa9362946ae7009c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_012.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_013.png",
+      "bytes": 1019409,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_013.png.meta",
+      "guid": "c67fb91c26dcd3c4cbc54a42144ed29c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_013.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_014.png",
+      "bytes": 1027414,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_014.png.meta",
+      "guid": "29c06a0f330ec9f40ae9bd268f067e4b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_014.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_015.png",
+      "bytes": 1003763,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_015.png.meta",
+      "guid": "88939425fbbdaae47bb940a61d426fd4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_015.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_016.png",
+      "bytes": 978530,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_016.png.meta",
+      "guid": "f886876ce2712e744a14622171e76030",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_016.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_017.png",
+      "bytes": 1001213,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_017.png.meta",
+      "guid": "f21c8d0e6dd64a943aaefac1284bfe2a",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_017.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_018.png",
+      "bytes": 1046154,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_018.png.meta",
+      "guid": "158a8308c5dd9ac45b1f1710d4b81a94",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_018.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_019.png",
+      "bytes": 1036643,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_019.png.meta",
+      "guid": "92a4dfc876d2a534fab5d120783ef788",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_019.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_020.png",
+      "bytes": 1035757,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_020.png.meta",
+      "guid": "522ad04b7e503ff428f06ef61264f81f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Backgrounds/background_020.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_001.png",
+      "bytes": 2874460,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_001.png.meta",
+      "guid": "db72791ab8eb99740935d9e7760639e7",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_002.png",
+      "bytes": 2799924,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_002.png.meta",
+      "guid": "4a2ea683fa61c39479c19163d6f6c5b2",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_003.png",
+      "bytes": 1623995,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_003.png.meta",
+      "guid": "5899bcf800305ed41856fd8e8e073dca",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_004.png",
+      "bytes": 2839989,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_004.png.meta",
+      "guid": "0785bb34ac1e1a94787c104bf59438d6",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_005.png",
+      "bytes": 2420184,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_005.png.meta",
+      "guid": "381e49e73fb95f94ab449216a77fb5ba",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_006.png",
+      "bytes": 1560427,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_006.png.meta",
+      "guid": "aaef95cd5d6471148b3a8b27b8c251fb",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_007.png",
+      "bytes": 2541500,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_007.png.meta",
+      "guid": "290804c2ba66e6a48b115e33ff0df2e8",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_008.png",
+      "bytes": 2031035,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_008.png.meta",
+      "guid": "a6ce81c9575b76947941e5395bbedca0",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_009.png",
+      "bytes": 2869634,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_009.png.meta",
+      "guid": "470bf572c98c79f4286b46ddb2e5304a",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_010.png",
+      "bytes": 1898198,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_010.png.meta",
+      "guid": "18c42126dedc92b4d8c0714a77be2a0f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_010.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_011.png",
+      "bytes": 1881168,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_011.png.meta",
+      "guid": "205ef7306c971e4498a368fce5634126",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_011.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_012.png",
+      "bytes": 2895782,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_012.png.meta",
+      "guid": "6761ca6cb9127714285d0b78918b2104",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_012.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_013.png",
+      "bytes": 3007502,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_013.png.meta",
+      "guid": "e563a426ac8fdce4d94c8c2e2554dadc",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_013.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_014.png",
+      "bytes": 3636645,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_014.png.meta",
+      "guid": "a08b0a5016d58e245871df35ddad8f0a",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_014.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_015.png",
+      "bytes": 2605535,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_015.png.meta",
+      "guid": "6b2614eb7c80c3645918c2f32d368cf7",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Banners/banner_015.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_001.png",
+      "bytes": 513513,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_001.png.meta",
+      "guid": "f3ca68a7136f2264189d5612aacefa6c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_002.png",
+      "bytes": 68026,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_002.png.meta",
+      "guid": "cec7f74672ceba74ba5530cbdae22f4e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_003.png",
+      "bytes": 67782,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_003.png.meta",
+      "guid": "7724221d7fde0b148b5de9ef4dea387e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_004.png",
+      "bytes": 68164,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_004.png.meta",
+      "guid": "84ef3b36fb1f0814f8cd807b2483a2c9",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_005.png",
+      "bytes": 66135,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_005.png.meta",
+      "guid": "5b8d41787f757504b8064b46b6a9e24f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_006.png",
+      "bytes": 68289,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_006.png.meta",
+      "guid": "14cb2b1a9a36dd04e86e7a3899f69e46",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_007.png",
+      "bytes": 68026,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_007.png.meta",
+      "guid": "a02aca0b589e71b46a1ace4fc4c10f87",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_008.png",
+      "bytes": 67782,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_008.png.meta",
+      "guid": "9518eb5ea15aca74a926cf9f30f09baa",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Borders/border_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_001.png",
+      "bytes": 766815,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_001.png.meta",
+      "guid": "8a27fb3b06541e24284aea1252912897",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_002.png",
+      "bytes": 21370,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_002.png.meta",
+      "guid": "f28bd0a1b08ca134f9d92bb3566c0f5a",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_003.png",
+      "bytes": 19483,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_003.png.meta",
+      "guid": "c25a250344af3744999fae55302c8058",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_004.png",
+      "bytes": 21666,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_004.png.meta",
+      "guid": "655344a035cec3140be3082af3482049",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_005.png",
+      "bytes": 20576,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_005.png.meta",
+      "guid": "d375c8df23e93744d9c335580bb77a1e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_006.png",
+      "bytes": 21606,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_006.png.meta",
+      "guid": "d60080fb763233c4086f2a58eae60e57",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Crowns/crown_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_001.png",
+      "bytes": 691388,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_001.png.meta",
+      "guid": "53d94adaf6b656b46ab6ab318097de61",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_002.png",
+      "bytes": 24267,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_002.png.meta",
+      "guid": "33acd86e564704b4abc87d42fa73f9eb",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_003.png",
+      "bytes": 24578,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_003.png.meta",
+      "guid": "f9bbc3f991c526041a1b66962c24c95c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_004.png",
+      "bytes": 24696,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_004.png.meta",
+      "guid": "9aa3309ebcdcbc8439af753f67a86b06",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Laurels/laurel_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_001.png",
+      "bytes": 780252,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_001.png.meta",
+      "guid": "8b7b831bd5012034f91b9dc88446a70c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_002.png",
+      "bytes": 31541,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_002.png.meta",
+      "guid": "96245ad261f0dc44783184a30fd6a03f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_003.png",
+      "bytes": 26256,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_003.png.meta",
+      "guid": "fcc7978d1defd224295350978e9aeb6d",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_004.png",
+      "bytes": 30843,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_004.png.meta",
+      "guid": "03074acd6e2fc8d4ba2dd898f2d05601",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_005.png",
+      "bytes": 26209,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_005.png.meta",
+      "guid": "8b38b2638cec51740b29ce87af44895e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_006.png",
+      "bytes": 31363,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_006.png.meta",
+      "guid": "603edfdb2812a6e459ca43cc87637376",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_007.png",
+      "bytes": 26384,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_007.png.meta",
+      "guid": "77822ed227fcfe340a74fbe108ac1151",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_008.png",
+      "bytes": 31325,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_008.png.meta",
+      "guid": "620edf827754a8f4b941c5c37327e461",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Ornaments/ornament_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_001.png",
+      "bytes": 760092,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_001.png.meta",
+      "guid": "20821e807b42a4c479b9fe0988ead7df",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_002.png",
+      "bytes": 22799,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_002.png.meta",
+      "guid": "cd96ab0d2bf73eb4f8219665afe6dca7",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_003.png",
+      "bytes": 13561,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_003.png.meta",
+      "guid": "ecac88277425ddd4ba00ec892e133a1b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_004.png",
+      "bytes": 17145,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_004.png.meta",
+      "guid": "241d938359edea44fa4d66fa8a82bac8",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_005.png",
+      "bytes": 28606,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_005.png.meta",
+      "guid": "4ef8016889b63a5448fea77170c01608",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_006.png",
+      "bytes": 23134,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_006.png.meta",
+      "guid": "c1dd5931a20cffb45b799822c3c9b14b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_007.png",
+      "bytes": 29760,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_007.png.meta",
+      "guid": "b19223696a3e1b2498106c75eae18125",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_008.png",
+      "bytes": 26273,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_008.png.meta",
+      "guid": "ed7de9a89b5de5f4eaea262d30c569c4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_009.png",
+      "bytes": 8970,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_009.png.meta",
+      "guid": "ac9d7580e15362545a672e52de320168",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_010.png",
+      "bytes": 14131,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_010.png.meta",
+      "guid": "277c4025dab63bd4883a991d7f2dd5a2",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_010.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_011.png",
+      "bytes": 16732,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_011.png.meta",
+      "guid": "2c511b0b6ad26a34094f843698310092",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_011.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_012.png",
+      "bytes": 29834,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_012.png.meta",
+      "guid": "745e799e201bca7478eac2586b309c7f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Symbols/symbol_012.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_001.png",
+      "bytes": 1089431,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_001.png.meta",
+      "guid": "9662cfce47aa9db41969d81e863c1497",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_002.png",
+      "bytes": 54679,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_002.png.meta",
+      "guid": "73ff6e412bf7a884b86edf75de8c24a3",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_003.png",
+      "bytes": 54397,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_003.png.meta",
+      "guid": "6e1847034a9e55b4f9aa707f0bce9f4f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_004.png",
+      "bytes": 54473,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_004.png.meta",
+      "guid": "c27937880891ea14a831e5d35ea9c94b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_005.png",
+      "bytes": 54376,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_005.png.meta",
+      "guid": "a538f0955af582442a74f089425cc6d2",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_006.png",
+      "bytes": 54612,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_006.png.meta",
+      "guid": "7213bb3bba2001f42b1bbf647b4503e2",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Heraldry/Wings/wing_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_001.png",
+      "bytes": 1357366,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_001.png.meta",
+      "guid": "1c48ef68c610a114da7797fbbeb93ae1",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_002.png",
+      "bytes": 1438746,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_002.png.meta",
+      "guid": "6d44830192dda5c4f8d7585ea10072b5",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_003.png",
+      "bytes": 1389866,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_003.png.meta",
+      "guid": "44e35651c97fabc4189c305d472749eb",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_004.png",
+      "bytes": 1246054,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_004.png.meta",
+      "guid": "a8777609e36f5214c8d7d816ee87dcf6",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_005.png",
+      "bytes": 1129477,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_005.png.meta",
+      "guid": "dd8607e92848b784b8eb7d5b0ad0391e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_006.png",
+      "bytes": 926647,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_006.png.meta",
+      "guid": "2c2c3a23f7e1b324cae27f189043c35f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_007.png",
+      "bytes": 1119355,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_007.png.meta",
+      "guid": "00e2a90e63f173b499f45691297d22fb",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_008.png",
+      "bytes": 1027068,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_008.png.meta",
+      "guid": "dc6686fca4f9c944fb2c5367ba8c014f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_009.png",
+      "bytes": 1143354,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_009.png.meta",
+      "guid": "049cfaec8a004414c930644f346d454e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_010.png",
+      "bytes": 1090251,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_010.png.meta",
+      "guid": "885e72e8ed8cf07418f1ff36ef1131d8",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_010.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_011.png",
+      "bytes": 1191197,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_011.png.meta",
+      "guid": "7299256a45b9b7249ab22c4031f24a9e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_011.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_012.png",
+      "bytes": 1190764,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_012.png.meta",
+      "guid": "093cdb6d0ba46f24ea8c268efe889232",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_012.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_013.png",
+      "bytes": 1183493,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_013.png.meta",
+      "guid": "e80c5b148da423d48b32f6ca0966dd24",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_013.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_014.png",
+      "bytes": 1178214,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_014.png.meta",
+      "guid": "124ed6e05ce02714ebcc641c1f7a410f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_014.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_015.png",
+      "bytes": 1155293,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_015.png.meta",
+      "guid": "faabe75d83a977c478859ef1fa0efbab",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_015.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_016.png",
+      "bytes": 1110271,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_016.png.meta",
+      "guid": "f2e57e038fe9ff144a7ffa3a5d9f41be",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_016.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_017.png",
+      "bytes": 1148554,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_017.png.meta",
+      "guid": "47dcaedd8cec81241a8b9e8887ada5c7",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_017.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_018.png",
+      "bytes": 1177559,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_018.png.meta",
+      "guid": "d2272a737176f8344b5f9b84a8d2ef42",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_018.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_019.png",
+      "bytes": 1160557,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_019.png.meta",
+      "guid": "3fac7bf0c49f8b6438b5eedb26e4dc39",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_019.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_020.png",
+      "bytes": 1157668,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_020.png.meta",
+      "guid": "b8e17f1d7dc8d4e42bb4db6f3c1934c8",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Backgrounds/background_020.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_001.png",
+      "bytes": 190858,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_001.png.meta",
+      "guid": "b370f3c6a0fa29740b7665c16e3792b6",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_002.png",
+      "bytes": 180599,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_002.png.meta",
+      "guid": "39b88cf46fc78274482ae5678e097ff5",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_003.png",
+      "bytes": 173302,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_003.png.meta",
+      "guid": "c36064dd296c39047975411599f709f3",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_004.png",
+      "bytes": 188024,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_004.png.meta",
+      "guid": "3e42a0e87636f7145aa02efd1b92f13e",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_005.png",
+      "bytes": 188613,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_005.png.meta",
+      "guid": "040f9777d80e22d449ed898def97499f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_006.png",
+      "bytes": 169689,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_006.png.meta",
+      "guid": "9ccd833d75ecc3848842638445802b33",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_007.png",
+      "bytes": 174588,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_007.png.meta",
+      "guid": "98a68dc3be260364ea792717dd0753d9",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_008.png",
+      "bytes": 203924,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_008.png.meta",
+      "guid": "18f33e151c3b5e6418eb3eef0aee0b2b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_009.png",
+      "bytes": 190576,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_009.png.meta",
+      "guid": "f956fca1305aaaa43a001cddd73465be",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_010.png",
+      "bytes": 194372,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_010.png.meta",
+      "guid": "133a7e901b4701642b5c0507dcbdfec1",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_010.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_011.png",
+      "bytes": 190078,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_011.png.meta",
+      "guid": "76f14da65357cd048a8a1dc04f4a85bc",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_011.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_012.png",
+      "bytes": 194464,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_012.png.meta",
+      "guid": "3cb3318309eed7041a8b7fdb40383e47",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_012.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_013.png",
+      "bytes": 202088,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_013.png.meta",
+      "guid": "ea8dc1cf0e2982b4b85fa1c5b4405143",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_013.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_014.png",
+      "bytes": 266497,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_014.png.meta",
+      "guid": "d484461cbfff0b547ba0603765c2a999",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_014.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_015.png",
+      "bytes": 210289,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_015.png.meta",
+      "guid": "904a94d8363db5e41a46dc78b408f954",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Banners/banner_015.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_001.png",
+      "bytes": 483286,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_001.png.meta",
+      "guid": "6a3118538ee89af4cb4146aee14c836c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_002.png",
+      "bytes": 126745,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_002.png.meta",
+      "guid": "a51bb64454ffd1c44bb20ecda6ed041d",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_003.png",
+      "bytes": 116983,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_003.png.meta",
+      "guid": "baab24f6bfe78244bb15537070ca30bd",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_004.png",
+      "bytes": 127982,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_004.png.meta",
+      "guid": "0b7b9f1cf26c5b0468abaa1795ef317a",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_005.png",
+      "bytes": 117966,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_005.png.meta",
+      "guid": "f687c50d75ec87448a8db127558cce4d",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_006.png",
+      "bytes": 125248,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_006.png.meta",
+      "guid": "cafdafc426384114e907624e9de337f0",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_007.png",
+      "bytes": 126745,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_007.png.meta",
+      "guid": "e729f11f0ed1f554fa5f878110a1ed95",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_008.png",
+      "bytes": 116983,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_008.png.meta",
+      "guid": "c3cc1024fbee8f643bcdffeeb4d6a38b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Borders/border_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_001.png",
+      "bytes": 56564,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_001.png.meta",
+      "guid": "da1413c5b00df7d46a95c832a12060fc",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_002.png",
+      "bytes": 22599,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_002.png.meta",
+      "guid": "76b2155a09aac4a498938cb6b7828ad0",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_003.png",
+      "bytes": 20506,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_003.png.meta",
+      "guid": "40cb5ea427ab5ff4ca1b4b27bf4e8d6c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_004.png",
+      "bytes": 22499,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_004.png.meta",
+      "guid": "97ac9100df2d5594ca8f900451bd01ab",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_005.png",
+      "bytes": 20439,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_005.png.meta",
+      "guid": "deebfae1fdd31f74aba8979bad133098",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_006.png",
+      "bytes": 21817,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_006.png.meta",
+      "guid": "d91656871f739c44992846baf4b62437",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Crowns/crown_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_001.png",
+      "bytes": 199154,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_001.png.meta",
+      "guid": "c81182f6d1ba0b049865e45de97c9f0b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_002.png",
+      "bytes": 47938,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_002.png.meta",
+      "guid": "4208a001121e2794d9f22758bd3f3ad3",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_003.png",
+      "bytes": 50540,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_003.png.meta",
+      "guid": "5879701438c9eba4da3e582e0096d985",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_004.png",
+      "bytes": 45810,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_004.png.meta",
+      "guid": "f36154e0cdead4d479a214569c444b8b",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Laurels/laurel_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_001.png",
+      "bytes": 710755,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_001.png.meta",
+      "guid": "2c1d577e141d5fb46acb55b3ada78427",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_002.png",
+      "bytes": 72614,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_002.png.meta",
+      "guid": "a01d7de1fedd1454592f77e8340f9fff",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_003.png",
+      "bytes": 73302,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_003.png.meta",
+      "guid": "6456db1c0b5ebea4ead8a6f5c6b246b2",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_004.png",
+      "bytes": 75774,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_004.png.meta",
+      "guid": "fe52c5d6fba74744e9449a9f95871e70",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_005.png",
+      "bytes": 71507,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_005.png.meta",
+      "guid": "f55e7970f9a39394086681cd43fcc5fd",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_006.png",
+      "bytes": 80209,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_006.png.meta",
+      "guid": "0f36af22f66e08446aafab9105a0c38f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_007.png",
+      "bytes": 66932,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_007.png.meta",
+      "guid": "f9d2b9f238f7c064b92f60a4851fac0f",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_008.png",
+      "bytes": 79443,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_008.png.meta",
+      "guid": "d8a4530a1bc41864689f384f82d3a7c9",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Ornaments/ornament_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_001.png",
+      "bytes": 149187,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_001.png.meta",
+      "guid": "392d9115b4dde754fab82f680d767142",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_002.png",
+      "bytes": 31178,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_002.png.meta",
+      "guid": "a0e447041b8c9054ca02fd0cd5edd021",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_003.png",
+      "bytes": 34637,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_003.png.meta",
+      "guid": "28096997211d4af408f0ee3e62b04e59",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_004.png",
+      "bytes": 35178,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_004.png.meta",
+      "guid": "b7cd3f3a1a5094c4c986d37adbda5c92",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_005.png",
+      "bytes": 38205,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_005.png.meta",
+      "guid": "ad41ad0e09dc48c4ca501e47ab149227",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_006.png",
+      "bytes": 42441,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_006.png.meta",
+      "guid": "ef28cbe21698bdb42a2980571f279881",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_007.png",
+      "bytes": 51845,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_007.png.meta",
+      "guid": "4ad129c585d753e43bdcaaa689fc7cd5",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_007.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_008.png",
+      "bytes": 33234,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_008.png.meta",
+      "guid": "b11396291730b414381d5b0de308e9c9",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_008.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_009.png",
+      "bytes": 32719,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_009.png.meta",
+      "guid": "c6532e1228c59d04f85410db78d17363",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_010.png",
+      "bytes": 22230,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_010.png.meta",
+      "guid": "3ceb769430da68242adf2846750eb170",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_010.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_011.png",
+      "bytes": 29100,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_011.png.meta",
+      "guid": "ef4f34bedfa64ca47b35cfc47798eca4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_011.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_012.png",
+      "bytes": 51485,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_012.png.meta",
+      "guid": "5d208292ace177148bd81d2af7588c30",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Symbols/symbol_012.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_001.png",
+      "bytes": 880906,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_001.png.meta",
+      "guid": "243d6ed37d2f1ad46b806847e0b86d35",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_001.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_002.png",
+      "bytes": 185941,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_002.png.meta",
+      "guid": "2007649808e59254d88f3bad0f539268",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_002.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_003.png",
+      "bytes": 181690,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_003.png.meta",
+      "guid": "e43b4d85e5263c448b2b7ad40db7da03",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_003.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_004.png",
+      "bytes": 182383,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_004.png.meta",
+      "guid": "5b7d8663980524d42adead9ff53e8661",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_004.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_005.png",
+      "bytes": 179943,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_005.png.meta",
+      "guid": "21d8b6831e7c0b9499487694b37a7db4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_005.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_006.png",
+      "bytes": 178200,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_006.png.meta",
+      "guid": "f9f3fbecd92dcd34fb15e4eb76a6ac61",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryNormalized/Wings/wing_006.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/honeycomb.png",
+      "bytes": 222812,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/honeycomb.png.meta",
+      "guid": "775ec7ed8579d7246b61ac1baa305db8",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/honeycomb.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/royal-bee.png",
+      "bytes": 318291,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/royal-bee.png.meta",
+      "guid": "6ddb1802782b9404084790c22396e32c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/royal-bee.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/royal-wings.png",
+      "bytes": 261802,
+      "meta": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/royal-wings.png.meta",
+      "guid": "a87df38d8ef61f2479a4ed694ad9afea",
+      "filter": "Assets/BeeKingdom/Playground/Resources/HeraldryPremium/Symbols/royal-wings.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Pollination/field_bloom.png",
+      "bytes": 73030,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Pollination/field_bloom.png.meta",
+      "guid": "cd05b168a862c464691d14160a43523c",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Pollination/field_bloom.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Pollination/field_recovering.png",
+      "bytes": 49886,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Pollination/field_recovering.png.meta",
+      "guid": "d87a5aaf2e2d8f14db43c51c26afc5a5",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Pollination/field_recovering.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Pollination/field_resting.png",
+      "bytes": 40977,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Pollination/field_resting.png.meta",
+      "guid": "3caad0c995cf8fd4abe586118fee8ec4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Pollination/field_resting.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/Pollination/forager.png",
+      "bytes": 5998,
+      "meta": "Assets/BeeKingdom/Playground/Resources/Pollination/forager.png.meta",
+      "guid": "9e01ed456e6fd904389d034a429b3fc9",
+      "filter": "Assets/BeeKingdom/Playground/Resources/Pollination/forager.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/PremiumHiveNavigation/bag-v2.png",
+      "bytes": 2545788,
+      "meta": "Assets/BeeKingdom/Playground/Resources/PremiumHiveNavigation/bag-v2.png.meta",
+      "guid": "6d87a50f6f3dbef41a974f56aca2a6f9",
+      "filter": "Assets/BeeKingdom/Playground/Resources/PremiumHiveNavigation/bag-v2.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/PremiumHiveNavigation/more-v2.png",
+      "bytes": 1520732,
+      "meta": "Assets/BeeKingdom/Playground/Resources/PremiumHiveNavigation/more-v2.png.meta",
+      "guid": "2f5581ee9e9c2784592179d9b85fcfab",
+      "filter": "Assets/BeeKingdom/Playground/Resources/PremiumHiveNavigation/more-v2.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/hive-starter.png",
+      "bytes": 552813,
+      "meta": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/hive-starter.png.meta",
+      "guid": "ea46516a6d6649842900ec3fcac89cfe",
+      "filter": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/hive-starter.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/honey-medium.png",
+      "bytes": 373130,
+      "meta": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/honey-medium.png.meta",
+      "guid": "97a8b363c7ce06645b5146407afefed0",
+      "filter": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/honey-medium.png: filter: lfs"
+    },
+    {
+      "path": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/shield-beetle.png",
+      "bytes": 527738,
+      "meta": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/shield-beetle.png.meta",
+      "guid": "1b25f57f8d2fb8a4da2bfea068cda0b4",
+      "filter": "Assets/BeeKingdom/Playground/Resources/WorldMapApprovedVisuals/shield-beetle.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260911-141539.png",
+      "bytes": 3265143,
+      "meta": "Assets/Screenshots/screenshot-20260911-141539.png.meta",
+      "guid": "7a4cd3bcd5816fd4ea94c0c191ff4753",
+      "filter": "Assets/Screenshots/screenshot-20260911-141539.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260911-141634.png",
+      "bytes": 3394586,
+      "meta": "Assets/Screenshots/screenshot-20260911-141634.png.meta",
+      "guid": "5b2d1f68727119140974a3965f9eea24",
+      "filter": "Assets/Screenshots/screenshot-20260911-141634.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260911-144025.png",
+      "bytes": 125036,
+      "meta": "Assets/Screenshots/screenshot-20260911-144025.png.meta",
+      "guid": "d6fd29e0c8cfbde44892d26b9a256e00",
+      "filter": "Assets/Screenshots/screenshot-20260911-144025.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260911-152103.png",
+      "bytes": 123567,
+      "meta": "Assets/Screenshots/screenshot-20260911-152103.png.meta",
+      "guid": "77b857e62710cf342a0d554768a892dc",
+      "filter": "Assets/Screenshots/screenshot-20260911-152103.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260911-152156.png",
+      "bytes": 2970119,
+      "meta": "Assets/Screenshots/screenshot-20260911-152156.png.meta",
+      "guid": "eb536eb50b526d644a4414a9d10a05c6",
+      "filter": "Assets/Screenshots/screenshot-20260911-152156.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260911-152514.png",
+      "bytes": 3433203,
+      "meta": "Assets/Screenshots/screenshot-20260911-152514.png.meta",
+      "guid": "51c7c82e427e1234690a46b7b2e40066",
+      "filter": "Assets/Screenshots/screenshot-20260911-152514.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260912-142711.png",
+      "bytes": 3544604,
+      "meta": "Assets/Screenshots/screenshot-20260912-142711.png.meta",
+      "guid": "ed10b45bf96cffb458ca5cf32fca0b04",
+      "filter": "Assets/Screenshots/screenshot-20260912-142711.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-200730.png",
+      "bytes": 2970794,
+      "meta": "Assets/Screenshots/screenshot-20260913-200730.png.meta",
+      "guid": "56256cb0d22e063459aa1919d5df2649",
+      "filter": "Assets/Screenshots/screenshot-20260913-200730.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-200837.png",
+      "bytes": 3040131,
+      "meta": "Assets/Screenshots/screenshot-20260913-200837.png.meta",
+      "guid": "d41b03133e1ca084a81b8fc25e439eb5",
+      "filter": "Assets/Screenshots/screenshot-20260913-200837.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-200928.png",
+      "bytes": 3029138,
+      "meta": "Assets/Screenshots/screenshot-20260913-200928.png.meta",
+      "guid": "e713bdc24666668499b8456852d08f5e",
+      "filter": "Assets/Screenshots/screenshot-20260913-200928.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-201009.png",
+      "bytes": 3029138,
+      "meta": "Assets/Screenshots/screenshot-20260913-201009.png.meta",
+      "guid": "3f6f69fcf7591f74fb21b5ed2b5ef244",
+      "filter": "Assets/Screenshots/screenshot-20260913-201009.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-201516.png",
+      "bytes": 3029128,
+      "meta": "Assets/Screenshots/screenshot-20260913-201516.png.meta",
+      "guid": "5a8a8fde13d0a624e95bc34a8ae1879e",
+      "filter": "Assets/Screenshots/screenshot-20260913-201516.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-201902.png",
+      "bytes": 3272819,
+      "meta": "Assets/Screenshots/screenshot-20260913-201902.png.meta",
+      "guid": "9e9630b1eb89e83498b752963702faf4",
+      "filter": "Assets/Screenshots/screenshot-20260913-201902.png: filter: lfs"
+    },
+    {
+      "path": "Assets/Screenshots/screenshot-20260913-202215.png",
+      "bytes": 2398662,
+      "meta": "Assets/Screenshots/screenshot-20260913-202215.png.meta",
+      "guid": "4538ac5418cb80647a1b021befa0c8e2",
+      "filter": "Assets/Screenshots/screenshot-20260913-202215.png: filter: lfs"
+    }
+  ]
+}

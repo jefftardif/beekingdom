@@ -1,0 +1,780 @@
+fileFormatVersion: 2
+guid: f36154e0cdead4d479a214569c444b8b
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 3094099148453084290
+    second: laurel_004_0
+  - first:
+      213: 2903787498871984932
+    second: laurel_004_1
+  - first:
+      213: -2142280050783396994
+    second: laurel_004_2
+  - first:
+      213: -4481720936625562702
+    second: laurel_004_3
+  - first:
+      213: 5472635270952645747
+    second: laurel_004_4
+  - first:
+      213: -7706002402130454566
+    second: laurel_004_5
+  - first:
+      213: -1911373212504818056
+    second: laurel_004_6
+  - first:
+      213: -2438747150098047242
+    second: laurel_004_7
+  - first:
+      213: -7291547524699547639
+    second: laurel_004_8
+  - first:
+      213: 3866603728231027421
+    second: laurel_004_9
+  - first:
+      213: -4153847383749591913
+    second: laurel_004_10
+  - first:
+      213: -247190486282658579
+    second: laurel_004_11
+  - first:
+      213: 8351361319276742945
+    second: laurel_004_12
+  - first:
+      213: -8371750233886350968
+    second: laurel_004_13
+  - first:
+      213: -2495513148187834292
+    second: laurel_004_14
+  - first:
+      213: 5202228034876854528
+    second: laurel_004_15
+  - first:
+      213: 6286849686502481460
+    second: laurel_004_16
+  - first:
+      213: 2952662183844563720
+    second: laurel_004_17
+  - first:
+      213: -3432368726274846329
+    second: laurel_004_18
+  - first:
+      213: -2835278286701359219
+    second: laurel_004_19
+  - first:
+      213: 6592625204067207040
+    second: laurel_004_20
+  - first:
+      213: 7614862978225625554
+    second: laurel_004_21
+  - first:
+      213: -773407862657884027
+    second: laurel_004_22
+  - first:
+      213: 4093386734532238613
+    second: laurel_004_23
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: laurel_004_0
+      rect:
+        serializedVersion: 2
+        x: 299
+        y: 328
+        width: 114
+        height: 317
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 28c726348c270fa20800000000000000
+      internalID: 3094099148453084290
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_1
+      rect:
+        serializedVersion: 2
+        x: 352
+        y: 637
+        width: 42
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4231c7568535c4820800000000000000
+      internalID: 2903787498871984932
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_2
+      rect:
+        serializedVersion: 2
+        x: 611
+        y: 330
+        width: 115
+        height: 315
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e7b56a3e4a71542e0800000000000000
+      internalID: -2142280050783396994
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_3
+      rect:
+        serializedVersion: 2
+        x: 630
+        y: 637
+        width: 42
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bb9006ad8abdc1c0800000000000000
+      internalID: -4481720936625562702
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_4
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 607
+        width: 43
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 374f76e98c4b2fb40800000000000000
+      internalID: 5472635270952645747
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_5
+      rect:
+        serializedVersion: 2
+        x: 379
+        y: 629
+        width: 22
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad715b6b4a7ce0590800000000000000
+      internalID: -7706002402130454566
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_6
+      rect:
+        serializedVersion: 2
+        x: 616
+        y: 607
+        width: 43
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 87ef37ba0307975e0800000000000000
+      internalID: -1911373212504818056
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_7
+      rect:
+        serializedVersion: 2
+        x: 623
+        y: 629
+        width: 22
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6fed8655364d72ed0800000000000000
+      internalID: -2438747150098047242
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_8
+      rect:
+        serializedVersion: 2
+        x: 378
+        y: 577
+        width: 41
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 908976798283fca90800000000000000
+      internalID: -7291547524699547639
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_9
+      rect:
+        serializedVersion: 2
+        x: 605
+        y: 579
+        width: 41
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd2596cca9fe8a530800000000000000
+      internalID: 3866603728231027421
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_10
+      rect:
+        serializedVersion: 2
+        x: 619
+        y: 599
+        width: 22
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 79c7b6000d19a56c0800000000000000
+      internalID: -4153847383749591913
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_11
+      rect:
+        serializedVersion: 2
+        x: 382
+        y: 549
+        width: 42
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dec1449ff8dc19cf0800000000000000
+      internalID: -247190486282658579
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_12
+      rect:
+        serializedVersion: 2
+        x: 600
+        y: 549
+        width: 42
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1298d6a5fdef5e370800000000000000
+      internalID: 8351361319276742945
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_13
+      rect:
+        serializedVersion: 2
+        x: 382
+        y: 519
+        width: 42
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88129e8848191db80800000000000000
+      internalID: -8371750233886350968
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_14
+      rect:
+        serializedVersion: 2
+        x: 600
+        y: 519
+        width: 42
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c4882f573082e5dd0800000000000000
+      internalID: -2495513148187834292
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_15
+      rect:
+        serializedVersion: 2
+        x: 300
+        y: 462
+        width: 7
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 001d96bc5d6023840800000000000000
+      internalID: 5202228034876854528
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_16
+      rect:
+        serializedVersion: 2
+        x: 376
+        y: 487
+        width: 42
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 43e91401b706f3750800000000000000
+      internalID: 6286849686502481460
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_17
+      rect:
+        serializedVersion: 2
+        x: 606
+        y: 487
+        width: 42
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 80bc8c1cc96f9f820800000000000000
+      internalID: 2952662183844563720
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_18
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 457
+        width: 32
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7815a3434d6cd50d0800000000000000
+      internalID: -3432368726274846329
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_19
+      rect:
+        serializedVersion: 2
+        x: 367
+        y: 459
+        width: 41
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8f89c19b6117a8d0800000000000000
+      internalID: -2835278286701359219
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_20
+      rect:
+        serializedVersion: 2
+        x: 617
+        y: 457
+        width: 42
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08786b1a1b5bd7b50800000000000000
+      internalID: 6592625204067207040
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_21
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 427
+        width: 29
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d9596e888d6da960800000000000000
+      internalID: 7614862978225625554
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_22
+      rect:
+        serializedVersion: 2
+        x: 630
+        y: 427
+        width: 34
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 58068c785ad4445f0800000000000000
+      internalID: -773407862657884027
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: laurel_004_23
+      rect:
+        serializedVersion: 2
+        x: 632
+        y: 328
+        width: 18
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 51d17102c81aec830800000000000000
+      internalID: 4093386734532238613
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    outline: []
+    customData:
+    physicsShape: []
+    bones: []
+    spriteID:
+    internalID: 0
+    vertices: []
+    indices:
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      laurel_004_0: 3094099148453084290
+      laurel_004_1: 2903787498871984932
+      laurel_004_10: -4153847383749591913
+      laurel_004_11: -247190486282658579
+      laurel_004_12: 8351361319276742945
+      laurel_004_13: -8371750233886350968
+      laurel_004_14: -2495513148187834292
+      laurel_004_15: 5202228034876854528
+      laurel_004_16: 6286849686502481460
+      laurel_004_17: 2952662183844563720
+      laurel_004_18: -3432368726274846329
+      laurel_004_19: -2835278286701359219
+      laurel_004_2: -2142280050783396994
+      laurel_004_20: 6592625204067207040
+      laurel_004_21: 7614862978225625554
+      laurel_004_22: -773407862657884027
+      laurel_004_23: 4093386734532238613
+      laurel_004_3: -4481720936625562702
+      laurel_004_4: 5472635270952645747
+      laurel_004_5: -7706002402130454566
+      laurel_004_6: -1911373212504818056
+      laurel_004_7: -2438747150098047242
+      laurel_004_8: -7291547524699547639
+      laurel_004_9: 3866603728231027421
+  mipmapLimitGroupName:
+  pSDRemoveMatte: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:
