@@ -1,0 +1,277 @@
+{
+  "time_local": "2026-11-05T22:42:59-05:00",
+  "tracked_server_cs": 6,
+  "new_server_source_project_sql": 56,
+  "new_qa_readmes": 3,
+  "excluded": [
+    "appsettings.json",
+    "appsettings.Production.json",
+    "appsettings.Development.json",
+    "unreviewed PowerShell tooling",
+    "runtime credentials",
+    "Unity assets"
+  ],
+  "files": [
+    {
+      "path": "Server/ops/pollination-alliance-qa/PollinationAllianceQa.csproj",
+      "sha256": "91eb29008b2cef6d520edb89b1612afdd2e8d2859fffb172f7b10cc2fe970b03"
+    },
+    {
+      "path": "Server/ops/pollination-alliance-qa/Program.cs",
+      "sha256": "8ae16cda063ae21e5cfcfa34f570c185eebd139b72437064353e36cc60e5ec03"
+    },
+    {
+      "path": "Server/ops/pollination-alliance-qa/README.md",
+      "sha256": "2175ba55a9e1f31ce550c4cf4a0394d46e91b31fc16b97cee08e0df950562566"
+    },
+    {
+      "path": "Server/ops/pollination-sql-qa/PollinationSqlQa.csproj",
+      "sha256": "91eb29008b2cef6d520edb89b1612afdd2e8d2859fffb172f7b10cc2fe970b03"
+    },
+    {
+      "path": "Server/ops/pollination-sql-qa/Program.cs",
+      "sha256": "f4576ef3d8af11c69a94fa77d0967adbc6b0dc55d098808840865f78a3b1e7e3"
+    },
+    {
+      "path": "Server/ops/pollination-sql-qa/README.md",
+      "sha256": "4ae5c5ccf11f38902269917648e05e1acf85347ff74b11bad68ca1cad146ebb2"
+    },
+    {
+      "path": "Server/ops/pollination-unity-client-qa/PanelSmoke.cs",
+      "sha256": "c78096f5ad5ce5fce34d586b1113e6f7cd5ce53144e5de9b3a5b4a97e19b58b6"
+    },
+    {
+      "path": "Server/ops/pollination-unity-client-qa/PollinationUnityClientQa.csproj",
+      "sha256": "ed5d0be97386d1278c1216b6c03c8291e8e27f1b9c42b92c443590f156d815cd"
+    },
+    {
+      "path": "Server/ops/pollination-unity-client-qa/Program.cs",
+      "sha256": "0a2461389e7300a4991e5273db57dfd96f00e47701a130c32c55acdb11e59fc7"
+    },
+    {
+      "path": "Server/ops/pollination-unity-client-qa/README.md",
+      "sha256": "805d903e0a51592d05c7fab32e244e81c0147e0956c17d193ed097d6a4eb5347"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/AllianceTerritoryCapacity.cs",
+      "sha256": "c3be75721303a57081c6ec0488f9ab4f8f5728ab1faa8fd7863b3b4640da9fb8"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/AllianceTerritoryCapacityReader.cs",
+      "sha256": "8fa2dd3a7932c23e5e13e01941615d920dabd75dedba4ab2a01920f6866db20c"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/DurableTerritoryAuthorityStore.cs",
+      "sha256": "f34fbdd31c732855ca4f07e62680741fba04636c85ed9c333b286d3467bd33c1"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/DurableTerritoryFoundationStore.cs",
+      "sha256": "cfe323331845892bc39624d7d2ff093fbe761784bc1c8766ad41faa8d0355e6d"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/DurableTerritoryWorldRegistry.cs",
+      "sha256": "28a2da83baef57cb2621cfd6c7f041452f0860b461a13a8807562452a48bc8f1"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/SqlTerritoryCompensation.cs",
+      "sha256": "335c6684b2cdf8897bd83d31e125fb3aae557bff72f1f838bc0fb472391680d1"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/SqlTerritoryHiveContribution.cs",
+      "sha256": "fc7e26a1d8c3be0bbfbd1e379d9a421916da4c87be21bc0ba0034c69f1b24ebf"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/SqlTerritoryPlacementWriter.cs",
+      "sha256": "783d50db23ab64ac6bac9bc49a68c512475c8b137bd85ed69904765aa29cc803"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/SqlTerritorySpatialImporter.cs",
+      "sha256": "d1a3e6bf1bb9ec0e4d8355c7cbd373bd95771dac332ee14ee80aaa436fade4d4"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/SqlTerritoryStore.cs",
+      "sha256": "7409bd868eb0b804e7105bfa44320dbc5b7e5dbc9bb2acee2c4749540acd7289"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/TerritoryFoundationPlanner.cs",
+      "sha256": "71d031983d6b02dcbec9acd43bc8d0ede0e94de223c4bb26d7c3dc9c86d62bb2"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/TerritoryGeometry.cs",
+      "sha256": "9105b9f8f5dcbb3208918aeb19b00f7d1a9b6798446342a0c977006d55c0158b"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/TerritoryHeadquarters.cs",
+      "sha256": "1ce19c9aa2245eef708de5605f0a28479b554f173c01d1fbace285b642121791"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/TerritoryMapReadModel.cs",
+      "sha256": "97d0b5b9172915f93f5d3be0e78634cc9c4060759f24b6e403a9a4bacdf97432"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Alliance/Territories/TerritoryPveEligibility.cs",
+      "sha256": "81758b1868d95e75c23ea142de53875264a21d40a38443605636b1054d1bbd33"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Database/DatabaseCatalog.cs",
+      "sha256": "247019f1e79389e68245fdbc006deb407d999b8e099871808b846c671133f60b"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Database/Scripts/096_floral_site_states.sql",
+      "sha256": "b048018a63d9239fc3c71cbfb4f08e8bb99bf41f3a58261b560ecc1a24275deb"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Database/Scripts/097_floral_civil_contributions.sql",
+      "sha256": "2649c35578b6f68473ef0586e750dc84ba61e9395ef631e5c7c09cff1fbc62f9"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Database/Scripts/098_floral_alliance_projects.sql",
+      "sha256": "517a9bce263f255c56a5673a86ff0dc362abc4098f3d45fb1e30e389f4eb6176"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/AcademyTrainingService.cs",
+      "sha256": "bb70a4823fa4a91b394e5f3a3ab886306ae464c46be4e24f3c247749647d7ec0"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/CivilExpeditionDueProcessor.cs",
+      "sha256": "b5e946a0791f1d657e8cd477118d36f7c2ef809b5a13f6d6730422cf92cba347"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/CivilExpeditionModels.cs",
+      "sha256": "5e730fbbf1dfbd4306ef63f98245ee381ba1af16b154e88fc745df7dd4a8ad86"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/CivilExpeditionService.cs",
+      "sha256": "54214a3153a6f9f4edf6a137a3dec7b5ed9bd7214a20d4ed5c29d4edeb504390"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/CivilPopulationService.cs",
+      "sha256": "56e33d0a9052525c5e64cb5368d4d8224dc14ec977c072c51b8d036d6b1041e4"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/FloralAllianceProjectModels.cs",
+      "sha256": "b1f59c41b067ad45b0bd71a4cc74579c395f00b5f6751557e207783a4b4dda37"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/FloralSiteRepositories.cs",
+      "sha256": "be2e1d54746e5abebb72e37eaf8d7861a92f2093252f371d0d99ce231cac0283"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/FloralSiteService.cs",
+      "sha256": "77a349db1af59f31dbca40b030057a872e94f6b3675ee8db2f371c0df0368e91"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/HiveOperationModels.cs",
+      "sha256": "719a51cb138a049925603c99c0e5af8d7a4549947c2be34f124f3eed579dc8f8"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/HiveStateMigrator.cs",
+      "sha256": "659c06bf6187e52cc6dc0daf15b822372a8fe81af5cdbbbce1c96f90ed9335cd"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/SqlCivilExpeditionUnitOfWork.cs",
+      "sha256": "944c0af55e4c0f3fb5dbcae50dfae8a43310aa55445412bbc9d2dc66516afec9"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/SqlFloralAllianceContributionApplier.cs",
+      "sha256": "106f7b9b7da89dfa06efe9d770c9b693925bffeb15fe81e8b41972c016f15c75"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/SqlFloralAllianceProjectService.cs",
+      "sha256": "5c1b6f748131db2ba7193404be5765382cb248bd7c6cfe2a0a436535259288af"
+    },
+    {
+      "path": "Server/src/BeeKingdom.HiveOperations/SqlHiveStateRepository.cs",
+      "sha256": "73fb78e479a4c385c3aa16b9bc1515b6b9c40979879ead9eeecc6b4ddf639b39"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/CanonicalHivePositionStartup.cs",
+      "sha256": "0e500e05d458535c4d028c61f7d58389370e5c12e17a7530aa93086f8060b623"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/CivilExpeditionSettlementWorker.cs",
+      "sha256": "553933039f0e517ec69c7335d74f91d73985610caf888f88c9ada18421ed75c9"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/Program.cs",
+      "sha256": "978ac239f1e3c13d3ccc145b2a8c944899572e8704eb9c170897e0600dc09fe9"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/SqlHiveCanonicalIdentity.cs",
+      "sha256": "156450751d74ee9477b8725070db8b9e11213041d7ad10d2bc271ffb3e5d0d2e"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/SqlHivePositionEndpoints.cs",
+      "sha256": "e51e2a923c46cb46f238828a9b3f47a70d1b63596b71f07e08e138e7e80cec7a"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/SqlHivePositionStore.cs",
+      "sha256": "abcfe3957be0841968729d32247970df7db33c7461be182ca32e5ec699551b39"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/SqlTerritoryEndpoints.cs",
+      "sha256": "e50ea7b7ad34c711464d83dd52c1e35542b56b8860e7229940a177443f313cba"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/TerritoryEndpoints.cs",
+      "sha256": "e8bef3bac7075542ec7d9120d705ab660f90c024f07917865b1054a98b3536df"
+    },
+    {
+      "path": "Server/src/BeeKingdom.Server/TerritoryFoundationEndpoints.cs",
+      "sha256": "ee83d0b50bd242f3a5b78da97d1b7c56735d8c041aba8efbf4374e243ea75e99"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.HiveOperations.Tests/AcademyTrainingServiceTests.cs",
+      "sha256": "4181a4547f1ac176176b1bdee7ed367720eb61ca78a189af7a7ba00f5168690f"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.HiveOperations.Tests/CivilExpeditionServiceTests.cs",
+      "sha256": "cd2ed78b142548a7eb462ffe29919d153ba488e57866ca1f6c77859a58cdfa1e"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.HiveOperations.Tests/CivilPopulationServiceTests.cs",
+      "sha256": "b341a5edd7a46ebcf5c7b71c60cd1352d59b502e2e2c344287ac662336199ea4"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.HiveOperations.Tests/FloralAllianceProjectRulesTests.cs",
+      "sha256": "b29c90d46972cf1efd1698b5335182e3141798e4818ff2a259474465fbd5f0ef"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.HiveOperations.Tests/FloralSiteServiceTests.cs",
+      "sha256": "a6f783c7c5ce1273ab4a25371e84e18c1d1505d94b89d280b00c83d9d659a749"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/AcademyTrainingEndpointTests.cs",
+      "sha256": "1e39a0fbc0e9f9cde4cdc6574eda445b2e457ce70674af1a44e17bdffe027aa1"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/CivilExpeditionEndpointTests.cs",
+      "sha256": "56bc331d8544f44489dbea9c7816d88b130f5d10d3aa2358b8d035a10a53e8f6"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/CivilPopulationEndpointTests.cs",
+      "sha256": "9175f0e8410b6be15aa2fc892c60b88efbeee27cfb28d5360b00e0f58ba0a6e3"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/FloralAllianceProjectEndpointTests.cs",
+      "sha256": "3577d4934a6715ca53e2588f8945d9f16fa385680d9a391e3268391d2e8eec78"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/FloralAllianceProjectMigrationContractTests.cs",
+      "sha256": "07194124ea539953db438da72baf523d0d99b5ad07d09381167cd40216bf5f5b"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/FloralSiteEndpointTests.cs",
+      "sha256": "e28eaee8f24cf15a5f7662a9cfcb45381d01ff6627695512fe73267c93ebaf2b"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/FloralSiteMigrationContractTests.cs",
+      "sha256": "11237a9ccaa6dae4f956521a74e6ac8c29fd3226e033f92b26cfa0010c55ef81"
+    },
+    {
+      "path": "Server/tests/BeeKingdom.Tests/SqlServerOptInIntegrationTests.cs",
+      "sha256": "499ad8fb57b1cf87cd63246607b38c9fa251bffbff0c85756c0f5452e42f8d98"
+    }
+  ],
+  "status": "WIP, no SQL production writes, no deployment"
+}
