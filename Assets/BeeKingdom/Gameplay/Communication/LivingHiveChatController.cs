@@ -73,6 +73,7 @@ namespace BeeKingdom.Gameplay.Communication
         public string SelectedConversationId { get; set; }
         public IReadOnlyList<LivingHiveChatConversation> Conversations { get; set; } = Array.Empty<LivingHiveChatConversation>();
         public IReadOnlyList<LivingHiveChatMessage> Messages { get; set; } = Array.Empty<LivingHiveChatMessage>();
+        public IReadOnlyList<LivingHiveChatMessage> FeedMessages { get; set; } = Array.Empty<LivingHiveChatMessage>();
         public int PendingCount { get; set; }
         public bool TranslationAvailable { get; set; }
         public string TranslationModelVersion { get; set; }
@@ -102,6 +103,53 @@ namespace BeeKingdom.Gameplay.Communication
         private readonly object gate = new object();
         private readonly List<LivingHiveChatConversation> conversations = new List<LivingHiveChatConversation>();
         private readonly List<LivingHiveChatMessage> messages = new List<LivingHiveChatMessage>();
+        private readonly List<LivingHiveChatMessage> feedMessages = new List<LivingHiveChatMessage>();
+        private readonly SemaphoreSlim messageRefreshGate = new SemaphoreSlim(1,1);
+        private LivingHiveChatFeedChannels feedChannels;
+        private int feedRevision, lifecycleRevision, catalogueRevision, feedRoundRobin;
+
+        public void SetFeedChannels(LivingHiveChatFeedChannels value)
+        {
+            value &= (LivingHiveChatFeedChannels)15;
+            lock(gate) { if(value==feedChannels)return;feedChannels=value;feedRevision++;feedRoundRobin=0; }
+        }
+
+        // At most four authorized conversations, one page each, on the existing polling tick.
+        // Reading the feed neither selects a conversation nor acknowledges a read cursor.
+        public async Task RefreshFeedAsync(CancellationToken ct)
+        {
+            if(!await messageRefreshGate.WaitAsync(0,ct))return;
+            try
+            {
+                string[] ids;int filterVersion,sessionVersion,catalogueVersion;
+                lock(gate)
+                {
+                    if(feedChannels==LivingHiveChatFeedChannels.None || (status!=LivingHiveChatStatus.Polling && status!=LivingHiveChatStatus.Online))return;
+                    var eligible=conversations.Where(c=>c.ConversationId!=selectedConversationId && (LivingHiveChatFeed.Channel(c.ChannelType)&feedChannels)!=0).Select(c=>c.ConversationId).OrderBy(id=>id,StringComparer.Ordinal).ToArray();
+                    if(eligible.Length==0)return;
+                    int start=feedRoundRobin%eligible.Length;
+                    ids=Enumerable.Range(0,Math.Min(4,eligible.Length)).Select(i=>eligible[(start+i)%eligible.Length]).ToArray();
+                    feedRoundRobin=(start+ids.Length)%eligible.Length;
+                    filterVersion=feedRevision;sessionVersion=lifecycleRevision;catalogueVersion=catalogueRevision;
+                }
+                foreach(string id in ids)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    lock(gate) if(filterVersion!=feedRevision || sessionVersion!=lifecycleRevision || catalogueVersion!=catalogueRevision)return;
+                    var result=await provider.ReconcileFullyAsync(id,provider.GetConfirmedSequence(id),new ChatPaginationPolicy(50,1),ct);
+                    ct.ThrowIfCancellationRequested();
+                    lock(gate)
+                    {
+                        if(filterVersion!=feedRevision || sessionVersion!=lifecycleRevision || catalogueVersion!=catalogueRevision)return;
+                        var allowed=conversations.FirstOrDefault(c=>c.ConversationId==id && (LivingHiveChatFeed.Channel(c.ChannelType)&feedChannels)!=0);
+                        if(allowed==null)continue;
+                        foreach(var message in result?.Items ?? Array.Empty<RemoteChatMessage>())ObserveFeedMessage(MapMessage(message));
+                    }
+                }
+            }
+            finally { messageRefreshGate.Release(); }
+        }
+
         private LivingHiveChatStatus status = LivingHiveChatStatus.Offline;
         private string errorCode;
         private string selectedConversationId;
@@ -141,6 +189,9 @@ namespace BeeKingdom.Gameplay.Communication
                     PendingCount = pendingCount,
                     Conversations = conversations.Select(Clone).ToArray(),
                     Messages = messages.Select(Clone).ToArray(),
+                    FeedMessages = (status==LivingHiveChatStatus.Online || status==LivingHiveChatStatus.Polling)
+                        ? feedMessages.Where(m=>conversations.Any(c=>c.ConversationId==m.ConversationId)).Select(Clone).ToArray()
+                        : Array.Empty<LivingHiveChatMessage>(),
                     TranslationAvailable = capabilities != null && capabilities.TranslationAvailable,
                     TranslationModelVersion = capabilities?.TranslationModelVersion,
                     PendingInvitations = pendingInvitations.Select(Clone).ToArray(),
@@ -324,6 +375,10 @@ namespace BeeKingdom.Gameplay.Communication
 
         public async Task RefreshSelectedAsync(CancellationToken ct)
         {
+            await messageRefreshGate.WaitAsync(ct);
+            try
+            {
+
             string conversationId;
             lock (gate) conversationId = selectedConversationId;
             if (string.IsNullOrWhiteSpace(conversationId)) { lock (gate) messages.Clear(); return; }
@@ -337,6 +392,7 @@ namespace BeeKingdom.Gameplay.Communication
                 {
                     messages.Clear();
                     messages.AddRange(source.OrderBy(value => value.Sequence).TakeLast(recentMessageLimit).Select(MapMessage));
+                    foreach(var message in messages)ObserveFeedMessage(message);
                 }
                 if (latest > 0)
                 {
@@ -353,6 +409,9 @@ namespace BeeKingdom.Gameplay.Communication
             {
                 SetStatus(MapStatus(exception.Error), exception.ServerCode ?? exception.Error.ToString());
             }
+
+            }
+            finally { messageRefreshGate.Release(); }
         }
 
         public async Task SendAsync(string body, CancellationToken ct)
@@ -429,13 +488,14 @@ namespace BeeKingdom.Gameplay.Communication
 
         public async Task CloseAsync(CancellationToken ct)
         {
+            lock(gate) { lifecycleRevision++;feedRevision++;feedChannels=LivingHiveChatFeedChannels.None;feedMessages.Clear();status=LivingHiveChatStatus.Offline; }
             liveUpdates?.Cancel();
             try { await Task.WhenAll(pollingTask, RealtimeReceiptTask()); } catch (Exception) { }
             liveUpdates?.Dispose();
             liveUpdates = null;
             pollingTask = Task.CompletedTask;
             await provider.DisconnectAsync(ct);
-            lock (gate) { messages.Clear(); conversations.Clear(); selectedConversationId = null; pendingCount = 0; status = LivingHiveChatStatus.Offline; errorCode = null; ClearGroupState(); }
+            lock (gate) { feedMessages.Clear(); messages.Clear(); conversations.Clear(); selectedConversationId = null; pendingCount = 0; status = LivingHiveChatStatus.Offline; errorCode = null; ClearGroupState(); }
         }
 
         private void SetStatus(LivingHiveChatStatus value, string code) { lock (gate) { status = value; errorCode = code; } }
@@ -458,6 +518,7 @@ namespace BeeKingdom.Gameplay.Communication
                     await delay.WaitAsync(pollInterval, ct);
                     await RefreshConversationListAsync(ct);
                     await RefreshSelectedAsync(ct);
+                    await RefreshFeedAsync(ct);
                     // RAP-OPTIONNEL-COMMUNICATIONS_01: invitations ride the EXISTING poll tick on
                     // purpose - a second timer would double the request rate against a chat backend
                     // that is rate limited per player.
@@ -469,10 +530,13 @@ namespace BeeKingdom.Gameplay.Communication
         }
         private async Task RefreshConversationListAsync(CancellationToken ct)
         {
+            int sessionVersion;lock(gate)sessionVersion=lifecycleRevision;
             RemoteConversationLoadResult loaded = await provider.LoadAllConversationsAsync(new ChatPaginationPolicy(50, 10), ct);
             IReadOnlyList<RemoteConversation> accessible = loaded?.Items ?? Array.Empty<RemoteConversation>();
             lock (gate)
             {
+                if(sessionVersion!=lifecycleRevision)return;
+                catalogueRevision++;
                 conversations.Clear();
                 conversations.AddRange(accessible.Where(value => value != null && !string.IsNullOrWhiteSpace(value.ConversationId)).Select(MapConversation));
                 PruneInaccessibleGroupDetails();
@@ -492,7 +556,9 @@ namespace BeeKingdom.Gameplay.Communication
             lock (gate)
             {
                 LivingHiveChatConversation conversation = conversations.FirstOrDefault(value => string.Equals(value.ConversationId, evt.ConversationId, StringComparison.Ordinal));
-                if (conversation != null) conversation.LastSequence = Math.Max(conversation.LastSequence, evt.Message.Sequence);
+                if (conversation == null) return; // Never surface an event outside the server-authorized catalogue.
+                ObserveFeedMessage(MapMessage(evt.Message));
+                conversation.LastSequence = Math.Max(conversation.LastSequence, evt.Message.Sequence);
                 if (!string.Equals(selectedConversationId, evt.ConversationId, StringComparison.Ordinal))
                 {
                     if (conversation != null) conversation.UnreadCount++;
@@ -525,6 +591,17 @@ namespace BeeKingdom.Gameplay.Communication
                 if (conversation != null) { conversation.UnreadCount = 0; conversation.MentionCount = 0; }
             }
             PersistRecentCache();
+        }
+        // Caller holds gate. In-memory bounded observation, independent of the selected conversation.
+        private void ObserveFeedMessage(LivingHiveChatMessage message)
+        {
+            if(message==null || message.Delivery!=LivingHiveChatDelivery.Confirmed ||
+                !conversations.Any(c=>c.ConversationId==message.ConversationId))return;
+            feedMessages.RemoveAll(m=>!conversations.Any(c=>c.ConversationId==m.ConversationId) ||
+                (m.ConversationId==message.ConversationId && m.Sequence==message.Sequence));
+            feedMessages.Add(Clone(message));
+            feedMessages.Sort((a,b)=>a.CreatedAt.CompareTo(b.CreatedAt));
+            if(feedMessages.Count>96)feedMessages.RemoveRange(0,feedMessages.Count-96);
         }
         private void TrimMessages() { if (messages.Count > recentMessageLimit) messages.RemoveRange(0, messages.Count - recentMessageLimit); }
         private void RestoreRecentCache()
@@ -594,6 +671,7 @@ namespace BeeKingdom.Gameplay.Communication
             await ResetAsync();
             lock (Gate) { controller = value; lifetime = new CancellationTokenSource(); }
         }
+        public static void SetFeedChannels(LivingHiveChatFeedChannels channels) { lock(Gate) controller?.SetFeedChannels(channels); }
         public static Task OpenAsync() { lock (Gate) return controller == null ? Task.CompletedTask : controller.OpenAsync(lifetime.Token); }
         public static Task SelectAsync(string id) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SelectConversationAsync(id, lifetime.Token); }
         public static Task SelectKnownAsync(string id, string title, string channelType) { lock (Gate) return controller == null ? Task.CompletedTask : controller.SelectKnownConversationAsync(id, title, channelType, lifetime.Token); }

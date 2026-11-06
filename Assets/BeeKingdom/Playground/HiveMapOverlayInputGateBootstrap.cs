@@ -29,11 +29,28 @@ namespace BeeKingdom.Playground
     // Same auto-bootstrap strategy as the other Environment2D5D runtime bootstraps: a
     // RuntimeInitializeOnLoadMethod creates this only when the active scene starts with
     // "Environment2D5D", no scene wiring required.
+    [DefaultExecutionOrder(-1000)]
     public sealed class HiveMapOverlayInputGateBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Overlay Input Gate Runtime";
 
         private BuildingInteractionController controller;
+
+        private void OnEnable()
+        {
+            BuildingInteractionController.ExternalInputBlocked = IsExternalInputBlocked;
+        }
+
+        private void OnDisable()
+        {
+            if (BuildingInteractionController.ExternalInputBlocked == (Func<bool>)IsExternalInputBlocked)
+                BuildingInteractionController.ExternalInputBlocked = null;
+        }
+
+        private bool IsExternalInputBlocked()
+        {
+            return IsAnyOverlayBlocking() || HiveViewProductUiPresenter.WorldChatInputBlocked;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -71,9 +88,41 @@ namespace BeeKingdom.Playground
         // Communication/Chat Royal overlay because it only checked Research/Activities/
         // RoyalPalace/Army, never Alliance/Communication/Barrack/Construction/Settings).
         // Single source of truth so a new overlay only needs to be added once here.
+        private static readonly ModalGestureBarrier GestureBarrier = new ModalGestureBarrier();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetGestureBarrier() => GestureBarrier.Reset();
+
+        private static bool AnyPointerHeld()
+        {
+            if (Input.GetMouseButton(0) || Input.GetMouseButton(1) || Input.GetMouseButton(2)) return true;
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                TouchPhase phase = Input.GetTouch(i).phase;
+                if (phase != TouchPhase.Ended && phase != TouchPhase.Canceled) return true;
+            }
+            return false;
+        }
+
+        // One ownership barrier for IMGUI, uGUI and world consumers. A closing
+        // surface cannot hand its current gesture to a newly exposed surface.
         public static bool IsAnyOverlayBlocking()
         {
-            return HiveViewProductUiPresenter.BankOverlayOpenForExternalHost
+            return GestureBarrier.Observe(IsAnyOverlayOpen(), AnyPointerHeld(), Time.frameCount);
+        }
+
+        public static void CaptureClosingGesture()
+        {
+            GestureBarrier.Capture(Time.frameCount);
+            Event current = Event.current;
+            if (current != null && current.type != EventType.Layout && current.type != EventType.Repaint)
+                current.Use();
+        }
+
+        private static bool IsAnyOverlayOpen()
+        {
+            return HiveViewProductUiPresenter.AdditionalModalOpenForInputOwnership
+                || HiveViewProductUiPresenter.BankOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost
                 || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
@@ -116,17 +165,12 @@ namespace BeeKingdom.Playground
             // comment), so this is a separate, pointer-position-scoped check: building clicks
             // are only suppressed while the mouse is actually over the mini-chat's own rect,
             // not the whole screen.
-            bool blockedByMiniChatPointer = false;
-            if (!blocked && HiveViewProductUiPresenter.MiniChatOnlyOpenForExternalHost)
-            {
-                Vector2 guiPoint = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-                blockedByMiniChatPointer = HiveViewProductUiPresenter.MiniChatFloatingRectForExternalHost.Contains(guiPoint);
-            }
+            bool blockedByMiniChatPointer = HiveViewProductUiPresenter.WorldChatInputBlocked;
 
             if (controller == null) controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller != null) controller.IsEnabled = !blocked && !blockedByMiniChatPointer;
 
-            if (LivingHiveMenuRuntime.CanvasComponent != null) LivingHiveMenuRuntime.CanvasComponent.SetInputBlocked(blocked);
+            if (LivingHiveMenuRuntime.CanvasComponent != null) LivingHiveMenuRuntime.CanvasComponent.SetInputBlocked(blocked, blockedByMiniChatPointer);
         }
     }
 }

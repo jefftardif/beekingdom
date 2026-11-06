@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BeeKingdom.Core.Integration;
+using BeeKingdom.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -29,7 +30,46 @@ namespace BeeKingdom.LivingHiveMenu
 
         private readonly LivingHiveMenuState state = new LivingHiveMenuState();
 
+        private bool sharedPanelsOnly;
+        private GameObject sharedBackdrop;
+        public Action SharedClosingGesture { get; set; }
+        public Action SharedSettingsRequested { get; set; }
+        public Action SharedArmyRequested { get; set; }
+        public bool SharedPanelOpen
+        {
+            get
+            {
+                if (!sharedPanelsOnly) return false;
+                if (!string.IsNullOrEmpty(state.ActiveMenuId)) return true;
+                foreach (var panel in panels.Values) if (panel != null && panel.activeSelf) return true;
+                return false;
+            }
+        }
+        public string SharedPanelId => sharedPanelsOnly ? state.ActiveMenuId : string.Empty;
+
+        public void BuildSharedPanelsOnly()
+        {
+            if (canvas != null) return;
+            sharedPanelsOnly = true;
+            Build();
+        }
+
+        public void ToggleSharedPanel(string itemId)
+        {
+            if (!sharedPanelsOnly || (itemId != LivingHiveMenuSpec.BagId && itemId != LivingHiveMenuSpec.MoreId)) return;
+            SharedClosingGesture?.Invoke();
+            OnEntryClicked(itemId);
+        }
+
+        public void CloseSharedPanel()
+        {
+            SharedClosingGesture?.Invoke();
+            state.CloseActiveMenuPanel();
+            RefreshAll();
+        }
+
         private Canvas canvas;
+        private CanvasGroup inputOwnershipGroup;
         private RectTransform railRoot;
         private readonly Dictionary<string, Button> railButtons = new Dictionary<string, Button>();
         private readonly Dictionary<string, RailButtonVisual> railVisuals = new Dictionary<string, RailButtonVisual>();
@@ -153,9 +193,14 @@ namespace BeeKingdom.LivingHiveMenu
         // modals...) is itself full-screen or otherwise meant to fully own the screen, so
         // hiding this canvas outright (not just its raycaster) while any of them is open is
         // correct in every case, not just Communication's.
-        public void SetInputBlocked(bool blocked)
+        public void SetInputBlocked(bool blocked, bool pointerCaptured = false)
         {
-            if (raycaster != null) raycaster.enabled = !blocked;
+            if (inputOwnershipGroup != null)
+            {
+                inputOwnershipGroup.interactable = !blocked && !pointerCaptured;
+                inputOwnershipGroup.blocksRaycasts = !blocked && !pointerCaptured;
+            }
+            if (raycaster != null) raycaster.enabled = !blocked && !pointerCaptured;
             if (canvas != null) canvas.enabled = !blocked;
         }
 
@@ -168,6 +213,7 @@ namespace BeeKingdom.LivingHiveMenu
             canvasObj.transform.SetParent(transform, false);
             canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            inputOwnershipGroup = canvasObj.AddComponent<CanvasGroup>();
             // PAS de CanvasScaler : le monolithe affiche des rects en pixels écran absolus
             // (IMGUI). Un scaler avec référence 800x600 par défaut étirerait ces pixels et
             // chasserait le rail de la zone visible. L'overlay sans scaler mappe
@@ -175,11 +221,52 @@ namespace BeeKingdom.LivingHiveMenu
             // monolithe ; le relayout sur changement de résolution gère les réglages.
             raycaster = canvasObj.AddComponent<GraphicRaycaster>();
 
-            BuildRail(canvasObj.transform);
-            BuildHeader(canvasObj.transform);
-            BuildPanels(canvasObj.transform);
+            if (sharedPanelsOnly)
+            {
+                sharedBackdrop = new GameObject("SharedPanelBackdrop", typeof(RectTransform), typeof(Image), typeof(Button));
+                sharedBackdrop.transform.SetParent(canvasObj.transform, false);
+                FillRect(sharedBackdrop.GetComponent<RectTransform>());
+                sharedBackdrop.GetComponent<Image>().color = new Color(0, 0, 0, .55f);
+                sharedBackdrop.GetComponent<Button>().onClick.AddListener(CloseSharedPanel);
+                BuildPanel(canvasObj.transform, LivingHiveMenuSpec.BagId, "Sac & stocks", BuildBagContent, new Rect(10, 96, 520, 460));
+                BuildPanel(canvasObj.transform, LivingHiveMenuSpec.MoreId, "Plus", BuildMoreContent, new Rect(10, 96, 420, 520));
+                foreach (var pair in panels)
+                {
+                    var close = new GameObject("SharedPanelClose", typeof(RectTransform), typeof(Image), typeof(Button));
+                    close.transform.SetParent(pair.Value.transform, false);
+                    close.GetComponent<Image>().sprite = PremiumNavigationStyle.Surface("idle");
+                    var rt = close.GetComponent<RectTransform>();
+                    rt.anchorMin = rt.anchorMax = new Vector2(1, 1); rt.pivot = new Vector2(1, 1);
+                    rt.anchoredPosition = new Vector2(-8, -8); rt.sizeDelta = new Vector2(52, 40);
+                    var label = CreateLabel(close.transform, "×", 22, TextAnchor.MiddleCenter, true);
+                    FillRect(label.GetComponent<RectTransform>());
+                    close.GetComponent<Button>().onClick.AddListener(CloseSharedPanel);
+                }
+                RepositionSharedPanels();
+            }
+            else
+            {
+                BuildRail(canvasObj.transform);
+                BuildHeader(canvasObj.transform);
+                BuildPanels(canvasObj.transform);
+            }
             RefreshAll();
             lastScreenSize = new Vector2(Screen.width, Screen.height);
+        }
+
+        private void RepositionSharedPanels()
+        {
+            Rect safe = Screen.safeArea;
+            if (safe.width <= 0 || safe.height <= 0) safe = new Rect(0, 0, Screen.width, Screen.height);
+            foreach (var pair in panels)
+            {
+                float nominalWidth = pair.Key == LivingHiveMenuSpec.BagId ? 520 : 420;
+                float nominalHeight = pair.Key == LivingHiveMenuSpec.BagId ? 460 : 520;
+                float scale = Mathf.Min(1f, Mathf.Min(Mathf.Max(1, safe.width - 16) / nominalWidth, Mathf.Max(1, safe.height - 16) / nominalHeight));
+                var rect = pair.Value.GetComponent<RectTransform>();
+                rect.localScale = new Vector3(scale, scale, 1);
+                rect.anchoredPosition = new Vector2(safe.center.x - nominalWidth * scale * .5f, safe.center.y - nominalHeight * scale * .5f);
+            }
         }
 
         private const float HeaderLiveRefreshIntervalSeconds = 0.5f;
@@ -189,6 +276,14 @@ namespace BeeKingdom.LivingHiveMenu
         {
             if (!Application.isPlaying) return;
             if (canvas == null) return;
+            if (sharedPanelsOnly)
+            {
+                RepositionSharedPanels();
+                if (sharedBackdrop != null) sharedBackdrop.SetActive(SharedPanelOpen);
+                RefreshLocalizedRailLabels();
+                TickPanelAnimations();
+                return;
+            }
             if (Screen.width != (int)lastScreenSize.x || Screen.height != (int)lastScreenSize.y)
             {
                 lastScreenSize = new Vector2(Screen.width, Screen.height);
@@ -206,7 +301,9 @@ namespace BeeKingdom.LivingHiveMenu
             // polls its own already-cheap RefreshHeader() every frame instead (needed for the
             // roll-up count animation below to actually animate smoothly, not just jump once
             // every 0.5s).
+            if (lastRailSafeArea != Screen.safeArea) RebuildRail();
             RefreshHeader();
+            RefreshLocalizedRailLabels();
             TickPanelAnimations();
 
             if (Time.unscaledTime - headerLiveRefreshLastAt >= HeaderLiveRefreshIntervalSeconds)
@@ -220,12 +317,63 @@ namespace BeeKingdom.LivingHiveMenu
             }
         }
 
+        private readonly Dictionary<string, TextMeshProUGUI> moreRowLabels =
+            new Dictionary<string, TextMeshProUGUI>(StringComparer.Ordinal);
+
+        private static string LocalizedMoreEntry(string id)
+        {
+            switch (id)
+            {
+                case "Armée": return BeeLocalization.Text("nav.army", "Armée");
+                case "Parametres": return BeeLocalization.Text("settings.panel.title", "Paramètres");
+                case "Aide": return BeeLocalization.Text("nav.help", "Aide");
+                case "Support": return BeeLocalization.Text("nav.support", "Support");
+                default: return id;
+            }
+        }
+
+        private TextMeshProUGUI bagTitleLabel;
+        private readonly List<TextMeshProUGUI> bagRowLabels = new List<TextMeshProUGUI>();
+        private TextMeshProUGUI queenHeaderLabel;
+        private TextMeshProUGUI queenHeaderLevelLabel;
+        private string lastRailLocale;
+        private static string LocalizedRailLabel(string id)
+        {
+            switch (id)
+            {
+                case "SurfaceSwitch": return BeeLocalization.Text("nav.map", "Carte");
+                case "Activities": return BeeLocalization.Text("nav.activities", "Activités");
+                case "Communication": return BeeLocalization.Text("nav.communication", "Communication");
+                case "Bag": return BeeLocalization.Text("nav.bag", "Sac");
+                case "More": return BeeLocalization.Text("nav.more", "Plus");
+                default: return id ?? string.Empty;
+            }
+        }
+
+        private void RefreshLocalizedRailLabels()
+        {
+            string locale = BeeLocalization.CurrentLocale;
+            if (string.Equals(lastRailLocale, locale, StringComparison.Ordinal)) return;
+            lastRailLocale = locale;
+            if (bagTitleLabel != null) bagTitleLabel.text = BeeLocalization.Text("ledger.title", "Sac & stocks");
+            for (int i = 0; i < bagRowLabels.Count; i++)
+                if (bagRowLabels[i] != null) bagRowLabels[i].text = LocalizedBagRow(i);
+            if (queenHeaderLabel != null) queenHeaderLabel.text = BeeLocalization.Text("hive.hud.queen", "Reine");
+            if (queenHeaderLevelLabel != null) queenHeaderLevelLabel.text = BeeLocalization.Text("hive.hud.level_short", "Niv. ") + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString();
+            foreach (var entry in moreRowLabels)
+                if (entry.Value != null) entry.Value.text = LocalizedMoreEntry(entry.Key);
+            foreach (var pair in railVisuals)
+                if (pair.Value.Label != null) pair.Value.Label.text = LocalizedRailLabel(pair.Key);
+        }
         // --- Rail du bas (géométrie pixel écran du monolithe, 1 unité uGUI = 1 pixel) ---
+
+        private Rect lastRailSafeArea;
 
         private void BuildRail(Transform parent)
         {
+            lastRailSafeArea = Screen.safeArea;
             bool portrait = LivingHiveMenuSpec.IsPortrait(Screen.width, Screen.height);
-            Rect rail = ScreenRectToUiRect(LivingHiveMenuSpec.RailRectForProof(portrait, Screen.width, Screen.height));
+            Rect rail = ScreenRectToUiRect(LivingHiveMenuSpec.RailRectForSafeArea(Screen.width, Screen.height, Screen.safeArea));
 
             // Fond premium (miroir DrawPremiumPanel du rail) : géométrie inchangée, seul le
             // rendu change (couleur plate -> sprite 9-slice grain/bordure/coins).
@@ -233,12 +381,12 @@ namespace BeeKingdom.LivingHiveMenu
             bg.transform.SetParent(parent, false);
             bg.transform.SetSiblingIndex(0);
             Image bgImage = bg.AddComponent<Image>();
-            bgImage.sprite = LivingHiveMenuVisuals.RailBackdropSprite();
+            bgImage.sprite = PremiumNavigationStyle.Surface("bar");
             bgImage.type = Image.Type.Sliced;
             // Transparence réelle du monolithe (DrawBottomRail : fill alpha 0.84). RGB
             // inchangé (sprites premium intacts) : seuls les sprites restent tels quels,
             // l'alpha global est imposé par Image.color pour laisser la scène transparaître.
-            bgImage.color = new Color(1f, 1f, 1f, LivingHiveMenuVisuals.RailFill.a);
+            bgImage.color = Color.white;
             RectTransform bgRect = bg.GetComponent<RectTransform>();
             PositionRect(bgRect, rail);
 
@@ -252,13 +400,14 @@ namespace BeeKingdom.LivingHiveMenu
             ornamentImage.sprite = LivingHiveMenuVisuals.RailOrnamentSprite();
             ornamentImage.type = Image.Type.Simple;
             ornamentImage.raycastTarget = false;
+            ornamentImage.enabled = false;
             PositionRect(ornament.GetComponent<RectTransform>(), rail);
 
             LivingHiveMenuEntry[] entries = LivingHiveMenuSpec.Entries(portrait);
-            Rect[] itemRects = LivingHiveMenuSpec.ItemRects(portrait, Screen.width, Screen.height);
+            Rect[] itemRects = LivingHiveMenuSpec.ItemRectsForSafeArea(Screen.width, Screen.height, Screen.safeArea);
             for (int i = 0; i < entries.Length && i < itemRects.Length; i++)
             {
-                if (i > 0) BuildDivider(parent, itemRects[i - 1], itemRects[i], rail);
+                // Rounded cards provide their own separation.
                 TravelTo(parent, entries[i], itemRects[i]);
             }
         }
@@ -378,13 +527,15 @@ namespace BeeKingdom.LivingHiveMenu
             Rect2Local(iconImage, iconX, iconY, icon, icon);
 
             // Nom "Reine" + niveau.
-            TextMeshProUGUI name = CreateLabel(container, "Reine", portrait ? 15 : 18, TextAnchor.MiddleLeft, true);
+            TextMeshProUGUI name = CreateLabel(container, BeeLocalization.Text("hive.hud.queen", "Reine"), portrait ? 15 : 18, TextAnchor.MiddleLeft, true);
             name.color = new Color(1f, 0.90f, 0.58f);
+            queenHeaderLabel = name;
             Rect2Local(name, (portrait ? 52f : 70f), (portrait ? 4f : 6f), 90f, 20f);
 
-            TextMeshProUGUI level = CreateLabel(container, "Niv. " + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString(),
+            TextMeshProUGUI level = CreateLabel(container, BeeLocalization.Text("hive.hud.level_short", "Niv. ") + LivingHiveMenuHeaderData.PreviewQueenLevel.ToString(),
                 portrait ? 11 : 12, TextAnchor.MiddleLeft);
             level.color = LivingHiveMenuVisuals.LabelInactiveColor;
+            queenHeaderLevelLabel = level;
             Rect2Local(level, (portrait ? 52f : 70f), portrait ? 24f : 28f, 80f, 16f);
 
             // Barre de progression vers le niveau suivant (paysage uniquement).
@@ -632,16 +783,17 @@ namespace BeeKingdom.LivingHiveMenu
             GameObject go = new GameObject("Button_" + entry.ItemId);
             go.transform.SetParent(parent, false);
             Image image = go.AddComponent<Image>();
-            image.sprite = LivingHiveMenuVisuals.ButtonNormalSprite();
+            image.sprite = PremiumNavigationStyle.Surface("idle");
             image.type = Image.Type.Sliced;
             // Transparence réelle du monolithe (DrawIconButton : fill idle alpha 0.78).
             // RGB inchangé ; RefreshRailHighlights impose l'alpha actif (0.94) si besoin.
-            image.color = new Color(1f, 1f, 1f, LivingHiveMenuVisuals.ButtonNormalFill.a);
+            image.color = Color.white;
             Button button = go.AddComponent<Button>();
             button.targetGraphic = image;
             // Le sprite premium sert déjà de feedback visuel (RefreshRailHighlights) ; la
             // transition de couleur par défaut du Button assombrirait le rendu par-dessus.
-            button.transition = Selectable.Transition.None;
+            button.transition = Selectable.Transition.SpriteSwap;
+            button.spriteState = new SpriteState { highlightedSprite=PremiumNavigationStyle.Surface("hover"), pressedSprite=PremiumNavigationStyle.Surface("pressed"), selectedSprite=PremiumNavigationStyle.Surface("hover"), disabledSprite=PremiumNavigationStyle.Surface("idle") };
 
             // Convertit le rect IMGUI (origine haut-gauche) en anchoredPosition uGUI
             // (origine bas-gauche, 1 unité = 1 pixel) : ancré sur le canvas, pas sur un
@@ -667,9 +819,9 @@ namespace BeeKingdom.LivingHiveMenu
             headerBand.SetActive(false);
 
             // Icône : glow (derrière) + socket hexagonal + icône elle-même, insetée (miroir DrawMenuIcon).
-            float iconSize = Mathf.Min(74f, bh * 0.76f);
+            float iconSize = Mathf.Min(50f, Mathf.Min(bw - 10f, bh - 28f));
             float iconX = bw * 0.5f - iconSize * 0.5f;
-            float iconY = Mathf.Max(2f, bh - 2f - iconSize);
+            float iconY = Mathf.Max(2f, bh - 5f - iconSize);
 
             GameObject glow = new GameObject("Glow");
             glow.transform.SetParent(go.transform, false);
@@ -686,15 +838,17 @@ namespace BeeKingdom.LivingHiveMenu
             socketImage.sprite = LivingHiveMenuVisuals.IconSocketSprite();
             socketImage.color = LivingHiveMenuVisuals.SocketTintInactive;
             socketImage.raycastTarget = false;
+            socketImage.enabled = false;
             rect2(socket, iconX, iconY, iconSize, iconSize);
 
             GameObject icon = new GameObject("Icon");
             icon.transform.SetParent(go.transform, false);
             Image iconImage = icon.AddComponent<Image>();
-            iconImage.sprite = LivingHiveMenuVisuals.IconSprite(LivingHiveMenuSpec.NavIconId(entry.IconKey));
-            iconImage.color = LivingHiveMenuVisuals.IconTintInactive;
+            iconImage.sprite = PremiumNavigationStyle.Artwork(entry.ItemId);
+            iconImage.color = Color.white;
+            iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
-            float iconInset = iconSize * 0.14f;
+            float iconInset = 0f;
             rect2(icon, iconX + iconInset, iconY + iconInset, iconSize - iconInset * 2f, iconSize - iconInset * 2f);
 
             // Barre de progression lumineuse sous le bouton actif.
@@ -708,8 +862,9 @@ namespace BeeKingdom.LivingHiveMenu
             progressLine.SetActive(false);
 
             // Libellé en bande basse (taille 11, conforme au monolithe — DrawIconButton labelStyle).
-            TextMeshProUGUI label = CreateLabel(go.transform, entry.Label, 11, TextAnchor.MiddleCenter);
-            label.color = LivingHiveMenuVisuals.LabelInactiveColor;
+            TextMeshProUGUI label = CreateLabel(go.transform, LocalizedRailLabel(entry.ItemId), bw < 90f ? 10 : 12, TextAnchor.MiddleCenter);
+            label.color = new Color(1f,.95f,.82f,1f);
+            label.enableAutoSizing = true; label.fontSizeMin = 8f; label.fontSizeMax = bw < 90f ? 10f : 12f;
             rect2(label.gameObject, 2f, 2f, Mathf.Max(1f, bw - 4f), 20f);
 
             LivingHiveMenuEntry capture = entry;
@@ -778,6 +933,7 @@ namespace BeeKingdom.LivingHiveMenu
                 return;
             }
             state.ToggleEntry(itemId);
+            if (sharedBackdrop != null) sharedBackdrop.SetActive(SharedPanelOpen);
             RefreshAll();
         }
 
@@ -894,6 +1050,7 @@ namespace BeeKingdom.LivingHiveMenu
             TextMeshProUGUI titleLabel = CreateLabel(go.transform, title, 22, TextAnchor.MiddleLeft, true);
             LabelRect(titleLabel.GetComponent<RectTransform>(), 14f, 12f);
 
+            if (string.Equals(panelId, LivingHiveMenuSpec.BagId, StringComparison.Ordinal)) bagTitleLabel = titleLabel;
             contentBuilder(go.transform, size);
             panels[panelId] = go;
 
@@ -916,18 +1073,39 @@ namespace BeeKingdom.LivingHiveMenu
             LabelRect(hint.GetComponent<RectTransform>(), 16f, 52f);
         }
 
+        private static string LocalizedBagRow(int index)
+        {
+            // This legacy Bag panel currently uses static preview values.
+            // Translate the labels without suggesting these are official stocks.
+            switch (index)
+            {
+                case 0: return BeeLocalization.Text("bag.preview.nectar", "Nectar: 120");
+                case 1: return BeeLocalization.Text("bag.preview.pollen", "Pollen: 80");
+                case 2: return BeeLocalization.Text("bag.preview.wax", "Cire: 45");
+                case 3: return BeeLocalization.Text("bag.preview.honey", "Miel: 67");
+                case 4: return BeeLocalization.Text("bag.preview.capacity", "Capacité: 400/500");
+                default: return string.Empty;
+            }
+        }
+
         private void BuildBagContent(Transform parent, Rect panel)
         {
-            string[] rows = { "Nectar : 120", "Pollen : 80", "Cire : 45", "Miel : 67", "Capacite : 400/500" };
-            float y = 52f;
-            for (int i = 0; i < rows.Length; i++)
+            bagRowLabels.Clear();
+            if (sharedPanelsOnly)
             {
-                TextMeshProUGUI row = CreateLabel(parent, rows[i], 16, TextAnchor.MiddleLeft);
+                var unavailable = CreateLabel(parent, BeeLocalization.Text("bag.data_unavailable", "Stocks indisponibles sur cet ecran."), 15, TextAnchor.MiddleLeft);
+                LabelRect(unavailable.GetComponent<RectTransform>(), 16f, 64f);
+                return;
+            }
+            float y = 52f;
+            for (int i = 0; i < 5; i++)
+            {
+                TextMeshProUGUI row = CreateLabel(parent, LocalizedBagRow(i), 16, TextAnchor.MiddleLeft);
+                bagRowLabels.Add(row);
                 LabelRect(row.GetComponent<RectTransform>(), 16f, y);
                 y += 38f;
             }
         }
-
         private void BuildMoreContent(Transform parent, Rect panel)
         {
             string[] entries = LivingHiveMenuSpec.MoreMenuEntries;
@@ -943,8 +1121,9 @@ namespace BeeKingdom.LivingHiveMenu
                 rect2(go, 10f, y, panel.width - 20f, rowH);
                 Button b = go.AddComponent<Button>();
                 b.targetGraphic = img;
-                TextMeshProUGUI t = CreateLabel(go.transform, entry, 16, TextAnchor.MiddleLeft);
+                TextMeshProUGUI t = CreateLabel(go.transform, LocalizedMoreEntry(entry), 16, TextAnchor.MiddleLeft);
                 LabelRect(t.GetComponent<RectTransform>(), 14f, 0f);
+                moreRowLabels[entry] = t;
                 string captureEntry = entry;
                 b.onClick.AddListener(() => OnMoreRowClicked(captureEntry));
                 // M038C-CL: "Armée" lives inside the "Plus" submenu, not on the bottom rail
@@ -967,7 +1146,10 @@ namespace BeeKingdom.LivingHiveMenu
             if (string.Equals(entry, "Armée", System.StringComparison.Ordinal))
             {
                 state.CloseActiveMenuPanel();
-                LivingHiveArmyBridge.OpenOverlay();
+                SharedClosingGesture?.Invoke();
+                if (sharedPanelsOnly && SharedArmyRequested != null) SharedArmyRequested();
+                else LivingHiveArmyBridge.OpenOverlay();
+                if (sharedPanelsOnly) RefreshAll();
                 return;
             }
             if (string.Equals(entry, "Parametres", System.StringComparison.Ordinal))
@@ -978,7 +1160,9 @@ namespace BeeKingdom.LivingHiveMenu
                 // uGUI buttons live underneath would let a click meant for a Settings toggle
                 // also fire whatever Plus row happens to sit at that same screen position.
                 state.CloseActiveMenuPanel();
-                LivingHiveSettingsBridge.ToggleOverlay();
+                SharedClosingGesture?.Invoke();
+                if (sharedPanelsOnly && SharedSettingsRequested != null) SharedSettingsRequested();
+                else LivingHiveSettingsBridge.ToggleOverlay();
             }
             RefreshAll();
         }
@@ -1062,20 +1246,18 @@ namespace BeeKingdom.LivingHiveMenu
                 bool isActive = string.Equals(pair.Key, active, System.StringComparison.Ordinal);
                 RailButtonVisual v = pair.Value;
 
-                v.Panel.sprite = isActive ? LivingHiveMenuVisuals.ButtonActiveSprite() : LivingHiveMenuVisuals.ButtonNormalSprite();
+                v.Panel.sprite = isActive ? PremiumNavigationStyle.Surface("selected") : PremiumNavigationStyle.Surface("idle");
                 // Alpha réel du monolithe par état (0.94 actif / 0.78 inactif) : le sprite
                 // change, la transparence aussi (miroir des fills de DrawIconButton).
-                v.Panel.color = isActive
-                    ? new Color(1f, 1f, 1f, LivingHiveMenuVisuals.ButtonActiveFill.a)
-                    : new Color(1f, 1f, 1f, LivingHiveMenuVisuals.ButtonNormalFill.a);
+                v.Panel.color = Color.white;
                 v.Label.color = isActive ? LivingHiveMenuVisuals.LabelActiveColor : LivingHiveMenuVisuals.LabelInactiveColor;
 
-                v.Glow.sprite = isActive ? LivingHiveMenuVisuals.GlowActiveSprite() : LivingHiveMenuVisuals.GlowInactiveSprite();
-                v.Glow.color = isActive ? LivingHiveMenuVisuals.GlowTintActive : LivingHiveMenuVisuals.GlowTintInactive;
+                v.Glow.sprite = LivingHiveMenuVisuals.SoftRadialGlowSprite();
+                v.Glow.color = isActive ? new Color(1f, 0.77f, 0.36f, 0.20f) : Color.clear;
                 v.Socket.color = isActive ? LivingHiveMenuVisuals.SocketTintActive : LivingHiveMenuVisuals.SocketTintInactive;
-                v.Icon.color = isActive ? LivingHiveMenuVisuals.IconTintActive : LivingHiveMenuVisuals.IconTintInactive;
+                v.Icon.color = Color.white;
 
-                if (v.HeaderBand != null) v.HeaderBand.SetActive(isActive);
+                if (v.HeaderBand != null) v.HeaderBand.SetActive(false);
                 if (v.ProgressLine != null) v.ProgressLine.SetActive(isActive);
             }
         }
@@ -1094,6 +1276,7 @@ namespace BeeKingdom.LivingHiveMenu
                 bool shouldShow = ShouldShowPanel(pair.Key);
                 PanelAnimState state = panelAnimStates[pair.Key];
                 bool isActive = pair.Value.activeSelf;
+                if (sharedPanelsOnly) { state.Group.interactable = shouldShow; state.Group.blocksRaycasts = shouldShow; }
 
                 if (shouldShow && !isActive)
                 {

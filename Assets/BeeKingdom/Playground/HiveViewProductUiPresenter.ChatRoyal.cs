@@ -522,6 +522,7 @@ namespace BeeKingdom.Playground
 
         private static void CloseChatRoyalOverlays()
         {
+            HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
             chatNewDiscussionOpen = false;
             chatNewGroupOpen = false;
             chatSettingsOpen = false;

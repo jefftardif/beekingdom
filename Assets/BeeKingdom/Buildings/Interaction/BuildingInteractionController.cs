@@ -23,6 +23,12 @@ namespace BeeKingdom.Buildings.Interaction
         // un clic avant le collider d'un bâtiment (ex: TREES_01 devant ROYAL_PALACE).
         public const int BuildingLayerIndex = 9;
 
+        // Input ownership only; never reuse the economic completion/preemption hooks.
+        public static Func<bool> ExternalInputBlocked { get; set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetExternalInputBarrier() => ExternalInputBlocked = null;
+
         [SerializeField] private Camera _raycastCamera;
         [SerializeField] private bool _enabled = true;
 
@@ -133,7 +139,7 @@ namespace BeeKingdom.Buildings.Interaction
 
         public void HandlePointer()
         {
-            if (!_enabled) return;
+            if (!_enabled || (ExternalInputBlocked?.Invoke() ?? false)) return;
             Camera camera = EffectiveCamera();
             if (camera == null || !Input.GetMouseButtonDown(0)) return;
 
@@ -166,7 +172,7 @@ namespace BeeKingdom.Buildings.Interaction
         // public rather than internal.
         public void DispatchClick(BuildingDefinition definition)
         {
-            if (definition == null) return;
+            if (definition == null || !_enabled || (ExternalInputBlocked?.Invoke() ?? false)) return;
             if (InteractionPreemptionHook != null && InteractionPreemptionHook(definition)) return;
 
             _selection.NotifyClicked(definition);

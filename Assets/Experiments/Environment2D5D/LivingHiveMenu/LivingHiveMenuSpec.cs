@@ -127,43 +127,25 @@ namespace BeeKingdom.LivingHiveMenu
         // --- Géométrie ForProof : miroir exact des rects du monolithe. ---
 
         // Miroir de MobileBottomRailItemRectsForProof (portrait 5 entrées).
-        public static Rect[] MobileBottomRailItemRectsForProof(float screenWidth, float screenHeight)
+        public static Rect[] MobileBottomRailItemRectsForProof(float width,float height) => ItemRectsForSafeArea(width,height,new Rect(0,0,width,height));
+        public static Rect[] LandscapeBottomRailItemRectsForProof(float width,float height) => ItemRectsForSafeArea(width,height,new Rect(0,0,width,height));
+        public static Rect RailRectForProof(bool portrait,float width,float height) => RailRectForSafeArea(width,height,new Rect(0,0,width,height));
+        public static Rect RailRectForSafeArea(float width,float height,Rect deviceSafe)
         {
-            Rect rail = new Rect(8f, screenHeight - 78f, screenWidth - 16f, 70f);
-            const int itemCount = 5;
-            const float gap = 8f;
-            float itemWidth = (rail.width - 20f - gap * (itemCount - 1)) / itemCount;
-            Rect[] result = new Rect[itemCount];
-            for (int i = 0; i < itemCount; i++)
-            {
-                result[i] = new Rect(rail.x + 10f + i * (itemWidth + gap), rail.y + 8f, itemWidth, rail.height - 16f);
-            }
-            return result;
+            Rect safe=deviceSafe.width>0f&&deviceSafe.height>0f?new Rect(deviceSafe.x,height-deviceSafe.yMax,deviceSafe.width,deviceSafe.height):new Rect(0,0,width,height);
+            float w=Mathf.Min(760f,Mathf.Max(1f,safe.width-16f));
+            float h=Mathf.Min(118f,Mathf.Max(1f,safe.height-16f));
+            return new Rect(safe.center.x-w*.5f,safe.yMax-h-8f,w,h);
         }
-
-        // Miroir du rail paysage (DrawBottomRail, 10 entrées).
-        public static Rect[] LandscapeBottomRailItemRectsForProof(float screenWidth, float screenHeight)
+        public static Rect[] ItemRectsForSafeArea(float width,float height,Rect deviceSafe)
         {
-            Rect rail = new Rect(8f, screenHeight - 76f, screenWidth - 16f, 68f);
-            const int itemCount = 10;
-            const float gap = 8f;
-            float itemWidth = (rail.width - 20f - gap * (itemCount - 1)) / itemCount;
-            Rect[] result = new Rect[itemCount];
-            for (int i = 0; i < itemCount; i++)
-            {
-                result[i] = new Rect(rail.x + 10f + i * (itemWidth + gap), rail.y + 7f, itemWidth, rail.height - 14f);
-            }
+            Rect rail=RailRectForSafeArea(width,height,deviceSafe);
+            const int count=5; const float gap=6f;
+            float w=Mathf.Max(1f,(rail.width-16f-gap*(count-1))/count);
+            float h=Mathf.Min(82f,Mathf.Max(1f,rail.height-16f));
+            Rect[] result=new Rect[count];
+            for(int i=0;i<count;i++)result[i]=new Rect(rail.x+8f+i*(w+gap),rail.yMax-h-8f,w,h);
             return result;
-        }
-
-        // Miroir exact du rail du monolithe (bandeau du bas, pleine largeur).
-        // Portrait : DrawPortraitBottomRail rail = (8, h-78, w-16, 70).
-        // Paysage  : DrawBottomRail rail = (8, h-76, w-16, 68).
-        public static Rect RailRectForProof(bool portrait, float screenWidth, float screenHeight)
-        {
-            return portrait
-                ? new Rect(8f, screenHeight - 78f, screenWidth - 16f, 70f)
-                : new Rect(8f, screenHeight - 76f, screenWidth - 16f, 68f);
         }
 
         // Miroir de MobileHudRectForProof (bandeau haut compact, utilisé comme butée).
