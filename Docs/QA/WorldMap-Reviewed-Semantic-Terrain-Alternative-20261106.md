@@ -184,3 +184,27 @@ Le script de contrôle ne possède **aucune commande d'activation**.
 Il ne suffira pas de modifier les indicateurs booléens; le moteur
 de réservations doit être relié aux transactions serveur, avec
 preuve de capacité et tuiles officiellement revues, avant publication.
+## Validation SQL jetable sur PCJEFF (6 novembre 2026)
+
+Les scripts additifs de réservation ont été **réellement exécutés**
+sur l'instance SQL Server LocalDB dédiée à la QA de PCJEFF, dans
+`BeeKingdomSpatialSandbox_20261106` et **jamais** contre la base de
+production de SRVESDT. Le contrat SQL a retourné
+`BK_SPATIAL_SQL_SANDBOX_PASS`, 2 réservations, révision 3.
+
+Un test d'intégration NUnit via le C# `SqlWorldMapSpatialCommitGateway`
+a envoyé deux demandes concurrentes. Un seul commit et un seul reçu
+ont été enregistrés; la requête perdante a été refusée pour révision
+périmée. Le rejeu idempotent et la tentative de collision subséquente
+n'ont pas modifié la base. Batterie ciblée : **17/17 PASS**.
+
+Une sauvegarde de cette **base jetable uniquement** a été vérifiée
+par `RESTORE VERIFYONLY` (PASS). Le rapport détaillé et les commandes
+figurent dans
+`Server/ops/world-map-semantic/README-Spatial-SQL-20261106.md`.
+
+La fonctionnalité n'est **toujours pas activée en production** :
+il manque le référentiel Wave6 certifié, le catalogue serveur des
+emprises réelles, le parcours API/gameplay et les tests visuels Android.
+L'existence d'une procédure SQL testée n'autorise pas de nouvelles
+positions sans terrain vérifié.

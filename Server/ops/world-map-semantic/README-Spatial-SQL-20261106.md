@@ -1,6 +1,6 @@
 # BeeKingdom - WorldMap spatial SQL: preproduction runbook (2026-11-06)
 
-STATUS: CODE READY FOR ISOLATED SQL QA. LIVE GAMEPLAY NOT ACTIVATED.
+STATUS: ISOLATED SQL EXECUTION AND CONCURRENT C# INTEGRATION PASS. LIVE GAMEPLAY NOT ACTIVATED.
 
 These three SQL scripts are intentionally NOT registered in automatic DatabaseCatalog.Migrations.
 
@@ -28,7 +28,10 @@ The C# SqlWorldMapSpatialCommitGateway is compiled into BeeKingdom.HiveOperation
 - Production API /health Healthy; world-map-readiness remains PreparationOnly, readOnly=true and nonLive=true.
 - Production activation preflight: BLOCKED, as expected.
 
-IMPORTANT: This is NOT proof the full stored procedure works. It has not run on a disposable SQL database. The remote SYSTEM agent is not sysadmin on either SQL Server Express instance, and no BeeKingdomSpatialSandbox_* database exists. Do not bypass these privileges or test against the real BeeKingdom database.
+The full T-SQL procedure HAS NOW been run and passed against a separate
+user-owned SQL Server 2025 LocalDB instance on PCJEFF, not against the
+production game database. SRVESDT remote SYSTEM still lacks privileges
+to create a disposable database; do not bypass that restriction.
 
 ## How an authorized SQL administrator can perform the isolated QA
 
@@ -38,16 +41,66 @@ Create a disposable, dedicated database named BeeKingdomSpatialSandbox_20261106.
 2. sqlcmd -S .\SQLEXPRESS -E -C -b -d BeeKingdomSpatialSandbox_20261106 -i 101_worldmap_spatial_atomic_commit.staging.sql
 3. sqlcmd -S .\SQLEXPRESS -E -C -b -d BeeKingdomSpatialSandbox_20261106 -i 102_worldmap_spatial_sandbox_contract_test.sql
 
-EXPECTED, NOT YET OBSERVED: BK_SPATIAL_SQL_SANDBOX_PASS, 2 reservations, revision 3. The contract tests successful placement, replay without duplication, collision rejection, unauthorized ownership replacement and stale revision rejection. Follow with actual parallel end-to-end stored-procedure tests before release.
+OBSERVED on PCJEFF LocalDB: BK_SPATIAL_SQL_SANDBOX_PASS,
+2 reservations, revision 3. The contract tested successful placement,
+idempotent replay, collision rejection, unauthorized ownership
+replacement, and stale revision rejection.
+
+OBSERVED in the opt-in NUnit integration test: two simultaneous C#
+gateway calls from different actors using the same world revision resulted
+in exactly ONE committed reservation, ONE idempotency receipt,
+a revision of 2, and one rejected stale caller. Exact winner replay and
+subsequent conflicting placement preserved this state.
 
 ## Required before activating the production game
 
 - Independent human or authoritative review of WorldMap Wave6 terrain and shorelines, version-pinned against source tile SHA-256. The nine pilot tiles are still candidates, not approved gameplay data.
 - An authoritative footprint catalogue on the SERVER including the rendered artwork, labels, controls and margin at the smallest supported zoom. Implement and verify IWorldMapReviewedFootprintVerifier.
 - An authenticated server-side route and/or trusted system service that applies the gateway to initial generation, player movement, NPC movement and resource respawn. Client data cannot grant server occupancy.
-- Disposable database SQL QA and tested rollback. Apply any additive SQL migration in production only after backup and exact compatibility checks; never auto-seed WritesEnabled=1.
+- Disposable SQL QA is now PASS; repeat against the exact candidate production build and validate rollback before any additive production migration. Never auto-seed WritesEnabled=1.
 - Correct 22 estimated overlapping pairs and 18 unresolved historical positions through certified world-coordinate changes, not on-screen shuffling.
 - Full runtime Unity/Android visual and hitbox validation; recheck HUD/Chat regressions.
 - Production gate must be READY with genuine runtime proof, not simply flipped booleans.
 
 No live IIS, production SQL, existing game coordinates or main branch were modified by this prototype.
+
+## PCJEFF LocalDB end-to-end evidence — 6 November 2026
+
+Created a new **isolated** per-user LocalDB instance:
+`(localdb)\BKSpatialQA20261106` (SQL Server 2025 17.0.4025.3).
+Within this instance only, created the disposable database
+`BeeKingdomSpatialSandbox_20261106`.
+
+Using the Windows ODBC sqlcmd executable (not the Go sqlcmd build,
+which did not discover the named LocalDB instance), executed scripts
+100, 101 and 102 with `-b`, all **exit 0**. Actual SQL result:
+`BK_SPATIAL_SQL_SANDBOX_PASS`, two reservations, occupation revision 3.
+All intended rejections left the world unchanged.
+
+Added `Server/tests/BeeKingdom.Tests/WorldMapSpatialLocalDbIntegrationTests.cs`
+with two independent C# requests executed concurrently against the same
+isolated SQL database. Result `Passed`, 1/1. Combined targeted NUnit
+test suite: **17/17 PASS** (16 unit tests + 1 SQL integration).
+Log/artifact:
+`Server/tests/BeeKingdom.Tests/TestResults/BK-Spatial-Combined-QA-20261106.trx`.
+
+The integration fixture FAILS CLOSED unless **both** of these
+environment variables are deliberately provided:
+- `BK_ENABLE_DISPOSABLE_SPATIAL_QA=1`
+- `BK_SPATIAL_SANDBOX_CONNECTION` with a DataSource starting
+  `(localdb)\BKSpatialQA`, database starting
+  `BeeKingdomSpatialSandbox_` and integrated security.
+
+The isolated QA database was backed up on PCJEFF with SQL Server
+`BACKUP DATABASE ... WITH CHECKSUM` and verified using
+`RESTORE VERIFYONLY ... WITH CHECKSUM` (**PASS**).
+Local QA backup:
+`C:\BeeKingdom\qa\BK-Spatial-Sandbox-Backup-20261106.bak`
+(4,771,840 bytes, SHA-256
+`414409E3A00C5DE8CABA9535E14CD6CE969D3C4AA8E9AB886461D802811B1D2D`).
+
+**This does not authorize production placement.** The approved map terrain,
+actual per-icon/per-label footprint catalogue, authenticated and trusted
+server route, review of historical conflicts and Unity Android validation
+remain outstanding. No database production schema was migrated, no
+gameplay endpoint activated, and no game entity relocated.
