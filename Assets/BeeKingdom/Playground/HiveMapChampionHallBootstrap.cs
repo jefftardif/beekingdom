@@ -204,12 +204,14 @@ namespace BeeKingdom.Playground
             if (!OverlayOpenForExternalHost || selectedBuilding == null) return;
             if (HiveMapActivitiesBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
 
-            bool compact = Screen.width < 900f;
+            Rect safe = WorldMapHudLayout.SafeGuiRect(Screen.width,Screen.height,Screen.safeArea);
+            bool compact = safe.width < 900f;
             float pad = compact ? 12f : 26f;
             Rect full = new Rect(0, 0, Screen.width, Screen.height);
             DrawSurface(full, Background, new Color(.38f, .24f, .09f));
-            Rect header = new Rect(pad, 8f, Screen.width - 2f * pad, compact ? 114f : 96f);
-            if (hallBanner == null) hallBanner = Resources.Load<Texture2D>("PremiumBeeReference/BuildingBanners/champion_hall");
+            Rect header = new Rect(safe.x+pad,safe.y+8f,safe.width-2f*pad,compact?114f:96f);
+            if (hallBanner == null) hallBanner = Resources.Load<Texture2D>(HiveMapPremiumBuildingWindow.BannerResourcePathForProof(
+                BuildingLegacyKeys.ArchivesHoneyfall));
             if (hallBanner != null) GUI.DrawTexture(header, hallBanner, ScaleMode.ScaleAndCrop, true);
             DrawSurface(header, new Color(.06f, .034f, .018f, .78f), Gold);
 
@@ -235,7 +237,7 @@ namespace BeeKingdom.Playground
             }
 
             float y = header.yMax + 14f;
-            Rect summary = new Rect(pad, y, Screen.width - 2f * pad, compact ? 105f : 106f);
+            Rect summary = new Rect(header.x,y,header.width,compact?105f:106f);
             DrawSurface(summary, Card, new Color(.57f, .37f, .13f));
             int owned = snapshot?.Levels?.Count ?? 0;
             int assigned = snapshot?.AssignedBeeIds?.Count ?? 0;
@@ -255,7 +257,7 @@ namespace BeeKingdom.Playground
                 info, Label(compact ? 12 : 16, error ? new Color(1f, .55f, .45f) : Muted));
 
             y = summary.yMax + 12f;
-            Rect filters = new Rect(pad, y, Screen.width - 2f * pad, 46f);
+            Rect filters = new Rect(header.x,y,header.width,46f);
             string[] ids = { "", "guardians", "wingrunners", "darters", "civilian" };
             string[] labels = {
                 T("all", "Toutes"),
@@ -273,7 +275,7 @@ namespace BeeKingdom.Playground
             }
 
             y += 53f;
-            Rect viewport = new Rect(pad, y, Screen.width - 2f * pad, Screen.height - y - 18f);
+            Rect viewport = new Rect(header.x,y,header.width,Mathf.Max(48f,safe.yMax-y-18f));
             var filtered = ChampionBeeCatalog.All.Where(b =>
                 string.IsNullOrEmpty(selectedRole) || RoleId(b.Role) == selectedRole).ToList();
             float rowH = 220f;

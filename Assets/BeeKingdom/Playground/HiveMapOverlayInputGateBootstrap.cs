@@ -119,7 +119,7 @@ namespace BeeKingdom.Playground
                 current.Use();
         }
 
-        private static bool IsAnyOverlayOpen()
+        private static bool IsAnyOverlayOpen(bool ignoreProductionInfo = false)
         {
             return HiveViewProductUiPresenter.AdditionalModalOpenForInputOwnership
                 || HiveViewProductUiPresenter.BankOverlayOpenForExternalHost
@@ -136,7 +136,7 @@ namespace BeeKingdom.Playground
                 // M006-CL wave 1: new HiveMap-native windows, not part of the monolith's
                 // own overlay bookkeeping, so they need their own flags here.
                 || HiveMapNurseryBootstrap.OverlayOpenForExternalHost
-                || HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost
+                || (!ignoreProductionInfo && HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost)
                 // M009-CX wave 3: Champion Hall uses its own IMGUI catalog/status window.
                 || HiveMapChampionHallBootstrap.OverlayOpenForExternalHost
                 // M008-CX wave 2: same IMGUI input protection for the Genetics/Infirmary
@@ -149,6 +149,14 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.UpgradeProgressOverlayOpenForExternalHost;
         }
 
+        // Fullscreen production info is an overlay in its own right, and must
+        // NOT count itself as another overlay when deciding whether to paint.
+        // All other modal/Chat guards remain active.
+        public static bool IsAnotherOverlayBlockingProductionInfo()
+        {
+            return IsAnyOverlayOpen(ignoreProductionInfo: true)
+                || HiveViewProductUiPresenter.WorldChatInputBlocked;
+        }
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;

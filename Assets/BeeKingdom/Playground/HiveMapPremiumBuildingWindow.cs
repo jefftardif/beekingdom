@@ -185,6 +185,7 @@ namespace BeeKingdom.Playground
             if (defenseMode) RefreshDefense();
             if (geneticsMode) RefreshGeneticsLabels();
             if (academyMode) RefreshAcademyLabels();
+            if (productionInfoMode) RefreshProductionInfoLabels();
 
         }
 
@@ -196,6 +197,12 @@ namespace BeeKingdom.Playground
             defenseMode = false;
             geneticsMode = false;
             academyMode = false;
+            productionInfoMode = false;
+            productionInfoController = null;
+            productionInfoStatus = productionInfoStock = productionInfoRate = null;
+            productionInfoBalance = productionInfoCapacity = productionInfoResource = null;
+            productionInfoHint = null;
+            productionInfoRefreshButton = null;
             academyLevelLabel = null;
             academySyncLabel = null;
             academyUpgradeLabel = null;
@@ -261,6 +268,7 @@ namespace BeeKingdom.Playground
                 || !string.Equals(lastLanguage, BeeLocalization.CurrentLocale,
                     StringComparison.Ordinal))
                 Render();
+            if (productionInfoMode) TickProductionInfo();
             if (infirmaryMode)
             {
                 // Countdown labels update without rebuilding ScrollRect under a drag.
@@ -674,6 +682,12 @@ namespace BeeKingdom.Playground
             }
         }
 
+        public static string BannerResourcePathForProof(string legacyKey)
+        {
+            if (!BuildingMappingTable.TryGetByLegacyKey(legacyKey, out _))
+                return string.Empty;
+            return "PremiumBeeReference/BuildingBanners/" + legacyKey;
+        }
         public static Rect HeaderRectForProof(float safeWidth, float safeHeight)
         {
             bool landscape = safeWidth > safeHeight && safeWidth >= 600f;
@@ -697,7 +711,7 @@ namespace BeeKingdom.Playground
 
         private void Render()
         {
-            float retainedDefenseScroll = (defenseMode || geneticsMode || academyMode) && scroll != null
+            float retainedDefenseScroll = (defenseMode || geneticsMode || academyMode || productionInfoMode) && scroll != null
                 ? scroll.verticalNormalizedPosition : 1f;
             if (!windowOpen || suppressed || selected == null) return;
             if (canvas == null)
@@ -744,19 +758,20 @@ namespace BeeKingdom.Playground
             safeRoot = Node(canvas.transform, "SafeArea", safe);
             Rect headerRect = HeaderRectForProof(width, height);
             RectTransform header = Plate(safeRoot, "Header", headerRect, Ink, "panel-fill");
+            // Every building has a dedicated HD banner. Never show Alliance
+            // imagery on Infirmary, Nursery, Defense or a future building.
             Texture2D banner = Resources.Load<Texture2D>(
-                academyMode ? "PremiumBeeReference/BuildingBanners/academy_canopy"
-                : geneticsMode ? "PremiumBeeReference/BuildingBanners/genetics_garden"
-                : "PremiumBeeReference/BuildingBanners/alliance_future_hall");
+                BannerResourcePathForProof(selected.LegacyKey));
             if (banner != null)
                 Art(header, new Rect(width * .40f, 0f, width * .60f, headerRect.height),
                     banner, new Color(1f, 1f, 1f, .32f));
 
             string name = fr ? titleFr : titleEn;
-            string role = academyMode ? AcademyText("subtitle")
+            string role = productionInfoMode ? ProductionText("subtitle", "Production et reserves de la colonie")
+                : academyMode ? AcademyText("subtitle")
                 : geneticsMode ? BeeLocalization.Text("genetics.premium.subtitle")
                 : selected.Role ?? string.Empty;
-            if (!fr && !defenseMode && !geneticsMode && !academyMode)
+            if (!fr && !productionInfoMode && !defenseMode && !geneticsMode && !academyMode)
                 role = "Building overview";
             WorldMapHudLayout.StyleReturnButton(ButtonAt(header, new Rect(16f, 12f, 52f, 52f),
                 fr ? "Retour" : "Back", false, closeAction));
@@ -821,7 +836,11 @@ namespace BeeKingdom.Playground
             float gap = 20f;
             float cardWidth = cWidth - gap * 2f;
             float cursor;
-            if (infirmaryMode)
+            if (productionInfoMode)
+            {
+                RenderProductionInfoCards(content, cardWidth, gap, out cursor, viewportRect.height);
+            }
+            else if (infirmaryMode)
             {
                 RenderInfirmaryCards(content, cardWidth, gap, out cursor,
                     fr, viewportRect.height);
@@ -879,7 +898,7 @@ namespace BeeKingdom.Playground
                     Mathf.Max(cursor + 28f, viewportRect.height + 1f));
             }
             Canvas.ForceUpdateCanvases();
-            scroll.verticalNormalizedPosition = (defenseMode || geneticsMode || academyMode)
+            scroll.verticalNormalizedPosition = (defenseMode || geneticsMode || academyMode || productionInfoMode)
                 ? retainedDefenseScroll : 1f;
         }
 

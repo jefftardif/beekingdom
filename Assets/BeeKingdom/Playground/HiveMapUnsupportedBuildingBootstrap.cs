@@ -18,8 +18,6 @@ namespace BeeKingdom.Playground
     public sealed class HiveMapUnsupportedBuildingBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Unsupported Building Runtime";
-        private const float PanelWidth = 350f;
-        private const float PanelHeight = 210f;
 
         public static bool OverlayOpenForExternalHost { get; private set; }
 
@@ -341,48 +339,12 @@ namespace BeeKingdom.Playground
                 }
                 return;
             }
-            BuildingDefinition building = selectedBuilding;
-            if (building == null)
-            {
-                OverlayOpenForExternalHost = false;
-                return;
-            }
-
-            Rect panel = new Rect(
-                (Screen.width - PanelWidth) * 0.5f,
-                (Screen.height - PanelHeight) * 0.5f,
-                PanelWidth,
-                PanelHeight);
-            GUI.Box(panel, string.Empty);
-
-            GUILayout.BeginArea(new Rect(panel.x + 12f, panel.y + 10f, PanelWidth - 24f, PanelHeight - 20f));
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(BuildingTitle(building), GUI.skin.label);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("X", GUILayout.Width(28f))) OverlayOpenForExternalHost = false;
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(8f);
-            GUILayout.Label(BuildingStatus(building), new GUIStyle(GUI.skin.label) { wordWrap = true });
-            GUILayout.Space(8f);
-            GUILayout.Label(BeeLocalization.Text("unsupported_building.capacity"), new GUIStyle(GUI.skin.label) { wordWrap = true });
-            GUILayout.Label(BeeLocalization.Text("unsupported_building.gameplay_unavailable"), new GUIStyle(GUI.skin.label) { wordWrap = true });
-
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button(BeeLocalization.Text("common.close")))
-            {
-                OverlayOpenForExternalHost = false;
-            }
-            if (GUILayout.Button(BeeLocalization.Text("common.upgrade")))
-            {
-                OverlayOpenForExternalHost = false;
-                HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(building.LegacyKey);
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
+            // Every tracked building (Academy, Defense, Genetics, Infirmary)
+            // has a real retained-mode premium canvas above. Never resurrect
+            // the old generic gray GUI.Box/GUILayout placeholder.
+            OverlayOpenForExternalHost = false;
+            selectedBuilding = null;
         }
-
         private static bool IsTracked(string buildingType)
         {
             return string.Equals(buildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)
@@ -391,26 +353,5 @@ namespace BeeKingdom.Playground
                 || string.Equals(buildingType, BuildingTypes.Defense, StringComparison.Ordinal);
         }
 
-        private static string BuildingStatus(BuildingDefinition building)
-        {
-            if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal))
-                return BeeLocalization.Text("unsupported_building.infirmary_status");
-            if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal))
-                return BeeLocalization.Text("unsupported_building.academy_status");
-            if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal))
-                return BeeLocalization.Text("unsupported_building.defense_status");
-            if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal))
-                return BeeLocalization.Text("unsupported_building.bank_status");
-            return BeeLocalization.Text("unsupported_building.genetics_status");
-        }
-
-        private static string BuildingTitle(BuildingDefinition building)
-        {
-            if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.infirmary_title");
-            if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.academy_title");
-            if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.defense_title");
-            if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.bank_title");
-            return BeeLocalization.Text("unsupported_building.genetics_title");
-        }
     }
 }
