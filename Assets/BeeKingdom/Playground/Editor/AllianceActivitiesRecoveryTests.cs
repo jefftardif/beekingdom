@@ -203,7 +203,7 @@ public sealed class AllianceRecoveryLocalFixture : IAllianceCenterPanelControlle
             StringAssert.Contains("allianceMemberProfileOpen", source);
             StringAssert.Contains("allianceActionPanelOpen", source);
             Assert.That(source.IndexOf("allianceMemberProfileOpen", StringComparison.Ordinal),
-                Is.LessThan(source.IndexOf("DrawPreviewActionButton", StringComparison.Ordinal)));
+                Is.LessThan(source.IndexOf("DrawPremiumBuildingUpgradeHeader", StringComparison.Ordinal)));
         }
 
         [Test]

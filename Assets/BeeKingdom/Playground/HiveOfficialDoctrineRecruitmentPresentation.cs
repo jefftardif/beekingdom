@@ -524,11 +524,15 @@ namespace BeeKingdom.Playground
         {
             if (busy || disposed) return;
             busy = true;
-            Model = HiveOfficialDoctrineRecruitmentPresentation.Project(
-                HiveDoctrineRecruitmentScreenState.Loading,
-                snapshot,
-                clock.Elapsed,
-                outbox.IsProtectionAvailable);
+            // A scheduled read does not invalidate a previously confirmed snapshot.
+            // Keep the stable Ready/Pending/Offline view while the server responds.
+            // Only the very first read may show a Loading state.
+            if (snapshot == null)
+                Model = HiveOfficialDoctrineRecruitmentPresentation.Project(
+                    HiveDoctrineRecruitmentScreenState.Loading,
+                    null,
+                    clock.Elapsed,
+                    outbox.IsProtectionAvailable);
             try
             {
                 RemoteDoctrineRecruitmentSnapshot result =

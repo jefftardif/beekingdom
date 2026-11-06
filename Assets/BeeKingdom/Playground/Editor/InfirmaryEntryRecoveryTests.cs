@@ -60,7 +60,19 @@ namespace BeeKingdom.Playground.Editor
             {
                 var host = root.AddComponent<HiveMapUnsupportedBuildingBootstrap>();
                 Call(host, "OnBuildingClicked", BuildingCatalog.GetByBuildingType(building));
-                Assert.That(root.GetComponentInChildren<HiveMapPremiumBuildingWindow>(true), Is.Null);
+                // Defense and Genetics now have their OWN premium Activities
+                // windows. This test protects the Infirmary from cross-routing,
+                // rather than outlawing unrelated premium building screens.
+                var views = root.GetComponentsInChildren<HiveMapPremiumBuildingWindow>(true);
+                Assert.That(views.Any(v => v.InfirmaryActiveForProof), Is.False);
+                if (building == BuildingTypes.Genetics)
+                    Assert.That(views.Single().GeneticsActiveForProof, Is.True);
+                else if (building == BuildingTypes.Defense)
+                    Assert.That(views.Single().DefenseActiveForProof, Is.True);
+                else if (building == BuildingTypes.Academy)
+                    Assert.That(views.Single().AcademyActiveForProof, Is.True);
+                else
+                    Assert.That(views, Is.Empty);
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }

@@ -275,12 +275,21 @@ namespace BeeKingdom.Buildings.Interaction
                 return null;
             }
 
+            bool fitRoyalHiveMap = buildingType == "ROYAL_PALACE"
+                && scan.Width == 1254 && scan.Height == 1254
+                && SceneManager.GetActiveScene().name == "Environment2D5D_HiveMap_Test";
+            float previousRoyalScale = scale * 1.20f;
+            if (fitRoyalHiveMap) scale *= 1.23f;
             float meshW = CanvasHeightWorld * scan.Aspect;
             float meshH = CanvasHeightWorld;
+            // Presentation fit on the existing pedestal; root/sidecar coordinates stay intact.
+            Vector3 visualOffset = fitRoyalHiveMap
+                ? new Vector3(meshW * (previousRoyalScale * 0.06f + (scale - previousRoyalScale) * 0.5f), -meshH * (previousRoyalScale * 0.10f + (scale - previousRoyalScale) * 0.5f + scale * 0.0575f), 0f)
+                : Vector3.zero;
 
             Transform visual = new GameObject("Visual").transform;
             visual.SetParent(root.transform, false);
-            visual.localPosition = Vector3.zero;
+            visual.localPosition = visualOffset;
             visual.localRotation = Quaternion.identity;
             visual.localScale = new Vector3(scale, scale, 1f);
 
@@ -310,8 +319,8 @@ namespace BeeKingdom.Buildings.Interaction
             BoxCollider collider = root.AddComponent<BoxCollider>();
             collider.size = new Vector3(meshW * scale, meshH * scale, 0.5f);
             collider.center = new Vector3(
-                0f,
-                (1f - scan.ContactV - 0.5f) * meshH * scale,
+                fitRoyalHiveMap ? visualOffset.x + (0.5f - scan.ContactU) * meshW * scale : 0f,
+                visualOffset.y + (1f - scan.ContactV - 0.5f) * meshH * scale,
                 0f);
 
             BuildingInteractionComponent interaction = root.AddComponent<BuildingInteractionComponent>();
@@ -399,13 +408,40 @@ namespace BeeKingdom.Buildings.Interaction
 
             bool isRoyal = string.Equals(resourceName, "ROYAL_PALACE", StringComparison.OrdinalIgnoreCase);
             ArtworkScan scan;
-            if (isRoyal)
+            if (isRoyal && width == RoyalPalaceOverride.Width && height == RoyalPalaceOverride.Height)
             {
                 scan = RoyalPalaceOverride;
                 scan.Width = 1536;
                 scan.Height = 1024;
                 scan.Aspect = ScanAspect(1536, 1024);
                 scan.Valid = true;
+            }
+            else if (isRoyal)
+            {
+                // New artwork: preserve its actual aspect and anchor the lowest opaque row.
+                // GetPixels32 rows run from bottom to top. Keep the sidecar ground point intact.
+                scan = default(ArtworkScan);
+                for (int y = 0; y < height; y++)
+                {
+                    int left = width;
+                    int right = -1;
+                    for (int x = 0; x < width; x++)
+                    {
+                        if (pixels[y * width + x].a < 8) continue;
+                        left = Mathf.Min(left, x);
+                        right = Mathf.Max(right, x);
+                    }
+                    if (right < left) continue;
+                    scan.Width = width;
+                    scan.Height = height;
+                    scan.ContactX = (left + right) / 2;
+                    scan.ContactYFromTop = height - 1 - y;
+                    scan.ContactU = (scan.ContactX + 0.5f) / width;
+                    scan.ContactV = (y + 0.5f) / height;
+                    scan.Aspect = ScanAspect(width, height);
+                    scan.Valid = true;
+                    break;
+                }
             }
             else
             {

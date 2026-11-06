@@ -131,38 +131,46 @@ namespace BeeKingdom.Tutorial
             float scale = compact ? Mathf.Max(0.75f, safe.width / 390f)
                 : Mathf.Clamp(Mathf.Min(safe.width / 1600f, safe.height / 900f), 0.65f, 3f);
             float margin = (compact ? 12f : 16f) * scale;
+            // The dialogue is a slim royal bandeau, never a quarter-screen billboard.
+            // On a 1920x1080 display this is ~1224x226 instead of ~1488x300.
+            // Mobile portrait keeps its independent safe-area layout.
             float panelWidth = compact ? safe.width - 2f * margin
-                : Mathf.Min(1240f * scale, safe.width - 2f * margin);
-            // Final compact landscape: 14% shorter; keep phone touch targets and readable copy.
-            float landscapeHeight = safe.height / scale < 650f ? 275f : 250f;
-            float panelHeight = Mathf.Min((compact ? 300f : landscapeHeight) * scale, safe.height * 0.6f);
+                : Mathf.Min(1020f * scale, safe.width - 2f * margin);
+            float panelHeight = Mathf.Min((compact ? 300f : 188f) * scale, safe.height * 0.6f);
             float bottom = compact ? margin : Mathf.Min(90f * scale, safe.height * 0.105f);
             Rect panel = new Rect(safe.center.x - panelWidth * 0.5f,
                 safe.yMax - bottom - panelHeight, panelWidth, panelHeight);
             float padding = (compact ? 20f : 24f) * scale;
-            float portraitWidth = compact ? 64f * scale : Mathf.Min(330f * scale, panelWidth * 0.29f);
-            float contentLeft = compact ? panel.x + padding : panel.x + portraitWidth + 30f * scale;
+            float portraitWidth = compact ? 64f * scale : Mathf.Min(185f * scale, panelWidth * 0.25f);
+            float contentLeft = compact ? panel.x + padding : panel.x + portraitWidth + 22f * scale;
             Rect portrait = compact
                 ? new Rect(panel.x + padding, panel.y + 14f * scale, portraitWidth, 64f * scale)
                 : new Rect(panel.x + 8f * scale, panel.y + 12f * scale, portraitWidth, panel.height - 24f * scale);
             Rect name = compact
                 ? new Rect(portrait.xMax + 14f * scale, panel.y + 26f * scale,
                     panel.xMax - padding - portrait.xMax - 14f * scale, 32f * scale)
-                : new Rect(contentLeft, panel.y + 20f * scale, panel.xMax - padding - contentLeft,
-                    Mathf.Max(26f, 32f * scale));
-            float actionHeight = Mathf.Max(48f, (compact ? 52f : 58f) * scale);
-            float actionWidth = (compact ? 126f : 206f) * scale;
+                : new Rect(contentLeft, panel.y + 17f * scale, panel.xMax - padding - contentLeft,
+                    Mathf.Max(26f, 29f * scale));
+            float actionHeight = Mathf.Max(48f, (compact ? 52f : 50f) * scale);
+            float actionWidth = (compact ? 126f : 174f) * scale;
             Rect action = new Rect(panel.xMax - padding - actionWidth,
-                panel.yMax - (compact ? 20f : 18f) * scale - actionHeight, actionWidth, actionHeight);
-            float skipWidth = (compact ? 98f : 136f) * scale;
+                panel.yMax - (compact ? 20f : 14f) * scale - actionHeight, actionWidth, actionHeight);
+            float skipWidth = (compact ? 98f : 110f) * scale;
             float textTop = compact ? panel.y + 96f * scale : name.yMax + 8f * scale;
+            // In landscape the action row sits BESIDE the dialogue, not below it.
+            // This keeps a 90+ unit scrollable text region even on short screens.
+            float textWidth = compact
+                ? panel.xMax - padding - contentLeft
+                : action.x - 10f * scale - skipWidth - 12f * scale - contentLeft;
+            float textHeight = compact
+                ? action.y - 12f * scale - textTop
+                : panel.yMax - 17f * scale - textTop;
             return new DialogueLayout
             {
                 Panel = panel, Scale = scale, Compact = compact, Portrait = portrait, Name = name,
-                Text = new Rect(contentLeft, textTop, panel.xMax - padding - contentLeft,
-                    action.y - 12f * scale - textTop),
+                Text = new Rect(contentLeft, textTop, textWidth, textHeight),
                 Continue = action,
-                Skip = new Rect(action.x - 12f * scale - skipWidth, action.y, skipWidth, action.height)
+                Skip = new Rect(action.x - 10f * scale - skipWidth, action.y, skipWidth, action.height)
             };
         }
 
@@ -170,8 +178,8 @@ namespace BeeKingdom.Tutorial
         {
             if (layout.Compact || BeeKingdom.Playground.HiveViewProductUiPresenter.AnyModalOpenForExternalHost)
                 return layout.Portrait;
-            return new Rect(layout.Panel.x - 32f * layout.Scale, layout.Panel.y - 26f * layout.Scale,
-                layout.Portrait.width + 60f * layout.Scale, layout.Panel.height + 24f * layout.Scale);
+            return new Rect(layout.Panel.x - 18f * layout.Scale, layout.Panel.y - 14f * layout.Scale,
+                layout.Portrait.width + 36f * layout.Scale, layout.Panel.height + 14f * layout.Scale);
         }
         private void ContinueOrDismiss()
         {

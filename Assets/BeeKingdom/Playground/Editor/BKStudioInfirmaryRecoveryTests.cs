@@ -124,9 +124,12 @@ namespace BeeKingdom.Playground.Editor
                 Assert.That(scroll.verticalScrollbar, Is.Not.Null);
                 Button refresh = host.GetComponentsInChildren<Button>(true).FirstOrDefault(btn =>
                     (btn.GetComponentInChildren<TextMeshProUGUI>(true)?.text == "Actualiser" || btn.GetComponentInChildren<TextMeshProUGUI>(true)?.text == "Refresh"));
-                Assert.That(refresh, Is.Not.Null);
-                refresh.onClick.Invoke();
-                Assert.That(fake.RefreshCalls, Is.EqualTo(2));
+                Assert.That(refresh, Is.Null, "Building data refreshes without a manual header/body Refresh button.");
+                typeof(HiveMapPremiumBuildingWindow).GetMethod("RefreshInfirmary",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .Invoke(view, null);
+                Assert.That(fake.RefreshCalls, Is.EqualTo(2),
+                    "Automatic refresh uses the same official shared controller.");
                 view.Hide();
                 Assert.That(view.InfirmaryActiveForProof, Is.False);
             }

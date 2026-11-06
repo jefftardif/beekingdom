@@ -394,6 +394,9 @@ namespace BeeKingdom.Playground
         private RemoteHiveResearchSnapshot snapshot;
         private bool disposed;
         private bool busy;
+        private bool quietlyRefreshing;
+        private string deferredStartId = string.Empty;
+        private bool deferredComplete;
 
         public HiveResearchPanelController(
             IHiveResearchClient client,
@@ -411,7 +414,8 @@ namespace BeeKingdom.Playground
 
         public HiveResearchScreenModel Model { get; private set; }
         public bool IsConfigured => !disposed;
-        public bool IsBusy => busy;
+        public bool IsBusy => busy && !quietlyRefreshing;
+        public bool IsRefreshingQuietly => quietlyRefreshing;
         public TimeSpan Elapsed => clock.Elapsed;
 
         public void Refresh() { RefreshInsideLifetime(false); }
@@ -420,8 +424,29 @@ namespace BeeKingdom.Playground
         // the whole window to a "Loading" state every few seconds just because the player didn't
         // ask for it - only Refresh(), called from an explicit player click, should do that.
         public void RefreshQuietly() { RefreshInsideLifetime(true); }
-        public void Start(string researchId) { StartInsideLifetime(researchId); }
-        public void Complete() { CompleteInsideLifetime(); }
+        public void Start(string researchId)
+        {
+            if (quietlyRefreshing)
+            {
+                if (!disposed && Model != null && Model.CanStart(researchId) &&
+                    string.IsNullOrEmpty(deferredStartId) && !deferredComplete)
+                    deferredStartId = researchId;
+                return;
+            }
+            StartInsideLifetime(researchId);
+        }
+        public void Complete()
+        {
+            if (quietlyRefreshing)
+            {
+                if (!disposed && Model?.ActiveOperation != null &&
+                    Model.CanComplete(Model.ActiveOperation.ResearchId) &&
+                    string.IsNullOrEmpty(deferredStartId))
+                    deferredComplete = true;
+                return;
+            }
+            CompleteInsideLifetime();
+        }
 
         public void Dispose()
         {
@@ -430,6 +455,8 @@ namespace BeeKingdom.Playground
             lifetime.Cancel();
             lifetime.Dispose();
             pendingKeys.Clear();
+            deferredStartId = string.Empty;
+            deferredComplete = false;
         }
 
         public Task RefreshForProofAsync() { return RefreshCoreAsync(false); }
@@ -445,6 +472,7 @@ namespace BeeKingdom.Playground
         {
             if (busy || disposed) return;
             busy = true;
+            quietlyRefreshing = quiet;
             if (!quiet) Model = HiveResearchPresentation.Loading(snapshot, clock.Elapsed);
             try
             {
@@ -472,6 +500,23 @@ namespace BeeKingdom.Playground
             finally
             {
                 busy = false;
+                quietlyRefreshing = false;
+                if (quiet && !disposed)
+                {
+                    // Accept only a deliberate click made while a passive
+                    // server read was pending. Never trigger a mutation from
+                    // polling alone. Revalidate against the fresh snapshot.
+                    string startId = deferredStartId;
+                    bool complete = deferredComplete;
+                    deferredStartId = string.Empty;
+                    deferredComplete = false;
+                    if (complete && Model?.ActiveOperation != null &&
+                        Model.CanComplete(Model.ActiveOperation.ResearchId))
+                        CompleteInsideLifetime();
+                    else if (!string.IsNullOrEmpty(startId) &&
+                             Model != null && Model.CanStart(startId))
+                        StartInsideLifetime(startId);
+                }
             }
         }
 

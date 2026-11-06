@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BeeKingdom.Networking;
+using BeeKingdom.Localization;
 using NUnit.Framework;
 
 namespace BeeKingdom.Playground.Editor
@@ -300,6 +301,120 @@ namespace BeeKingdom.Playground.Editor
             }
         }
 
+        [Test]
+        public async Task QuietPollingKeepsStartEnabledAndQueuesClickOnce()
+        {
+            var client = new FakeClient(Snapshot());
+            using (var controller = new HiveResearchPanelController(
+                client, HiveId, new FixedKeySource("queued-start-key"), new FakeClock(TimeSpan.Zero)))
+            {
+                await controller.RefreshForProofAsync();
+                Assert.That(controller.Model.CanStart(HiveResearchClient.ForagingRoutesId), Is.True);
+                var response = new TaskCompletionSource<RemoteHiveResearchSnapshot>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                client.DeferredRead = response.Task;
+                Task polling = controller.RefreshQuietlyForProofAsync();
+
+                Assert.That(controller.IsRefreshingQuietly, Is.True);
+                Assert.That(controller.IsBusy, Is.False,
+                    "Passive server reads must not visually disable the Start button.");
+                Assert.That(controller.Model.State, Is.EqualTo(HiveResearchScreenState.Ready));
+                Assert.That(controller.Model.CanStart(HiveResearchClient.ForagingRoutesId), Is.True);
+
+                client.StartSteps.Enqueue(StartResponse(3, "queued-start-key"));
+                controller.Start(HiveResearchClient.ForagingRoutesId);
+                controller.Start(HiveResearchClient.ForagingRoutesId);
+                Assert.That(client.StartKeys, Is.Empty,
+                    "A queued click must wait for a fresh server snapshot.");
+
+                client.DeferredRead = null;
+                response.SetResult(Snapshot());
+                await polling;
+
+                Assert.That(controller.IsRefreshingQuietly, Is.False);
+                Assert.That(client.StartKeys, Has.Count.EqualTo(1),
+                    "Multiple taps during one silent GET must issue only one mutation.");
+                Assert.That(controller.Model.ActiveOperation, Is.Not.Null);
+                Assert.That(controller.Model.ActiveOperation.ResearchId,
+                    Is.EqualTo(HiveResearchClient.ForagingRoutesId));
+            }
+        }
+
+        [Test]
+        public async Task QuietPollingQueuesReadyCompletionOnlyAfterFreshServerProof()
+        {
+            var client = new FakeClient(SnapshotWithOperation(HiveResearchClient.AwaitingCompletionStatus));
+            using (var controller = new HiveResearchPanelController(
+                client, HiveId, new FixedKeySource("queued-complete-key"), new FakeClock(TimeSpan.Zero)))
+            {
+                await controller.RefreshForProofAsync();
+                Assert.That(controller.Model.CanComplete(HiveResearchClient.ForagingRoutesId), Is.True);
+                var response = new TaskCompletionSource<RemoteHiveResearchSnapshot>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                client.DeferredRead = response.Task;
+                Task polling = controller.RefreshQuietlyForProofAsync();
+
+                Assert.That(controller.IsBusy, Is.False);
+                controller.Complete();
+                controller.Complete();
+                Assert.That(client.CompleteKeys, Is.Empty);
+
+                client.CompleteSteps.Enqueue(CompleteResponse(4, "queued-complete-key"));
+                client.DeferredRead = null;
+                response.SetResult(SnapshotWithOperation(HiveResearchClient.AwaitingCompletionStatus));
+                await polling;
+
+                Assert.That(client.CompleteKeys, Has.Count.EqualTo(1));
+                Assert.That(controller.Model.IsCompleted(HiveResearchClient.ForagingRoutesId), Is.True);
+            }
+        }
+        [Test]
+        public void ResearchPremiumLocalizationResolvesAccentsAndPunctuationInBothLanguages()
+        {
+            // Tests Unity's real Resources/TextAsset/JsonUtility path, not just
+            // the text written to the source JSON. Do not modify saved locale.
+            string originalLocale = BeeLocalization.CurrentLocale;
+            // Guard the complete FR/EN catalogs, not just the few strings in
+            // this screen. Newly inserted text must never be double-decoded.
+            foreach (string locale in new[] { "fr-CA", "en-US" })
+            {
+                UnityEngine.TextAsset catalog = UnityEngine.Resources.Load<UnityEngine.TextAsset>(
+                    "Localization/strings." + locale);
+                Assert.That(catalog, Is.Not.Null, "Missing language catalog: " + locale);
+                Assert.That(catalog.text.Contains("\u00C3"), Is.False,
+                    "Double-encoded UTF-8 accent in " + locale);
+                Assert.That(catalog.text.Contains("\u00E2\u20AC"), Is.False,
+                    "Double-encoded dash/typographic punctuation in " + locale);
+                Assert.That(catalog.text.Contains("\u00C2\u00B7"), Is.False,
+                    "Double-encoded separator in " + locale);
+            }
+            try
+            {
+                Assert.That(BeeLocalization.SetLocale("fr-CA"), Is.True);
+                Assert.That(BeeLocalization.Text("research.premium.completed"),
+                    Is.EqualTo("\u00C9tudes termin\u00E9es : {0}/{1}"));
+                Assert.That(BeeLocalization.Text("research.premium.online"),
+                    Is.EqualTo("Donn\u00E9es officielles synchronis\u00E9es"));
+                Assert.That(BeeLocalization.Text("research.premium.tab.reserves"),
+                    Is.EqualTo("R\u00E9serves"));
+                Assert.That(BeeLocalization.Text("research.premium.status.locked"),
+                    Is.EqualTo("Pr\u00E9requis manquant"));
+                Assert.That(BeeLocalization.Text("research.premium.server_suffix"),
+                    Is.EqualTo(" \u00B7 serveur officiel"));
+
+                Assert.That(BeeLocalization.SetLocale("en-US"), Is.True);
+                Assert.That(BeeLocalization.Text("research.premium.local"),
+                    Is.EqualTo("Local demo \u2014 not saved to your official account"));
+                Assert.That(BeeLocalization.Text("research.premium.offline"),
+                    Is.EqualTo("Offline \u2014 view only"));
+                Assert.That(BeeLocalization.Text("research.premium.server_suffix"),
+                    Is.EqualTo(" \u00B7 official server"));
+            }
+            finally
+            {
+                BeeLocalization.SetLocale(originalLocale);
+            }
+        }
         private static RemoteHiveResearchSnapshot Snapshot()
         {
             DateTimeOffset now = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero);
@@ -419,12 +534,13 @@ namespace BeeKingdom.Playground.Editor
             public GameReadSource LastReadSource { get; set; } = GameReadSource.Server;
             public DateTimeOffset LastReadCachedAtUtc { get; set; }
             public Action OnReadAsync { get; set; }
+            public Task<RemoteHiveResearchSnapshot> DeferredRead { get; set; }
             public void BumpSnapshotRevision(long newRevision) { snapshot.Revision = newRevision; }
             public Task<RemoteHiveResearchSnapshot> ReadAsync(Guid hiveId, CancellationToken cancellationToken = default(CancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 OnReadAsync?.Invoke();
-                return Task.FromResult(snapshot);
+                return DeferredRead ?? Task.FromResult(snapshot);
             }
             public Task<RemoteHiveResearchMutationResponse> StartAsync(Guid hiveId, string researchId, long expectedRevision, string idempotencyKey, CancellationToken cancellationToken = default(CancellationToken))
             {

@@ -27,13 +27,18 @@ namespace BeeKingdom.Tutorial.Tests.Editor
         {
             var layout = Layout(width, height, new Rect(0, 0, width, height));
             Rect panel = Box(layout, "Panel");
-            Assert.That(panel.height / height, Is.LessThanOrEqualTo(0.28f), "No return to the oversized black panel.");
-            Assert.That(panel.width / width, Is.LessThanOrEqualTo(0.80f));
+            Assert.That(panel.height / height, Is.LessThanOrEqualTo(0.215f), "The landscape tutorial is a slim royal bandeau.");
+            Assert.That(panel.width / width, Is.LessThanOrEqualTo(0.66f));
             Assert.That(panel.yMin / height, Is.GreaterThanOrEqualTo(0.61f));
             Assert.That((height - panel.yMax) / height, Is.GreaterThanOrEqualTo(0.095f));
             Assert.That(Box(layout, "Text").Overlaps(Box(layout, "Continue")), Is.False);
             Assert.That(Box(layout, "Text").Overlaps(Box(layout, "Skip")), Is.False);
             Assert.That(Box(layout, "Portrait").Overlaps(Box(layout, "Text")), Is.False);
+            Rect text = Box(layout, "Text");
+            float scale = (float)layout.GetType().GetField("Scale").GetValue(layout);
+            Assert.That(text.height / scale, Is.GreaterThanOrEqualTo(90f),
+                "Shortening the panel must not reduce the scrollable text region.");
+            Assert.That(text.width / scale, Is.GreaterThanOrEqualTo(320f));
         }
 
         [TestCase(844, 390, 47, 21, 750, 369)]

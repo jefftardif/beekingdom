@@ -1,5 +1,6 @@
 using System;
 using BeeKingdom.Buildings.Interaction;
+using BeeKingdom.Localization;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -23,7 +24,19 @@ namespace BeeKingdom.Playground
         public static bool OverlayOpenForExternalHost { get; private set; }
 
         private HiveMapPremiumBuildingWindow infirmaryWindow;
+        private HiveMapPremiumBuildingWindow defenseWindow;
+        private HiveMapPremiumBuildingWindow geneticsWindow;
+        private HiveMapPremiumBuildingWindow academyWindow;
+        private IHiveSquadReservationPanelController boundDefenseSquad;
+        private ICombatPatrolPanelController boundDefensePatrol;
         private ICombatPatrolPanelController boundInfirmaryController;
+        private bool IsAcademySelection => selectedBuilding != null &&
+            string.Equals(selectedBuilding.BuildingType, BuildingTypes.Academy,
+                StringComparison.Ordinal);
+        private bool IsGeneticsSelection => selectedBuilding != null &&
+            string.Equals(selectedBuilding.BuildingType, BuildingTypes.Genetics, StringComparison.Ordinal);
+        private bool IsDefenseSelection => selectedBuilding != null &&
+            string.Equals(selectedBuilding.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal);
         private bool IsInfirmarySelection => selectedBuilding != null &&
             string.Equals(selectedBuilding.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal);
         private BuildingDefinition selectedBuilding;
@@ -72,6 +85,23 @@ namespace BeeKingdom.Playground
                 }
                 infirmaryWindow.SetSuppressed(InfirmarySuppressed());
             }
+            if (OverlayOpenForExternalHost && IsDefenseSelection && defenseWindow != null)
+            {
+                var squad = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap;
+                var patrol = MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap;
+                if (!ReferenceEquals(boundDefenseSquad, squad) ||
+                    !ReferenceEquals(boundDefensePatrol, patrol))
+                {
+                    boundDefenseSquad = squad;
+                    boundDefensePatrol = patrol;
+                    defenseWindow.BindDefenseControllers(squad, patrol);
+                }
+                defenseWindow.SetSuppressed(DefenseSuppressed());
+            }
+            if (OverlayOpenForExternalHost && IsGeneticsSelection && geneticsWindow != null)
+                geneticsWindow.SetSuppressed(GeneticsSuppressed());
+            if (OverlayOpenForExternalHost && IsAcademySelection && academyWindow != null)
+                academyWindow.SetSuppressed(AcademySuppressed());
             if (subscribedController != null) return;
             BuildingInteractionController controller = FindAnyObjectByType<BuildingInteractionController>();
             if (controller == null) return;
@@ -82,6 +112,9 @@ namespace BeeKingdom.Playground
         private void OnDestroy()
         {
             CloseInfirmaryWindow();
+            CloseDefenseWindow();
+            CloseGeneticsWindow();
+            CloseAcademyWindow();
             if (subscribedController != null) subscribedController.Selection.BuildingClicked -= OnBuildingClicked;
         }
 
@@ -92,6 +125,9 @@ namespace BeeKingdom.Playground
             OverlayOpenForExternalHost = true;
             if (IsInfirmarySelection)
             {
+                // Only one premium building window may remain active.
+                if (defenseWindow != null) defenseWindow.Hide();
+                if (academyWindow != null) academyWindow.Hide();
                 // Restore the existing recovery ward, not the future-feature placeholder.
                 if (infirmaryWindow == null)
                 {
@@ -101,11 +137,68 @@ namespace BeeKingdom.Playground
                 }
                 boundInfirmaryController = MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap;
                 infirmaryWindow.BindInfirmaryController(boundInfirmaryController);
+                if (geneticsWindow != null) geneticsWindow.Hide();
                 infirmaryWindow.Show(building, "Infirmerie", "Infirmary", string.Empty, string.Empty,
                     CloseInfirmaryWindow, UpgradeInfirmary);
                 infirmaryWindow.SetSuppressed(InfirmarySuppressed());
             }
-            else if (infirmaryWindow != null) infirmaryWindow.Hide();
+            else if (IsDefenseSelection)
+            {
+                if (infirmaryWindow != null) infirmaryWindow.Hide();
+                if (academyWindow != null) academyWindow.Hide();
+                if (defenseWindow == null)
+                {
+                    GameObject root = new GameObject("Defense Activities Screen");
+                    root.transform.SetParent(transform, false);
+                    defenseWindow = root.AddComponent<HiveMapPremiumBuildingWindow>();
+                }
+                boundDefenseSquad = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap;
+                boundDefensePatrol = MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap;
+                defenseWindow.BindDefenseControllers(boundDefenseSquad, boundDefensePatrol);
+                if (geneticsWindow != null) geneticsWindow.Hide();
+                defenseWindow.Show(building, "Défense", "Defense", string.Empty,
+                    string.Empty, CloseDefenseWindow, UpgradeDefense);
+                defenseWindow.SetSuppressed(DefenseSuppressed());
+            }
+            else if (IsGeneticsSelection)
+            {
+                if (infirmaryWindow != null) infirmaryWindow.Hide();
+                if (academyWindow != null) academyWindow.Hide();
+                if (defenseWindow != null) defenseWindow.Hide();
+                if (geneticsWindow == null)
+                {
+                    GameObject root = new GameObject("Genetics Activities Screen");
+                    root.transform.SetParent(transform, false);
+                    geneticsWindow = root.AddComponent<HiveMapPremiumBuildingWindow>();
+                }
+                geneticsWindow.Show(building, "Génétique", "Genetics",
+                    string.Empty, string.Empty,
+                    CloseGeneticsWindow, UpgradeGenetics);
+                geneticsWindow.SetSuppressed(GeneticsSuppressed());
+            }
+            else if (IsAcademySelection)
+            {
+                if (infirmaryWindow != null) infirmaryWindow.Hide();
+                if (defenseWindow != null) defenseWindow.Hide();
+                if (geneticsWindow != null) geneticsWindow.Hide();
+                if (academyWindow == null)
+                {
+                    GameObject root = new GameObject("Academy Activities Screen");
+                    root.transform.SetParent(transform, false);
+                    academyWindow = root.AddComponent<HiveMapPremiumBuildingWindow>();
+                }
+                academyWindow.Show(building, "Académie", "Academy",
+                    string.Empty, string.Empty,
+                    CloseAcademyWindow, UpgradeAcademy);
+                academyWindow.SetSuppressed(AcademySuppressed());
+            }
+            else
+            {
+                if (infirmaryWindow != null) infirmaryWindow.Hide();
+                if (defenseWindow != null) defenseWindow.Hide();
+                if (geneticsWindow != null) geneticsWindow.Hide();
+                if (academyWindow != null) academyWindow.Hide();
+            }
         }
 
         private static bool InfirmarySuppressed()
@@ -116,6 +209,74 @@ namespace BeeKingdom.Playground
                 || HiveViewProductUiPresenter.UpgradeProgressOverlayOpenForExternalHost;
         }
 
+        private static bool DefenseSuppressed()
+        {
+            return InfirmarySuppressed() ||
+                HiveViewProductUiPresenter.PlayerProfileOverlayOpenForExternalHost;
+        }
+
+        private static bool GeneticsSuppressed()
+        {
+            return DefenseSuppressed();
+        }
+
+        private static bool AcademySuppressed()
+        {
+            return DefenseSuppressed()
+                || HiveViewProductUiPresenter.BarrackOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost
+                || HiveViewProductUiPresenter.CommunicationOverlayOpenForExternalHost;
+        }
+
+        private void CloseAcademyWindow()
+        {
+            if (!IsAcademySelection && academyWindow == null) return;
+            OverlayOpenForExternalHost = false;
+            selectedBuilding = null;
+            if (academyWindow != null) academyWindow.Hide();
+        }
+
+        private void UpgradeAcademy()
+        {
+            string key = selectedBuilding?.LegacyKey;
+            CloseAcademyWindow();
+            if (!string.IsNullOrWhiteSpace(key))
+                HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(key);
+        }
+
+        private void CloseGeneticsWindow()
+        {
+            if (!IsGeneticsSelection && geneticsWindow == null) return;
+            OverlayOpenForExternalHost = false;
+            selectedBuilding = null;
+            if (geneticsWindow != null) geneticsWindow.Hide();
+        }
+
+        private void UpgradeGenetics()
+        {
+            string key = selectedBuilding?.LegacyKey;
+            CloseGeneticsWindow();
+            if (!string.IsNullOrWhiteSpace(key))
+                HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(key);
+        }
+        private void CloseDefenseWindow()
+        {
+            if (!IsDefenseSelection && defenseWindow == null) return;
+            OverlayOpenForExternalHost = false;
+            selectedBuilding = null;
+            boundDefenseSquad = null;
+            boundDefensePatrol = null;
+            if (defenseWindow != null) defenseWindow.Hide();
+        }
+
+        private void UpgradeDefense()
+        {
+            string key = selectedBuilding?.LegacyKey;
+            CloseDefenseWindow();
+            CloseGeneticsWindow();
+            if (!string.IsNullOrWhiteSpace(key))
+                HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(key);
+        }
         private void CloseInfirmaryWindow()
         {
             OverlayOpenForExternalHost = false;
@@ -147,6 +308,39 @@ namespace BeeKingdom.Playground
                 }
                 return;
             }
+            if (IsDefenseSelection)
+            {
+                // The retained-mode full screen receives events, not the
+                // old provisional popup. No click-through to the hive.
+                if (!DefenseSuppressed() && Event.current.type == EventType.KeyDown
+                    && Event.current.keyCode == KeyCode.Escape)
+                {
+                    CloseDefenseWindow();
+                    Event.current.Use();
+                }
+                return;
+            }
+            if (IsGeneticsSelection)
+            {
+                if (!GeneticsSuppressed() && Event.current.type == EventType.KeyDown
+                    && Event.current.keyCode == KeyCode.Escape)
+                {
+                    CloseGeneticsWindow();
+                    Event.current.Use();
+                }
+                return;
+            }
+            if (IsAcademySelection)
+            {
+                // Academy is a retained-mode fullscreen modal, not a small popup.
+                if (!AcademySuppressed() && Event.current.type == EventType.KeyDown
+                    && Event.current.keyCode == KeyCode.Escape)
+                {
+                    CloseAcademyWindow();
+                    Event.current.Use();
+                }
+                return;
+            }
             BuildingDefinition building = selectedBuilding;
             if (building == null)
             {
@@ -171,16 +365,16 @@ namespace BeeKingdom.Playground
             GUILayout.Space(8f);
             GUILayout.Label(BuildingStatus(building), new GUIStyle(GUI.skin.label) { wordWrap = true });
             GUILayout.Space(8f);
-            GUILayout.Label("Capacite actuelle : amelioration du batiment.", new GUIStyle(GUI.skin.label) { wordWrap = true });
-            GUILayout.Label("Gameplay officiel : pas encore disponible dans le client actuel.", new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUILayout.Label(BeeLocalization.Text("unsupported_building.capacity"), new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUILayout.Label(BeeLocalization.Text("unsupported_building.gameplay_unavailable"), new GUIStyle(GUI.skin.label) { wordWrap = true });
 
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Fermer"))
+            if (GUILayout.Button(BeeLocalization.Text("common.close")))
             {
                 OverlayOpenForExternalHost = false;
             }
-            if (GUILayout.Button("Ameliorer"))
+            if (GUILayout.Button(BeeLocalization.Text("common.upgrade")))
             {
                 OverlayOpenForExternalHost = false;
                 HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(building.LegacyKey);
@@ -200,23 +394,23 @@ namespace BeeKingdom.Playground
         private static string BuildingStatus(BuildingDefinition building)
         {
             if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal))
-                return "Les soins officiels ne sont pas encore exposes par un controleur Infirmary. Les soigneuses restent donc en attente de fonctionnalite.";
+                return BeeLocalization.Text("unsupported_building.infirmary_status");
             if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal))
-                return "L'Academie est presente comme batiment futur. La Recherche officielle reste portee par son propre noeud et sa fenetre HiveMap dediee; aucune formation Academie separee n'est server-backed aujourd'hui.";
+                return BeeLocalization.Text("unsupported_building.academy_status");
             if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal))
-                return "La Defense reste une zone future. Les systemes combat/perimetre existants vivent dans les parcours Armee et serveur, mais ne sont pas encore une action officielle de ce batiment.";
+                return BeeLocalization.Text("unsupported_building.defense_status");
             if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal))
-                return "La Banque est presente comme batiment futur. Les stocks, recompenses et ressources officielles restent portes par leurs panneaux et clients dedies; aucune action bancaire separee n'est server-backed aujourd'hui.";
-            return "La genetique officielle reste une capacite future : les choix de mutation/progression ne sont pas encore server-backed.";
+                return BeeLocalization.Text("unsupported_building.bank_status");
+            return BeeLocalization.Text("unsupported_building.genetics_status");
         }
 
         private static string BuildingTitle(BuildingDefinition building)
         {
-            if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)) return "Infirmerie";
-            if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal)) return "Academie";
-            if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal)) return "Defense";
-            if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal)) return "Banque";
-            return "Genetique";
+            if (string.Equals(building.BuildingType, BuildingTypes.Infirmary, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.infirmary_title");
+            if (string.Equals(building.BuildingType, BuildingTypes.Academy, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.academy_title");
+            if (string.Equals(building.BuildingType, BuildingTypes.Defense, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.defense_title");
+            if (string.Equals(building.BuildingType, BuildingTypes.Bank, StringComparison.Ordinal)) return BeeLocalization.Text("unsupported_building.bank_title");
+            return BeeLocalization.Text("unsupported_building.genetics_title");
         }
     }
 }

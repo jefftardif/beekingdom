@@ -173,6 +173,53 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
+        public async Task BackgroundRefreshKeepsConfirmedRosterAndDoesNotStartAnAction()
+        {
+            var store = new MemoryStore();
+            var fake = new FakeClient(store) { ReadResult = Snapshot() };
+            var controller = NewController(fake, store, new FakeClock());
+            await controller.RefreshForProofAsync();
+            var confirmed = controller.Model;
+
+            var delayed = new TaskCompletionSource<RemoteDoctrineRecruitmentSnapshot>();
+            fake.NextRead = delayed;
+            Task refresh = controller.RefreshForProofAsync();
+            Assert.That(controller.IsBusy, Is.True);
+            Assert.That(controller.Model, Is.SameAs(confirmed),
+                "A passive refresh must not put an already loaded roster into Loading.");
+            Assert.That(controller.Model.State, Is.EqualTo(HiveDoctrineRecruitmentScreenState.Ready));
+            Assert.That(controller.Model.FindOffer("guardians").BatchSize, Is.EqualTo(4));
+            Assert.That(fake.StartKeys, Is.Empty);
+            Assert.That(fake.ClaimKeys, Is.Empty);
+
+            delayed.SetResult(Snapshot());
+            await refresh;
+            Assert.That(controller.IsBusy, Is.False);
+            Assert.That(controller.Model.State, Is.EqualTo(HiveDoctrineRecruitmentScreenState.Ready));
+            Assert.That(fake.StartKeys, Is.Empty);
+            Assert.That(fake.ClaimKeys, Is.Empty);
+            controller.Dispose();
+        }
+        [Test]
+        public void BarrackTrainingLabelRemainsFormerFourAcrossSilentRefresh()
+        {
+            var snapshot = Snapshot();
+            var ready = HiveOfficialDoctrineRecruitmentPresentation.Project(
+                HiveDoctrineRecruitmentScreenState.Ready, snapshot, TimeSpan.Zero, true);
+            var refreshing = HiveOfficialDoctrineRecruitmentPresentation.Project(
+                HiveDoctrineRecruitmentScreenState.Loading, snapshot, TimeSpan.Zero, true);
+            var method = typeof(HiveViewProductUiPresenter).GetMethod(
+                "BarrackTrainingButtonCaption",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.That(method, Is.Not.Null);
+            string before = (string)method.Invoke(null, new object[] { ready, "guardians" });
+            string during = (string)method.Invoke(null, new object[] { refreshing, "guardians" });
+            Assert.That(before, Is.EqualTo("Former +4"));
+            Assert.That(during, Is.EqualTo(before));
+            Assert.That(ready.CanStart("guardians"), Is.True);
+            Assert.That(refreshing.CanStart("guardians"), Is.False);
+        }
+        [Test]
         public async Task PreparedStartIsStoredBeforeTransportAndCleared()
         {
             var store = new MemoryStore();
@@ -630,6 +677,7 @@ namespace BeeKingdom.Playground.Editor
                 get;
                 set;
             }
+            public TaskCompletionSource<RemoteDoctrineRecruitmentSnapshot> NextRead { get; set; }
             public RemoteDoctrineRecruitmentResponse StartResult
             {
                 get;
@@ -655,6 +703,12 @@ namespace BeeKingdom.Playground.Editor
                     default(CancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (NextRead != null)
+                {
+                    var read = NextRead.Task;
+                    NextRead = null;
+                    return read;
+                }
                 return Task.FromResult(ReadResult);
             }
 

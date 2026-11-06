@@ -22,6 +22,7 @@ namespace BeeKingdom.Playground
         private const string AllianceCenterBuildingType = "ALLIANCE_CENTER";
 
         private BuildingInteractionController subscribedController;
+        private float nextAutoRefreshAt;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -55,6 +56,16 @@ namespace BeeKingdom.Playground
 
         private void Update()
         {
+            // Quiet reads every 18 seconds; no visible Refresh action needed.
+            if (HiveViewProductUiPresenter.AllianceOverlayOpenForExternalHost &&
+                HiveViewProductUiPresenter.HasEnteredHiveForExternalHost &&
+                Time.unscaledTime >= nextAutoRefreshAt)
+            {
+                nextAutoRefreshAt = Time.unscaledTime + 18f;
+                var alliance = MobileAccountSessionRuntimeBootstrap.AllianceCenterControllerForHiveMap;
+                if (alliance != null && alliance.IsConfigured && !alliance.IsBusy)
+                    alliance.RefreshQuietly();
+            }
             // Polled rather than found once in Start(): BuildingInteractionController is
             // created by a separate AutoStart bootstrap (BuildingRuntimeViewBootstrap) with
             // no guaranteed ordering relative to this one on the same AfterSceneLoad frame.

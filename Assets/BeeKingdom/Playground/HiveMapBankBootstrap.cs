@@ -44,6 +44,7 @@ namespace BeeKingdom.Playground {
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            HiveViewProductUiPresenter.TickBankOverlayForExternalHost();
             if (subscribedController != null) return;
 
             BuildingInteractionController controller = FindAnyObjectByType<BuildingInteractionController>();

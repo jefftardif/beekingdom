@@ -33,6 +33,23 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
+        public void UpgradeIsOnlyInHeaderAndPassiveRefreshNeverShowsLoadingOnPrimaryAction()
+        {
+            string source = Presenter;
+            int start = source.IndexOf("private static void DrawOfficialBarrackContentActivities(",
+                StringComparison.Ordinal);
+            int end = source.IndexOf("public sealed class HiveViewCellMarker", start,
+                StringComparison.Ordinal);
+            string body = source.Substring(start, end - start);
+            StringAssert.DoesNotContain("Rect upgrade = new Rect(levelCard", body);
+            StringAssert.DoesNotContain("DrawAllianceActivitiesButton(upgrade,", body);
+            StringAssert.DoesNotContain("OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily)", body);
+            StringAssert.Contains("DrawBarrackStableTrainingButton", body);
+            StringAssert.Contains("BarrackTrainingButtonCaption", body);
+            StringAssert.Contains("doctrineRecruitmentController.IsBusy", body);
+            StringAssert.Contains("DrawPremiumBuildingUpgradeHeader(\"guard_post\"", source);
+        }
+        [Test]
         public void BuildingTap_StillUsesRealTrainingAndKeepsFastClaim()
         {
             StringAssert.Contains("BuildingTypes.Barrack", Host);
