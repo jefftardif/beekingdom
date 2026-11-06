@@ -33269,9 +33269,9 @@ if (leftNavigationTexture == null)
 
         private static void DrawAllianceTopNavigation(Rect rect, bool compact)
         {
-            // One navigation level only. Every visible tab below is backed by real, working
-            // content in the current Alpha; unfinished Territory/Shop/War/Diplomacy routes are
-            // intentionally not exposed as dead buttons.
+            // One navigation level only. Every visible tab has a real handler:
+            // Territory is a server-backed read-only view. Unfinished Shop/War/
+            // Diplomacy routes remain hidden rather than showing dead buttons.
             string[] ids = { "overview", "members", "chat", "journal", "help", "donations", "research", "territory" };
             string[] labels = { BeeLocalization.Text("alliance.premium.tab.overview", "APERÇU"), BeeLocalization.Text("alliance.premium.tab.members", "MEMBRES"), "CHAT", BeeLocalization.Text("alliance.premium.tab.journal", "JOURNAL"), BeeLocalization.Text("alliance.premium.tab.help", "AIDE"), BeeLocalization.Text("alliance.premium.tab.donations", "DONS"), BeeLocalization.Text("alliance.premium.tab.research", "RECHERCHES"), AllianceTerritoryText("tab", "TERRITOIRE", "TERRITORY") };
             // Activities-v4: no outer framed container around a row of navigation controls.

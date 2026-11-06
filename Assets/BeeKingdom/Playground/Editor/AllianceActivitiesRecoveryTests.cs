@@ -68,7 +68,7 @@ public sealed class AllianceRecoveryLocalFixture : IAllianceCenterPanelControlle
         private static Type Presenter => typeof(HiveViewProductUiPresenter);
         private static IAllianceCenterPanelController previousController;
         private static bool previewActive;
-        private static readonly string[] AlphaTabs = { "overview", "members", "chat", "journal", "help", "donations", "research" };
+        private static readonly string[] AlphaTabs = { "overview", "members", "chat", "journal", "help", "donations", "research", "territory" };
 
         private static string MethodSource(string name)
         {
@@ -86,10 +86,13 @@ public sealed class AllianceRecoveryLocalFixture : IAllianceCenterPanelControlle
         }
 
         [Test]
-        public void AllianceShell_UsesRecoveredActivitiesHeaderNotLegacyThreeColumns()
+        public void AllianceShell_UsesPremiumBackAndNavigationNotLegacyThreeColumns()
         {
             string source = MethodSource("DrawAllianceHeadquartersScreen");
-            StringAssert.Contains("DrawAllianceActivitiesButton", source);
+            // Current premium navigation has a dedicated back action; an
+            // Activities shortcut is no longer part of this header.
+            StringAssert.Contains("DrawPremiumBackButton", source);
+            StringAssert.Contains("ClosePremiumScreensInPriorityOrderCore", source);
             StringAssert.Contains("DrawAllianceTopNavigation", source);
             StringAssert.Contains("DrawUnderOwnOverlayGate", source);
             StringAssert.DoesNotContain("DrawAllianceRightColumn(", source);
@@ -97,7 +100,7 @@ public sealed class AllianceRecoveryLocalFixture : IAllianceCenterPanelControlle
         }
 
         [Test]
-        public void AlphaNavigation_ExposesExactlySevenFunctionalTabs()
+        public void AlphaNavigation_ExposesEightFunctionalTabsIncludingReadOnlyTerritory()
         {
             string source = MethodSource("DrawAllianceTopNavigation");
             var ids = Regex.Match(source, @"string\[\] ids\s*=\s*\{([^}]+)\}");
@@ -107,6 +110,14 @@ public sealed class AllianceRecoveryLocalFixture : IAllianceCenterPanelControlle
             CollectionAssert.AreEqual(AlphaTabs, actual);
             string routes = MethodSource("DrawAllianceTabContent");
             foreach (string tab in AlphaTabs) StringAssert.Contains("\"" + tab + "\"", routes);
+            // Territory is intentionally a server-backed read-only view, not
+            // an exposed placeholder or an unauthorized mutation button.
+            StringAssert.Contains("DrawAllianceTerritoryReadOnly", routes);
+            string territory = MethodSource("DrawAllianceTerritoryReadOnly");
+            StringAssert.Contains("HeadquartersReadForAlliance", territory);
+            StringAssert.Contains("AllianceHeadquartersPresentation.Rows", territory);
+            StringAssert.DoesNotContain("CreateProject(", territory);
+            StringAssert.DoesNotContain("UpdateTerritory(", territory);
         }
 
         [Test]
