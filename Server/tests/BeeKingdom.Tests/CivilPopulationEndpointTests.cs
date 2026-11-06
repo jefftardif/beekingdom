@@ -43,6 +43,50 @@ public sealed class CivilPopulationEndpointTests
     }
 
     [Test]
+    public async Task Read_only_pilot_allows_auth_get_but_never_paid_cohort_post()
+    {
+        await using var factory = Factory(true, readOnlyPilot: true);
+        using var client = factory.CreateClient();
+        Guid unknownHive = Guid.NewGuid();
+        string route = $"/game/v1/hives/{unknownHive:D}/civil-population";
+        Assert.That((await client.GetAsync(route)).StatusCode,
+            Is.EqualTo(HttpStatusCode.Unauthorized));
+        using HttpResponseMessage deniedBeforeLogin = await client.PostAsJsonAsync(
+            route + "/cohorts/start", new { expectedRevision = 0,
+                idempotencyKey = "read-only-unauth-01" });
+        Assert.That(deniedBeforeLogin.StatusCode,
+            Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+
+        string token = await Login(factory, client);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+        Guid player = factory.Services.GetRequiredService<BeeKingdom.Authentication.AuthenticationManager>()
+            .ValidateToken(token).PlayerId!.Value;
+        Guid hive = Guid.NewGuid();
+        await Seed(factory, player, hive);
+        string endpoint = $"/game/v1/hives/{hive:D}/civil-population";
+        PlayerHiveState before = (await factory.Services
+            .GetRequiredService<IHiveStateRepository>().ReadAsync(player, hive))!;
+        using HttpResponseMessage response = await client.GetAsync(endpoint);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body.RootElement.GetProperty("canStart").GetBoolean(), Is.False);
+        Assert.That(body.RootElement.GetProperty("availableWorkers").GetInt64(), Is.Zero);
+        using HttpResponseMessage rejected = await client.PostAsJsonAsync(
+            endpoint + "/cohorts/start", new { expectedRevision = before.Revision,
+                idempotencyKey = "read-only-auth-01" });
+        Assert.That(rejected.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+        using var error = JsonDocument.Parse(await rejected.Content.ReadAsStringAsync());
+        Assert.That(error.RootElement.GetProperty("code").GetString(),
+            Is.EqualTo("game.civil_population_readonly"));
+        PlayerHiveState after = (await factory.Services
+            .GetRequiredService<IHiveStateRepository>().ReadAsync(player, hive))!;
+        Assert.That(after.Revision, Is.EqualTo(before.Revision));
+        Assert.That(after.CivilPopulation, Is.Null);
+        Assert.That(after.Resources["honey"].Amount, Is.EqualTo(before.Resources["honey"].Amount));
+        Assert.That(after.Resources["pollen"].Amount, Is.EqualTo(before.Resources["pollen"].Amount));
+    }
+
+    [Test]
     public async Task Authenticated_nursery_birth_matures_offline_without_double_award()
     {
         var clock = new MutableClock(Origin);
@@ -162,7 +206,7 @@ public sealed class CivilPopulationEndpointTests
     }
 
     private static WebApplicationFactory<Program> Factory(bool enabled,
-        MutableClock? clock = null) =>
+        MutableClock? clock = null, bool readOnlyPilot = false) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Development");
@@ -170,6 +214,7 @@ public sealed class CivilPopulationEndpointTests
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["CivilPopulation:Enabled"] = enabled.ToString(),
+                    ["CivilPopulation:ReadOnlyPilot"] = readOnlyPilot.ToString(),
                     ["HiveDailyRound:Enabled"] = "false"
                 }));
             if (clock != null)

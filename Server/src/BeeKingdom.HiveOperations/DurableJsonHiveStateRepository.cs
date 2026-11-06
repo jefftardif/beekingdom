@@ -79,7 +79,11 @@ public sealed class DurableJsonHiveStateRepository(string rootDirectory, Func<Gu
     private static async Task<PlayerHiveState?> ReadCoreAsync(string path, CancellationToken ct)
     {
         if (!File.Exists(path)) return null;
-        await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        // Atomic temp-file replacement on Windows requires active readers
+        // to allow delete/rename sharing. Readers keep a stable old handle
+        // while File.Move commits the next complete JSON generation.
+        await using FileStream stream = new(path, FileMode.Open, FileAccess.Read,
+            FileShare.Read | FileShare.Delete);
         return await JsonSerializer.DeserializeAsync<PlayerHiveState>(stream, JsonOptions, ct);
     }
 
