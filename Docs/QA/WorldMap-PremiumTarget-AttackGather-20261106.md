@@ -47,3 +47,41 @@ Le panneau a été remplacé par un composant commun :
 Ne pas fusionner dans \`main\` les changements locaux préexistants. Ne pas commiter les DLL NuGet, fichiers binaires Unity, métadonnées externes ou fichiers temporaires étrangers au panneau. Conserver l'APK et les logs dans \`C:\BeeKingdom\qa\`, hors Git.
 
 En production, le nouveau panneau ne doit jamais annoncer une récompense ou une victoire avant la validation du contrôleur officiel. Les fonctions du terrain sémantique demeurent indépendantes de ce lot.
+
+## Résultat de compilation Android et nettoyage (6 novembre 2026)
+
+Deux essais de build Android de QA ont été effectués, sans toucher au
+serveur ou aux données de production. L'APK est destiné à la validation
+sur tablette et possède une identité Android séparée de l'alpha existante.
+
+- Premier essai : compilation Android bloquée par un appel Editor-only
+  `GUIStyleState.scaledBackgrounds` dans
+  `Assets/BeeKingdom/Tutorial/Runtime/TutorialPremiumSkin.cs`.
+  Correction minimale `#if UNITY_EDITOR` appliquée dans le code et commitée,
+  tout en conservant `state.background = null` sur Android.
+- Deuxième essai : la compilation C# a franchi cette erreur, puis Unity
+  a terminé les shaders et est entré dans `bee_backend.exe` / Player
+  natif. Le journal s'est immobilisé à l'étape du Player DAG sans produire
+  de rapport `BuildResult.Succeeded` ni de fichier APK.
+  Seul le processus de build QA identifié (PID 61612) a été arrêté,
+  afin de libérer PCJEFF. Aucun APK Android vérifié n'est disponible.
+- Rapports conservés exclusivement sur PCJEFF :
+  `C:\BeeKingdom\qa\BK-TargetPremium-AndroidBuild-20261106.log`
+  et `C:\BeeKingdom\qa\BK-TargetPremium-AndroidBuild-Retry-20261106.log`.
+  Le fichier attendu
+  `C:\BeeKingdom\qa\BeeKingdom_PremiumTarget_QA_20261106.apk`
+  n'existe pas.
+- Les paramètres Android du worktree, temporairement modifiés par le
+  builder au moment de l'arrêt forcé, ont été restaurés depuis l'état Git
+  initialement propre de `ProjectSettings/ProjectSettings.asset`.
+  `main` et ses 53 modifications locales préexistantes restent intacts.
+- Le contrôle strict des ressources Unity
+  `C:\BeeKingdom\qa\BK-Premium-Target-UnityAsset-Contract-20261106.json`
+  a passé **5 685/5 685 SHA-256**, sans fichier manquant ni GUID dupliqué.
+
+**Conclusion :** la nouvelle fenêtre et les vrais raccordements aux
+contrôleurs existants sont implémentés et validés par les tests Unity,
+mais il serait incorrect d'affirmer qu'un APK Android ou une validation
+tactile physique ont été livrés. Le rendu pixel par pixel en mode
+batch n'a pas été vérifié. Ne pas activer les nouveaux placements de
+ressources sur le serveur Wave6 avec le masque non approuvé.
