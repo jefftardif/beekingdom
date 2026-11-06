@@ -213,6 +213,7 @@
     {"key":"bag.preview.wax","value":"Wax: 45"},
     {"key":"bag.preview.honey","value":"Honey: 67"},
     {"key":"bag.preview.capacity","value":"Capacity: 400/500"},
+    {"key":"bag.data_unavailable","value":"Inventory unavailable on this screen."},
     {"key":"player.summary.session.official","value":"Official account"},
     {"key":"player.summary.session.offline","value":"Offline session"},
     {"key":"player.summary.session.local","value":"Local profile"},
