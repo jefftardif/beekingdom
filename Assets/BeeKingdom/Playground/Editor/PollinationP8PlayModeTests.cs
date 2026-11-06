@@ -313,9 +313,10 @@ namespace BeeKingdom.Playground.Editor
                     (RemoteCivilExpeditionSnapshot)null);
                 panel.SelectTabForProof(1);
                 yield return null;
-                Assert.That(HasText(host,"APERÇU EN LECTURE SEULE"),Is.True);
+                Assert.That(HasText(host,"FUTURES BUTINEUSES"),Is.True,
+                    "Read-only preview should use player-facing text.");
                 Assert.That(HasText(host,"Capacité maximale"),Is.True);
-                Assert.That(HasText(host,"Aucun miel ni pollen dépensé"),Is.True);
+                Assert.That(HasText(host,"BIENTÔT DISPONIBLE"),Is.True);
                 Assert.That(host.GetComponentsInChildren<Button>()
                     .Any(button=>button.GetComponentsInChildren<TextMeshProUGUI>()
                         .Any(text=>text.text=="Former une cohorte")),Is.False,
@@ -323,12 +324,12 @@ namespace BeeKingdom.Playground.Editor
                 Assert.That(BeeLocalization.SetLocale("en-US"),Is.True);
                 yield return null;
                 Assert.That(host.GetComponentsInChildren<TextMeshProUGUI>()
-                    .Any(text=>text.text=="READ-ONLY PREVIEW"),Is.True,
+                    .Any(text=>text.text=="FUTURE FORAGERS"),Is.True,
                     "The English preview must be visible.");
                 Assert.That(BeeLocalization.SetLocale("fr-CA"),Is.True);
                 panel.SelectTabForProof(2);
                 yield return null;
-                Assert.That(HasText(host,"Consultation seulement"),Is.True);
+                Assert.That(HasText(host,"Les projets floraux seront bientôt accessibles"),Is.True);
                 Assert.That(host.GetComponentsInChildren<Button>()
                     .Any(button=>button.GetComponentsInChildren<TextMeshProUGUI>()
                         .Any(text=>text.text=="Ouvrir un projet floral")),Is.False,
