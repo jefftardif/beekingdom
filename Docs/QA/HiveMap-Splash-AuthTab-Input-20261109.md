@@ -34,3 +34,36 @@ Dans le Unity ouvert sur
 5. Ne saisir aucun mot de passe dans le chat; saisir les identifiants directement dans le jeu.
 
 Aucune configuration SRVESDT, donnée SQL, identifiant, ou branche `main` n'a été modifié dans ce correctif.
+
+## Correctif de reprise après échec visible (9 novembre 2026)
+
+Après la première correction IMGUI, la capture utilisateur montre que les onglets
+restent sans réponse dans GameView. Le diagnostic a montré qu'aucune trace
+`[BK-Splash] Tab clicked` n'était disponible dans les journaux observables;
+la compilation C# seule ne prouve pas que Unity livre les événements IMGUI.
+
+Une solution de rechange indépendante a été ajoutée à
+`HiveMapSplashBootstrap.Update()` :
+- `Input.GetMouseButtonDown(0)` pour la souris
+- `Input.GetTouch(i).phase == TouchPhase.Began` pour le tactile
+- conversion explicite du repère Unity (origine bas-gauche) vers
+  les rects GUI (origine haut-gauche)
+- même méthode `TryNavigateSplashTabForProof`, donc un seul état et
+  un seul jeu de coordonnées pour les trois onglets
+- reprise correcte de l'état `revealed` en cas de retour à l'accueil
+- double sécurité : le chemin IMGUI précédent demeure disponible
+- raccourci de diagnostic F8 limite a Unity Editor : ouvrir Connexion
+  meme si le clic souris est bloque; aucun raccourci dans les builds joueur
+- diagnostic Editor sans secrets : `[BK-Splash] Update fallback selected tab: Login`;
+  si le clic est reçu hors des zones, `Update saw pointer outside active tabs`
+
+Deux scénarios NUnit supplémentaires vérifient ce repérage indépendant en
+portrait et paysage; l'ensemble de l'éditeur, tests compris, a été
+**compilé sans erreur** et le jeu également. L'exécution dans Unity Test Runner
+et le clic utilisateur réel **restent à confirmer**, car Unity est ouvert
+interactivement sur la même copie de projet.
+
+Aucun compte, mot de passe, SQL ni configuration d'API n'a été modifié.
+La présence du formulaire n'atteste pas la réussite de l'authentification;
+la disponibilité des comptes et la validation complète du gameplay
+constituent deux vérifications différentes.

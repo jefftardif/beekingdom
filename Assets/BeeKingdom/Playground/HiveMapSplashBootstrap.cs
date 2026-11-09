@@ -66,8 +66,74 @@ namespace BeeKingdom.Playground
 
         private void Update()
         {
-            if (revealed) return;
-            ApplyGate(HiveViewProductUiPresenter.HasEnteredHiveForExternalHost);
+            bool entered = HiveViewProductUiPresenter.HasEnteredHiveForExternalHost;
+            if (!entered)
+            {
+                // IMGUI may lose mouse events when another GUI callback
+                // captures its hotControl. Poll the Unity input manager
+                // independently: login tabs must not depend on GUI.Button.
+                PollSplashNavigationInput();
+#if UNITY_EDITOR
+                // Developer escape hatch while diagnosing a completely
+                // unfocused/blocked GameView: F8 enters the login tab without
+                // needing IMGUI pointer events. Never included in player builds.
+                if (Input.GetKeyDown(KeyCode.F8))
+                {
+                    bool portrait = Screen.height > Screen.width;
+                    Rect[] tabs = HiveViewProductUiPresenter.SplashAuthTabRectsForProof(
+                        portrait, Screen.width, Screen.height);
+                    Vector2 loginPoint = ScreenPointerToGuiPointForProof(
+                        tabs[1].center, Screen.height);
+                    TrySplashPointer(loginPoint);
+                }
+#endif
+                if (revealed) revealed = false;
+            }
+            if (!revealed || !entered)
+                ApplyGate(HiveViewProductUiPresenter.HasEnteredHiveForExternalHost);
+        }
+
+        public static Vector2 ScreenPointerToGuiPointForProof(Vector2 pointer, float height)
+        {
+            return new Vector2(pointer.x, height - pointer.y);
+        }
+
+        private void PollSplashNavigationInput()
+        {
+            if (Input.touchCount > 0)
+            {
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    Touch touch = Input.GetTouch(i);
+                    if (touch.phase != TouchPhase.Began) continue;
+                    TrySplashPointer(touch.position);
+                    return;
+                }
+            }
+            if (Input.GetMouseButtonDown(0))
+                TrySplashPointer(Input.mousePosition);
+        }
+
+        public static bool TryNavigateFromScreenPointerForProof(
+            Vector2 screenPoint, float width, float height, bool pressed)
+        {
+            return HiveViewProductUiPresenter.TryNavigateSplashTabForProof(
+                height > width, width, height,
+                ScreenPointerToGuiPointForProof(screenPoint, height), pressed);
+        }
+
+        private static void TrySplashPointer(Vector2 screenPoint)
+        {
+            bool handled = TryNavigateFromScreenPointerForProof(
+                screenPoint, Screen.width, Screen.height, true);
+#if UNITY_EDITOR
+            if (handled)
+                Debug.Log("[BK-Splash] Update fallback selected tab: " +
+                    HiveViewProductUiPresenter.SplashAuthTabStateForProof);
+            else
+                Debug.Log("[BK-Splash] Update saw pointer outside active tabs; viewport=" +
+                    Screen.width + "x" + Screen.height);
+#endif
         }
 
         // Hides/disables HiveMap's own menu + building interaction while the splash/login

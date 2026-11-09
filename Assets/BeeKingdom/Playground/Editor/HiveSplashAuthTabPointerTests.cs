@@ -70,6 +70,27 @@ namespace BeeKingdom.Playground.Editor
                 Is.EqualTo("Splash"));
         }
 
+        [TestCase(390f,844f,true)]
+        [TestCase(1280f,720f,false)]
+        public void PollingFallbackWorksWithoutIMGUIEvents(
+            float width, float height, bool portrait)
+        {
+            Rect[] tabs=HiveViewProductUiPresenter.SplashAuthTabRectsForProof(
+                portrait,width,height);
+            for(int i=0;i<tabs.Length;i++)
+            {
+                HiveViewProductUiPresenter.SetSplashAuthGateForProof("splash");
+                Vector2 gamePoint=HiveMapSplashBootstrap.ScreenPointerToGuiPointForProof(
+                    tabs[i].center,height);
+                Assert.That(HiveMapSplashBootstrap.TryNavigateFromScreenPointerForProof(
+                    gamePoint,width,height,true),Is.True);
+                string expected=i==0?"Splash":i==1?"Login":"CreateAccount";
+                Assert.That(HiveViewProductUiPresenter.SplashAuthTabStateForProof,
+                    Is.EqualTo(expected));
+                Assert.That(HiveMapSplashBootstrap.TryNavigateFromScreenPointerForProof(
+                    gamePoint,width,height,false),Is.False);
+            }
+        }
         [Test]
         public void AlreadyEnteredHiveCannotBeMovedBackByStaleSplashClick()
         {
