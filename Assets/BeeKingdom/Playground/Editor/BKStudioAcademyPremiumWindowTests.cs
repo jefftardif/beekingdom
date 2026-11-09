@@ -120,7 +120,10 @@ namespace BeeKingdom.Playground.Editor
                     Is.True);
                 Assert.That(root.GetComponentsInChildren<ScrollRect>(true),
                     Has.Length.EqualTo(1));
-                FindButton(view.gameObject, "Retour").onClick.Invoke();
+                Button goldBack = view.gameObject.GetComponentsInChildren<Button>(true)
+                    .Single(button => button.name == "PremiumBack");
+                Assert.That(goldBack.targetGraphic,Is.TypeOf<Image>());
+                goldBack.onClick.Invoke();
                 Assert.That(view.IsOpen, Is.False);
                 Assert.That(HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost,
                     Is.False);

@@ -563,7 +563,7 @@ namespace BeeKingdom.Playground
                 ? "Connecte-toi pour accéder aux soins de la Nurserie."
                 : "Sign in to access Nursery care.";
             else if (error) nurseryStatusLabel.text =
-                BeeLocalization.Text("nursery.status.retry_hint") + " (" + model.ErrorCode + ")";
+                BeeLocalization.Text("nursery.status.retry_hint");
             else if (!loaded) nurseryStatusLabel.text = fr
                 ? "Chargement des données officielles..." : "Loading server data...";
             else if (busy) nurseryStatusLabel.text = fr
@@ -573,9 +573,7 @@ namespace BeeKingdom.Playground
                 : "Command awaiting confirmation. Use Verify command.";
             else if (readOnly) nurseryStatusLabel.text = fr
                 ? "Hors ligne : consultation seulement." : "Offline: read-only.";
-            else if (error) nurseryStatusLabel.text = fr
-                ? "Erreur du serveur : " + model.ErrorCode
-                : "Server error: " + model.ErrorCode;
+
             else nurseryStatusLabel.text = fr
                 ? "Les soins améliorent la nutrition et la stabilité des larves."
                 : "Care improves brood nutrition and stability.";
@@ -589,7 +587,7 @@ namespace BeeKingdom.Playground
                         : (fr ? "Stabilisation" : "Stabilization"))
                     : string.Empty;
                 nurseryOperationLabel.text = !configured || !loaded
-                    ? (fr ? "En attente du serveur" : "Waiting for server")
+                    ? (fr ? "Données non confirmées" : "Data not confirmed")
                     : pending ? (fr ? "Commande incertaine : vérification requise"
                                     : "Uncertain command: verification required")
                     : hasOperation
@@ -678,7 +676,7 @@ namespace BeeKingdom.Playground
                 if (infirmaryTimerLabels.TryGetValue(row.Family, out TextMeshProUGUI timer) && timer != null)
                     timer.text = readable
                         ? InfirmaryRecoveryOverview.Countdown(row.NextReadyAtUtc, DateTimeOffset.UtcNow, french)
-                        : (french ? "En attente du serveur" : "Awaiting server");
+                        : (french ? "--" : "--");
             }
         }
 
@@ -763,8 +761,10 @@ namespace BeeKingdom.Playground
             Texture2D banner = Resources.Load<Texture2D>(
                 BannerResourcePathForProof(selected.LegacyKey));
             if (banner != null)
-                Art(header, new Rect(width * .40f, 0f, width * .60f, headerRect.height),
-                    banner, new Color(1f, 1f, 1f, .32f));
+                // Same quiet dark heading treatment as Barracks, with the
+                // correct building art as an understated right-hand accent.
+                Art(header, new Rect(width * .56f, 0f, width * .44f, headerRect.height),
+                    banner, new Color(1f, 1f, 1f, .14f));
 
             string name = fr ? titleFr : titleEn;
             string role = productionInfoMode ? ProductionText("subtitle", "Production et reserves de la colonie")
@@ -773,8 +773,7 @@ namespace BeeKingdom.Playground
                 : selected.Role ?? string.Empty;
             if (!fr && !productionInfoMode && !defenseMode && !geneticsMode && !academyMode)
                 role = "Building overview";
-            WorldMapHudLayout.StyleReturnButton(ButtonAt(header, new Rect(16f, 12f, 52f, 52f),
-                fr ? "Retour" : "Back", false, closeAction));
+            PremiumBackButton(header, closeAction);
             bool landscape = width > height && width >= 600f;
             TextMeshProUGUI title = Label(header, landscape
                     ? new Rect(120f, 12f, Mathf.Max(100f, width - 340f), 39f)
@@ -1415,6 +1414,25 @@ namespace BeeKingdom.Playground
             return card;
         }
 
+        private void PremiumBackButton(Transform header, Action callback)
+        {
+            // ButtonAt() uses RawImage, whereas the approved Barracks/Chat
+            // return design requires UI.Image for sprite-swap and the gold
+            // arrow glyph. Build the correct target graphic directly, with
+            // NO "Retour" text to wrap into two lines.
+            RectTransform node = Node(header, "PremiumBack",
+                new Rect(16f, 12f, 52f, 52f));
+            Image background = node.gameObject.AddComponent<Image>();
+            background.raycastTarget = true;
+            Button button = node.gameObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            button.onClick.AddListener(() =>
+            {
+                AudioManager.Instance?.PlayUIClick();
+                callback?.Invoke();
+            });
+            WorldMapHudLayout.StyleReturnButton(button);
+        }
         private Button ButtonAt(Transform parent, Rect rect, string text,
             bool primary, Action callback)
         {

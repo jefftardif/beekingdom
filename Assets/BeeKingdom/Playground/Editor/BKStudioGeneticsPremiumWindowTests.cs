@@ -148,13 +148,14 @@ namespace BeeKingdom.Playground.Editor
                 Assert.That(root.GetComponentsInChildren<ScrollRect>(true).Length,
                     Is.EqualTo(1));
 
+                // Back is now the approved Barracks gold arrow, without a
+                // wrapped "Retour" caption. Assert the actual button/graphic
+                // and the original close handler, not a removed text label.
                 Button back = root.GetComponentsInChildren<Button>(true)
-                    .Single(button =>
-                    {
-                        string title = button.GetComponentInChildren<TextMeshProUGUI>(
-                            true)?.text;
-                        return title == "Retour" || title == "Back";
-                    });
+                    .Single(button => button.name == "PremiumBack");
+                Assert.That(back.targetGraphic, Is.TypeOf<Image>());
+                Assert.That(back.GetComponentInChildren<RawImage>(true),
+                    Is.Not.Null, "Return arrow art must be present.");
                 back.onClick.Invoke();
                 Assert.That(HiveMapUnsupportedBuildingBootstrap.OverlayOpenForExternalHost,
                     Is.False);

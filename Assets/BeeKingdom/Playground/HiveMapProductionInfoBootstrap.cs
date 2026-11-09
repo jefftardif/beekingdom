@@ -84,11 +84,29 @@ namespace BeeKingdom.Playground
             if (subscribedController != null) return;
             BuildingInteractionController controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller == null) return;
+            controller.Selection.BuildingClicked += OnBuildingClicked;
             subscribedController = controller;
         }
 
+        private static bool IsProducerBuildingType(string type)
+        {
+            return type == BuildingTypes.HoneyReserve ||
+                   type == BuildingTypes.Warehouse ||
+                   type == BuildingTypes.Transformation;
+        }
+
+        private void OnBuildingClicked(BuildingDefinition building)
+        {
+            if (building == null || !IsProducerBuildingType(building.BuildingType)) return;
+            // A click on a producer opens a visible premium panel even when
+            // nothing is ready to collect. The existing collection stays in
+            // ProductionBootstrap and the new info view never credits stock.
+            OpenPremiumInfo(building.BuildingType);
+        }
         private void OnDestroy()
         {
+            if (subscribedController != null)
+                subscribedController.Selection.BuildingClicked -= OnBuildingClicked;
             if (premiumWindow != null) premiumWindow.Hide();
             OverlayOpenForExternalHost = false;
             openBuildingType = null;
