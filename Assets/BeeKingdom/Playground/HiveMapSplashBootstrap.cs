@@ -96,7 +96,27 @@ namespace BeeKingdom.Playground
         private void OnGUI()
         {
             if (HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            HiveViewProductUiPresenter.Draw(60f, Screen.width < 900);
+            // Splash/login is the only interactive surface before HiveMap
+            // entry. Other runtime bootstraps may leave GUI.enabled false or
+            // draw an IMGUI underlay; never let them steal the login tabs.
+            // The startup loading screen deliberately uses -32750 and
+            // therefore still takes priority while it is genuinely active.
+            int priorDepth = GUI.depth;
+            bool priorEnabled = GUI.enabled;
+            Matrix4x4 priorMatrix = GUI.matrix;
+            try
+            {
+                GUI.depth = -31000;
+                GUI.enabled = true;
+                GUI.matrix = Matrix4x4.identity;
+                HiveViewProductUiPresenter.Draw(60f, Screen.width < 900);
+            }
+            finally
+            {
+                GUI.depth = priorDepth;
+                GUI.enabled = priorEnabled;
+                GUI.matrix = priorMatrix;
+            }
         }
     }
 }

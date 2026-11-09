@@ -5375,16 +5375,82 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             GUI.color = previous;
         }
 
-        private static void DrawSplashStepTabs(Rect panel, float y)
+        // Exact same rectangles for rendering, hit testing and automated QA.
+        public static Rect[] SplashAuthTabRectsForProof(bool portrait, float screenWidth, float screenHeight)
         {
-            bool portrait = IsPortraitLayout();
+            Rect panel = SplashAuthPanelRectForProof(portrait, screenWidth, screenHeight);
             float pad = portrait ? 16f : 30f;
+            float y = panel.y + pad + (portrait ? 92f : 110f);
             float gap = portrait ? 6f : 10f;
             float width = (panel.width - pad * 2f - gap * 2f) / 3f;
             float height = portrait ? 34f : 42f;
-            DrawSplashTab(new Rect(panel.x + pad, y, width, height), BeeLocalization.Text("splash.tab.home", "Accueil"), splashAuthGateState == SplashAuthGateState.Splash, SplashAuthGateState.Splash);
-            DrawSplashTab(new Rect(panel.x + pad + (width + gap), y, width, height), BeeLocalization.Text(portrait ? "splash.tab.login_short" : "splash.tab.login", "Connexion"), splashAuthGateState == SplashAuthGateState.Login, SplashAuthGateState.Login);
-            DrawSplashTab(new Rect(panel.x + pad + (width + gap) * 2f, y, width, height), BeeLocalization.Text(portrait ? "splash.tab.create_short" : "splash.tab.create", "Création"), splashAuthGateState == SplashAuthGateState.CreateAccount, SplashAuthGateState.CreateAccount);
+            return new[]
+            {
+                new Rect(panel.x + pad, y, width, height),
+                new Rect(panel.x + pad + width + gap, y, width, height),
+                new Rect(panel.x + pad + (width + gap) * 2f, y, width, height)
+            };
+        }
+
+        public static string SplashAuthTabStateForProof => splashAuthGateState.ToString();
+
+        private static void ActivateSplashAuthTab(SplashAuthGateState target)
+        {
+            if (splashAuthGateState == SplashAuthGateState.EnteredHive || newAccountNeedsDisplayName)
+                return;
+            splashAuthGateState = target;
+            if (target == SplashAuthGateState.Splash)
+                SetSplashAuthMessage("splash.message.choose_entry", false);
+            else if (target == SplashAuthGateState.Login)
+                SetSplashAuthMessageLiteral(ConnectionTruthMessage(CurrentConnectionTruthState()), false);
+            else
+                SetSplashAuthMessage("splash.create.demo_body", false);
+        }
+
+        // Mouse-down navigation is intentional: a previously captured GUI
+        // hotControl can steal the mouse-up from an invisible IMGUI Button.
+        // We still leave the normal GUI.Button path for keyboard/gamepad use.
+        public static bool TryNavigateSplashTabForProof(
+            bool portrait, float screenWidth, float screenHeight, Vector2 pointerPosition, bool pointerPressed)
+        {
+            if (!pointerPressed || splashAuthGateState == SplashAuthGateState.EnteredHive ||
+                newAccountNeedsDisplayName) return false;
+            Rect[] tabs = SplashAuthTabRectsForProof(portrait, screenWidth, screenHeight);
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                if (!tabs[i].Contains(pointerPosition)) continue;
+                ActivateSplashAuthTab(i == 0 ? SplashAuthGateState.Splash :
+                    i == 1 ? SplashAuthGateState.Login : SplashAuthGateState.CreateAccount);
+                return true;
+            }
+            return false;
+        }
+
+        private static void DrawSplashStepTabs(Rect panel, float y)
+        {
+            bool portrait = IsPortraitLayout();
+            Rect[] tabs = SplashAuthTabRectsForProof(portrait, Screen.width, Screen.height);
+            Event current = Event.current;
+            if (current != null && current.button == 0 &&
+                (current.type == EventType.MouseDown || current.rawType == EventType.MouseDown) &&
+                TryNavigateSplashTabForProof(portrait, Screen.width, Screen.height,
+                    current.mousePosition, true))
+            {
+                // Clear a stale invisible IMGUI button capture before opening
+                // credential fields. Do not retain keyboard focus from home.
+                GUIUtility.hotControl = 0;
+                GUIUtility.keyboardControl = 0;
+#if UNITY_EDITOR
+                Debug.Log("[BK-Splash] Tab clicked: " + splashAuthGateState);
+#endif
+                if (current.type != EventType.Used) current.Use();
+            }
+            DrawSplashTab(tabs[0], BeeLocalization.Text("splash.tab.home", "Accueil"),
+                splashAuthGateState == SplashAuthGateState.Splash, SplashAuthGateState.Splash);
+            DrawSplashTab(tabs[1], BeeLocalization.Text(portrait ? "splash.tab.login_short" : "splash.tab.login", "Connexion"),
+                splashAuthGateState == SplashAuthGateState.Login, SplashAuthGateState.Login);
+            DrawSplashTab(tabs[2], BeeLocalization.Text(portrait ? "splash.tab.create_short" : "splash.tab.create", "Création"),
+                splashAuthGateState == SplashAuthGateState.CreateAccount, SplashAuthGateState.CreateAccount);
         }
 
         private static void DrawSplashTab(Rect rect, string label, bool active, SplashAuthGateState target)
@@ -5400,13 +5466,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             GUI.enabled = true;
             bool clicked = GUI.Button(rect, string.Empty, GUIStyle.none);
             GUI.enabled = previousEnabled;
-            if (clicked)
-            {
-                splashAuthGateState = target;
-                splashAuthMessage = target == SplashAuthGateState.Splash
-                    ? "Choisis une entree demo locale. Aucun compte serveur live."
-                    : "Mode demo local. Validation minimale uniquement.";
-            }
+            if (clicked) ActivateSplashAuthTab(target);
         }
 
         private static void DrawSplashGate(Rect panel, float y, bool portrait)
