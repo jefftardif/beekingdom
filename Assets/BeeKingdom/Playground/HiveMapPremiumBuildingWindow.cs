@@ -761,11 +761,17 @@ namespace BeeKingdom.Playground
             Texture2D banner = Resources.Load<Texture2D>(
                 BannerResourcePathForProof(selected.LegacyKey));
             if (banner != null)
-                // Same quiet dark heading treatment as Barracks, with the
-                // correct building art as an understated right-hand accent.
-                Art(header, new Rect(width * .56f, 0f, width * .44f, headerRect.height),
-                    banner, new Color(1f, 1f, 1f, .14f));
-
+            {
+                // The old 2:1 source was stretched into a nearly 7:1 strip.
+                // Show the real building-specific HD art with native aspect,
+                // at readable contrast and without covering the Upgrade action.
+                float artHeight = headerRect.height - 8f;
+                float artWidth = Mathf.Min(width * .34f, artHeight * 2.4f);
+                float artX = Mathf.Max(width * .54f,
+                    width - (upgradeAction != null ? 230f : 28f) - artWidth);
+                HeaderArtwork(header, new Rect(artX, 4f, artWidth, artHeight),
+                    banner, new Color(1f, 1f, 1f, .66f));
+            }
             string name = fr ? titleFr : titleEn;
             string role = productionInfoMode ? ProductionText("subtitle", "Production et reserves de la colonie")
                 : academyMode ? AcademyText("subtitle")
@@ -1576,6 +1582,34 @@ namespace BeeKingdom.Playground
             return node;
         }
 
+        public static Rect HeaderArtworkCropForProof(
+            float imageWidth, float imageHeight, float rectWidth, float rectHeight)
+        {
+            if (imageWidth <= 0f || imageHeight <= 0f ||
+                rectWidth <= 0f || rectHeight <= 0f)
+                return new Rect(0f,0f,1f,1f);
+            float imageAspect = imageWidth / imageHeight;
+            float displayAspect = rectWidth / rectHeight;
+            if (displayAspect > imageAspect)
+            {
+                float cropHeight = imageAspect / displayAspect;
+                return new Rect(0f,(1f-cropHeight)*.5f,1f,cropHeight);
+            }
+            float cropWidth = displayAspect / imageAspect;
+            return new Rect((1f-cropWidth)*.5f,0f,cropWidth,1f);
+        }
+
+        private static void HeaderArtwork(Transform parent, Rect rect,
+            Texture2D source, Color tint)
+        {
+            RawImage image = Node(parent, "BuildingHeaderArtwork", rect)
+                .gameObject.AddComponent<RawImage>();
+            image.texture=source;
+            image.color=tint;
+            image.raycastTarget=false;
+            image.uvRect=HeaderArtworkCropForProof(
+                source.width,source.height,rect.width,rect.height);
+        }
         private static void Art(Transform parent, Rect rect,
             Texture texture, Color color)
         {

@@ -22,7 +22,7 @@ namespace BeeKingdom.Playground
     // Same auto-bootstrap strategy as the other Environment2D5D runtime bootstraps: a
     // RuntimeInitializeOnLoadMethod creates this only when the active scene starts with
     // "Environment2D5D", no scene wiring required.
-    public sealed class HiveMapProductionInfoBootstrap : MonoBehaviour
+    public sealed partial class HiveMapProductionInfoBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Production Info Runtime";
         private const float PanelWidth = 300f;
@@ -102,6 +102,10 @@ namespace BeeKingdom.Playground
             // nothing is ready to collect. The existing collection stays in
             // ProductionBootstrap and the new info view never credits stock.
             OpenPremiumInfo(building.BuildingType);
+#if UNITY_EDITOR
+            Debug.Log("[BK-ProducerInfo] Normal building click: " +
+                building.BuildingType + " shown=" + OverlayOpenForExternalHost);
+#endif
         }
         private void OnDestroy()
         {
@@ -114,7 +118,14 @@ namespace BeeKingdom.Playground
 
         private void OpenPremiumInfo(string buildingType)
         {
-            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
+            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking())
+            {
+#if UNITY_EDITOR
+                Debug.Log("[BK-ProducerInfo] Open withheld by active modal for " +
+                    buildingType);
+#endif
+                return;
+            }
             if (!BuildingCatalog.TryGetByBuildingType(buildingType, out BuildingDefinition building))
                 return;
             var source = MobileAccountSessionRuntimeBootstrap.OfflineProductionControllerForHiveMap;
@@ -185,7 +196,14 @@ namespace BeeKingdom.Playground
                 }
                 return;
             }
-            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
+            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking())
+            {
+#if UNITY_EDITOR
+                Debug.Log("[BK-ProducerInfo] Open withheld by active modal for " +
+                    buildingType);
+#endif
+                return;
+            }
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
@@ -199,13 +217,8 @@ namespace BeeKingdom.Playground
                 Rect bounds = ScreenRectFor(go, camera);
                 if (bounds.width <= 0f) continue;
 
-                const float hitSize = 44f; // comfortable finger target
-                Rect target = new Rect(
-                    Mathf.Clamp(bounds.xMax - 20f, 4f,
-                        Mathf.Max(4f,Screen.width - hitSize - 4f)),
-                    Mathf.Clamp(bounds.yMin - 18f, 4f,
-                        Mathf.Max(4f,Screen.height - hitSize - 4f)),
-                    hitSize, hitSize);
+                Rect target = ProducerInfoBadgeRectForProof(bounds,
+                    Screen.width, Screen.height, HeaderBottom());
                 Color tint = GUI.color;
                 GUI.color = new Color(.98f,.73f,.26f,.97f);
                 GUI.DrawTexture(target, Texture2D.whiteTexture);

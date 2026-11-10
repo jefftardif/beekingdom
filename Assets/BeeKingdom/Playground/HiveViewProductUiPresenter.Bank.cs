@@ -29,6 +29,42 @@ namespace BeeKingdom.Playground {
         private static string bankReserveAmountText = "100";
 
 
+        // Bank has its own IMGUI renderer: add the canonical HD artwork
+        // without touching the banking transactions or other buildings.
+        public const string BankHeaderArtworkResourceForProof =
+            "PremiumBeeReference/BuildingBanners/hive_bank";
+        private static Texture2D bankHeaderArtwork;
+
+        public static Rect BankHeaderArtworkRectForProof(float screenWidth, bool compact)
+        {
+            float height = compact ? 66f : 78f;
+            float width = height * 1.85f;
+            float reservedUpgradeWidth = compact ? 180f : 234f;
+            return new Rect(Mathf.Max(112f,
+                screenWidth - reservedUpgradeWidth - width - 14f),
+                compact ? 8f : 5f, width, height);
+        }
+
+        private static void DrawBankHeaderArtwork(bool compact)
+        {
+            if (bankHeaderArtwork == null)
+            {
+                bankHeaderArtwork = Resources.Load<Texture2D>(
+                    BankHeaderArtworkResourceForProof);
+                if (bankHeaderArtwork == null)
+                {
+                    Sprite sprite = Resources.Load<Sprite>(
+                        BankHeaderArtworkResourceForProof);
+                    if (sprite != null) bankHeaderArtwork = sprite.texture;
+                }
+            }
+            if (bankHeaderArtwork == null) return;
+            Color saved = GUI.color;
+            GUI.color = new Color(1f, .97f, .85f, .90f);
+            GUI.DrawTexture(BankHeaderArtworkRectForProof(Screen.width, compact),
+                bankHeaderArtwork, ScaleMode.ScaleToFit, true);
+            GUI.color = saved;
+        }
         private static string BankText(string key) => BeeLocalization.Text("bank.premium." + key);
         private static string BankLocalizedFeedback(string message) =>
             !string.IsNullOrEmpty(message) && message.StartsWith("bank.premium.", StringComparison.Ordinal)
@@ -598,6 +634,7 @@ namespace BeeKingdom.Playground {
             GUI.color = new Color(.035f, .022f, .012f, .995f);
             GUI.DrawTexture(full, Texture2D.whiteTexture);
             GUI.color = Color.white;
+            DrawBankHeaderArtwork(compact);
 
             if (DrawActivitiesButton(new Rect(16f, 14f, 78f, 48f), BankText("header.back"), true, false))
             {
