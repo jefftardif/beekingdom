@@ -196,14 +196,7 @@ namespace BeeKingdom.Playground
                 }
                 return;
             }
-            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking())
-            {
-#if UNITY_EDITOR
-                Debug.Log("[BK-ProducerInfo] Open withheld by active modal for " +
-                    buildingType);
-#endif
-                return;
-            }
+            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
             if (subscribedController == null) return;
             Camera camera = Camera.main;
             if (camera == null) return;
