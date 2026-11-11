@@ -19,7 +19,7 @@
     {"key":"production.info.premium.note.no_server","value":"Connectez-vous pour consulter les donn\u00E9es officielles."},
     {"key":"production.info.premium.note.offline","value":"Mode consultation : aucune op\u00E9ration possible."},
     {"key":"production.info.premium.note.full","value":"R\u00E9serve pleine : r\u00E9colte indisponible."},
-    {"key":"production.info.premium.note.collect_on_building","value":"Touchez le b\u00E2timent pour r\u00E9colter. Ce panneau est en lecture seule."},
+    {"key":"production.info.premium.note.collect_on_building","value":"Une r\u00E9colte disponible est lanc\u00E9e au premier clic. Le clic suivant ouvre la fiche; le serveur confirme le cr\u00E9dit."},
     {"key":"production.info.premium.action.refresh","value":"Actualiser"},
     {"key":"worldmap.ui.target.unavailable","value":"Cible indisponible"},
     {"key":"worldmap.ui.target.reason.preview_only","value":"Aperçu local : aucun gain officiel."},

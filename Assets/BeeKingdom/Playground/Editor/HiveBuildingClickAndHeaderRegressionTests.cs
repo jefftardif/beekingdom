@@ -61,42 +61,18 @@ namespace BeeKingdom.Playground.Editor
         [TestCase(BuildingTypes.HoneyReserve)]
         [TestCase(BuildingTypes.Warehouse)]
         [TestCase(BuildingTypes.Transformation)]
-        public void TappingProductionBuildingOpensActualPremiumInformation(string type)
+        public void ProducerClickRuleHarvestsOnceThenShowsDetails(string type)
         {
-            var host = new GameObject("QA Producer Info Bootstrap");
-            host.SetActive(false);
-            try
-            {
-                var bootstrap = host.AddComponent<HiveMapProductionInfoBootstrap>();
-                MethodInfo tap = typeof(HiveMapProductionInfoBootstrap)
-                    .GetMethod("OnBuildingClicked",Private);
-                Assert.That(tap,Is.Not.Null);
-                BuildingDefinition building = BuildingCatalog.GetByBuildingType(type);
-                tap.Invoke(bootstrap,new object[]{building});
-                Assert.That(HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost,
-                    Is.True,type+" tap should open info rather than doing nothing");
-                var info=host.GetComponentInChildren<HiveMapPremiumBuildingWindow>(true);
-                Assert.That(info,Is.Not.Null);
-                Assert.That(info.ProductionInfoModeForProof,Is.True);
-                var close=typeof(HiveMapProductionInfoBootstrap)
-                    .GetMethod("ClosePremiumInfo",Private);
-                close.Invoke(bootstrap,null);
-                Assert.That(HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost,
-                    Is.False);
-            }
-            finally
-            {
-                // Global singleton flags are shared across EditMode tests.
-                // Always release the modal, including after an assertion
-                // failure, so other building tests cannot be poisoned.
-                if (HiveMapProductionInfoBootstrap.OverlayOpenForExternalHost)
-                    typeof(HiveMapProductionInfoBootstrap)
-                        .GetMethod("ClosePremiumInfo",Private)
-                        .Invoke(host.GetComponent<HiveMapProductionInfoBootstrap>(),null);
-                UnityEngine.Object.DestroyImmediate(host);
-            }
+            BuildingDefinition building=BuildingCatalog.GetByBuildingType(type);
+            Assert.That(building,Is.Not.Null);
+            Assert.That(HiveMapProductionInfoBootstrap.ShouldHarvestOnFirstClickForProof(
+                collectable:true,detailsPending:false),Is.True);
+            Assert.That(HiveMapProductionInfoBootstrap.ShouldHarvestOnFirstClickForProof(
+                collectable:true,detailsPending:true),Is.False,
+                "The second click must show details even if the server still reports stock");
+            Assert.That(HiveMapProductionInfoBootstrap.ShouldHarvestOnFirstClickForProof(
+                collectable:false,detailsPending:false),Is.False);
         }
-
         [Test]
         public void NewInformationPanelCannotInventCreditsOrBreakExistingCollection()
         {
@@ -105,10 +81,16 @@ namespace BeeKingdom.Playground.Editor
             string bootstrap=File.ReadAllText(path);
             StringAssert.Contains("controller.Selection.BuildingClicked += OnBuildingClicked;",bootstrap);
             StringAssert.Contains("subscribedController.Selection.BuildingClicked -= OnBuildingClicked;",bootstrap);
-            StringAssert.Contains("OpenPremiumInfo(building.BuildingType);",bootstrap);
+            StringAssert.Contains("OpenPremiumInfo(type);",bootstrap);
             string original=File.ReadAllText(Path.Combine(Application.dataPath,
                 "BeeKingdom/Playground/HiveMapProductionBootstrap.cs"));
-            StringAssert.Contains("CollectManualProductionForExternalHost(hotspotId);",original);
+            StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",original);
+            StringAssert.DoesNotContain("BuildingClicked += OnBuildingClicked;",original);
+            StringAssert.Contains("CollectManualProductionForExternalHost(hotspotId);",bootstrap);
+            StringAssert.Contains("showDetailsAfterSuccessfulHarvest.Add(type);",bootstrap);
+            StringAssert.Contains("showDetailsAfterSuccessfulHarvest.Remove(type);",bootstrap);
+            StringAssert.Contains("lastProducerClickFrame == Time.frameCount",bootstrap);
+            StringAssert.DoesNotContain("GUI.Label(target,",bootstrap);
             string ui=File.ReadAllText(Path.Combine(Application.dataPath,
                 "BeeKingdom/Playground/HiveMapPremiumBuildingWindow.ProductionInfo.cs"));
             StringAssert.DoesNotContain("AddResource(",ui);

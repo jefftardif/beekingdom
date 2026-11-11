@@ -1,32 +1,23 @@
 using System;
+using System.Collections.Generic;
 using BeeKingdom.Buildings.Interaction;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-    // M006-CL wave 1: adds a small "i" button next to Honey Reserve and Warehouse showing
-    // the official server-backed pending/rate/capacity forecast (HiveOfflineProductionPanelController
-    // - the same controller/data LivingHive's "Mobile production forecast" screen already
-    // reads, see Docs/Demos/LivingHive.md). Read-only: this never collects anything, so the
-    // existing manual-collection tap-to-collect flow owned by HiveMapProductionBootstrap
-    // (badge, zoom-derived sizing, bee-swirl feedback, resource mutation) is completely
-    // untouched - the "i" button is a separate small GUI.Button hit-tested by OnGUI itself,
-    // never reaching BuildingInteractionController's 3D raycast or the building's own
-    // BuildingClicked event.
+    // Unified premium interaction for Honey Reserve, Warehouse and Wax
+    // Workshop. A building tap harvests only if the existing authoritative
+    // production model says stock is collectible. A successful dispatch
+    // makes the NEXT click on that building open the production details.
+    // If there is nothing to harvest, the first click opens details.
+    // The former floating "i" and its independent IMGUI input have been
+    // retired. The read-only details never credit inventory themselves.
     //
-    // M008-CX wave 2: extends the same read-only forecast to Transformation, the third
-    // manual-production building, without touching HiveMapProductionBootstrap's
-    // tap-to-collect/badge/feedback behavior.
-    //
-    // Same auto-bootstrap strategy as the other Environment2D5D runtime bootstraps: a
-    // RuntimeInitializeOnLoadMethod creates this only when the active scene starts with
-    // "Environment2D5D", no scene wiring required.
+    // Same runtime bootstrap strategy as other Environment2D5D services.
     public sealed partial class HiveMapProductionInfoBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Production Info Runtime";
-        private const float PanelWidth = 300f;
-        private const float PanelHeight = 170f;
 
         private static readonly string[] TrackedBuildingTypes =
         {
@@ -40,7 +31,11 @@ namespace BeeKingdom.Playground
         private BuildingInteractionController subscribedController;
         private string openBuildingType;
         private HiveMapPremiumBuildingWindow premiumWindow;
-        private GUIStyle cachedInfoBadgeStyle;
+        // One deterministic click sequence per producer, even when its
+        // server snapshot remains collectible during a pending request.
+        private readonly HashSet<string> showDetailsAfterSuccessfulHarvest =
+            new HashSet<string>(StringComparer.Ordinal);
+        private int lastProducerClickFrame = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -76,7 +71,11 @@ namespace BeeKingdom.Playground
 
         private void Update()
         {
-            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost)
+            {
+                showDetailsAfterSuccessfulHarvest.Clear();
+                return;
+            }
             if (OverlayOpenForExternalHost && premiumWindow != null)
             {
                 // A producer info window already owns the modal gesture.
@@ -112,16 +111,62 @@ namespace BeeKingdom.Playground
                    type == BuildingTypes.Transformation;
         }
 
+        public static bool ShouldHarvestOnFirstClickForProof(
+            bool collectable, bool detailsPending)
+        {
+            return collectable && !detailsPending;
+        }
+
         private void OnBuildingClicked(BuildingDefinition building)
         {
-            if (building == null || !IsProducerBuildingType(building.BuildingType)) return;
-            // A click on a producer opens a visible premium panel even when
-            // nothing is ready to collect. The existing collection stays in
-            // ProductionBootstrap and the new info view never credits stock.
-            OpenPremiumInfo(building.BuildingType);
+            if (building == null || !IsProducerBuildingType(building.BuildingType))
+                return;
+            // Both the building collider and artwork fallback may observe
+            // the same frame. Never process one tap twice.
+            if (lastProducerClickFrame == Time.frameCount) return;
+            lastProducerClickFrame = Time.frameCount;
+            if (OverlayOpenForExternalHost) return;
+
+            string type = building.BuildingType;
+            if (showDetailsAfterSuccessfulHarvest.Contains(type))
+            {
+                OpenPremiumInfo(type);
+                if (OverlayOpenForExternalHost)
+                    showDetailsAfterSuccessfulHarvest.Remove(type);
 #if UNITY_EDITOR
-            Debug.Log("[BK-ProducerInfo] Normal building click: " +
-                building.BuildingType + " shown=" + OverlayOpenForExternalHost);
+                Debug.Log("[BK-ProducerInfo] Follow-up click opens " + type +
+                    " shown=" + OverlayOpenForExternalHost);
+#endif
+                return;
+            }
+
+            string hotspotId=BuildingMappingTable.GetByBuildingType(type).LegacyKey;
+            bool ready=HiveViewProductUiPresenter.ManualProductionReadyForExternalHost(
+                hotspotId);
+            if (ShouldHarvestOnFirstClickForProof(ready, false))
+            {
+                // The existing collection bridge uses the official server
+                // when authenticated and the local preview only in demo.
+                // No second callback is allowed to start another mutation.
+                float accepted=HiveViewProductUiPresenter
+                    .CollectManualProductionForExternalHost(hotspotId);
+                if (accepted > 0f)
+                {
+                    showDetailsAfterSuccessfulHarvest.Add(type);
+#if UNITY_EDITOR
+                    Debug.Log("[BK-ProducerInfo] First click harvest dispatched: " +
+                        type + " (next click shows details)");
+#endif
+                    return;
+                }
+            }
+
+            // No authoritative harvest available (or it was rejected):
+            // one click opens the premium details, with honest server status.
+            OpenPremiumInfo(type);
+#if UNITY_EDITOR
+            Debug.Log("[BK-ProducerInfo] No harvest available, open details: " +
+                type + " shown=" + OverlayOpenForExternalHost);
 #endif
         }
         private void OnDestroy()
@@ -203,61 +248,17 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
-            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (OverlayOpenForExternalHost)
+            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost ||
+                !OverlayOpenForExternalHost) return;
+            // The building itself is the only entry point; no floating "i"
+            // buttons. Only Escape remains handled by this legacy GUI path.
+            if (Event.current.type == EventType.KeyDown &&
+                Event.current.keyCode == KeyCode.Escape)
             {
-                // Do not dismiss an already opened producer panel on
-                // subsequent IMGUI Layout/Repaint callbacks. The opening
-                // request checked the other overlays beforehand.
-                // The full-screen, retained-mode Canvas now owns the rendering.
-                // No second legacy IMGUI popup or 3D hit zones may appear above it.
-                if (Event.current.type == EventType.KeyDown &&
-                    Event.current.keyCode == KeyCode.Escape)
-                {
-                    ClosePremiumInfo();
-                    Event.current.Use();
-                }
-                return;
-            }
-            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
-            if (subscribedController == null) return;
-            Camera camera = Camera.main;
-            if (camera == null) return;
-
-            for (int i = 0; i < TrackedBuildingTypes.Length; i++)
-            {
-                string type = TrackedBuildingTypes[i];
-                // The runtime registry can be incomplete while resources load.
-                if (!subscribedController.Registry.TryGetGameObjectByBuildingType(
-                    type, out GameObject go) || go == null) continue;
-                Rect bounds = ScreenRectFor(go, camera);
-                if (bounds.width <= 0f) continue;
-
-                Rect target = ProducerInfoBadgeRectForProof(bounds,
-                    Screen.width, Screen.height, HeaderBottom());
-                Color tint = GUI.color;
-                GUI.color = new Color(.98f,.73f,.26f,.97f);
-                GUI.DrawTexture(target, Texture2D.whiteTexture);
-                GUI.color = tint;
-                if (cachedInfoBadgeStyle == null)
-                {
-                    cachedInfoBadgeStyle = new GUIStyle(GUI.skin.label)
-                    {
-                        alignment = TextAnchor.MiddleCenter,
-                        fontSize = 22,
-                        fontStyle = FontStyle.Bold,
-                        normal = { textColor = new Color(.12f,.075f,.035f,1f) }
-                    };
-                }
-                GUI.Label(target,"i",cachedInfoBadgeStyle);
-                if (GUI.Button(target, GUIContent.none, GUIStyle.none))
-                {
-                    OpenPremiumInfo(type);
-                    return;
-                }
+                ClosePremiumInfo();
+                Event.current.Use();
             }
         }
-
         private static Rect ScreenRectFor(GameObject go, Camera camera)
         {
             Collider collider = go.GetComponent<Collider>();

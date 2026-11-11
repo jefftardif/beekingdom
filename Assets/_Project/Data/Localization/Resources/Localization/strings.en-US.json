@@ -19,7 +19,7 @@
     {"key":"production.info.premium.note.no_server","value":"Sign in to view official server data."},
     {"key":"production.info.premium.note.offline","value":"View-only mode: no actions are available."},
     {"key":"production.info.premium.note.full","value":"Storage is full. Collection unavailable."},
-    {"key":"production.info.premium.note.collect_on_building","value":"Tap the building to collect. This panel is read-only."},
+    {"key":"production.info.premium.note.collect_on_building","value":"First click starts collection when stock is ready. The next click opens details; the server confirms the credit."},
     {"key":"production.info.premium.action.refresh","value":"Refresh"},
     {"key":"worldmap.ui.target.unavailable","value":"Target unavailable"},
     {"key":"worldmap.ui.target.reason.preview_only","value":"Local preview: no official rewards."},

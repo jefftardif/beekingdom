@@ -97,7 +97,8 @@ namespace BeeKingdom.Playground.Editor
             StringAssert.Contains("CaptureClosingGesture()",source);
             StringAssert.DoesNotContain("GUILayout.BeginArea",source);
             StringAssert.DoesNotContain("GUI.Box(panel, string.Empty)",source);
-            StringAssert.Contains("const float hitSize = 44f",source);
+            StringAssert.DoesNotContain("GUI.Label(target,",source);
+            StringAssert.DoesNotContain("GUI.Button(target,",source);
             StringAssert.Contains("OfflineProductionControllerForHiveMap",source);
             string shared=Source("HiveMapOverlayInputGateBootstrap.cs");
             StringAssert.Contains("ignoreProductionInfo",shared);

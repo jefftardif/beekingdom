@@ -10,17 +10,17 @@ namespace BeeKingdom.Playground.Editor
         [TestCase(1080f,2400f,90f)]
         [TestCase(1280f,720f,88f)]
         [TestCase(1920f,1080f,88f)]
-        public void GoldInfoBadgeIsTouchableAndBelowTheHiveHeader(
+        public void BuildingFootprintHitboxRespectsHudClip(
             float width,float height,float headerBottom)
         {
             Rect building=new Rect(width*.30f,10f,180f,155f);
-            Rect badge=HiveMapProductionInfoBootstrap.ProducerInfoBadgeRectForProof(
+            Rect badge=HiveMapProductionInfoBootstrap.ProducerBuildingHitBoundsForProof(
                 building,width,height,headerBottom);
 
-                Assert.That(badge.width,Is.GreaterThanOrEqualTo(44f));
-                Assert.That(badge.height,Is.GreaterThanOrEqualTo(44f));
+                Assert.That(badge.width,Is.GreaterThanOrEqualTo(40f));
+                Assert.That(badge.height,Is.GreaterThanOrEqualTo(40f));
                 Assert.That(badge.xMin,Is.GreaterThanOrEqualTo(0f));
-                Assert.That(badge.yMin,Is.GreaterThanOrEqualTo(headerBottom+7.9f));
+                Assert.That(badge.yMin,Is.GreaterThanOrEqualTo(headerBottom+3.9f));
                 Assert.That(badge.xMax,Is.LessThanOrEqualTo(width));
                 Assert.That(badge.yMax,Is.LessThanOrEqualTo(height));
 
@@ -74,12 +74,12 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
-        public void WorldInputOwnershipProtectsInfoBadgeAndLegacyManualCollection()
+        public void OneProducerClickHandlerAndNoOverlayBadgeGate()
         {
             string baseDir=Path.Combine(Application.dataPath,"BeeKingdom","Playground");
             string gate=File.ReadAllText(Path.Combine(baseDir,
                 "HiveMapOverlayInputGateBootstrap.cs"));
-            StringAssert.Contains("ProducerInfoBadgeOwnsCurrentPointer()",gate);
+            StringAssert.DoesNotContain("ProducerInfoBadgeOwnsCurrentPointer()",gate);
             string producer=File.ReadAllText(Path.Combine(baseDir,
                 "HiveMapProductionInfoBootstrap.Pointer.cs"));
             StringAssert.Contains("private void LateUpdate()",producer);
@@ -88,7 +88,10 @@ namespace BeeKingdom.Playground.Editor
             StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",producer);
             string collection=File.ReadAllText(Path.Combine(baseDir,
                 "HiveMapProductionBootstrap.cs"));
-            StringAssert.Contains("CollectManualProductionForExternalHost(",collection);
+            StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",collection);
+            string info=File.ReadAllText(Path.Combine(baseDir,
+                "HiveMapProductionInfoBootstrap.cs"));
+            StringAssert.Contains("CollectManualProductionForExternalHost(",info);
         }
     }
 }

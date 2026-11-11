@@ -127,7 +127,8 @@ namespace BeeKingdom.Playground.Editor
             StringAssert.DoesNotContain("AddResource(",detail);
 
             string original=Source("HiveMapProductionBootstrap.cs");
-            StringAssert.Contains("CollectManualProductionForExternalHost(",original);
+            StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",original);
+            StringAssert.Contains("CollectManualProductionForExternalHost(", Source("HiveMapProductionInfoBootstrap.cs"));
             string info=Source("HiveMapProductionInfoBootstrap.cs");
             StringAssert.Contains("ShowProductionInfo(",info);
             StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",info);

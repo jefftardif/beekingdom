@@ -49,8 +49,7 @@ namespace BeeKingdom.Playground
 
         private bool IsExternalInputBlocked()
         {
-            return IsAnyOverlayBlocking() || HiveViewProductUiPresenter.WorldChatInputBlocked
-                || HiveMapProductionInfoBootstrap.ProducerInfoBadgeOwnsCurrentPointer();
+            return IsAnyOverlayBlocking() || HiveViewProductUiPresenter.WorldChatInputBlocked;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

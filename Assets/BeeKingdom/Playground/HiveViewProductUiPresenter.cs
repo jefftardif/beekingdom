@@ -4690,17 +4690,10 @@ private static string courierToast = string.Empty;
                     DrawGameIcon(iconRect, icon, Color.white);
                     GUI.color = previous;
 
-                    // The 3D building collider already collects on click, but the badge now
-                    // sits on top of it - without its own hit target the icon would just be
-                    // inert decoration layered over whatever the collider's raycast picks up.
-                    // TryCollectPendingProduction is threshold-gated (see CollectionReadyThreshold),
-                    // so a click that happens to also register on the collider the same frame
-                    // collects once, not twice: the second call finds pending already back
-                    // below threshold and no-ops.
-                    if (GUI.Button(glowRect, string.Empty, GUIStyle.none))
-                    {
-                        CollectManualProductionForExternalHost(hotspotId);
-                    }
+                    // The glow/icon is decorative. The building collider and
+                    // premium producer input fallback own clicks; leaving a
+                    // second IMGUI.Button here could issue a duplicate server
+                    // collection or unexpectedly open details on the first tap.
                 }
             }
 
