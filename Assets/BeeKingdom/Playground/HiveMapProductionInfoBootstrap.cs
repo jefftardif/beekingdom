@@ -72,14 +72,31 @@ namespace BeeKingdom.Playground
             root.AddComponent<HiveMapProductionInfoBootstrap>();
         }
 
+        private bool producerCompetingOverlayNoted;
+
         private void Update()
         {
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
             if (OverlayOpenForExternalHost && premiumWindow != null)
             {
-                if (HiveMapOverlayInputGateBootstrap.IsAnotherOverlayBlockingProductionInfo())
-                    ClosePremiumInfo();
-                else premiumWindow.SetSuppressed(false);
+                // A producer info window already owns the modal gesture.
+                // Previously another temporary modal flag could instantly
+                // CLOSE this screen after ShowProductionInfo succeeded, which
+                // is why logs said shown=True but no window ever appeared.
+                // Other screens cannot silently revoke this user's choice;
+                // only Back/Upgrade/Escape may call ClosePremiumInfo().
+                bool competingOverlay =
+                    HiveMapOverlayInputGateBootstrap.IsAnotherOverlayBlockingProductionInfo();
+                if (competingOverlay && !producerCompetingOverlayNoted)
+                {
+#if UNITY_EDITOR
+                    Debug.LogWarning("[BK-ProducerInfo] Transient competing overlay; " +
+                        "keeping production panel in foreground");
+#endif
+                    producerCompetingOverlayNoted = true;
+                }
+                if (!competingOverlay) producerCompetingOverlayNoted = false;
+                premiumWindow.SetSuppressed(false);
             }
             if (subscribedController != null) return;
             BuildingInteractionController controller = FindFirstObjectByType<BuildingInteractionController>();
@@ -143,6 +160,13 @@ namespace BeeKingdom.Playground
                 source, ClosePremiumInfo, UpgradeFromPremiumInfo);
             if (source != null && source.IsConfigured && !source.IsBusy)
                 source.Refresh();
+#if UNITY_EDITOR
+            Canvas panelCanvas = premiumWindow.GetComponentInChildren<Canvas>(true);
+            Debug.Log("[BK-ProducerInfo] Premium canvas opened: " + buildingType +
+                " isOpen=" + premiumWindow.IsOpen +
+                " producerMode=" + premiumWindow.ProductionInfoModeForProof +
+                " canvasActive=" + (panelCanvas != null && panelCanvas.gameObject.activeInHierarchy));
+#endif
         }
 
         private static string BuildingName(string type, bool french)
@@ -163,6 +187,7 @@ namespace BeeKingdom.Playground
             HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
             OverlayOpenForExternalHost = false;
             openBuildingType = null;
+            producerCompetingOverlayNoted = false;
             if (premiumWindow != null) premiumWindow.Hide();
         }
 
@@ -181,11 +206,9 @@ namespace BeeKingdom.Playground
             if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
             if (OverlayOpenForExternalHost)
             {
-                if (HiveMapOverlayInputGateBootstrap.IsAnotherOverlayBlockingProductionInfo())
-                {
-                    ClosePremiumInfo();
-                    return;
-                }
+                // Do not dismiss an already opened producer panel on
+                // subsequent IMGUI Layout/Repaint callbacks. The opening
+                // request checked the other overlays beforehand.
                 // The full-screen, retained-mode Canvas now owns the rendering.
                 // No second legacy IMGUI popup or 3D hit zones may appear above it.
                 if (Event.current.type == EventType.KeyDown &&

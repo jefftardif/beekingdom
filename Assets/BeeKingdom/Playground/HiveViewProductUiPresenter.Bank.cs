@@ -636,7 +636,7 @@ namespace BeeKingdom.Playground {
             GUI.color = Color.white;
             DrawBankHeaderArtwork(compact);
 
-            if (DrawActivitiesButton(new Rect(16f, 14f, 78f, 48f), BankText("header.back"), true, false))
+            if (WorldMapHudLayout.DrawChatReturnButton(new Rect(30f, 24f, 52f, 52f)))
             {
                 AudioManager.Instance?.PlayUIClick();
                 if (string.Equals(bankSelectedView, "reserve", StringComparison.Ordinal))
