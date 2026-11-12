@@ -1405,21 +1405,73 @@ namespace BeeKingdom.Playground
             RefreshNurseryLabels();
         }
 
-        private RectTransform CardAt(Transform parent, Rect rect, string title, string icon)
+        // Shared premium card header geometry. A contained image never crops
+        // the gilded frame of a real resource icon, even for non-square art.
+        public static Rect PremiumCardIconContainRectForProof(
+            Rect frame, float padding, float sourceWidth, float sourceHeight)
         {
+            float inset = Mathf.Clamp(padding, 0f,
+                Mathf.Min(frame.width, frame.height) * .45f);
+            float innerWidth = Mathf.Max(1f, frame.width - inset * 2f);
+            float innerHeight = Mathf.Max(1f, frame.height - inset * 2f);
+            float width = sourceWidth > 0f ? sourceWidth : innerWidth;
+            float height = sourceHeight > 0f ? sourceHeight : innerHeight;
+            float scale = Mathf.Min(innerWidth / width, innerHeight / height);
+            float renderWidth = width * scale;
+            float renderHeight = height * scale;
+            return new Rect(
+                frame.x + inset + (innerWidth - renderWidth) * .5f,
+                frame.y + inset + (innerHeight - renderHeight) * .5f,
+                renderWidth, renderHeight);
+        }
+
+        // Production uses the same Plate, ink, type and separator primitives
+        // as all other premium cards, but needs a taller, padded header for
+        // fully visible premium resource icons.
+        private RectTransform CardAt(Transform parent, Rect rect,
+            string title, string icon, bool spaciousPremiumHeader = false)
+        {
+            float headerHeight = spaciousPremiumHeader ? 84f : 62f;
             RectTransform card = Plate(parent, "Card", rect, Card, "panel-fill");
-            Plate(card, "HeaderSheen", new Rect(1f, 1f, rect.width - 2f, 62f),
+            Plate(card, "HeaderSheen",
+                new Rect(1f, 1f, rect.width - 2f, headerHeight),
                 new Color(.205f, .135f, .071f, .76f), "panel-fill");
             Plate(card, "GoldAccent", new Rect(1f, 1f, 3f, rect.height - 2f),
                 new Color(.72f, .47f, .17f, .86f), "etched-line");
-            Icon(card, new Rect(18f, 12f, 48f, 48f), icon);
-            Label(card, new Rect(78f, 17f, rect.width - 96f, 42f),
-                title, (geneticsMode || academyMode) && rect.width < 540f ? 16f : 19f, Gold, true);
-            Plate(card, "Separator", new Rect(18f, 64f, rect.width - 36f, 1f),
+            if (spaciousPremiumHeader)
+            {
+                Texture artwork = PremiumIcon(icon);
+                if (artwork != null)
+                {
+                    Rect fitted = PremiumCardIconContainRectForProof(
+                        new Rect(12f, 6f, 72f, 72f), 6f,
+                        artwork.width, artwork.height);
+                    RawImage image = Node(card, "PremiumCardIcon", fitted)
+                        .gameObject.AddComponent<RawImage>();
+                    image.texture = artwork;
+                    image.uvRect = new Rect(0f, 0f, 1f, 1f);
+                    image.color = Color.white;
+                    image.raycastTarget = false;
+                }
+                TextMeshProUGUI heading = Label(card,
+                    new Rect(98f, 12f, Mathf.Max(92f, rect.width - 114f), 62f),
+                    title, rect.width < 480f ? 17f : 19f, Gold, true);
+                heading.enableAutoSizing = true;
+                heading.fontSizeMin = 13f;
+                heading.fontSizeMax = rect.width < 480f ? 17f : 19f;
+            }
+            else
+            {
+                Icon(card, new Rect(18f, 12f, 48f, 48f), icon);
+                Label(card, new Rect(78f, 17f, rect.width - 96f, 42f),
+                    title, (geneticsMode || academyMode) && rect.width < 540f
+                        ? 16f : 19f, Gold, true);
+            }
+            Plate(card, "Separator",
+                new Rect(18f, headerHeight + 2f, rect.width - 36f, 1f),
                 new Color(.43f, .29f, .12f), "etched-line");
             return card;
         }
-
         private void PremiumBackButton(Transform header, Action callback)
         {
             // ButtonAt() uses RawImage, whereas the approved Barracks/Chat

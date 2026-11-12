@@ -81,38 +81,38 @@ namespace BeeKingdom.Playground
         {
             cursor=14f;
             RectTransform overview=CardAt(parent,
-                new Rect(left,cursor,width,192f),
+                new Rect(left,cursor,width,216f),
                 ProductionText("card.status","ETAT DE PRODUCTION"),
-                selected != null ? selected.IconId : "honey");
+                selected != null ? selected.IconId : "honey", true);
             productionInfoStatus=Label(overview,
-                new Rect(18f,78f,width-36f,46f),"--",20f,Gold,true);
+                new Rect(18f,100f,width-36f,46f),"--",20f,Gold,true);
             productionInfoResource=Label(overview,
-                new Rect(18f,130f,width-36f,48f),"--",15f,Paper);
-            cursor+=212f;
+                new Rect(18f,152f,width-36f,48f),"--",15f,Paper);
+            cursor+=236f;
 
             RectTransform stock=CardAt(parent,
-                new Rect(left,cursor,width,246f),
-                ProductionText("card.resources","RESSOURCES ET CAPACITE"),"inventory");
+                new Rect(left,cursor,width,270f),
+                ProductionText("card.resources","RESSOURCES ET CAPACITE"),"resources",true);
             productionInfoStock=Label(stock,
-                new Rect(18f,75f,width-36f,32f),"--",19f,Gold,true);
+                new Rect(18f,97f,width-36f,32f),"--",19f,Gold,true);
             productionInfoRate=Label(stock,
-                new Rect(18f,111f,width-36f,31f),"--",16f,Paper);
+                new Rect(18f,133f,width-36f,31f),"--",16f,Paper);
             productionInfoBalance=Label(stock,
-                new Rect(18f,150f,width-36f,31f),"--",16f,Paper);
+                new Rect(18f,172f,width-36f,31f),"--",16f,Paper);
             productionInfoCapacity=Label(stock,
-                new Rect(18f,191f,width-36f,41f),"--",15f,Muted);
-            cursor+=266f;
+                new Rect(18f,213f,width-36f,41f),"--",15f,Muted);
+            cursor+=290f;
 
             RectTransform action=CardAt(parent,
-                new Rect(left,cursor,width,208f),
-                ProductionText("card.management","SUIVI DE PRODUCTION"),"research");
+                new Rect(left,cursor,width,232f),
+                ProductionText("card.management","SUIVI DE PRODUCTION"),"book",true);
             productionInfoHint=Label(action,
-                new Rect(18f,72f,width-36f,61f),
+                new Rect(18f,94f,width-36f,61f),
                 ProductionText("note.no_server",
                     "Les valeurs officielles proviennent du serveur."),
                 14f,Paper);
             productionInfoRefreshButton=ButtonAt(action,
-                new Rect(18f,151f,Mathf.Max(116f,width-36f),44f),
+                new Rect(18f,173f,Mathf.Max(116f,width-36f),44f),
                 ProductionText("action.refresh","Actualiser"),false,()=>
                 {
                     if(productionInfoController!=null &&
@@ -120,7 +120,7 @@ namespace BeeKingdom.Playground
                        !productionInfoController.IsBusy)
                         productionInfoController.Refresh();
                 });
-            cursor+=228f;
+            cursor+=252f;
             if(parent is RectTransform content)
                 content.sizeDelta=new Vector2(0f,
                     Mathf.Max(cursor+24f,viewportHeight+1f));
