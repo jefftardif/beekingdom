@@ -3350,7 +3350,7 @@ private static string courierToast = string.Empty;
         // "tu efface tout... le menu, les files d'attente, la barre de ressources du haut").
         // chatScreenOpen/courierScreenOpen are the two real full-screen states drawn inside
         // DrawCommunicationOverlayForExternalHost - this now matches them, not the mini-chat.
-        public static bool CommunicationOverlayOpenForExternalHost => chatScreenOpen || courierScreenOpen;
+        public static bool CommunicationOverlayOpenForExternalHost => chatScreenOpen || courierScreenOpen || worldChatSettingsOpen;
 
         // M043Y-CL: the small persistent floating mini-chat is non-modal by design (Jeff:
         // it must keep the rest of the HUD - top resource bar, bottom rail, queue sidebar -
@@ -3358,11 +3358,11 @@ private static string courierToast = string.Empty;
         // World decorations (production ready-glow/bee-swirl badges) still must not paint
         // through ITS panel specifically though, so this exposes just enough for callers to
         // do a precise per-rect overlap check instead of a blanket full-screen hide.
-        public static bool MiniChatOnlyOpenForExternalHost => communicationPanelOpen && !chatScreenOpen && !courierScreenOpen;
+        public static bool MiniChatOnlyOpenForExternalHost => WorldChatFeedVisibleForMap && !courierScreenOpen && !worldChatSettingsOpen;
 
-        public static Rect MiniChatFloatingRectForExternalHost => MiniChatFloatingRectForProof(IsPortraitLayout(), Screen.width, Screen.height);
+        public static Rect MiniChatFloatingRectForExternalHost => CurrentSharedChatFeed;
 
-        public static Rect MiniChatOcclusionRectForExternalHost => MiniChatFloatingOcclusionRect(false);
+        public static Rect MiniChatOcclusionRectForExternalHost => MiniChatOnlyOpenForExternalHost ? CurrentSharedChatFeed : Rect.zero;
 
         // EnsureStyles() touches GUI.skin, which throws outside an OnGUI call — this can
         // be invoked from a uGUI Button's onClick (EventSystem.Update, not OnGUI), so it
@@ -3370,11 +3370,14 @@ private static string courierToast = string.Empty;
         // real OnGUI every frame) already calls EnsureStyles() before drawing.
         public static void ToggleCommunicationOverlayForExternalHost()
         {
-            ToggleMiniChat();
+            WorldChatFilter();
+            if(worldChatSettingsOpen)DismissWorldChatSettings();
+            else worldChatSettingsOpen=true;
         }
 
         public static void CloseCommunicationOverlayForExternalHost()
         {
+            DismissWorldChatSettings();
             courierScreenOpen = false;
             CloseChatScreen();
             CloseMiniChat();
@@ -3403,15 +3406,15 @@ private static string courierToast = string.Empty;
 
         public static void DrawCommunicationOverlayForExternalHost(bool compact)
         {
-            if (!communicationPanelOpen) return;
+            if (SettingsOwnCommunicationInput) return;
+            if (!CommunicationOverlayOpenForExternalHost && HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
             EnsureStyles();
             int previousDepth = GUI.depth;
-            if (chatScreenOpen || courierScreenOpen) GUI.depth = HiveMapUiOcclusion.ModalWindowGuiDepth;
+            if (CommunicationOverlayOpenForExternalHost) GUI.depth = HiveMapUiOcclusion.ModalWindowGuiDepth;
             try
             {
                 if (courierScreenOpen) DrawCourierScreen(compact);
-                else if (chatScreenOpen) DrawChatScreen(compact);
-                else DrawMiniChatFloating(compact, false);
+                else DrawWorldChatFeed();
                 // M076F-CL : l'ancienne paire d'onglets CHAT/MAIL centree en haut
                 // (DrawCommunicationTabBarForExternalHost) faisait doublon avec la rangee
                 // MAIL/CHAT en haut a droite (DrawChatTopBar/DrawCourierTopBar), desormais
@@ -3461,6 +3464,41 @@ private static string courierToast = string.Empty;
         // EnsureSceneObjects()-free guarantee as Communication above:
         // DrawMobileComfortSettingsPanel only touches PlayerPrefs-backed preference state.
         public static bool SettingsOverlayOpenForExternalHost => activeMainMenuId == "Settings";
+        private static int settingsClosedThroughFrame = -1;
+        private static bool settingsCloseGestureCaptured;
+        private static bool SettingsOwnCommunicationInput
+        {
+            get
+            {
+                if (settingsCloseGestureCaptured)
+                {
+                    bool held = Input.GetMouseButton(0);
+                    for (int i = 0; i < Input.touchCount; i++)
+                    {
+                        TouchPhase phase = Input.GetTouch(i).phase;
+                        held |= phase != TouchPhase.Ended && phase != TouchPhase.Canceled;
+                    }
+                    if (!held)
+                    {
+                        settingsCloseGestureCaptured = false;
+                        settingsClosedThroughFrame = Time.frameCount + 1;
+                    }
+                }
+                return SettingsOverlayOpenForExternalHost || settingsCloseGestureCaptured || Time.frameCount <= settingsClosedThroughFrame;
+            }
+        }
+
+        private static void CaptureSettingsCloseGesture()
+        {
+            HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
+            settingsCloseGestureCaptured = true;
+            settingsClosedThroughFrame = Time.frameCount + 1;
+            worldChatPointerCaptured = true;
+            worldChatInputSuppressedThroughFrame = Time.frameCount + 1;
+            ReleaseGuiInputCapture();
+            if (Event.current != null && Event.current.type != EventType.Layout && Event.current.type != EventType.Repaint)
+                Event.current.Use();
+        }
 
         public static void OpenSettingsOverlayForExternalHost()
         {
@@ -3470,6 +3508,7 @@ private static string courierToast = string.Empty;
 
         public static void CloseSettingsOverlayForExternalHost()
         {
+            CaptureSettingsCloseGesture();
             activeMainMenuId = string.Empty;
         }
 
@@ -3555,7 +3594,10 @@ private static string courierToast = string.Empty;
         {
             if (!ResearchOverlayOpenForExternalHost) return;
             EnsureStyles();
-            DrawActiveHiveMenuPanel(compact);
+            // The physical Research building must use the same full-screen premium
+            // interface as the game-level Research menu, not the legacy small
+            // research card list. The official research controller is unchanged.
+            DrawResearchFullscreen(compact);
         }
 
         public static void DrawAllianceOverlayForExternalHost(bool compact)
@@ -3574,11 +3616,7 @@ private static string courierToast = string.Empty;
         {
             if (!AllianceOverlayOpenForExternalHost || allianceMemberProfileOpen ||
                 !string.IsNullOrEmpty(allianceActionPanelOpen)) return;
-            Rect button = new Rect(14f, Screen.height - 58f, 190f, 40f);
-            if (DrawPreviewActionButton(button, "N." + DisplayedBuildingLevel("alliance_future_hall").ToString(CultureInfo.InvariantCulture) + " Ameliorer le batiment", true, true))
-            {
-                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("alliance_future_hall");
-            }
+            DrawPremiumBuildingUpgradeHeader("alliance_future_hall", Screen.width < 900);
         }
 
         // Manual production (Honey Reserve / Warehouse / Transformation - "honey_storage" /
@@ -3798,28 +3836,22 @@ private static string courierToast = string.Empty;
 
         private static void DrawBarrackTopBar(float bannerHeight)
         {
-            if (DrawAllianceActivitiesButton(new Rect(16f, 14f, 78f, 48f), "Retour", true, false))
+            if (DrawPremiumBackButton(new Rect(16f, 14f, 48f, 48f)))
             {
                 AudioManager.Instance?.PlayUIClick();
                 CloseBarrackOverlayForExternalHost();
                 return;
             }
 
-            GUI.Label(new Rect(112f, 12f, Screen.width * .30f, 38f), "CASERNE",
+            GUI.Label(new Rect(112f, 12f, Screen.width * .30f, 38f), BarrackText("header.title", "CASERNE"),
                 new GUIStyle(titleStyle) { fontSize = 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
-            GUI.Label(new Rect(114f, 52f, Screen.width * .36f, 22f), "Entraînez vos troupes et préparez vos patrouilles",
-                new GUIStyle(smallStyle) { fontSize = 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
-            GUI.Label(new Rect(114f, 76f, Screen.width * .36f, 18f),
-                "Niveau " + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture) + "  ·  " + LocalArmyTotal().ToString(CultureInfo.InvariantCulture) + " troupes",
-                new GUIStyle(smallStyle) { fontSize = 11, normal = { textColor = new Color(.68f, .62f, .52f, 1f) } });
+            GUI.Label(new Rect(114f, 49f, Screen.width * .42f, 28f), BarrackText("header.subtitle", "Entraînez vos troupes et préparez vos patrouilles"),
+                new GUIStyle(smallStyle) { fontSize = 17, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+            GUI.Label(new Rect(114f, 80f, Screen.width * .42f, 24f),
+                BarrackFormat("header.level", "Niveau {0} · {1} troupes", DisplayedBuildingLevel("guard_post"), LocalArmyTotal()),
+                new GUIStyle(smallStyle) { fontSize = 14, normal = { textColor = new Color(.68f, .62f, .52f, 1f) } });
 
-            if (DrawAllianceActivitiesButton(new Rect(Screen.width - 126f, 14f, 110f, 48f), "Actualiser", true, false))
-            {
-                if (OfficialDoctrineRecruitmentConfigured() && doctrineRecruitmentController != null && !doctrineRecruitmentController.IsBusy)
-                    doctrineRecruitmentController.Refresh();
-                try { MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Refresh(); } catch {}
-                try { MobileAccountSessionRuntimeBootstrap.CombatPatrolControllerForHiveMap?.Refresh(); } catch {}
-            }
+            DrawPremiumBuildingUpgradeHeader("guard_post", Screen.width < 900);
         }
 
         // Placeholder content area for the currently selected troop type - a stable slot for
@@ -3944,20 +3976,20 @@ private static string courierToast = string.Empty;
         {
             HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
             if (model == null || model.State == HiveDoctrineRecruitmentScreenState.NotConfigured)
-                return "Entrainement officiel non configure";
-            if (model.IsReadOnly) return "Hors ligne - actions bloquees";
+                return BarrackText("training.status.unconfigured", "Entraînement officiel non configuré");
+            if (model.IsReadOnly) return BarrackText("training.status.offline", "Hors ligne - actions bloquées");
             HiveDoctrineRecruitmentOperationModel active = model.ActiveOperation;
             if (active != null)
             {
                 if (!string.Equals(active.Family, family, StringComparison.Ordinal))
-                    return "Une autre troupe occupe la file d'entrainement";
-                if (active.AwaitingCompletion) return "Entrainement termine - a reclamer";
-                return "En cours - " + FormatBuildingUpgradeDuration(model.Remaining(doctrineRecruitmentController.Elapsed)) + " restantes";
+                    return BarrackText("training.status.other_busy", "Une autre troupe occupe la file d'entraînement");
+                if (active.AwaitingCompletion) return BarrackText("training.status.ready_to_claim", "Entraînement terminé - à réclamer");
+                return BarrackFormat("training.status.in_progress", "En cours - {0} restantes", FormatBuildingUpgradeDuration(model.Remaining(doctrineRecruitmentController.Elapsed)));
             }
             HiveDoctrineRecruitmentOfferModel offer = model.FindOffer(family);
-            if (offer == null) return "Aucune offre disponible";
-            string offerText = "Lot de " + offer.BatchSize.ToString(CultureInfo.InvariantCulture) + " - " + offer.HoneyCost.ToString(CultureInfo.InvariantCulture) + " miel, " + offer.PollenCost.ToString(CultureInfo.InvariantCulture) + " pollen - " + FormatBuildingUpgradeDuration(offer.Duration);
-            if (!model.CanStart(family)) return "Ressources insuffisantes - " + offerText;
+            if (offer == null) return BarrackText("training.status.no_offer", "Aucune offre disponible");
+            string offerText = BarrackFormat("training.status.offer", "Lot de {0} - {1} miel, {2} pollen - {3}", offer.BatchSize, offer.HoneyCost, offer.PollenCost, FormatBuildingUpgradeDuration(offer.Duration));
+            if (!model.CanStart(family)) return BarrackFormat("training.status.insufficient", "Ressources insuffisantes - {0}", offerText);
             return offerText;
         }
 
@@ -4658,17 +4690,10 @@ private static string courierToast = string.Empty;
                     DrawGameIcon(iconRect, icon, Color.white);
                     GUI.color = previous;
 
-                    // The 3D building collider already collects on click, but the badge now
-                    // sits on top of it - without its own hit target the icon would just be
-                    // inert decoration layered over whatever the collider's raycast picks up.
-                    // TryCollectPendingProduction is threshold-gated (see CollectionReadyThreshold),
-                    // so a click that happens to also register on the collider the same frame
-                    // collects once, not twice: the second call finds pending already back
-                    // below threshold and no-ops.
-                    if (GUI.Button(glowRect, string.Empty, GUIStyle.none))
-                    {
-                        CollectManualProductionForExternalHost(hotspotId);
-                    }
+                    // The glow/icon is decorative. The building collider and
+                    // premium producer input fallback own clicks; leaving a
+                    // second IMGUI.Button here could issue a duplicate server
+                    // collection or unexpectedly open details on the first tap.
                 }
             }
 
@@ -5343,16 +5368,82 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             GUI.color = previous;
         }
 
-        private static void DrawSplashStepTabs(Rect panel, float y)
+        // Exact same rectangles for rendering, hit testing and automated QA.
+        public static Rect[] SplashAuthTabRectsForProof(bool portrait, float screenWidth, float screenHeight)
         {
-            bool portrait = IsPortraitLayout();
+            Rect panel = SplashAuthPanelRectForProof(portrait, screenWidth, screenHeight);
             float pad = portrait ? 16f : 30f;
+            float y = panel.y + pad + (portrait ? 92f : 110f);
             float gap = portrait ? 6f : 10f;
             float width = (panel.width - pad * 2f - gap * 2f) / 3f;
             float height = portrait ? 34f : 42f;
-            DrawSplashTab(new Rect(panel.x + pad, y, width, height), "Accueil", splashAuthGateState == SplashAuthGateState.Splash, SplashAuthGateState.Splash);
-            DrawSplashTab(new Rect(panel.x + pad + (width + gap), y, width, height), portrait ? "Connex." : "Connexion", splashAuthGateState == SplashAuthGateState.Login, SplashAuthGateState.Login);
-            DrawSplashTab(new Rect(panel.x + pad + (width + gap) * 2f, y, width, height), portrait ? "Creer" : "Creation", splashAuthGateState == SplashAuthGateState.CreateAccount, SplashAuthGateState.CreateAccount);
+            return new[]
+            {
+                new Rect(panel.x + pad, y, width, height),
+                new Rect(panel.x + pad + width + gap, y, width, height),
+                new Rect(panel.x + pad + (width + gap) * 2f, y, width, height)
+            };
+        }
+
+        public static string SplashAuthTabStateForProof => splashAuthGateState.ToString();
+
+        private static void ActivateSplashAuthTab(SplashAuthGateState target)
+        {
+            if (splashAuthGateState == SplashAuthGateState.EnteredHive || newAccountNeedsDisplayName)
+                return;
+            splashAuthGateState = target;
+            if (target == SplashAuthGateState.Splash)
+                SetSplashAuthMessage("splash.message.choose_entry", false);
+            else if (target == SplashAuthGateState.Login)
+                SetSplashAuthMessageLiteral(ConnectionTruthMessage(CurrentConnectionTruthState()), false);
+            else
+                SetSplashAuthMessage("splash.create.demo_body", false);
+        }
+
+        // Mouse-down navigation is intentional: a previously captured GUI
+        // hotControl can steal the mouse-up from an invisible IMGUI Button.
+        // We still leave the normal GUI.Button path for keyboard/gamepad use.
+        public static bool TryNavigateSplashTabForProof(
+            bool portrait, float screenWidth, float screenHeight, Vector2 pointerPosition, bool pointerPressed)
+        {
+            if (!pointerPressed || splashAuthGateState == SplashAuthGateState.EnteredHive ||
+                newAccountNeedsDisplayName) return false;
+            Rect[] tabs = SplashAuthTabRectsForProof(portrait, screenWidth, screenHeight);
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                if (!tabs[i].Contains(pointerPosition)) continue;
+                ActivateSplashAuthTab(i == 0 ? SplashAuthGateState.Splash :
+                    i == 1 ? SplashAuthGateState.Login : SplashAuthGateState.CreateAccount);
+                return true;
+            }
+            return false;
+        }
+
+        private static void DrawSplashStepTabs(Rect panel, float y)
+        {
+            bool portrait = IsPortraitLayout();
+            Rect[] tabs = SplashAuthTabRectsForProof(portrait, Screen.width, Screen.height);
+            Event current = Event.current;
+            if (current != null && current.button == 0 &&
+                (current.type == EventType.MouseDown || current.rawType == EventType.MouseDown) &&
+                TryNavigateSplashTabForProof(portrait, Screen.width, Screen.height,
+                    current.mousePosition, true))
+            {
+                // Clear a stale invisible IMGUI button capture before opening
+                // credential fields. Do not retain keyboard focus from home.
+                GUIUtility.hotControl = 0;
+                GUIUtility.keyboardControl = 0;
+#if UNITY_EDITOR
+                Debug.Log("[BK-Splash] Tab clicked: " + splashAuthGateState);
+#endif
+                if (current.type != EventType.Used) current.Use();
+            }
+            DrawSplashTab(tabs[0], BeeLocalization.Text("splash.tab.home", "Accueil"),
+                splashAuthGateState == SplashAuthGateState.Splash, SplashAuthGateState.Splash);
+            DrawSplashTab(tabs[1], BeeLocalization.Text(portrait ? "splash.tab.login_short" : "splash.tab.login", "Connexion"),
+                splashAuthGateState == SplashAuthGateState.Login, SplashAuthGateState.Login);
+            DrawSplashTab(tabs[2], BeeLocalization.Text(portrait ? "splash.tab.create_short" : "splash.tab.create", "Création"),
+                splashAuthGateState == SplashAuthGateState.CreateAccount, SplashAuthGateState.CreateAccount);
         }
 
         private static void DrawSplashTab(Rect rect, string label, bool active, SplashAuthGateState target)
@@ -5368,39 +5459,33 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             GUI.enabled = true;
             bool clicked = GUI.Button(rect, string.Empty, GUIStyle.none);
             GUI.enabled = previousEnabled;
-            if (clicked)
-            {
-                splashAuthGateState = target;
-                splashAuthMessage = target == SplashAuthGateState.Splash
-                    ? "Choisis une entree demo locale. Aucun compte serveur live."
-                    : "Mode demo local. Validation minimale uniquement.";
-            }
+            if (clicked) ActivateSplashAuthTab(target);
         }
 
         private static void DrawSplashGate(Rect panel, float y, bool portrait)
         {
             float pad = portrait ? 16f : 30f;
             float width = panel.width - pad * 2f;
-            GUI.Label(new Rect(panel.x + pad, y, width, 34f), "Ruche Prime", new GUIStyle(titleStyle) { fontSize = portrait ? 21 : 26 });
+            GUI.Label(new Rect(panel.x + pad, y, width, 34f), BeeLocalization.Text("splash.home.hive_name", "Ruche Prime"), new GUIStyle(titleStyle) { fontSize = portrait ? 21 : 26 });
             y += portrait ? 36f : 46f;
-            GUI.Label(new Rect(panel.x + pad, y, width, portrait ? 42f : 50f), "Demo locale uniquement. Aucun compte officiel, aucune sauvegarde serveur.", smallStyle);
+            GUI.Label(new Rect(panel.x + pad, y, width, portrait ? 42f : 50f), BeeLocalization.Text("splash.home.demo_warning", "Demo locale uniquement. Aucun compte officiel, aucune sauvegarde serveur."), smallStyle);
             y += portrait ? 58f : 70f;
 
             float primaryHeight = portrait ? 54f : 60f;
-            if (DrawSplashPrimaryButton(new Rect(panel.x + pad, y, width, primaryHeight), "Jouer en demo locale", "hive"))
+            if (DrawSplashPrimaryButton(new Rect(panel.x + pad, y, width, primaryHeight), BeeLocalization.Text("splash.home.play_demo", "Jouer en demo locale"), "hive"))
             {
                 EnterHiveFromSplash("demo_local_direct");
             }
 
             y += portrait ? 66f : 78f;
             float secondaryHeight = portrait ? 50f : 56f;
-            if (DrawSplashSecondaryButton(new Rect(panel.x + pad, y, (width - 10f) * 0.5f, secondaryHeight), "Connexion"))
+            if (DrawSplashSecondaryButton(new Rect(panel.x + pad, y, (width - 10f) * 0.5f, secondaryHeight), BeeLocalization.Text("splash.tab.login", "Connexion")))
             {
                 splashAuthGateState = SplashAuthGateState.Login;
                 splashAuthMessage = "Connexion demo locale. Aucun serveur contacte.";
             }
 
-            if (DrawSplashSecondaryButton(new Rect(panel.x + pad + (width + 10f) * 0.5f, y, (width - 10f) * 0.5f, secondaryHeight), "Creer"))
+            if (DrawSplashSecondaryButton(new Rect(panel.x + pad + (width + 10f) * 0.5f, y, (width - 10f) * 0.5f, secondaryHeight), BeeLocalization.Text("splash.tab.create_short", "Créer")))
             {
                 splashAuthGateState = SplashAuthGateState.CreateAccount;
                 splashAuthMessage = "Creation locale uniquement. Aucun compte officiel.";
@@ -5417,8 +5502,8 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             float y = panel.yMax - (portrait ? 250f : 238f);
             Rect menu = new Rect(panel.x + pad, y, width, menuHeight);
             DrawPremiumPanel(menu, new Color(0.045f, 0.058f, 0.070f, 0.92f), new Color(0.25f, 0.72f, 1f, 0.78f));
-            GUI.Label(new Rect(menu.x + 12f, menu.y + 8f, menu.width - 24f, 20f), "Developpement", new GUIStyle(titleStyle) { fontSize = portrait ? 13 : 14, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.82f, 0.94f, 1f, 1f) } });
-            GUI.Label(new Rect(menu.x + 12f, menu.y + 30f, menu.width - 24f, 18f), "Visible Editor / Development build seulement", new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.86f, 0.92f, 1f, 1f) } });
+            GUI.Label(new Rect(menu.x + 12f, menu.y + 8f, menu.width - 24f, 20f), BeeLocalization.Text("splash.development.title", "Développement"), new GUIStyle(titleStyle) { fontSize = portrait ? 13 : 14, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.82f, 0.94f, 1f, 1f) } });
+            GUI.Label(new Rect(menu.x + 12f, menu.y + 30f, menu.width - 24f, 18f), BeeLocalization.Text("splash.development.description", "Visible Editor / Development build seulement"), new GUIStyle(tinyLabelStyle) { alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.86f, 0.92f, 1f, 1f) } });
 
             float gap = portrait ? 6f : 8f;
             float buttonHeight = portrait ? 32f : 36f;
@@ -5506,6 +5591,14 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             bool googleOperationPending = IsMobileGoogleLoginPending();
             bool googleReady = !authenticated && truth == ConnectionTruthState.Ready && mobileAccountSessionClient != null && !string.IsNullOrWhiteSpace(mobileGoogleOAuthClientId) &&
                 mobileGoogleLoginRequestFactory != null;
+            // Staging should show the real Google option even before the
+            // separate OAuth credentials have been installed on that API.
+            // Its button stays disabled until Google is genuinely configured.
+            bool googleOptionVisible = googleReady;
+#if UNITY_EDITOR
+            googleOptionVisible |= !authenticated && truth == ConnectionTruthState.Ready &&
+                MobileAccountSessionRuntimeBootstrap.AcademyStagingSelectedForEditor;
+#endif
 
             // Le contenu (titre + carte de disponibilite + champs/boutons) peut depasser la
             // hauteur du panneau sur les viewports courts (paysage bas, petite fenetre Game
@@ -5568,6 +5661,30 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 return;
             }
 
+            if (googleOptionVisible)
+            {
+                bool previousEnabledGoogle = GUI.enabled;
+                GUI.enabled = previousEnabledGoogle && googleReady &&
+                    !operationPending && !googleOperationPending;
+                string googleLabel = googleOperationPending
+                    ? BeeLocalization.Text("splash.login.official_connecting", "Connexion sécurisée…")
+                    : BeeLocalization.Text("splash.login.google_button", "Se connecter avec Google");
+                if (DrawSplashPrimaryButton(new Rect(0f, ly, innerWidth, portrait ? 52f : 54f), googleLabel, "queen"))
+                {
+                    BeginMobileGoogleLogin();
+                }
+                GUI.enabled = previousEnabledGoogle;
+                ly += (portrait ? 52f : 54f) + (portrait ? 14f : 12f);
+                if (!googleReady)
+                {
+                    GUI.Label(new Rect(4f, ly - 7f, innerWidth - 8f, portrait ? 45f : 30f),
+                        BeeLocalization.Text("splash.login.google_staging_not_configured",
+                            "Google est en attente de configuration sur le serveur de test."),
+                        new GUIStyle(smallStyle) { wordWrap = true, alignment = TextAnchor.UpperCenter });
+                    ly += portrait ? 43f : 28f;
+                }
+            }
+
             if (canCollectCredentials)
             {
                 float fieldHeight = portrait ? 46f : 44f;
@@ -5598,28 +5715,13 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                 ly += portrait ? 62f : 66f;
             }
 
-            if (googleReady)
-            {
-                bool previousEnabledGoogle = GUI.enabled;
-                GUI.enabled = previousEnabledGoogle && !operationPending && !googleOperationPending;
-                string googleLabel = googleOperationPending
-                    ? BeeLocalization.Text("splash.login.official_connecting", "Connexion sécurisée…")
-                    : BeeLocalization.Text("splash.login.google_button", "Se connecter avec Google");
-                if (DrawSplashPrimaryButton(new Rect(0f, ly, innerWidth, portrait ? 52f : 54f), googleLabel, "queen"))
-                {
-                    BeginMobileGoogleLogin();
-                }
-                GUI.enabled = previousEnabledGoogle;
-                ly += (portrait ? 52f : 54f) + (portrait ? 14f : 12f);
-            }
-
             if (DrawSplashPrimaryButton(new Rect(0f, ly, innerWidth, portrait ? 54f : 60f), BeeLocalization.Text("splash.login.local_demo", "Continuer en démo locale"), "hive"))
             {
                 EnterHiveFromSplash("demo_local_guest");
             }
             ly += portrait ? 54f : 60f;
 
-            if (!googleReady)
+            if (!googleOptionVisible)
             {
                 ly += portrait ? 14f : 12f;
                 DrawDisabledFutureAuthNotice(new Rect(0f, ly, innerWidth, portrait ? 44f : 40f));
@@ -10744,7 +10846,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 
 		private static bool ShouldBlockUnderlyingHiveChromeInput()
 		{
-			return resourceInventoryOpen
+			return HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking() || resourceInventoryOpen
 				|| colonyOverviewOpen
 				|| championBeesPanelOpen
 				|| missionsCenterOpen
@@ -10774,9 +10876,17 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
 
         // Stabilisation UI/UX : toute fenetre Premium ouverte doit etancher les interactions
         // avec le monde (selection 3D, gestes de la ruche, hotspots), quel que soit l'ecran.
+        // Raw modal state only: never query the gesture gate from this accessor.
+        // Mini-chat and the non-modal More tray retain their scoped pointer guards.
+        public static bool AdditionalModalOpenForInputOwnership => resourceInventoryOpen
+            || colonyOverviewOpen || championBeesPanelOpen || missionsCenterOpen
+            || courierScreenOpen || friendsScreenOpen || chatScreenOpen
+            || speedUpWindowOpen || bestiaryCodexOverlayOpen || milestoneEventOverlayOpen
+            || referenceDetailInfoPopupOpen || strategicPathPanelOpen;
+
 		private static bool PremiumUiBlocksWorldInput()
 		{
-			return resourceInventoryOpen
+			return HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking() || resourceInventoryOpen
 				|| colonyOverviewOpen
 				|| championBeesPanelOpen
                 || missionsCenterOpen
@@ -21292,7 +21402,7 @@ public static string[] ConnectionTruthForProof()
         public static string RoyalPalaceNextLevelDescriptionForExternalHost()
         {
             HiveRoyalPalaceProgressionModel progression = RoyalPalaceProgressionModel();
-            return progression == null ? string.Empty : progression.NextLevelDescription;
+            return progression == null ? string.Empty : BeeLocalization.Text("royal_palace.next_description." + RoyalPalaceNextLevelForExternalHost().ToString(CultureInfo.InvariantCulture), progression.NextLevelDescription);
         }
 
         // Une ligne lisible par prerequis. `satisfied` permet a l'hote de distinguer
@@ -21984,7 +22094,7 @@ public static string[] ConnectionTruthForProof()
             if (!model.PrerequisitesMet(researchId))
                 return string.Format(CultureInfo.CurrentCulture,
                     BeeLocalization.Text("research.official.status.prerequisite", "Prérequis manquant · {0}"),
-                    model.MissingPrerequisite(researchId));
+                    PremiumResearchTitle(model.MissingPrerequisite(researchId)));
             string shortage = OfficialResearchShortageResource(researchId);
             if (!string.IsNullOrWhiteSpace(shortage))
                 return OfficialResearchShortageText(researchId, shortage);
@@ -22048,7 +22158,7 @@ public static string[] ConnectionTruthForProof()
                 offer?.GlobalCapacityBonusBps ?? completed?.GlobalCapacityBonusBps ?? 0);
             return parts.Count == 0
                 ? BeeLocalization.Text("research.official.effect.pending", "Effet confirmé par le serveur à la complétion")
-                : string.Join(" · ", parts) + " · serveur";
+                : string.Join(" · ", parts) + BeeLocalization.Text("research.premium.server_suffix", " · serveur");
         }
 
         private static void AppendResearchEffectPart(List<string> parts, string key, string fallback, int bps)
@@ -24670,12 +24780,12 @@ private static void DrawResourceInventoryOverlay(bool portrait)
             if (mobileAccountSessionClient != null &&
                 mobileAccountSessionClient.State == MobileAccountSessionState.Authenticated &&
                 mobileAccountSessionClient.ServerGameplayAuthorityGranted)
-                return "Compte officiel";
+                return BeeLocalization.Text("player.summary.session.official", "Compte officiel");
 
             if (mobileAccountSessionClient != null && mobileAccountSessionClient.State == MobileAccountSessionState.Offline)
-                return "Session hors ligne";
+                return BeeLocalization.Text("player.summary.session.offline", "Session hors ligne");
 
-            return "Profil local";
+            return BeeLocalization.Text("player.summary.session.local", "Profil local");
         }
 
         private static void OpenPlayerProfileFromSummary()
@@ -24690,9 +24800,9 @@ private static void DrawResourceInventoryOverlay(bool portrait)
 
         private static string PlayerIdentitySubtitle()
         {
-            return "Niv. " + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture) +
+            return BeeLocalization.Text("player.summary.level_short", "Niv. ") + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture) +
                 " · " + FormatRealPowerNumber(ComputeRealTotalPower()) +
-                " puissance";
+                BeeLocalization.Text("player.summary.power_suffix", " puissance");
         }
 
         private static string TrimForUi(string value, int maxCharacters)
@@ -24748,15 +24858,15 @@ private static void DrawResourceInventoryOverlay(bool portrait)
 
             float contentX = avatar.xMax + 12f;
             float rowW = rect.xMax - contentX - 14f;
-            DrawPlayerSummaryRow(new Rect(contentX, avatar.y, rowW, 28f), "Niveau", "Coeur royal " + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture));
-            DrawPlayerSummaryRow(new Rect(contentX, avatar.y + 34f, rowW, 28f), "Puissance", FormatRealPowerNumber(ComputeRealTotalPower()));
+            DrawPlayerSummaryRow(new Rect(contentX, avatar.y, rowW, 28f), BeeLocalization.Text("player.summary.level", "Niveau"), BeeLocalization.Text("player.summary.royal_core", "Coeur royal ") + CoeurRoyalLevel().ToString(CultureInfo.InvariantCulture));
+            DrawPlayerSummaryRow(new Rect(contentX, avatar.y + 34f, rowW, 28f), BeeLocalization.Text("player.summary.power", "Puissance"), FormatRealPowerNumber(ComputeRealTotalPower()));
 
             float y = avatar.yMax + 14f;
-            DrawPlayerSummaryRow(new Rect(rect.x + 14f, y, rect.width - 28f, 30f), "Session", CurrentPlayerSessionLabel());
-            DrawPlayerSummaryRow(new Rect(rect.x + 14f, y + 38f, rect.width - 28f, 30f), "Profil", "Résumé royal et progression stratégique");
+            DrawPlayerSummaryRow(new Rect(rect.x + 14f, y, rect.width - 28f, 30f), BeeLocalization.Text("player.summary.session", "Session"), CurrentPlayerSessionLabel());
+            DrawPlayerSummaryRow(new Rect(rect.x + 14f, y + 38f, rect.width - 28f, 30f), BeeLocalization.Text("player.summary.profile", "Profil"), BeeLocalization.Text("player.summary.description", "Résumé royal et progression stratégique"));
 
             Rect profileButton = new Rect(rect.x + 14f, rect.yMax - 52f, rect.width - 28f, 38f);
-            if (DrawPremiumButton(profileButton, "Profil", "queen"))
+            if (DrawPremiumButton(profileButton, BeeLocalization.Text("player.summary.profile", "Profil"), "queen"))
             {
                 OpenPlayerProfileFromSummary();
             }
@@ -25782,27 +25892,7 @@ if (leftNavigationTexture == null)
 
 		private static bool DrawPremiumBackButton(Rect visual)
 		{
-			Texture2D texture = LeftNavigationTexture();
-			if (texture != null)
-			{
-				Color previous = GUI.color;
-				GUI.color = Color.white;
-				GUI.DrawTexture(visual, texture, ScaleMode.ScaleToFit, true);
-				GUI.color = previous;
-			}
-			else
-			{
-				GUI.Label(visual, "\u2190", new GUIStyle(centeredTinyLabelStyle) { fontSize = 22 });
-			}
-
-			float width = Mathf.Max(52f, visual.width);
-			float height = Mathf.Max(52f, visual.height);
-			Rect hit = new Rect(
-				visual.x - (width - visual.width) * 0.5f,
-				visual.y - (height - visual.height) * 0.5f,
-				width,
-				height);
-			return GUI.Button(hit, string.Empty, GUIStyle.none);
+            return WorldMapHudLayout.DrawChatReturnButton(visual);
 		}
 
         public static bool DrawPremiumBackButtonForExternalHost(Rect visual)
@@ -32737,7 +32827,7 @@ if (leftNavigationTexture == null)
             GUI.DrawTexture(new Rect(0f, header.yMax - 1f, Screen.width, 1f), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            if (DrawAllianceActivitiesButton(new Rect(16f, 16f, 78f, 46f), "Retour", true, false))
+            if (DrawPremiumBackButton(new Rect(16f, 16f, 48f, 48f)))
             {
                 AudioManager.Instance?.PlayUIClick();
                 AudioManager.Instance?.PlayMenuClose();
@@ -32746,9 +32836,9 @@ if (leftNavigationTexture == null)
                 detailPanelClosed = true;
                 return;
             }
-            GUI.Label(new Rect(112f, 13f, Screen.width * .42f, 36f), "CENTRE D'ALLIANCE",
+            GUI.Label(new Rect(112f, 13f, Screen.width * .42f, 36f), BeeLocalization.Text("alliance.premium.title", "CENTRE D'ALLIANCE"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 21 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
-            GUI.Label(new Rect(114f, 53f, Screen.width * .46f, 20f), "Le cœur vivant de votre communauté",
+            GUI.Label(new Rect(114f, 53f, Screen.width * .46f, 20f), BeeLocalization.Text("alliance.premium.subtitle", "Le cœur vivant de votre communauté"),
                 new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
 
             Rect center = new Rect(Screen.width * .5f - 280f, Screen.height * .5f - 90f, 560f, 180f);
@@ -32783,7 +32873,7 @@ if (leftNavigationTexture == null)
             GUI.DrawTexture(new Rect(0f, header.yMax - 1f, Screen.width, 1f), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            if (DrawAllianceActivitiesButton(new Rect(16f, 16f, 78f, 46f), "Retour", true, false))
+            if (DrawPremiumBackButton(new Rect(16f, 16f, 48f, 48f)))
             {
                 AudioManager.Instance?.PlayUIClick();
                 AudioManager.Instance?.PlayMenuClose();
@@ -32792,7 +32882,7 @@ if (leftNavigationTexture == null)
                 detailPanelClosed = true;
                 return;
             }
-            GUI.Label(new Rect(112f, 13f, Screen.width * .42f, 36f), "CENTRE D'ALLIANCE",
+            GUI.Label(new Rect(112f, 13f, Screen.width * .42f, 36f), BeeLocalization.Text("alliance.premium.title", "CENTRE D'ALLIANCE"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 21 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
             GUI.Label(new Rect(114f, 53f, Screen.width * .46f, 20f), "Rejoignez ou créez une alliance pour bâtir votre communauté.",
                 new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
@@ -33030,6 +33120,11 @@ if (leftNavigationTexture == null)
         {
             SyncAllianceRuntimeStateFromController();
             AllianceCenterScreenModel allianceModel = allianceCenterController.Model;
+            if(allianceModel?.State==AllianceCenterScreenState.Ready)
+                MobileAccountSessionRuntimeBootstrap.ObserveTerritoryAlliance(allianceModel.Overview?.AllianceId ?? Guid.Empty);
+            else if(allianceModel?.State==AllianceCenterScreenState.NoAlliance)
+                MobileAccountSessionRuntimeBootstrap.ObserveTerritoryAlliance(Guid.Empty);
+
 
             // M043E-CL: explicit per-state branching, proven necessary by a CEO Play Mode
             // certification failure - the previous logic only special-cased State==NoAlliance and
@@ -33125,23 +33220,23 @@ if (leftNavigationTexture == null)
 
             string allianceRuntimeName = allianceModel?.Overview?.Name;
             string allianceRuntimeTag = allianceModel?.Overview?.Tag;
-            if (DrawAllianceActivitiesButton(new Rect(16f, 14f, 78f, 48f), "Retour", true, false))
+            if (DrawPremiumBackButton(new Rect(16f, 14f, 48f, 48f)))
             {
                 AudioManager.Instance?.PlayUIClick();
                 AudioManager.Instance?.PlayMenuClose();
                 ClosePremiumScreensInPriorityOrderCore();
                 return;
             }
-            GUI.Label(new Rect(112f, 12f, Screen.width * .30f, 38f), "CENTRE D'ALLIANCE",
+            GUI.Label(new Rect(112f, 12f, Screen.width * .30f, 38f), BeeLocalization.Text("alliance.premium.title", "CENTRE D'ALLIANCE"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 21 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
             string allianceIdentity = (string.IsNullOrEmpty(allianceRuntimeName) ? "—" : allianceRuntimeName)
                 + (string.IsNullOrEmpty(allianceRuntimeTag) ? string.Empty : "  [" + allianceRuntimeTag + "]");
             GUI.Label(new Rect(114f, 52f, Screen.width * .36f, 22f), allianceIdentity,
                 new GUIStyle(smallStyle) { fontSize = compact ? 12 : 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
-            GUI.Label(new Rect(114f, 76f, Screen.width * .36f, 18f), "Le cœur vivant de votre communauté",
+            GUI.Label(new Rect(114f, 76f, Screen.width * .36f, 18f), BeeLocalization.Text("alliance.premium.subtitle", "Le cœur vivant de votre communauté"),
                 new GUIStyle(smallStyle) { fontSize = compact ? 10 : 12, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
-            if (DrawAllianceActivitiesButton(new Rect(Screen.width - 126f, 14f, 110f, 48f), "Actualiser", !allianceCenterController.IsBusy, false))
-                allianceCenterController.Refresh();
+            // The Alliance controller is refreshed quietly by the building's runtime host.
+            // Do not put a redundant manual Refresh button in the shared building header.
 
             // M043T-CL: real, confirmed click pass-through bug - DrawAllianceQuickActionOverlay
             // (the "Inviter un joueur" etc. modal) and DrawAllianceMemberProfile are drawn LAST, on
@@ -33156,7 +33251,7 @@ if (leftNavigationTexture == null)
             if (allianceOverviewTab != "overview" && allianceOverviewTab != "members" &&
                 allianceOverviewTab != "chat" && allianceOverviewTab != "journal" &&
                 allianceOverviewTab != "help" && allianceOverviewTab != "donations" &&
-                allianceOverviewTab != "research")
+                allianceOverviewTab != "research" && allianceOverviewTab != "territory")
             {
                 allianceOverviewTab = "overview";
                 allianceTabChangedAt = NowForUi();
@@ -33230,8 +33325,8 @@ if (leftNavigationTexture == null)
             // One navigation level only. Every visible tab below is backed by real, working
             // content in the current Alpha; unfinished Territory/Shop/War/Diplomacy routes are
             // intentionally not exposed as dead buttons.
-            string[] ids = { "overview", "members", "chat", "journal", "help", "donations", "research" };
-            string[] labels = { "APERÇU", "MEMBRES", "CHAT", "JOURNAL", "AIDE", "DONS", "RECHERCHES" };
+            string[] ids = { "overview", "members", "chat", "journal", "help", "donations", "research", "territory" };
+            string[] labels = { BeeLocalization.Text("alliance.premium.tab.overview", "APERÇU"), BeeLocalization.Text("alliance.premium.tab.members", "MEMBRES"), "CHAT", BeeLocalization.Text("alliance.premium.tab.journal", "JOURNAL"), BeeLocalization.Text("alliance.premium.tab.help", "AIDE"), BeeLocalization.Text("alliance.premium.tab.donations", "DONS"), BeeLocalization.Text("alliance.premium.tab.research", "RECHERCHES"), AllianceTerritoryText("tab", "TERRITOIRE", "TERRITORY") };
             // Activities-v4: no outer framed container around a row of navigation controls.
             GUI.color = new Color(0.56f, 0.38f, 0.15f, 0.55f);
             GUI.DrawTexture(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Texture2D.whiteTexture);
@@ -33299,7 +33394,7 @@ if (leftNavigationTexture == null)
             // Keep this row for true shortcuts only. Chat and Guerre already have dedicated
             // navigation destinations, so duplicating them here only adds noise.
             string[] ids = { "invite", "announce" };
-            string[] titles = { "Inviter", "Publier une annonce" };
+            string[] titles = { BeeLocalization.Text("alliance.premium.action.invite", "Inviter"), BeeLocalization.Text("alliance.premium.action.announce", "Publier une annonce") };
             string[] icons = { "members", "mail" };
             float gap = compact ? 4f : 12f;
             float buttonWidth = compact ? 118f : Mathf.Min(280f, (rect.width - 16f - gap * (ids.Length - 1)) / ids.Length);
@@ -33943,31 +34038,36 @@ if (leftNavigationTexture == null)
                 return;
             }
 
-            float composerH = 34f;
-            Rect messagesArea = new Rect(area.x, area.y, area.width, area.height - composerH - 44f);
+            float composerH = compact ? 42f : 48f;
+            Rect messagesArea = new Rect(area.x, area.y, area.width, area.height - composerH - 20f);
             IReadOnlyList<BeeKingdom.Gameplay.Communication.LivingHiveChatMessage> messages = snapshot.Messages;
             Guid myPlayerId = allianceCenterController.Model?.Overview?.MyPlayerId ?? Guid.Empty;
             float scrollContentWidth = Mathf.Max(40f, messagesArea.width - 18f);
-            float bubbleWidth = Mathf.Max(80f, scrollContentWidth * 0.72f);
-            float bubbleTextWidth = Mathf.Max(40f, bubbleWidth - 20f);
+            float avatarSize = compact ? 36f : 44f;
+            float minBubbleWidth = compact ? 132f : 205f;
+            float maxBubbleWidth = Mathf.Max(minBubbleWidth,
+                Mathf.Min(compact ? 460f : 660f, scrollContentWidth - avatarSize - 22f));
             GUIStyle bodyMeasureStyle = new GUIStyle(smallStyle)
             {
-                fontSize = compact ? 10 : 11,
+                fontSize = compact ? 14 : 17,
                 wordWrap = true,
                 clipping = TextClipping.Clip
             };
-
+            float[] messageWidths = new float[messages.Count];
             float[] messageHeights = new float[messages.Count];
             float messagesContentHeight = 0f;
             for (int i = 0; i < messages.Count; i++)
             {
                 string body = messages[i].VisibleBody ?? string.Empty;
-                float bodyHeight = bodyMeasureStyle.CalcHeight(new GUIContent(body), bubbleTextWidth);
-                bodyHeight = Mathf.Clamp(bodyHeight, compact ? 18f : 20f, compact ? 96f : 120f);
-                messageHeights[i] = 28f + bodyHeight;
-                messagesContentHeight += messageHeights[i] + 6f;
+                float desiredWidth = bodyMeasureStyle.CalcSize(new GUIContent(body)).x + 35f;
+                float width = Mathf.Clamp(desiredWidth, minBubbleWidth, maxBubbleWidth);
+                float bodyHeight = bodyMeasureStyle.CalcHeight(
+                    new GUIContent(body), Mathf.Max(40f, width - 28f));
+                bodyHeight = Mathf.Clamp(bodyHeight, 25f, compact ? 155f : 180f);
+                messageWidths[i] = width;
+                messageHeights[i] = Mathf.Max(avatarSize + 8f, bodyHeight + 43f);
+                messagesContentHeight += messageHeights[i] + 11f;
             }
-
             allianceChatDrawerMessagesScroll.x = 0f;
             allianceChatDrawerMessagesScroll = GUI.BeginScrollView(
                 messagesArea,
@@ -33983,69 +34083,87 @@ if (leftNavigationTexture == null)
                 // M043U-CL: same left/right-by-sender convention as every other chat surface (own
                 // messages on the right, everyone else's on the left).
                 bool mine = myPlayerId != Guid.Empty && Guid.TryParse(message.SenderPlayerId, out Guid senderGuid) && senderGuid == myPlayerId;
-                float bubbleX = mine ? scrollContentWidth - bubbleWidth : 0f;
+                float bubbleWidth = messageWidths[i];
                 float bubbleHeight = messageHeights[i];
+                float avatarX = mine ? scrollContentWidth - avatarSize - 4f : 4f;
+                Rect avatar = new Rect(avatarX, messageY + 3f, avatarSize, avatarSize);
+                float bubbleX = mine
+                    ? avatar.x - 10f - bubbleWidth
+                    : avatar.xMax + 10f;
                 Rect bubble = new Rect(bubbleX, messageY, bubbleWidth, bubbleHeight);
-                Color accentBubble = mine ? new Color(.56f, .87f, .61f, 1f) : new Color(1f, .77f, .36f, 1f);
-                GUI.color = mine ? new Color(.12f, .16f, .08f, .96f) : new Color(.095f, .063f, .033f, .98f);
-                GUI.DrawTexture(bubble, Texture2D.whiteTexture);
-                GUI.color = new Color(accentBubble.r, accentBubble.g, accentBubble.b, .62f);
-                GUI.DrawTexture(new Rect(bubble.x, bubble.yMax - 1f, bubble.width, 1f), Texture2D.whiteTexture);
-                GUI.color = Color.white;
+                Color bubbleFill = mine
+                    ? new Color(.14f, .18f, .115f, .98f)
+                    : new Color(.14f, .095f, .055f, .98f);
+                DrawFlatRoundedRect(bubble, bubbleFill, 9f);
+                Color oldGuiColor = GUI.color;
+                GUI.color = mine
+                    ? new Color(.53f, .81f, .58f, .85f)
+                    : new Color(1f, .77f, .36f, .85f);
+                GUI.DrawTexture(new Rect(bubble.x + 7f, bubble.yMax - 2f,
+                    bubble.width - 14f, 2f), Texture2D.whiteTexture);
+                GUI.color = oldGuiColor;
+
+                string sender = string.IsNullOrWhiteSpace(message.SenderDisplayName)
+                    ? "—" : message.SenderDisplayName;
+                DrawAllianceMessageAvatar(avatar, sender);
 
                 GUIStyle senderStyle = new GUIStyle(badgeStyle)
                 {
-                    fontSize = compact ? 9 : 10,
-                    alignment = mine ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft
+                    fontSize = compact ? 12 : 15,
+                    fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleLeft,
+                    normal = { textColor = new Color(1f, .85f, .55f, 1f) }
                 };
-                GUIStyle timeStyle = new GUIStyle(badgeStyle)
+                GUIStyle timeStyle = new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 8 : 9,
-                    alignment = mine ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight,
-                    normal = { textColor = new Color(1f, 1f, 1f, 0.45f) }
+                    fontSize = compact ? 10 : 12,
+                    alignment = TextAnchor.MiddleRight,
+                    normal = { textColor = new Color(.82f, .77f, .69f, 1f) }
                 };
                 GUIStyle bodyStyle = new GUIStyle(bodyMeasureStyle)
                 {
-                    alignment = mine ? TextAnchor.UpperRight : TextAnchor.UpperLeft
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(1f, .96f, .88f, 1f) }
                 };
 
-                string timeLabel = message.CreatedAt.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
-                if (mine)
-                {
-                    GUI.Label(new Rect(bubble.x + 10f, bubble.y + 4f, bubble.width - 20f, 16f), timeLabel, timeStyle);
-                }
-                else
-                {
-                    string sender = string.IsNullOrEmpty(message.SenderDisplayName) ? "—" : message.SenderDisplayName;
-                    GUI.Label(new Rect(bubble.x + 10f, bubble.y + 4f, bubble.width - 66f, 16f), sender, senderStyle);
-                    GUI.Label(new Rect(bubble.xMax - 66f, bubble.y + 4f, 56f, 16f), timeLabel, timeStyle);
-                }
+                string timeLabel = message.CreatedAt.ToLocalTime().ToString(
+                    "HH:mm", CultureInfo.InvariantCulture);
+                GUI.Label(new Rect(bubble.x + 14f, bubble.y + 7f,
+                    Mathf.Max(45f, bubble.width - 92f), 25f),
+                    mine ? "Vous" : sender, senderStyle);
+                GUI.Label(new Rect(bubble.xMax - 75f, bubble.y + 7f,
+                    62f, 25f), timeLabel, timeStyle);
+                GUI.Label(new Rect(bubble.x + 14f, bubble.y + 34f,
+                    bubble.width - 28f, bubble.height - 42f),
+                    message.VisibleBody ?? string.Empty, bodyStyle);
 
-                GUI.Label(
-                    new Rect(bubble.x + 10f, bubble.y + 21f, bubble.width - 20f, bubble.height - 27f),
-                    message.VisibleBody ?? string.Empty,
-                    bodyStyle);
-
-                messageY += bubbleHeight + 6f;
+                messageY += bubbleHeight + 11f;
             }
             GUI.EndScrollView();
 
-            Rect input = new Rect(area.x, area.yMax - composerH, area.width - 110f, composerH);
+            Rect input = new Rect(area.x, area.yMax - composerH, area.width - 130f, composerH);
             GUI.color = new Color(.095f, .063f, .033f, .98f);
             GUI.DrawTexture(input, Texture2D.whiteTexture);
             GUI.color = new Color(.56f, .38f, .15f, .72f);
             GUI.DrawTexture(new Rect(input.x, input.yMax - 1f, input.width, 1f), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            GUIStyle composerStyle = new GUIStyle(GUI.skin.textField)
+            {
+                fontSize = compact ? 15 : 18,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = new Color(1f, .96f, .87f, 1f),
+                    background = Texture2D.blackTexture },
+                focused = { textColor = new Color(1f, .96f, .87f, 1f),
+                    background = Texture2D.blackTexture },
+                hover = { textColor = new Color(1f, .96f, .87f, 1f),
+                    background = Texture2D.blackTexture }
+            };
             allianceChatComposerText = GUI.TextField(
-                new Rect(input.x + 10f, input.y + 5f, input.width - 20f, input.height - 10f),
+                new Rect(input.x + 10f, input.y + 4f, input.width - 20f,
+                    input.height - 8f),
                 allianceChatComposerText ?? string.Empty,
-                new GUIStyle(GUI.skin.textField)
-                {
-                    fontSize = compact ? 11 : 12,
-                    normal = { textColor = new Color(1f, .95f, .82f, 1f), background = Texture2D.whiteTexture }
-                });
-
-            Rect send = new Rect(area.xMax - 100f, area.yMax - composerH, 100f, composerH);
+                composerStyle);
+            Rect send = new Rect(area.xMax - 120f, area.yMax - composerH, 120f, composerH);
             bool canSend = !string.IsNullOrWhiteSpace(allianceChatComposerText);
             if (DrawAllianceActivitiesButton(send, "Envoyer", canSend, true) && canSend)
             {
@@ -36433,6 +36551,7 @@ if (leftNavigationTexture == null)
 
 		private static void CloseChatScreen()
 		{
+            HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
 			chatScreenOpen = false;
 			chatActionMessageIndex = -1;
 			chatEmojiPanelOpen = false;
@@ -36561,8 +36680,16 @@ if (leftNavigationTexture == null)
 			if (mobile) chatMobilePane = "messages";
 		}
 
+        private static int chatBackHandledFrame = -1;
 		private static void ChatBackOrClose(bool compact)
 		{
+            if (chatBackHandledFrame == Time.frameCount)
+            {
+                HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
+                return;
+            }
+            chatBackHandledFrame = Time.frameCount;
+            HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
 			if (compact)
 			{
 				if (string.Equals(chatMobilePane, "messages", StringComparison.Ordinal))
@@ -36588,6 +36715,7 @@ if (leftNavigationTexture == null)
 
 		private static void DrawChatScreen(bool compact)
 		{
+            if (SettingsOwnCommunicationInput) return;
 			if (!chatScreenOpen) return;
 			compact |= Screen.width < 960;
 			EnsureChatData();
@@ -36676,9 +36804,11 @@ if (leftNavigationTexture == null)
 			GUI.color = new Color(0.01f, 0.008f, 0.004f, 0.50f);
 			GUI.DrawTexture(banner, Texture2D.blackTexture, ScaleMode.StretchToFill, true);
 			GUI.color = Color.white;
-			if (compact && height < 100f) return;
-			GUI.Label(new Rect(34f, compact ? height - 48f : 22f, Screen.width * 0.72f, 42f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 24 : 38, fontStyle = FontStyle.Bold });
-			GUI.Label(new Rect(36f, compact ? height - 22f : 68f, Screen.width * 0.72f, 20f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 15 });
+			if (height < 100f) return;
+			float textLeft = ChatBackButtonRect().xMax + 18f;
+			float textWidth = Mathf.Max(1f, Screen.width * 0.72f - (textLeft - 34f));
+			GUI.Label(new Rect(textLeft, compact ? height - 52f : 22f, textWidth, compact ? 28f : 42f), "CHAT ROYAL", new GUIStyle(titleStyle) { fontSize = compact ? 24 : 38, fontStyle = FontStyle.Bold });
+			GUI.Label(new Rect(textLeft + 2f, compact ? height - 22f : 68f, Mathf.Max(1f, textWidth - 2f), 20f), "Le centre de communication de votre royaume", new GUIStyle(smallStyle) { fontSize = compact ? 11 : 15 });
 		}
 
 		private static void DrawChatTopBar(float bannerHeight, bool compact)
@@ -36686,12 +36816,12 @@ if (leftNavigationTexture == null)
 			GUI.color = new Color(1f, 0.60f, 0.14f, 0.95f);
 			GUI.DrawTexture(new Rect(0f, bannerHeight - 1f, Screen.width, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
 			GUI.color = Color.white;
-			if (DrawPremiumBackButton(ChatBackButtonRect()))
+			if (WorldMapHudLayout.DrawChatReturnButton(ChatBackButtonRect()))
 			{
 				AudioManager.Instance?.PlayUIClick();
 				ChatBackOrClose(compact);
 			}
-			if (!compact) GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
+			if (!compact && bannerHeight < 100f) GUI.Label(new Rect(54f, 10f, Screen.width - 220f, 26f), "CHAT", new GUIStyle(badgeStyle) { fontSize = 13 });
 			// M070-CL : ajout Parametres + Fermer a droite (reference CEO : "CHAT / MAIL / Parametres
 			// / Fermer") - a cote des onglets CHAT/MAIL deja presents. "Fermer" ferme l'ecran Chat
 			// Royal (meme action que le bouton retour a gauche) ; "Parametres" ouvre le meme
@@ -38015,6 +38145,11 @@ if (leftNavigationTexture == null)
         private static void DrawResearchFullscreen(bool compact)
         {
             if (activeHiveMenu != HiveMenuMode.Research) return;
+            if (premiumResearchFullscreenEnabled)
+            {
+                DrawResearchFullscreenPremium(compact);
+                return;
+            }
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 CloseResearchFullscreen();
@@ -38302,6 +38437,13 @@ if (leftNavigationTexture == null)
                 return;
             }
 
+            if (allianceOverviewTab == "territory")
+            {
+                DrawAllianceTerritoryReadOnly(area, compact);
+                GUI.color=Color.white;
+                return;
+            }
+
             if (allianceOverviewTab != "overview")
             {
                 DrawAllianceComingSoon(area, compact);
@@ -38310,9 +38452,9 @@ if (leftNavigationTexture == null)
             }
 
             float inset = compact ? 12f : 18f;
-            GUI.Label(new Rect(area.x + inset, area.y + inset, area.width - inset * 2f, 34f), "VUE GÉNÉRALE",
+            GUI.Label(new Rect(area.x + inset, area.y + inset, area.width - inset * 2f, 34f), BeeLocalization.Text("alliance.premium.overview.title", "VUE GÉNÉRALE"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 20 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
-            GUI.Label(new Rect(area.x + inset, area.y + inset + 38f, area.width - inset * 2f, 20f), "Le point de rendez-vous de votre communauté",
+            GUI.Label(new Rect(area.x + inset, area.y + inset + 38f, area.width - inset * 2f, 20f), BeeLocalization.Text("alliance.premium.overview.subtitle", "Le point de rendez-vous de votre communauté"),
                 new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
             float y = area.y + inset + 72f;
             if (!compact)
@@ -38324,9 +38466,9 @@ if (leftNavigationTexture == null)
                 AllianceOverviewModel overview = allianceCenterController.Model?.Overview;
                 string chiefMessage = overview != null && !string.IsNullOrWhiteSpace(overview.Description)
                     ? overview.Description
-                    : "Aucun message du chef pour le moment.";
-                DrawAllianceOverviewCard(new Rect(area.x + inset, y, cardColWidth, 142f), "Description", "Une alliance grandit lorsque ses membres reviennent, s'entraident et avancent ensemble.", compact);
-                DrawAllianceOverviewCard(new Rect(area.x + inset, y + 160f, cardColWidth, 142f), "Message du chef", chiefMessage, compact);
+                    : BeeLocalization.Text("alliance.premium.overview.no_chief_message", "Aucun message du chef pour le moment.");
+                DrawAllianceOverviewCard(new Rect(area.x + inset, y, cardColWidth, 142f), BeeLocalization.Text("alliance.premium.overview.description", "Description"), BeeLocalization.Text("alliance.premium.overview.description_body", "Une alliance grandit lorsque ses membres reviennent, s'entraident et avancent ensemble."), compact);
+                DrawAllianceOverviewCard(new Rect(area.x + inset, y + 160f, cardColWidth, 142f), BeeLocalization.Text("alliance.premium.overview.chief", "Message du chef"), chiefMessage, compact);
                 Rect feed = new Rect(area.x + inset + cardColWidth + gap, y, feedWidth, Mathf.Max(302f, area.height - (y - area.y) - inset));
                 DrawAllianceActivityCard(feed, compact);
             }
@@ -38352,11 +38494,11 @@ if (leftNavigationTexture == null)
             DrawAllianceActivitiesSurface(rect);
             float inset = compact ? 12f : 18f;
             float headerHeight = compact ? 30f : 36f;
-            GUI.Label(new Rect(rect.x + inset, rect.y + inset, rect.width - inset * 2f, headerHeight), "ACTIVITÉ DE L'ALLIANCE",
+            GUI.Label(new Rect(rect.x + inset, rect.y + inset, rect.width - inset * 2f, headerHeight), BeeLocalization.Text("alliance.premium.activity.title", "ACTIVITÉ DE L'ALLIANCE"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 17 : 20, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
 
             string[] filterIds = { "all", "activity", "construction", "research", "members" };
-            string[] filterLabels = { "Tout", "Activité", "Construction", "Recherche", "Membres" };
+            string[] filterLabels = { BeeLocalization.Text("alliance.premium.activity.all", "Tout"), BeeLocalization.Text("alliance.premium.activity.activity", "Activité"), BeeLocalization.Text("alliance.premium.activity.construction", "Construction"), BeeLocalization.Text("alliance.premium.activity.research", "Recherche"), BeeLocalization.Text("alliance.premium.activity.members", "Membres") };
             float filterY = rect.y + inset + headerHeight + (compact ? 4f : 6f);
             float filterH = compact ? 24f : 30f;
             float filterW = (rect.width - inset * 2f - 4f * (filterIds.Length - 1)) / filterIds.Length;
@@ -38401,7 +38543,7 @@ if (leftNavigationTexture == null)
             {
                 // M043O-CL: distinct copy for "genuinely zero activity ever" vs "this filter has no
                 // matches" - a brand-new alliance's Journal must never say "coming soon".
-                string emptyLabel = allianceActivityFeed.Count == 0 ? "Aucune activité pour le moment." : "Aucun événement pour ce filtre";
+                string emptyLabel = allianceActivityFeed.Count == 0 ? BeeLocalization.Text("alliance.premium.activity.empty", "Aucune activité pour le moment.") : BeeLocalization.Text("alliance.premium.activity.no_matches", "Aucun événement pour ce filtre");
                 GUI.Label(new Rect(10f, 8f, activityContentWidth - 20f, 26f), emptyLabel,
                     new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
             }
@@ -38895,6 +39037,28 @@ if (leftNavigationTexture == null)
             }
         }
 
+        private static Vector2 allianceTerritoryReadScroll;
+        private static string AllianceTerritoryText(string key,string french,string english) =>
+            BeeLocalization.Text("alliance.territory.read."+key,
+                (BeeLocalization.CurrentLocale??"fr").StartsWith("fr",StringComparison.OrdinalIgnoreCase)?french:english);
+        private static void DrawAllianceTerritoryReadOnly(Rect rect,bool compact)
+        {
+            var model=allianceCenterController.Model;
+            Guid allianceId=model?.Overview?.AllianceId ?? Guid.Empty;
+            var detailResponse=model?.State==AllianceCenterScreenState.Ready
+                ? MobileAccountSessionRuntimeBootstrap.HeadquartersReadForAlliance(allianceId) : null;
+            string[] rows=BeeKingdom.Networking.AllianceHeadquartersPresentation.Rows(detailResponse,
+                (key,fr,en)=>AllianceTerritoryText(key,fr,en));
+            Rect viewport=new Rect(rect.x+12f,rect.y+12f,Mathf.Max(1f,rect.width-24f),Mathf.Max(1f,rect.height-24f));
+            float width=Mathf.Max(1f,viewport.width-20f);
+            allianceTerritoryReadScroll=GUI.BeginScrollView(viewport,allianceTerritoryReadScroll,new Rect(0,0,width,70f+rows.Length*50f));
+            DrawAllianceActivitiesSurface(new Rect(0,0,width,60f+rows.Length*50f));
+            GUI.Label(new Rect(16,12,Mathf.Max(1f,width-32f),32f),AllianceTerritoryText("heading","QUARTIER GÉNÉRAL ET TERRITOIRE","HEADQUARTERS AND TERRITORY"),new GUIStyle(titleStyle){fontSize=compact?16:21,clipping=TextClipping.Clip});
+            var style=new GUIStyle(smallStyle){fontSize=compact?12:14,wordWrap=true,clipping=TextClipping.Clip};
+            for(int index=0;index<rows.Length;index++)GUI.Label(new Rect(16,56f+index*50f,Mathf.Max(1f,width-32f),46f),rows[index],style);
+            GUI.EndScrollView();
+        }
+
         private static void DrawAllianceComingSoon(Rect rect, bool compact)
         {
             string title = allianceOverviewTab == "members" ? "Membres" : allianceOverviewTab == "chat" ? "Chat" : allianceOverviewTab == "journal" ? "Journal" : allianceOverviewTab == "help" ? "Aides" : allianceOverviewTab == "donations" ? "Dons" : allianceOverviewTab == "research" ? "Recherches" : allianceOverviewTab == "territory" ? "Territoire" : allianceOverviewTab == "shop" ? "Boutique" : allianceOverviewTab == "gifts" ? "Cadeaux" : allianceOverviewTab == "war" ? "Guerres" : "Diplomatie";
@@ -38923,17 +39087,17 @@ if (leftNavigationTexture == null)
             DrawBottomRailOrnament(rail);
             ThumbRailItem[] items =
             {
-                Rail("SurfaceSwitch", referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "Ruche" : "Carte", referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "hive-nav" : "world"),
-                Rail("Quests", "Quetes", "quests"),
+                Rail("SurfaceSwitch", BeeLocalization.Text(referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "nav.hive" : "nav.map"), referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "hive-nav" : "world"),
+                Rail("Quests", BeeLocalization.Text("nav.quests", "Quêtes"), "quests"),
                 Rail("Champions", BeeLocalization.Text("champion_bees.entry_button_short", "Championnes"), "queen"),
                 Rail("MilestoneEvent", MilestoneEventRailLabel(), "quests"),
                 Rail("QuestChain", QuestChainRailLabel(), "quests"),
                 Rail("Bestiary", BeeLocalization.Text("bestiary_codex.entry_button_short", "Bestiaire"), "quests"),
-                Rail("Bag", "Sac", "inventory"),
-                Rail("Mail", "Mail", "inbox"),
+                Rail("Bag", BeeLocalization.Text("nav.bag", "Sac"), "inventory"),
+                Rail("Mail", BeeLocalization.Text("nav.mail", "Courrier"), "inbox"),
                 Rail("Chat", "Chat", "messages"),
-                Rail("Alliance", "Alliance", "alliance"),
-                Rail("More", "Plus", "more")
+                Rail("Alliance", BeeLocalization.Text("nav.alliance", "Alliance"), "alliance"),
+                Rail("More", BeeLocalization.Text("nav.more", "Plus"), "more")
             };
             float gap = 8f;
             float itemWidth = (rail.width - 20f - gap * (items.Length - 1)) / items.Length;
@@ -39058,10 +39222,10 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
             ThumbRailItem[] items =
             {
                 Rail("Chat", "Chat", "messages"),
-                Rail("SurfaceSwitch", referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "Ruche" : "Carte", referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "hive-nav" : "world"),
-                Rail("Quests", "Quetes", "quests"),
-                Rail("Alliance", "Alliance", "alliance"),
-                Rail("More", "Plus", "more")
+                Rail("SurfaceSwitch", BeeLocalization.Text(referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "nav.hive" : "nav.map"), referenceSurfaceMode == ReferenceSurfaceMode.WorldBoundary ? "hive-nav" : "world"),
+                Rail("Quests", BeeLocalization.Text("nav.quests", "Quêtes"), "quests"),
+                Rail("Alliance", BeeLocalization.Text("nav.alliance", "Alliance"), "alliance"),
+                Rail("More", BeeLocalization.Text("nav.more", "Plus"), "more")
             };
             float gap = 8f;
             float itemWidth = (rail.width - 20f - gap * (items.Length - 1)) / items.Length;
@@ -39153,9 +39317,8 @@ private static Rect SurfaceSwitchButtonRect(bool portrait)
         {
             EnsureStyles();
             EnsureMobileComfortPreferencesLoaded();
-            ChatSimulationTick(true);
-            DrawWorldMapChatButton();
-            DrawMiniChatFloating(IsPortraitLayout(), true);
+            if(!chatScreenOpen)DrawWorldMapChatButton();
+            DrawWorldChatFeed();
         }
 
         // PvE combat patrol overlay (player squad vs. world map bestiary) — deliberately its own
@@ -39777,40 +39940,61 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
             }
         }
 
+        // The Barracks owns the prepared squad and its champion. The World Map
+        // must preview exactly that composition, not attempt increments against
+        // an asynchronously loading roster (which previously stayed at 0/36).
         internal static async void OpenCombatPatrolOverlayForWorldMap(int tier)
         {
             AudioManager.Instance?.PlayMenuOpen();
             combatPatrolOverlayOpen = true;
-            combatPatrolController.ClearSelection();
-            combatPatrolController.SelectTier(Mathf.Clamp(tier, 1, 7));
-            combatPatrolController.Refresh();
-            await System.Threading.Tasks.Task.Delay(600);
-            var squad = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
-            if (squad != null && squad.HasReservation)
-            {
-                try
-                {
-                    var model = combatPatrolController.Model;
-                    if (model != null)
-                    {
-                        model.AvailableRoster = new System.Collections.Generic.Dictionary<string, long>
-                        {
-                            ["guardians"] = squad.RosterGuardians,
-                            ["wingrunners"] = squad.RosterWingrunners,
-                            ["darters"] = squad.RosterDarters
-                        };
-                    }
-                }
-                catch { }
-                combatPatrolController.AdjustDraft("guardians", -1000);
-                combatPatrolController.AdjustDraft("wingrunners", -1000);
-                combatPatrolController.AdjustDraft("darters", -1000);
-                if (squad.ReservedGuardians > 0) combatPatrolController.AdjustDraft("guardians", (int)squad.ReservedGuardians);
-                if (squad.ReservedWingrunners > 0) combatPatrolController.AdjustDraft("wingrunners", (int)squad.ReservedWingrunners);
-                if (squad.ReservedDarters > 0) combatPatrolController.AdjustDraft("darters", (int)squad.ReservedDarters);
-            }
-        }
+            ICombatPatrolPanelController controller = combatPatrolController;
+            controller.ClearSelection();
+            int selectedTier = Mathf.Clamp(tier, 1, 7);
+            if (controller.Model == null) return;
+            controller.Model.SelectedTier = selectedTier;
+            controller.Refresh();
 
+            // A read can take longer than 600ms, especially immediately after
+            // loading the map. Wait for the authoritative read to finish rather
+            // than issuing discarded AdjustDraft calls while it is busy.
+            for (int attempt = 0; attempt < 60 && controller.IsBusy; attempt++)
+                await System.Threading.Tasks.Task.Delay(100);
+
+            if (!combatPatrolOverlayOpen || !ReferenceEquals(controller, combatPatrolController)
+                || !controller.IsConfigured || controller.IsBusy) return;
+
+            IHiveSquadReservationPanelController squadController =
+                MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap;
+            if (squadController == null || !squadController.IsConfigured) return;
+            if (squadController.IsBusy)
+            {
+                for (int attempt = 0; attempt < 30 && squadController.IsBusy; attempt++)
+                    await System.Threading.Tasks.Task.Delay(100);
+            }
+
+            var squad = squadController.Model;
+            if (!combatPatrolOverlayOpen || !ReferenceEquals(controller, combatPatrolController)
+                || squad == null || !squad.HasReservation || squadController.IsBusy) return;
+
+            CombatPatrolScreenModel patrol = controller.Model;
+            if (patrol == null) return;
+            // This mirrors an existing server reservation only. Server preview
+            // and launch still validate exact quantities, champion, capacity
+            // and combat eligibility; no army state is edited here.
+            patrol.AvailableRoster = new Dictionary<string, long>
+            {
+                ["guardians"] = Math.Max(squad.RosterGuardians, squad.ReservedGuardians),
+                ["wingrunners"] = Math.Max(squad.RosterWingrunners, squad.ReservedWingrunners),
+                ["darters"] = Math.Max(squad.RosterDarters, squad.ReservedDarters)
+            };
+            patrol.DraftGuardians = (int)Math.Min(int.MaxValue, squad.ReservedGuardians);
+            patrol.DraftWingrunners = (int)Math.Min(int.MaxValue, squad.ReservedWingrunners);
+            patrol.DraftDarters = (int)Math.Min(int.MaxValue, squad.ReservedDarters);
+
+            // One preview for the full prepared squad, never three competing
+            // previews against intermediate or empty troop compositions.
+            controller.SelectTier(selectedTier);
+        }
         private static async System.Threading.Tasks.Task RefreshCombatPatrolAsync()
         {
             combatPatrolController.Refresh();
@@ -40320,8 +40504,13 @@ float milestoneModalWidth = Mathf.Min(460f, Screen.width - 24f);
         // communication. La fenetre flottante partage l'etat et les donnees du Chat Premium.
         private static void DrawWorldMapChatButton()
         {
-            EnsureChatData();
-            DrawChatEntryButton(WorldMapChatButtonRect(), IsPortraitLayout());
+            WorldChatFilter();
+            Rect button=WorldMapChatButtonRect();
+            if(WorldMapHudLayout.DrawNavigationButton(button,"Chat","Canaux et chat premium",WorldMapNavigationIcon("messages"),worldChatSettingsOpen))
+                worldChatSettingsOpen=!worldChatSettingsOpen;
+            var snapshot=ChatServerSnapshot();
+            int unread=LivingHiveChatFeed.IsLive(snapshot)?snapshot.TotalUnread:0;
+            if(unread>0)DrawMiniChatBadge(new Rect(button.xMax-29f,button.y+5f,24f,17f),unread>9?"9+":unread.ToString(CultureInfo.InvariantCulture));
         }
 
         private static void DrawChatEntryButton(Rect button, bool compact)
@@ -40347,9 +40536,9 @@ private static void DrawMiniChatFloating(bool compact, bool worldMap)
 
             Rect panel = MiniChatFloatingOcclusionRect(worldMap);
             float fade = UIAnimationLibrary.GetFadeProgress("communication", 1f);
-            DrawPremiumPanel(panel, new Color(0.024f, 0.021f, 0.017f, 0.985f * fade), new Color(0.92f, 0.64f, 0.18f, 0.90f * fade));
+            DrawPremiumPanel(panel, new Color(0.024f, 0.028f, 0.024f, 0.97f * fade), ChatAccentColor() * new Color(1f, 1f, 1f, 0.70f * fade));
 
-			float headerHeight = 46f;
+			float headerHeight = 90f;
 			Rect header = new Rect(panel.x + 8f, panel.y + 8f, panel.width - 16f, headerHeight);
 			DrawPremiumHeaderBand(header);
 			string channel = MiniChatResolvedChannel();
@@ -40359,7 +40548,7 @@ private static void DrawMiniChatFloating(bool compact, bool worldMap)
 				CloseMiniChat();
 				return;
 			}
-			Rect cycleButton = new Rect(header.x + 50f, header.y + 9f, 30f, 28f);
+			Rect cycleButton = new Rect(header.x + 2f, header.y + 54f, 44f, 28f);
 			if (DrawPremiumHitButton(cycleButton, "↻", 13))
             {
                 AudioManager.Instance?.PlayUIClick();
@@ -40367,11 +40556,11 @@ private static void DrawMiniChatFloating(bool compact, bool worldMap)
                 PrepareMiniChatSelection();
                 return;
             }
-			GUI.Label(new Rect(header.x + 84f, header.y + 5f, header.width - 242f, 22f), MiniChatChannelDisplayName(channel), new GUIStyle(badgeStyle) { fontSize = compact ? 11 : 12 });
-			GUI.Label(new Rect(header.x + 84f, header.y + 25f, header.width - 242f, 14f), "Mini-chat · " + MiniChatWatchModeSuffix(), new GUIStyle(tinyLabelStyle) { fontSize = 8 });
-            if (unread > 0) DrawMiniChatBadge(new Rect(header.xMax - 154f, header.y + 12f, 32f, 18f), unread > 9 ? "9+" : unread.ToString(CultureInfo.InvariantCulture));
+			GUI.Label(new Rect(header.x + 56f, header.y + 5f, header.width - 64f, 24f), MiniChatChannelDisplayName(channel), new GUIStyle(badgeStyle) { fontSize = compact ? 13 : 15 });
+			GUI.Label(new Rect(header.x + 56f, header.y + 29f, header.width - 64f, 16f), "Mini-chat · " + MiniChatWatchModeSuffix(), new GUIStyle(tinyLabelStyle) { fontSize = 11 });
+            if (unread > 0) DrawMiniChatBadge(new Rect(header.x + 108f, header.y + 57f, 32f, 18f), unread > 9 ? "9+" : unread.ToString(CultureInfo.InvariantCulture));
             bool blinking = unread > 0 && MiniChatBlinkVisible();
-Rect blinkToggle = new Rect(header.xMax - 184f, header.y + 9f, 24f, 24f);
+Rect blinkToggle = new Rect(header.x + 54f, header.y + 54f, 44f, 28f);
             DrawMiniChatBlinkDot(new Rect(blinkToggle.x + 6f, blinkToggle.y + 6f, 12f, 12f), blinking);
 			if (DrawPremiumHitButton(blinkToggle, string.Empty, 0))
             {
@@ -40380,15 +40569,15 @@ Rect blinkToggle = new Rect(header.xMax - 184f, header.y + 9f, 24f, 24f);
                 return;
             }
 
-            Rect openButton = new Rect(header.xMax - 112f, header.y + 7f, 62f, 28f);
-            if (GUI.Button(openButton, "Ouvrir"))
+            Rect openButton = new Rect(header.xMax - 78f, header.y + 54f, 76f, 28f);
+            if (DrawPremiumHitButton(openButton, BeeLocalization.Text("chat.mini.open", "Ouvrir"), 12))
             {
                 AudioManager.Instance?.PlayUIClick();
                 OpenChatScreenForMiniChat();
                 return;
             }
 
-			Rect titleHit = new Rect(header.x + 84f, header.y + 2f, header.width - 254f, header.height - 4f);
+			Rect titleHit = new Rect(header.x + 56f, header.y + 2f, header.width - 64f, 42f);
             if (GUI.Button(titleHit, string.Empty, GUIStyle.none))
             {
                 AudioManager.Instance?.PlayUIClick();
@@ -40401,11 +40590,11 @@ Rect blinkToggle = new Rect(header.xMax - 184f, header.y + 9f, 24f, 24f);
             float bodyTop = header.yMax + 8f;
             float bodyBottom = composer.y - 8f;
             List<ChatMessageData> recent = MiniChatRecentMessages(channel, 8);
-            int rowCount = Mathf.Clamp(Mathf.FloorToInt((bodyBottom - bodyTop) / 27f), 1, 8);
+            int rowCount = Mathf.Clamp(Mathf.FloorToInt((bodyBottom - bodyTop) / 38f), 0, 8);
             rowCount = Mathf.Min(rowCount, recent.Count);
-            if (rowCount == 0)
+            if (recent.Count == 0 && bodyBottom - bodyTop >= 36f)
             {
-                GUI.Label(new Rect(panel.x + 16f, bodyTop + 8f, panel.width - 32f, 36f), "Aucun message dans ce canal.", new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
+                GUI.Label(new Rect(panel.x + 16f, bodyTop + 8f, panel.width - 32f, 36f), BeeLocalization.Text("chat.empty", "Aucun message"), new GUIStyle(centeredTinyLabelStyle) { fontSize = 10 });
             }
             else
             {
@@ -40413,25 +40602,25 @@ Rect blinkToggle = new Rect(header.xMax - 184f, header.y + 9f, 24f, 24f);
                 for (int i = 0; i < rowCount; i++)
                 {
                     ChatMessageData message = recent[i];
-                    Rect row = new Rect(panel.x + 10f, rowTop, panel.width - 20f, 25f);
+                    Rect row = new Rect(panel.x + 10f, rowTop, panel.width - 20f, 36f);
                     DrawPremiumPanel(row, new Color(0.045f, 0.035f, 0.022f, 0.88f), new Color(0.48f, 0.34f, 0.14f, 0.48f));
-                    string author = string.IsNullOrWhiteSpace(message.Author) ? "Joueur" : message.Author;
-                    GUI.Label(new Rect(row.x + 6f, row.y + 1f, row.width - 94f, 13f), author + " · " + message.TimeLabel, new GUIStyle(badgeStyle) { fontSize = 8 });
-                    GUI.Label(new Rect(row.x + 6f, row.y + 13f, row.width - 12f, 12f), MiniChatTruncate(message.Text, compact ? 42 : 64), new GUIStyle(tinyLabelStyle) { fontSize = 8 });
+                    string author = string.IsNullOrWhiteSpace(message.Author) ? BeeLocalization.Text("chat.sender.unknown", "Joueur") : message.Author;
+                    GUI.Label(new Rect(row.x + 6f, row.y + 1f, row.width - 12f, 16f), author + " · " + message.TimeLabel, new GUIStyle(badgeStyle) { fontSize = 11 });
+                    GUI.Label(new Rect(row.x + 6f, row.y + 18f, row.width - 12f, 16f), MiniChatTruncate(message.Text, compact ? 42 : 64), new GUIStyle(tinyLabelStyle) { fontSize = 11 });
                     if (GUI.Button(row, string.Empty, GUIStyle.none))
                     {
                         AudioManager.Instance?.PlayUIClick();
                         OpenChatScreenForMiniChat();
                         return;
                     }
-                    rowTop += 27f;
+                    rowTop += 38f;
                 }
             }
 
             ChatConversationData conversation = ChatConversationById(chatSelectedConversation);
             if (conversation == null || conversation.ReadOnly)
             {
-                GUI.Label(new Rect(composer.x, composer.y + 8f, composer.width, composer.height - 16f), "Conversation en lecture seule.", new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
+                GUI.Label(new Rect(composer.x, composer.y + 8f, composer.width, composer.height - 16f), BeeLocalization.Text("chat.mini.read_only", "Conversation en lecture seule."), new GUIStyle(centeredTinyLabelStyle) { fontSize = 9 });
             }
             else
             {
@@ -40451,11 +40640,23 @@ Rect blinkToggle = new Rect(header.xMax - 184f, header.y + 9f, 24f, 24f);
             return true;
         }
 
-        private static Rect WorldMapChatButtonRect() => WorldMapChatButtonRectForProof(Screen.width, Screen.height);
+        internal static Texture2D WorldMapNavigationIcon(string id)
+        {
+            string key="world-navigation-"+id;
+            if(IconTextures.TryGetValue(key,out Texture2D cached) && cached!=null)return cached;
+            string path=id=="messages"?"RoyalChatIcons/nouvelle_discussion":
+                id=="world"?"RoyalChatIcons/loupe":id=="hive-nav"?"WorldMapApprovedVisuals/hive-starter":
+                id=="pollen"?"Pollination/field_bloom":string.Empty;
+            Texture2D art=string.IsNullOrEmpty(path)?null:Resources.Load<Texture2D>(path);
+            if(art==null)art=GetIconTexture(id);
+            IconTextures[key]=art;return art;
+        }
+
+        private static Rect WorldMapChatButtonRect() => WorldMapHudLayout.CurrentButton(0);
 
         public static Rect WorldMapChatButtonRectForProof(float screenWidth, float screenHeight)
         {
-            return new Rect(12f, screenHeight - 128f, Mathf.Min(190f, screenWidth - 24f), 44f);
+            return WorldMapHudLayout.ChatButton(screenWidth, screenHeight);
         }
 
         private static Rect ChatRailButtonRect(bool portrait) => ChatRailButtonRectForProof(portrait, Screen.width, Screen.height);
@@ -40507,7 +40708,8 @@ public static Rect ChatRailButtonRectForProof(bool portrait, float screenWidth, 
 
         private static Rect MiniChatFloatingOcclusionRect(bool worldMap)
         {
-            return UIAnimationLibrary.ApplyWindowAnimation(MiniChatFloatingRect(worldMap), "communication");
+            Rect rect = UIAnimationLibrary.ApplyWindowAnimation(MiniChatFloatingRect(worldMap), "communication");
+            return worldMap ? WorldMapHudLayout.RelativeToSafeChat(rect) : rect;
         }
 
         public static Rect MiniChatFloatingRectForProof(bool portrait, float screenWidth, float screenHeight)
@@ -40517,6 +40719,7 @@ public static Rect ChatRailButtonRectForProof(bool portrait, float screenWidth, 
 
         public static Rect MiniChatFloatingRectForProof(bool portrait, float screenWidth, float screenHeight, bool worldMap)
         {
+            if (worldMap) return WorldMapHudLayout.ChatPanel(screenWidth, screenHeight);
             float bottom = worldMap
                 ? (portrait ? screenHeight - 190f - 8f - 56f : screenHeight - 108f) - 10f
                 : (portrait ? screenHeight - 78f : screenHeight - 76f) - 10f;
@@ -41775,6 +41978,14 @@ public static void ResetMissionsStateForProof()
 
         private static void DrawMobileComfortSettingsPanel(bool compact)
         {
+            int previousDepth = GUI.depth;
+            GUI.depth = HiveMapUiOcclusion.ModalWindowGuiDepth - 1;
+            try { DrawMobileComfortSettingsPanelContent(compact); }
+            finally { GUI.depth = previousDepth; }
+        }
+
+        private static void DrawMobileComfortSettingsPanelContent(bool compact)
+        {
             EnsureMobileComfortPreferencesLoaded();
             Rect panel = MobileComfortSettingsPanelRect(compact, Screen.width, Screen.height);
 			DrawPremiumPanel(panel, new Color(0.026f, 0.024f, 0.020f, 0.985f), new Color(0.92f, 0.64f, 0.18f, 0.88f));
@@ -41783,6 +41994,7 @@ public static void ResetMissionsStateForProof()
 			{
 				AudioManager.Instance?.PlayUIClick();
 				AudioManager.Instance?.PlayMenuClose();
+				CaptureSettingsCloseGesture();
 				CloseActiveMainMenuPanel();
 				return;
 			}
@@ -49822,22 +50034,24 @@ public static void ResetMissionsStateForProof()
             GUI.enabled = previousEnabled && enabled;
 
             bool hovered = enabled && rect.Contains(Event.current != null ? Event.current.mousePosition : Vector2.zero);
-            Color fill = primary
-                ? (hovered ? new Color(.92f, .55f, .10f, 1f) : new Color(.80f, .43f, .08f, .98f))
-                : (hovered ? new Color(.22f, .145f, .055f, .98f) : new Color(.13f, .085f, .038f, .96f));
+            Color fill = !enabled
+                ? new Color(.19f, .135f, .075f, .98f)
+                : primary
+                    ? (hovered ? new Color(1f, .69f, .24f, 1f) : new Color(.91f, .57f, .16f, 1f))
+                    : (hovered ? new Color(.22f, .145f, .055f, .98f) : new Color(.13f, .085f, .038f, .96f));
 
             DrawActivitiesSurface(rect, fill);
 
             Color textColor = enabled
-                ? (primary ? new Color(1f, .95f, .82f, 1f) : new Color(.92f, .84f, .69f, 1f))
-                : new Color(.48f, .44f, .38f, 1f);
+                ? (primary ? new Color(.12f, .075f, .028f, 1f) : new Color(.96f, .88f, .72f, 1f))
+                : new Color(.82f, .73f, .59f, 1f);
 
             GUI.Label(
                 rect,
                 label ?? string.Empty,
                 new GUIStyle(centeredTinyLabelStyle)
                 {
-                    fontSize = Mathf.Clamp(Mathf.RoundToInt(rect.height * .24f), 8, 12),
+                    fontSize = Mathf.Clamp(Mathf.RoundToInt(rect.height * .32f), 11, 17),
                     fontStyle = primary ? FontStyle.Bold : FontStyle.Normal,
                     alignment = TextAnchor.MiddleCenter,
                     clipping = TextClipping.Clip,
@@ -50083,7 +50297,7 @@ public static void ResetMissionsStateForProof()
             GUI.color = Color.white;
 
             string[] ids = { "training", "army" };
-            string[] labels = { "ENTRAÎNEMENT", "ARMÉES" };
+            string[] labels = { BarrackText("tabs.training", "ENTRAÎNEMENT"), BarrackText("tabs.army", "ARMÉES") };
             float gap = 10f;
             float width = (rect.width - gap) * .5f;
             for (int i = 0; i < ids.Length; i++)
@@ -50194,9 +50408,9 @@ public static void ResetMissionsStateForProof()
 
             DrawGameIcon(new Rect(rect.x + 10f, rect.y + 10f, 30f, 30f), icon, Color.white);
             GUI.Label(new Rect(rect.x + 52f, rect.y + 7f, rect.width * .36f, 24f), label,
-                new GUIStyle(smallStyle) { fontSize = 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
-            GUI.Label(new Rect(rect.x + 52f, rect.y + 31f, rect.width * .36f, 18f), "Disponible : " + available.ToString(CultureInfo.InvariantCulture),
-                new GUIStyle(smallStyle) { fontSize = 11, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                new GUIStyle(smallStyle) { fontSize = 16, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+            GUI.Label(new Rect(rect.x + 52f, rect.y + 31f, rect.width * .36f, 18f), BarrackFormat("army.available", "Disponible : {0}", available),
+                new GUIStyle(smallStyle) { fontSize = 14, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
 
             float controlW = 46f;
             float valueW = 64f;
@@ -50232,20 +50446,20 @@ public static void ResetMissionsStateForProof()
                 MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap?.Model;
             bool patrolLocked = squadModel != null && squadModel.HasReservation;
 
-            GUI.Label(new Rect(rect.x + 18f, rect.y + 12f, rect.width - 36f, 30f), "CHAMPIONNE",
+            GUI.Label(new Rect(rect.x + 18f, rect.y + 12f, rect.width - 36f, 30f), BarrackText("army.champion", "CHAMPIONNE"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 18 : 21, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
             GUI.Label(new Rect(rect.x + 18f, rect.y + 46f, rect.width - 36f, 44f),
                 patrolLocked
-                    ? "Championne verrouillée avec la patrouille active. Libérez la patrouille pour changer ce choix."
-                    : "Choisissez la championne qui accompagne cette patrouille. Ce choix est fait ici, jamais au moment d'attaquer.",
-                new GUIStyle(smallStyle) { fontSize = compact ? 10 : 12, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                    ? BarrackText("army.champion.locked_hint", "La championne est liée à la patrouille active. Libérez la patrouille pour modifier ce choix.")
+                    : BarrackText("army.champion.choose_hint", "Choisissez la championne qui accompagnera cette patrouille. Ce choix est fait ici, jamais au moment d'attaquer."),
+                new GUIStyle(smallStyle) { fontSize = compact ? 13 : 15, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
 
             EnsureOfficialChampionBeeAndTroopTierStateLoaded();
             List<ChampionBeeDefinition> owned = ChampionBeeCatalog.All.Where(def => IsChampionBeeOwned(def.Id)).ToList();
             float y = rect.y + 94f;
             if (owned.Count == 0)
             {
-                GUI.Label(new Rect(rect.x + 18f, y, rect.width - 36f, 48f), "Aucune championne débloquée.",
+                GUI.Label(new Rect(rect.x + 18f, y, rect.width - 36f, 48f), BarrackText("army.champion.none", "Aucune championne débloquée."),
                     new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
                 return;
             }
@@ -50269,15 +50483,15 @@ public static void ResetMissionsStateForProof()
 
                 DrawGameIcon(new Rect(row.x + 10f, row.y + 10f, rowH - 20f, rowH - 20f), "queen", Color.white);
                 GUI.Label(new Rect(row.x + rowH, row.y + 7f, row.width - rowH - 90f, 22f), ChampionBeeName(def),
-                    new GUIStyle(smallStyle) { fontSize = compact ? 12 : 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
+                    new GUIStyle(smallStyle) { fontSize = compact ? 14 : 16, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
                 GUI.Label(new Rect(row.x + rowH, row.y + 31f, row.width - rowH - 90f, 18f),
                     ChampionBeeRarityLabel(def.Rarity) + " · " + ChampionBeeRoleLabel(def.Role),
-                    new GUIStyle(smallStyle) { fontSize = compact ? 9 : 11, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
+                    new GUIStyle(smallStyle) { fontSize = compact ? 12 : 13, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
 
                 Rect select = new Rect(row.xMax - 92f, row.y + 13f, 82f, 34f);
                 string caption = assigned
-                    ? (patrolLocked ? "Assignée" : "Sélectionnée")
-                    : patrolLocked ? "Verrouillée" : "Choisir";
+                    ? (patrolLocked ? BarrackText("army.champion.assigned", "Assignée") : BarrackText("army.champion.selected", "Sélectionnée"))
+                    : patrolLocked ? BarrackText("army.champion.locked", "Verrouillée") : BarrackText("army.champion.choose", "Choisir");
                 bool selectable = !patrolLocked && !assigned;
                 if (DrawAllianceActivitiesButton(select, caption, selectable || assigned, assigned) && selectable)
                 {
@@ -50295,17 +50509,17 @@ public static void ResetMissionsStateForProof()
             IHiveSquadReservationPanelController ctrl = MobileAccountSessionRuntimeBootstrap.SquadReservationControllerForHiveMap;
             HiveSquadReservationScreenModel model = ctrl?.Model;
 
-            GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 36f, 34f), "ARMÉES & PATROUILLES",
+            GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 36f, 34f), BeeLocalization.Text("barrack.premium.army.title"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 20 : 27, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
             GUI.Label(new Rect(area.x + 18f, area.y + 50f, area.width - 36f, 38f),
-                "Préparez une patrouille complète ici : troupes et championne. Sur la Carte du Monde, vous sélectionnez ensuite cette patrouille comme une seule unité.",
+                BeeLocalization.Text("barrack.premium.army.subtitle"),
                 new GUIStyle(smallStyle) { fontSize = compact ? 11 : 13, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
 
             if (ctrl == null || !ctrl.IsConfigured || model == null)
             {
                 Rect unavailable = new Rect(area.x + 18f, area.y + 100f, area.width - 36f, 120f);
                 DrawAllianceActivitiesSurface(unavailable);
-                GUI.Label(new Rect(unavailable.x + 18f, unavailable.y + 18f, unavailable.width - 36f, 26f), "PATROUILLES INDISPONIBLES",
+                GUI.Label(new Rect(unavailable.x + 18f, unavailable.y + 18f, unavailable.width - 36f, 26f), BeeLocalization.Text("barrack.premium.army.unavailable.title"),
                     new GUIStyle(titleStyle) { fontSize = 18, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
                 GUI.Label(new Rect(unavailable.x + 18f, unavailable.y + 56f, unavailable.width - 36f, 38f), "La session serveur doit être active pour réserver une patrouille.",
                     new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
@@ -50358,13 +50572,13 @@ public static void ResetMissionsStateForProof()
                 : new Rect(squadCard.xMax + gap, top, area.xMax - squadCard.xMax - gap - 18f, squadCard.height);
 
             DrawAllianceActivitiesSurface(squadCard);
-            GUI.Label(new Rect(squadCard.x + 18f, squadCard.y + 12f, squadCard.width - 36f, 30f), model.HasReservation ? "PATROUILLE PRÉPARÉE" : "NOUVELLE PATROUILLE",
+            GUI.Label(new Rect(squadCard.x + 18f, squadCard.y + 12f, squadCard.width - 36f, 30f), model.HasReservation ? BeeLocalization.Text("barrack.premium.army.patrol.prepared") : BeeLocalization.Text("barrack.premium.army.patrol.new"),
                 new GUIStyle(titleStyle) { fontSize = compact ? 18 : 21, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .77f, .36f, 1f) } });
 
             int capacity = model.Capacity;
             int totalSelected = barrackArmyDraftGuardians + barrackArmyDraftWingrunners + barrackArmyDraftDarters;
             GUI.Label(new Rect(squadCard.x + 18f, squadCard.y + 48f, squadCard.width - 36f, 22f),
-                "Capacité : " + totalSelected.ToString(CultureInfo.InvariantCulture) + " / " + capacity.ToString(CultureInfo.InvariantCulture),
+                string.Format(CultureInfo.InvariantCulture, BeeLocalization.Text("barrack.premium.army.capacity"), totalSelected, capacity),
                 new GUIStyle(smallStyle) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .95f, .82f, 1f) } });
             DrawProgressBar(new Rect(squadCard.x + 18f, squadCard.y + 76f, squadCard.width - 36f, 9f),
                 capacity > 0 ? Mathf.Clamp01((float)totalSelected / capacity) : 0f);
@@ -50372,7 +50586,7 @@ public static void ResetMissionsStateForProof()
             float rowY = squadCard.y + 98f;
             if (model.HasReservation)
             {
-                string[] names = { "Gardiennes", "Voltigeuses", "Lanceuses" };
+                string[] names = { BarrackTroopLabel("guardians"), BarrackTroopLabel("wingrunners"), BarrackTroopLabel("darters") };
                 long[] counts = { model.ReservedGuardians, model.ReservedWingrunners, model.ReservedDarters };
                 string[] icons = { "guard-bee", "bee", "bee" };
                 for (int i = 0; i < names.Length; i++)
@@ -50390,20 +50604,20 @@ public static void ResetMissionsStateForProof()
                 }
 
                 IReadOnlyList<string> champions = model.ChampionBeeIds;
-                string champion = "Aucune championne";
+                string champion = BeeLocalization.Text("barrack.premium.army.patrol.none_champion");
                 if (champions != null && champions.Count > 0 && ChampionBeeCatalog.TryResolve(champions[0], out ChampionBeeDefinition assigned))
                     champion = ChampionBeeName(assigned);
-                GUI.Label(new Rect(squadCard.x + 18f, rowY + 8f, squadCard.width - 36f, 22f), "Championne : " + champion,
+                GUI.Label(new Rect(squadCard.x + 18f, rowY + 8f, squadCard.width - 36f, 22f), string.Format(CultureInfo.InvariantCulture, BeeLocalization.Text("barrack.premium.army.patrol.champion_line"), champion),
                     new GUIStyle(smallStyle) { fontSize = 12, fontStyle = FontStyle.Bold, normal = { textColor = new Color(.80f, .73f, .61f, 1f) } });
                 rowY += 42f;
 
                 bool ready = champions != null && champions.Count > 0;
                 GUI.Label(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 42f),
-                    ready ? "Cette patrouille est prête à être sélectionnée sur la Carte du Monde." : "Choisissez une championne avant de partir.",
+                    ready ? BeeLocalization.Text("barrack.premium.army.patrol.ready") : BeeLocalization.Text("barrack.premium.army.patrol.choose_champion"),
                     new GUIStyle(smallStyle) { fontSize = 12, wordWrap = true, normal = { textColor = ready ? new Color(.56f, .87f, .61f, 1f) : new Color(.90f, .63f, .34f, 1f) } });
                 rowY += 52f;
 
-                if (DrawAllianceActivitiesButton(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 42f), "Libérer la patrouille", model.CanRelease && !ctrl.IsBusy, false))
+                if (DrawAllianceActivitiesButton(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 42f), BeeLocalization.Text("barrack.premium.army.patrol.release"), model.CanRelease && !ctrl.IsBusy, false))
                 {
                     ctrl.Release();
                     barrackArmyDraftInitialized = false;
@@ -50424,7 +50638,7 @@ public static void ResetMissionsStateForProof()
                 bool championReady = !string.IsNullOrWhiteSpace(barrackArmyDraftChampionBeeId);
                 bool canCommit = model.CanCommit(new HiveSquadCompositionSnapshot(capacity, barrackArmyDraftGuardians, barrackArmyDraftWingrunners, barrackArmyDraftDarters));
                 if (DrawAllianceActivitiesButton(new Rect(squadCard.x + 18f, rowY, squadCard.width - 36f, 44f),
-                    "Créer la patrouille", canCommit && championReady && !ctrl.IsBusy, true))
+                    BeeLocalization.Text("barrack.premium.army.patrol.create"), canCommit && championReady && !ctrl.IsBusy, true))
                 {
                     ctrl.Commit(
                         barrackArmyDraftGuardians,
@@ -50434,7 +50648,7 @@ public static void ResetMissionsStateForProof()
                 }
                 if (!championReady)
                 {
-                    GUI.Label(new Rect(squadCard.x + 18f, rowY + 50f, squadCard.width - 36f, 34f), "Sélectionnez d'abord une championne dans le panneau de droite.",
+                    GUI.Label(new Rect(squadCard.x + 18f, rowY + 50f, squadCard.width - 36f, 34f), BeeLocalization.Text("barrack.premium.army.patrol.select_champion_right"),
                         new GUIStyle(smallStyle) { fontSize = 11, wordWrap = true, normal = { textColor = new Color(.90f, .63f, .34f, 1f) } });
                 }
             }
@@ -50447,7 +50661,7 @@ public static void ResetMissionsStateForProof()
                 Rect footer = compact
                     ? new Rect(area.x + 18f, championCard.yMax + 14f, area.width - 36f, 42f)
                     : new Rect(area.x + 18f, area.yMax - 56f, area.width - 36f, 42f);
-                string caption = active > 0 ? "Carte du Monde · " + active + " patrouille(s) en cours" : "Ouvrir la Carte du Monde";
+                string caption = active > 0 ? "Carte du Monde · " + active + " patrouille(s) en cours" : BeeLocalization.Text("barrack.premium.army.world.open");
                 if (DrawAllianceActivitiesButton(footer, caption, true, false))
                 {
                     CloseBarrackOverlayForExternalHost();
@@ -50463,7 +50677,7 @@ public static void ResetMissionsStateForProof()
             RefreshDoctrineRecruitmentIfDueOrJustFinished();
             HiveDoctrineRecruitmentScreenModel model = OfficialDoctrineRecruitmentModel();
 
-            GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 36f, 34f), "ENTRAÎNEMENT",
+            GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 36f, 34f), BarrackText("training.title", "ENTRAÎNEMENT"),
                 new GUIStyle(titleStyle)
                 {
                     fontSize = compact ? 20 : 27,
@@ -50471,39 +50685,35 @@ public static void ResetMissionsStateForProof()
                     normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                 });
             GUI.Label(new Rect(area.x + 18f, area.y + 50f, area.width - 36f, 22f),
-                "Formez les troupes qui composeront vos patrouilles.",
+                BarrackText("training.subtitle", "Formez les troupes qui composeront vos patrouilles."),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 11 : 13,
+                    fontSize = compact ? 15 : 17,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
-            Rect levelCard = new Rect(area.x + 18f, area.y + 82f, area.width - 36f, 62f);
+            Rect levelCard = new Rect(area.x + 18f, area.y + 82f, area.width - 36f, 72f);
             DrawAllianceActivitiesSurface(levelCard, new Color(.095f, .063f, .033f, .98f));
-            GUI.Label(new Rect(levelCard.x + 16f, levelCard.y + 9f, levelCard.width - 200f, 22f),
-                "Caserne · Niveau " + DisplayedBuildingLevel("guard_post").ToString(CultureInfo.InvariantCulture),
+            GUI.Label(new Rect(levelCard.x + 16f, levelCard.y + 8f, levelCard.width - 32f, 29f),
+                BarrackFormat("training.level", "Caserne · Niveau {0}", DisplayedBuildingLevel("guard_post")),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 12 : 14,
+                    fontSize = compact ? 16 : 18,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                 });
-            GUI.Label(new Rect(levelCard.x + 16f, levelCard.y + 33f, levelCard.width - 200f, 18f),
-                "Améliorer la caserne augmente votre progression militaire.",
+            GUI.Label(new Rect(levelCard.x + 16f, levelCard.y + 40f, levelCard.width - 32f, 25f),
+                BarrackText("training.upgrade_help", "Améliorer la caserne augmente votre progression militaire."),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 9 : 11,
+                    fontSize = compact ? 14 : 16,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
-            Rect upgrade = new Rect(levelCard.xMax - 172f, levelCard.y + 12f, 156f, 38f);
-            try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetUpgradeButton, upgrade); } catch {}
-            if (DrawAllianceActivitiesButton(upgrade, "Améliorer", OfficialBuildingUpgradeActionEnabled("guard_post"), false))
-                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("guard_post");
 
             float selectorTop = levelCard.yMax + 14f;
             float gap = compact ? 8f : 12f;
             float troopWidth = (area.width - 36f - gap * 2f) / 3f;
-            float troopHeight = compact ? 92f : 106f;
+            float troopHeight = compact ? 118f : 126f;
             for (int i = 0; i < OfficialTroopFamilies.Length; i++)
             {
                 string family = OfficialTroopFamilies[i];
@@ -50518,25 +50728,25 @@ public static void ResetMissionsStateForProof()
                 }
 
                 DrawGameIcon(new Rect(troop.x + 14f, troop.y + 14f, 38f, 38f), i == 0 ? "guard-bee" : "bee", Color.white);
-                GUI.Label(new Rect(troop.x + 64f, troop.y + 12f, troop.width - 78f, 24f), OfficialTroopFamilyLabels[i],
+                GUI.Label(new Rect(troop.x + 64f, troop.y + 10f, troop.width - 78f, 29f), BarrackTroopLabel(family),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 12 : 14,
+                        fontSize = compact ? 16 : 18,
                         fontStyle = FontStyle.Bold,
                         normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                     });
                 long count = model != null ? model.Count(family) : 0L;
-                GUI.Label(new Rect(troop.x + 64f, troop.y + 40f, troop.width - 78f, 28f), count.ToString(CultureInfo.InvariantCulture),
+                GUI.Label(new Rect(troop.x + 64f, troop.y + 44f, troop.width - 78f, 32f), count.ToString(CultureInfo.InvariantCulture),
                     new GUIStyle(titleStyle)
                     {
-                        fontSize = compact ? 16 : 20,
+                        fontSize = compact ? 21 : 25,
                         fontStyle = FontStyle.Bold,
                         normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                     });
-                GUI.Label(new Rect(troop.x + 14f, troop.yMax - 26f, troop.width - 28f, 18f), OfficialDoctrineRecruitmentStatusText(family),
+                GUI.Label(new Rect(troop.x + 14f, troop.yMax - 30f, troop.width - 28f, 23f), OfficialDoctrineRecruitmentStatusText(family),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 8 : 10,
+                        fontSize = compact ? 12 : 14,
                         alignment = TextAnchor.MiddleLeft,
                         clipping = TextClipping.Clip,
                         normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
@@ -50545,43 +50755,43 @@ public static void ResetMissionsStateForProof()
             }
 
             float y = selectorTop + troopHeight + 14f;
-            Rect population = new Rect(area.x + 18f, y, area.width - 36f, 54f);
+            Rect population = new Rect(area.x + 18f, y, area.width - 36f, 64f);
             DrawAllianceActivitiesSurface(population, new Color(.095f, .063f, .033f, .98f));
-            GUI.Label(new Rect(population.x + 16f, population.y + 8f, population.width - 32f, 20f), "POPULATION",
+            GUI.Label(new Rect(population.x + 16f, population.y + 6f, population.width - 32f, 27f), BarrackText("training.population", "POPULATION"),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 10 : 12,
+                    fontSize = compact ? 14 : 16,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                 });
-            GUI.Label(new Rect(population.x + 16f, population.y + 29f, population.width - 32f, 18f),
+            GUI.Label(new Rect(population.x + 16f, population.y + 34f, population.width - 32f, 25f),
                 DisplayedPopulationUsed().ToString("F0", CultureInfo.InvariantCulture) + " / " +
                 DisplayedPopulationCapacity().ToString("F0", CultureInfo.InvariantCulture),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 12 : 14,
+                    fontSize = compact ? 16 : 18,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                 });
-            y += 68f;
+            y += 78f;
 
-            Rect detail = new Rect(area.x + 18f, y, area.width - 36f, compact ? 130f : 148f);
+            Rect detail = new Rect(area.x + 18f, y, area.width - 36f, compact ? 138f : 154f);
             DrawAllianceActivitiesSurface(detail);
             int selectedIndex = Array.IndexOf(OfficialTroopFamilies, officialSelectedTroopFamily);
             selectedIndex = Mathf.Clamp(selectedIndex, 0, OfficialTroopFamilies.Length - 1);
             DrawGameIcon(new Rect(detail.x + 18f, detail.y + 18f, 54f, 54f), selectedIndex == 0 ? "guard-bee" : "bee", Color.white);
-            GUI.Label(new Rect(detail.x + 90f, detail.y + 14f, detail.width - 108f, 30f), OfficialTroopFamilyLabels[selectedIndex],
+            GUI.Label(new Rect(detail.x + 90f, detail.y + 13f, detail.width - 108f, 36f), BarrackTroopLabel(OfficialTroopFamilies[selectedIndex]),
                 new GUIStyle(titleStyle)
                 {
-                    fontSize = compact ? 17 : 20,
+                    fontSize = compact ? 20 : 24,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                 });
-            GUI.Label(new Rect(detail.x + 90f, detail.y + 50f, detail.width - 108f, 64f),
+            GUI.Label(new Rect(detail.x + 90f, detail.y + 50f, detail.width - 108f, 79f),
                 OfficialDoctrineRecruitmentStatusText(officialSelectedTroopFamily),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 10 : 12,
+                    fontSize = compact ? 14 : 16,
                     wordWrap = true,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
@@ -50598,10 +50808,10 @@ public static void ResetMissionsStateForProof()
                 DrawAllianceActivitiesSurface(progressCard, new Color(.095f, .063f, .033f, .98f));
                 double progress01 = model.Progress01(doctrineRecruitmentController.Elapsed);
                 GUI.Label(new Rect(progressCard.x + 16f, progressCard.y + 10f, progressCard.width - 190f, 22f),
-                    "Entraînement en cours · " + Mathf.RoundToInt((float)progress01 * 100f).ToString(CultureInfo.InvariantCulture) + " %",
+                    BarrackFormat("training.progress", "Entraînement en cours · {0} %", Mathf.RoundToInt((float)progress01 * 100f)),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 11 : 13,
+                        fontSize = compact ? 15 : 17,
                         fontStyle = FontStyle.Bold,
                         normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                     });
@@ -50619,15 +50829,19 @@ public static void ResetMissionsStateForProof()
             {
                 Rect trainButton = new Rect(area.x + 18f, y, area.width - 36f, 46f);
                 try { BeeKingdom.Tutorial.TutorialTargetRegistry.Instance.RegisterScreenRect(BeeKingdom.Tutorial.FtueTutorialRegistry.TargetTrainingStartButton, trainButton); } catch {}
-                bool enabled = OfficialDoctrineRecruitmentActionEnabled(officialSelectedTroopFamily);
-                if (DrawAllianceActivitiesButton(trainButton, OfficialDoctrineRecruitmentActionLabel(officialSelectedTroopFamily), enabled, true))
+                // A passive refresh never replaces the stable training caption.
+                // No new recruitment command can be issued while a read is in flight.
+                bool enabled = BarrackTrainingButtonActionable(model, officialSelectedTroopFamily);
+                string caption = BarrackTrainingButtonCaption(model, officialSelectedTroopFamily);
+                bool refreshing = doctrineRecruitmentController != null && doctrineRecruitmentController.IsBusy;
+                if (DrawBarrackStableTrainingButton(trainButton, caption, enabled, refreshing))
                     RunOfficialDoctrineRecruitmentAction(officialSelectedTroopFamily);
                 if (!enabled)
                 {
                     GUI.Label(new Rect(area.x + 18f, y + 52f, area.width - 36f, 34f), OfficialDoctrineRecruitmentStatusText(officialSelectedTroopFamily),
                         new GUIStyle(smallStyle)
                         {
-                            fontSize = compact ? 10 : 11,
+                            fontSize = compact ? 14 : 16,
                             alignment = TextAnchor.MiddleCenter,
                             wordWrap = true,
                             normal = { textColor = new Color(.80f, .73f, .61f, 1f) }

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using BeeKingdom.Audio;
 using BeeKingdom.Networking;
+using BeeKingdom.Localization;
 using UnityEngine;
 namespace BeeKingdom.Playground {
  public static partial class HiveViewProductUiPresenter {
@@ -28,6 +29,48 @@ namespace BeeKingdom.Playground {
         private static string bankReserveAmountText = "100";
 
 
+        // Bank has its own IMGUI renderer: add the canonical HD artwork
+        // without touching the banking transactions or other buildings.
+        public const string BankHeaderArtworkResourceForProof =
+            "PremiumBeeReference/BuildingBanners/hive_bank";
+        private static Texture2D bankHeaderArtwork;
+
+        public static Rect BankHeaderArtworkRectForProof(float screenWidth, bool compact)
+        {
+            float height = compact ? 66f : 78f;
+            float width = height * 1.85f;
+            float reservedUpgradeWidth = compact ? 180f : 234f;
+            return new Rect(Mathf.Max(112f,
+                screenWidth - reservedUpgradeWidth - width - 14f),
+                compact ? 8f : 5f, width, height);
+        }
+
+        private static void DrawBankHeaderArtwork(bool compact)
+        {
+            if (bankHeaderArtwork == null)
+            {
+                bankHeaderArtwork = Resources.Load<Texture2D>(
+                    BankHeaderArtworkResourceForProof);
+                if (bankHeaderArtwork == null)
+                {
+                    Sprite sprite = Resources.Load<Sprite>(
+                        BankHeaderArtworkResourceForProof);
+                    if (sprite != null) bankHeaderArtwork = sprite.texture;
+                }
+            }
+            if (bankHeaderArtwork == null) return;
+            Color saved = GUI.color;
+            GUI.color = new Color(1f, .97f, .85f, .90f);
+            GUI.DrawTexture(BankHeaderArtworkRectForProof(Screen.width, compact),
+                bankHeaderArtwork, ScaleMode.ScaleToFit, true);
+            GUI.color = saved;
+        }
+        private static string BankText(string key) => BeeLocalization.Text("bank.premium." + key);
+        private static string BankLocalizedFeedback(string message) =>
+            !string.IsNullOrEmpty(message) && message.StartsWith("bank.premium.", StringComparison.Ordinal)
+                ? BeeLocalization.Text(message)
+                : (message ?? string.Empty);
+
         private sealed class BankMilestone
         {
             public readonly int Level;
@@ -47,17 +90,17 @@ namespace BeeKingdom.Playground {
 
         private static readonly BankMilestone[] BankMilestones =
         {
-            new BankMilestone(1,  "Réserve Royale", "Mettez une partie de vos ressources à l'abri et préparez vos objectifs futurs.", "royal-jelly"),
-            new BankMilestone(3,  "Coffres spécialisés", "Créez des fonds dédiés : militaire, construction, recherche et reconstruction.", "capacity"),
-            new BankMilestone(5,  "Certificats de cire", "Immobilisez des ressources pour obtenir de meilleures conditions économiques.", "wax"),
-            new BankMilestone(10, "Marché d'échange", "Convertissez vos surplus selon des taux contrôlés par l'économie du serveur.", "resources"),
-            new BankMilestone(12, "Assurance des expéditions", "Couvrez une partie de la valeur transportée lors des sorties risquées.", "shield"),
-            new BankMilestone(15, "Avance économique", "Lancez certains projets avant d'avoir accumulé 100 % des ressources.", "production"),
-            new BankMilestone(20, "Obligations de la Ruche", "Financez progressivement les grands projets de votre colonie.", "queen-core"),
-            new BankMilestone(23, "Investissements d'Alliance", "Contribuez à certains grands projets collectifs contre prestige et contribution.", "alliance-center"),
-            new BankMilestone(25, "Conseiller économique", "Anticipez pénuries, dépenses et futurs paliers finançables.", "book"),
-            new BankMilestone(29, "Indice de confiance", "Votre stabilité économique influence progressivement vos conditions bancaires.", "events"),
-            new BankMilestone(30, "Spécialisation bancaire", "Orientez la Banque vers la sécurité, le commerce, l'expansion ou l'entraide.", "queen")
+            new BankMilestone(1,  "milestone.1.title", "milestone.1.description", "royal-jelly"),
+            new BankMilestone(3,  "milestone.3.title", "milestone.3.description", "capacity"),
+            new BankMilestone(5,  "milestone.5.title", "milestone.5.description", "wax"),
+            new BankMilestone(10, "milestone.10.title", "milestone.10.description", "resources"),
+            new BankMilestone(12, "milestone.12.title", "milestone.12.description", "shield"),
+            new BankMilestone(15, "milestone.15.title", "milestone.15.description", "production"),
+            new BankMilestone(20, "milestone.20.title", "milestone.20.description", "queen-core"),
+            new BankMilestone(23, "milestone.23.title", "milestone.23.description", "alliance-center"),
+            new BankMilestone(25, "milestone.25.title", "milestone.25.description", "book"),
+            new BankMilestone(29, "milestone.29.title", "milestone.29.description", "events"),
+            new BankMilestone(30, "milestone.30.title", "milestone.30.description", "queen")
         };
 
 
@@ -120,6 +163,7 @@ namespace BeeKingdom.Playground {
             bankRoyalReserveNotice = string.Empty;
             bankReserveAmountText = "100";
             bankReserveResource = "honey";
+            bankNextReserveRefreshAt = 0f;
         }
 
         private static bool BankRequestIsCurrent(int version, IRoyalReserveClient client, Guid hiveId)
@@ -159,7 +203,7 @@ namespace BeeKingdom.Playground {
             Guid hiveId = MobileAccountSessionRuntimeBootstrap.GameplayHiveId;
             if (client == null || hiveId == Guid.Empty)
             {
-                bankRoyalReserveError = "Connexion au serveur officiel requise.";
+                bankRoyalReserveError = "bank.premium.error.server_required";
                 return;
             }
 
@@ -181,7 +225,7 @@ namespace BeeKingdom.Playground {
             {
                 if (!BankRequestIsCurrent(requestVersion, client, hiveId)) return;
                 bankRoyalReserveSnapshot = null;
-                bankRoyalReserveError = "Impossible de synchroniser la Réserve Royale.";
+                bankRoyalReserveError = "bank.premium.error.sync_failed";
             }
             finally
             {
@@ -197,14 +241,14 @@ namespace BeeKingdom.Playground {
             Guid hiveId = MobileAccountSessionRuntimeBootstrap.GameplayHiveId;
             if (client == null || hiveId == Guid.Empty || bankRoyalReserveSnapshot == null)
             {
-                bankRoyalReserveError = "Synchronisez d'abord la Réserve Royale.";
+                bankRoyalReserveError = "bank.premium.error.sync_first";
                 return;
             }
 
             string normalizedAmount = (bankReserveAmountText ?? string.Empty).Replace(" ", string.Empty).Replace("\u00a0", string.Empty);
             if (!long.TryParse(normalizedAmount, NumberStyles.None, CultureInfo.InvariantCulture, out long amount) || amount <= 0)
             {
-                bankRoyalReserveError = "Entrez un montant supérieur à zéro.";
+                bankRoyalReserveError = "bank.premium.error.invalid_amount";
                 return;
             }
 
@@ -233,8 +277,8 @@ namespace BeeKingdom.Playground {
                 if (!BankRequestIsCurrent(requestVersion, client, hiveId)) return;
                 bankRoyalReserveSnapshot = snapshot;
                 bankRoyalReserveNotice = withdraw
-                    ? "Retrait confirmé par la Banque."
-                    : "Dépôt confirmé dans la Réserve Royale.";
+                    ? "bank.premium.notice.withdraw"
+                     : "bank.premium.notice.deposit";
                 MobileAccountSessionRuntimeBootstrap.RefreshStocksAfterBankMutation();
             }
             catch (RoyalReserveClientException exception)
@@ -247,7 +291,7 @@ namespace BeeKingdom.Playground {
             {
                 if (!BankRequestIsCurrent(requestVersion, client, hiveId)) return;
                 bankRoyalReserveSnapshot = null;
-                bankRoyalReserveError = "Transaction bancaire impossible pour le moment.";
+                bankRoyalReserveError = "bank.premium.error.transaction_failed";
             }
             finally
             {
@@ -261,22 +305,22 @@ namespace BeeKingdom.Playground {
             switch ((code ?? string.Empty).Trim())
             {
                 case "game.insufficient_resources":
-                    return "Ressources liquides insuffisantes pour ce dépôt.";
+                    return "bank.premium.error.insufficient_resources";
                 case "game.bank_reserve_capacity_insufficient":
-                    return "La Réserve Royale est pleine. Améliorez la Banque pour augmenter sa capacité.";
+                    return "bank.premium.error.reserve_full";
                 case "game.bank_reserve_insufficient":
-                    return "Le montant réservé est insuffisant pour ce retrait.";
+                    return "bank.premium.error.reserved_insufficient";
                 case "game.storage_capacity_insufficient":
-                    return "Vos bâtiments de stockage n'ont pas assez de place pour recevoir ce retrait.";
+                    return "bank.premium.error.storage_full";
                 case "game.revision_conflict":
-                    return "L'état de la ruche a changé. Actualisez la Réserve puis réessayez.";
+                    return "bank.premium.error.revision_conflict";
                 case "game.session_required":
                 case "auth.session_required":
-                    return "Reconnectez-vous pour utiliser la Réserve Royale.";
+                    return "bank.premium.error.session_required";
                 case "game.invalid_request":
-                    return "La transaction demandée n'est pas valide.";
+                    return "bank.premium.error.invalid_request";
                 default:
-                    return "Le serveur bancaire est momentanément indisponible.";
+                    return "bank.premium.error.server_unavailable";
             }
         }
 
@@ -285,9 +329,9 @@ namespace BeeKingdom.Playground {
         {
             switch (key)
             {
-                case "honey": return "Miel";
-                case "wax": return "Cire";
-                case "pollen": return "Pollen";
+                case "honey": return BankText("resource.honey");
+                case "wax": return BankText("resource.wax");
+                case "pollen": return BankText("resource.pollen");
                 default: return key ?? string.Empty;
             }
         }
@@ -299,9 +343,22 @@ namespace BeeKingdom.Playground {
         }
 
 
+        private static float bankNextReserveRefreshAt;
+
+        public static void TickBankOverlayForExternalHost()
+        {
+            if (!bankOverlayOpenForExternalHost
+                || !string.Equals(bankSelectedView, "reserve", StringComparison.Ordinal)
+                || bankRoyalReserveBusy || Time.unscaledTime < bankNextReserveRefreshAt)
+                return;
+            bankNextReserveRefreshAt = Time.unscaledTime + 30f;
+            RefreshBankRoyalReserveAsync();
+        }
+
         private static void OpenBankRoyalReserve()
         {
             bankSelectedView = "reserve";
+            bankNextReserveRefreshAt = Time.unscaledTime + 30f;
             bankRoyalReserveError = string.Empty;
             bankRoyalReserveNotice = string.Empty;
             RefreshBankRoyalReserveAsync();
@@ -314,7 +371,7 @@ namespace BeeKingdom.Playground {
 
             if (DrawActivitiesButton(
                 new Rect(area.x + 14f, area.y + 12f, compact ? 122f : 146f, 34f),
-                "Feuille de route",
+                BankText("reserve.roadmap_tab"),
                 !bankRoyalReserveBusy,
                 false))
             {
@@ -328,27 +385,25 @@ namespace BeeKingdom.Playground {
             float reserveTitleWidth = Mathf.Max(120f, area.xMax - 150f - reserveTitleX);
             GUI.Label(
                 new Rect(reserveTitleX, area.y + 10f, reserveTitleWidth, 30f),
-                "RÉSERVE ROYALE",
+                BankText("reserve.title"),
                 new GUIStyle(titleStyle)
                 {
-                    fontSize = compact ? 17 : 21,
+                    fontSize = compact ? 19 : 23,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                 });
 
             GUI.Label(
-                new Rect(area.x + 18f, area.y + 51f, area.width - 36f, 30f),
-                "Mettez une partie de vos ressources à l'abri. Un dépôt retire la ressource de vos stocks liquides; un retrait la rend disponible à nouveau.",
+                new Rect(area.x + 18f, area.y + 51f, area.width - 36f, 48f),
+                BankText("reserve.description"),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 9 : 11,
+                    fontSize = compact ? 13 : 15,
                     wordWrap = true,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
-            Rect refreshRect = new Rect(area.xMax - 132f, area.y + 10f, 116f, 34f);
-            if (DrawActivitiesButton(refreshRect, bankRoyalReserveBusy ? "Synchro..." : "Actualiser", !bankRoyalReserveBusy, false))
-                RefreshBankRoyalReserveAsync();
+            // The Bank runtime automatically refreshes server balances.
 
             if (bankRoyalReserveSnapshot == null)
             {
@@ -356,11 +411,11 @@ namespace BeeKingdom.Playground {
                 DrawActivitiesSurface(loading, new Color(.095f, .063f, .033f, .96f));
                 GUI.Label(
                     new Rect(loading.x + 16f, loading.y + 18f, loading.width - 32f, 24f),
-                    bankRoyalReserveBusy ? "Synchronisation de la Réserve Royale..." :
-                        string.IsNullOrEmpty(bankRoyalReserveError) ? "Réserve Royale prête à être synchronisée." : bankRoyalReserveError,
+                    bankRoyalReserveBusy ? BankText("reserve.loading") :
+                        string.IsNullOrEmpty(bankRoyalReserveError) ? BankText("reserve.ready") : BankLocalizedFeedback(bankRoyalReserveError),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 10 : 12,
+                        fontSize = compact ? 14 : 16,
                         alignment = TextAnchor.MiddleCenter,
                         wordWrap = true,
                         normal = { textColor = string.IsNullOrEmpty(bankRoyalReserveError)
@@ -371,7 +426,7 @@ namespace BeeKingdom.Playground {
                 if (!bankRoyalReserveBusy &&
                     DrawActivitiesButton(
                         new Rect(loading.x + loading.width * .25f, loading.y + 52f, loading.width * .5f, 30f),
-                        "Synchroniser",
+                        BankText("reserve.sync"),
                         true,
                         true))
                     RefreshBankRoyalReserveAsync();
@@ -379,15 +434,15 @@ namespace BeeKingdom.Playground {
             }
 
             RemoteRoyalReserveSnapshot snapshot = bankRoyalReserveSnapshot;
-            Rect summary = new Rect(area.x + 18f, area.y + 88f, area.width - 36f, compact ? 92f : 82f);
+            Rect summary = new Rect(area.x + 18f, area.y + 107f, area.width - 36f, compact ? 92f : 82f);
             DrawActivitiesSurface(summary, new Color(.13f, .085f, .038f, .98f));
 
             GUI.Label(
                 new Rect(summary.x + 16f, summary.y + 10f, summary.width - 32f, 22f),
-                "CAPACITÉ PROTÉGÉE",
+                BankText("reserve.capacity"),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 11 : 13,
+                    fontSize = compact ? 15 : 17,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                 });
@@ -395,10 +450,10 @@ namespace BeeKingdom.Playground {
             GUI.Label(
                 new Rect(summary.x + 16f, summary.y + 33f, summary.width - 32f, 20f),
                 BankFormatAmount(snapshot.ReservedTotal) + " / " + BankFormatAmount(snapshot.Capacity) +
-                "   ·   Banque niveau " + snapshot.BankLevel.ToString(CultureInfo.InvariantCulture),
+                BankText("reserve.level") + snapshot.BankLevel.ToString(CultureInfo.InvariantCulture),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 10 : 12,
+                    fontSize = compact ? 14 : 16,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
@@ -438,7 +493,7 @@ namespace BeeKingdom.Playground {
                     BankResourceLabel(key),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 10 : 12,
+                        fontSize = compact ? 14 : 16,
                         fontStyle = FontStyle.Bold,
                         normal = { textColor = selected
                             ? new Color(1f, .82f, .38f, 1f)
@@ -451,10 +506,10 @@ namespace BeeKingdom.Playground {
                 long reserved = snapshot.Reserved.GetValueOrDefault(key);
                 GUI.Label(
                     new Rect(card.x + (compact ? 50f : 58f), card.y + 31f, card.width - (compact ? 60f : 68f), 34f),
-                    "Liquide : " + BankFormatAmount(liquid) + "\nRéservé : " + BankFormatAmount(reserved),
+                    BankText("reserve.liquid") + BankFormatAmount(liquid) + "\n" + BankText("reserve.reserved") + BankFormatAmount(reserved),
                     new GUIStyle(tinyLabelStyle)
                     {
-                        fontSize = compact ? 8 : 10,
+                        fontSize = compact ? 12 : 14,
                         wordWrap = true,
                         normal = { textColor = new Color(.72f, .66f, .56f, 1f) }
                     });
@@ -478,10 +533,10 @@ namespace BeeKingdom.Playground {
 
             GUI.Label(
                 new Rect(transaction.x + 16f, transaction.y + 10f, transaction.width - 32f, 22f),
-                "TRANSACTION · " + BankResourceLabel(bankReserveResource),
+                BankText("reserve.transaction") + BankResourceLabel(bankReserveResource),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 11 : 13,
+                    fontSize = compact ? 15 : 17,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                 });
@@ -490,10 +545,10 @@ namespace BeeKingdom.Playground {
             float amountLabelWidth = compact ? 62f : 78f;
             GUI.Label(
                 new Rect(transaction.x + 16f, amountY + 6f, amountLabelWidth, 24f),
-                "Montant",
+                BankText("reserve.amount"),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 9 : 11,
+                    fontSize = compact ? 14 : 16,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
@@ -508,7 +563,7 @@ namespace BeeKingdom.Playground {
                 12,
                 new GUIStyle(GUI.skin.textField)
                 {
-                    fontSize = compact ? 11 : 13,
+                    fontSize = compact ? 15 : 17,
                     alignment = TextAnchor.MiddleCenter
                 });
             bankReserveAmountText = typed ?? string.Empty;
@@ -526,10 +581,10 @@ namespace BeeKingdom.Playground {
             long selectedReserved = snapshot.Reserved.GetValueOrDefault(bankReserveResource);
 
             quickX += 82f;
-            if (DrawActivitiesButton(new Rect(quickX, amountY, compact ? 86f : 104f, 32f), "MAX dépôt", !bankRoyalReserveBusy && selectedLiquid > 0, false))
+            if (DrawActivitiesButton(new Rect(quickX, amountY, compact ? 86f : 104f, 32f), BankText("reserve.max_deposit"), !bankRoyalReserveBusy && selectedLiquid > 0, false))
                 bankReserveAmountText = Math.Min(selectedLiquid, Math.Max(0L, snapshot.Capacity - snapshot.ReservedTotal)).ToString(CultureInfo.InvariantCulture);
             quickX += compact ? 92f : 110f;
-            if (DrawActivitiesButton(new Rect(quickX, amountY, compact ? 86f : 104f, 32f), "MAX retrait", !bankRoyalReserveBusy && selectedReserved > 0, false))
+            if (DrawActivitiesButton(new Rect(quickX, amountY, compact ? 86f : 104f, 32f), BankText("reserve.max_withdraw"), !bankRoyalReserveBusy && selectedReserved > 0, false))
                 bankReserveAmountText = Math.Min(selectedReserved, selectedBalance == null ? 0L : Math.Max(0L, selectedBalance.Capacity - selectedBalance.Amount)).ToString(CultureInfo.InvariantCulture);
 
             float actionY = amountY + 43f;
@@ -540,14 +595,14 @@ namespace BeeKingdom.Playground {
 
             if (DrawActivitiesButton(
                 new Rect(transaction.x + 16f, actionY, actionWidth, 36f),
-                bankRoyalReserveBusy ? "Transaction..." : "Déposer",
+                bankRoyalReserveBusy ? BankText("reserve.in_progress") : BankText("reserve.deposit"),
                 canDeposit,
                 true))
                 TransferBankRoyalReserveAsync(false);
 
             if (DrawActivitiesButton(
                 new Rect(transaction.x + 16f + actionWidth + actionGap, actionY, actionWidth, 36f),
-                bankRoyalReserveBusy ? "Transaction..." : "Retirer",
+                bankRoyalReserveBusy ? BankText("reserve.in_progress") : BankText("reserve.withdraw"),
                 canWithdraw,
                 false))
                 TransferBankRoyalReserveAsync(true);
@@ -559,10 +614,10 @@ namespace BeeKingdom.Playground {
             {
                 GUI.Label(
                     new Rect(transaction.x + 16f, actionY + 43f, transaction.width - 32f, 34f),
-                    feedback,
+                    BankLocalizedFeedback(feedback),
                     new GUIStyle(tinyLabelStyle)
                     {
-                        fontSize = compact ? 8 : 10,
+                        fontSize = compact ? 12 : 14,
                         alignment = TextAnchor.MiddleCenter,
                         wordWrap = true,
                         normal = { textColor = !string.IsNullOrEmpty(bankRoyalReserveError)
@@ -579,8 +634,9 @@ namespace BeeKingdom.Playground {
             GUI.color = new Color(.035f, .022f, .012f, .995f);
             GUI.DrawTexture(full, Texture2D.whiteTexture);
             GUI.color = Color.white;
+            DrawBankHeaderArtwork(compact);
 
-            if (DrawActivitiesButton(new Rect(16f, 14f, 78f, 48f), "Retour", true, false))
+            if (WorldMapHudLayout.DrawChatReturnButton(new Rect(30f, 24f, 52f, 52f)))
             {
                 AudioManager.Instance?.PlayUIClick();
                 if (string.Equals(bankSelectedView, "reserve", StringComparison.Ordinal))
@@ -597,55 +653,47 @@ namespace BeeKingdom.Playground {
                 return;
             }
 
-            GUI.Label(new Rect(112f, 12f, Screen.width * .44f, 38f), "BANQUE DE LA RUCHE",
+            GUI.Label(new Rect(112f, 12f, Mathf.Max(100f, PremiumBuildingUpgradeRectForProof(Screen.width, compact).x - 123f), 38f), BankText("header.title"),
                 new GUIStyle(titleStyle)
                 {
-                    fontSize = compact ? 21 : 27,
+                    fontSize = compact ? 23 : 29,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                 });
             GUI.Label(new Rect(114f, 52f, Screen.width * .55f, 22f),
-                "Le centre stratégique de la richesse de votre ruche.",
+                BankText("header.subtitle"),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 10 : 12,
+                    fontSize = compact ? 14 : 16,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
             int level = BankDisplayedLevel(out bool levelPending);
-            string levelText = levelPending ? "Niveau —" : "Niveau " + level.ToString(CultureInfo.InvariantCulture);
+            string levelText = levelPending ? BankText("level.pending") : BankText("level.label") + level.ToString(CultureInfo.InvariantCulture);
 
-            Rect upgrade = new Rect(Screen.width - (compact ? 156f : 184f), 14f, compact ? 140f : 168f, 48f);
-            bool officialConfigured = OfficialBuildingUpgradeConfigured();
-            bool upgradeEnabled = officialConfigured ? OfficialBuildingUpgradeActionEnabled("hive_bank") : true;
-            string upgradeLabel = officialConfigured ? OfficialBuildingUpgradeActionLabel("hive_bank") : "Améliorer";
-            if (DrawActivitiesButton(upgrade, upgradeLabel, upgradeEnabled, true) && upgradeEnabled)
-            {
-                AudioManager.Instance?.PlayUIClick();
-                TryStartUpgradeWithPrerequisiteRedirectForExternalHost("hive_bank");
-            }
+            DrawPremiumBuildingUpgradeHeader("hive_bank", compact);
 
             float top = 94f;
             float margin = compact ? 10f : 32f;
             Rect levelCard = new Rect(margin, top, Screen.width - margin * 2f, compact ? 96f : 88f);
             DrawActivitiesSurface(levelCard, new Color(.095f, .063f, .033f, .98f));
             GUI.Label(new Rect(levelCard.x + 18f, levelCard.y + 12f, levelCard.width - 210f, 24f),
-                "BANQUE · " + levelText,
+                BankText("level.bank") + levelText,
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 13 : 15,
+                    fontSize = compact ? 17 : 19,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .95f, .82f, 1f) }
                 });
 
             BankMilestone next = levelPending ? BankMilestones[0] : NextBankMilestone(level);
             string nextText = next == null
-                ? "Toutes les fonctions majeures de la première branche sont débloquées."
-                : "Prochain déblocage majeur : " + next.Title + " · niveau " + next.Level.ToString(CultureInfo.InvariantCulture);
+                ? BankText("level.all_unlocked")
+                : BankText("level.next") + BankText(next.Title) + BankText("level.suffix") + next.Level.ToString(CultureInfo.InvariantCulture);
             GUI.Label(new Rect(levelCard.x + 18f, levelCard.y + 41f, levelCard.width - 36f, 20f), nextText,
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 10 : 12,
+                    fontSize = compact ? 14 : 16,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
@@ -676,25 +724,25 @@ namespace BeeKingdom.Playground {
 
             DrawActivitiesSurface(roadmapCard, new Color(.070f, .045f, .024f, .985f));
 
-            GUI.Label(new Rect(roadmapCard.x + 18f, roadmapCard.y + 12f, roadmapCard.width - 36f, 28f), "FEUILLE DE ROUTE BANCAIRE",
+            GUI.Label(new Rect(roadmapCard.x + 18f, roadmapCard.y + 12f, roadmapCard.width - 36f, 28f), BankText("roadmap.heading"),
                 new GUIStyle(titleStyle)
                 {
-                    fontSize = compact ? 17 : 21,
+                    fontSize = compact ? 19 : 23,
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .77f, .36f, 1f) }
                 });
-            GUI.Label(new Rect(roadmapCard.x + 18f, roadmapCard.y + 42f, roadmapCard.width - 36f, 22f),
-                "Les fonctions futures restent visibles : vous savez toujours ce que le prochain niveau peut vous apporter.",
+            GUI.Label(new Rect(roadmapCard.x + 18f, roadmapCard.y + 42f, roadmapCard.width - 36f, 33f),
+                BankText("roadmap.description"),
                 new GUIStyle(smallStyle)
                 {
-                    fontSize = compact ? 9 : 11,
+                    fontSize = compact ? 14 : 16,
                     wordWrap = true,
                     normal = { textColor = new Color(.80f, .73f, .61f, 1f) }
                 });
 
-            Rect viewport = new Rect(roadmapCard.x + 12f, roadmapCard.y + 74f, roadmapCard.width - 24f, roadmapCard.height - 86f);
-            float gap = compact ? 7f : 9f;
-            float rowHeight = compact ? 88f : 82f;
+            Rect viewport = new Rect(roadmapCard.x + 12f, roadmapCard.y + 86f, roadmapCard.width - 24f, roadmapCard.height - 98f);
+            float gap = compact ? 10f : 12f;
+            float rowHeight = compact ? 104f : 100f;
             float contentWidth = Mathf.Max(40f, viewport.width - 18f);
             float contentHeight = BankMilestones.Length * (rowHeight + gap);
             bankRoadmapScroll.x = 0f;
@@ -720,36 +768,36 @@ namespace BeeKingdom.Playground {
                 DrawGameIcon(icon, milestone.IconId, unlockedByLevel ? Color.white : new Color(.62f, .58f, .52f, 1f));
 
                 float textX = icon.xMax + 12f;
-                float textWidth = Mathf.Max(80f, row.xMax - 154f - textX);
-                GUI.Label(new Rect(textX, row.y + 9f, textWidth, 22f),
-                    milestone.Title,
+                float textWidth = Mathf.Max(80f, row.xMax - 172f - textX);
+                GUI.Label(new Rect(textX, row.y + 11f, textWidth, 27f),
+                    BankText(milestone.Title),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 12 : 14,
+                        fontSize = compact ? 16 : 18,
                         fontStyle = FontStyle.Bold,
                         normal = { textColor = unlockedByLevel ? new Color(1f, .95f, .82f, 1f) : new Color(.80f, .73f, .61f, 1f) }
                     });
-                GUI.Label(new Rect(textX, row.y + 34f, textWidth, row.height - 40f),
-                    milestone.Description,
+                GUI.Label(new Rect(textX, row.y + 42f, textWidth, row.height - 47f),
+                    BankText(milestone.Description),
                     new GUIStyle(smallStyle)
                     {
-                        fontSize = compact ? 9 : 11,
+                        fontSize = compact ? 17 : 19,
                         wordWrap = true,
                         clipping = TextClipping.Clip,
                         normal = { textColor = new Color(.72f, .66f, .56f, 1f) }
                     });
 
                 string status;
-                if (levelPending) status = "Synchronisation";
-                else if (royalReserveAvailable) status = "DISPONIBLE";
-                else if (unlockedByLevel) status = "PALIER ATTEINT";
-                else if (isNext) status = "PROCHAIN · NIV. " + milestone.Level.ToString(CultureInfo.InvariantCulture);
-                else status = "🔒 NIV. " + milestone.Level.ToString(CultureInfo.InvariantCulture);
+                if (levelPending) status = BankText("status.synchronizing");
+                else if (royalReserveAvailable) status = BankText("status.available");
+                else if (unlockedByLevel) status = BankText("status.reached");
+                else if (isNext) status = BankText("status.next") + milestone.Level.ToString(CultureInfo.InvariantCulture);
+                else status = BankText("status.locked") + milestone.Level.ToString(CultureInfo.InvariantCulture);
 
-                GUI.Label(new Rect(row.xMax - 142f, row.y + 12f, 128f, 22f), status,
+                GUI.Label(new Rect(row.xMax - 160f, row.y + 11f, 146f, 26f), status,
                     new GUIStyle(badgeStyle)
                     {
-                        fontSize = compact ? 8 : 10,
+                        fontSize = compact ? 12 : 14,
                         alignment = TextAnchor.MiddleRight,
                         normal = { textColor = unlockedByLevel ? new Color(1f, .77f, .36f, 1f) : new Color(.68f, .62f, .52f, 1f) }
                     });
@@ -757,8 +805,8 @@ namespace BeeKingdom.Playground {
                 if (royalReserveAvailable)
                 {
                     if (DrawActivitiesButton(
-                        new Rect(row.xMax - 134f, row.y + 37f, 120f, 32f),
-                        "Ouvrir",
+                        new Rect(row.xMax - 152f, row.y + 44f, 138f, 40f),
+                        BankText("roadmap.open"),
                         !bankRoyalReserveBusy,
                         true))
                     {
@@ -768,11 +816,11 @@ namespace BeeKingdom.Playground {
                 }
                 else
                 {
-                    GUI.Label(new Rect(row.xMax - 142f, row.y + 38f, 128f, 32f),
-                        unlockedByLevel ? "Service bancaire\nen préparation" : "Améliorez la Banque\npour débloquer",
+                    GUI.Label(new Rect(row.xMax - 160f, row.y + 44f, 146f, 46f),
+                        unlockedByLevel ? BankText("roadmap.preparing") : BankText("roadmap.unlock"),
                         new GUIStyle(tinyLabelStyle)
                         {
-                            fontSize = compact ? 8 : 9,
+                            fontSize = compact ? 12 : 14,
                             alignment = TextAnchor.MiddleRight,
                             wordWrap = true,
                             normal = { textColor = new Color(.60f, .55f, .48f, 1f) }

@@ -1,32 +1,23 @@
 using System;
+using System.Collections.Generic;
 using BeeKingdom.Buildings.Interaction;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace BeeKingdom.Playground
 {
-    // M006-CL wave 1: adds a small "i" button next to Honey Reserve and Warehouse showing
-    // the official server-backed pending/rate/capacity forecast (HiveOfflineProductionPanelController
-    // - the same controller/data LivingHive's "Mobile production forecast" screen already
-    // reads, see Docs/Demos/LivingHive.md). Read-only: this never collects anything, so the
-    // existing manual-collection tap-to-collect flow owned by HiveMapProductionBootstrap
-    // (badge, zoom-derived sizing, bee-swirl feedback, resource mutation) is completely
-    // untouched - the "i" button is a separate small GUI.Button hit-tested by OnGUI itself,
-    // never reaching BuildingInteractionController's 3D raycast or the building's own
-    // BuildingClicked event.
+    // Unified premium interaction for Honey Reserve, Warehouse and Wax
+    // Workshop. A building tap harvests only if the existing authoritative
+    // production model says stock is collectible. A successful dispatch
+    // makes the NEXT click on that building open the production details.
+    // If there is nothing to harvest, the first click opens details.
+    // The former floating "i" and its independent IMGUI input have been
+    // retired. The read-only details never credit inventory themselves.
     //
-    // M008-CX wave 2: extends the same read-only forecast to Transformation, the third
-    // manual-production building, without touching HiveMapProductionBootstrap's
-    // tap-to-collect/badge/feedback behavior.
-    //
-    // Same auto-bootstrap strategy as the other Environment2D5D runtime bootstraps: a
-    // RuntimeInitializeOnLoadMethod creates this only when the active scene starts with
-    // "Environment2D5D", no scene wiring required.
-    public sealed class HiveMapProductionInfoBootstrap : MonoBehaviour
+    // Same runtime bootstrap strategy as other Environment2D5D services.
+    public sealed partial class HiveMapProductionInfoBootstrap : MonoBehaviour
     {
         private const string RuntimeRootName = "HiveMap Production Info Runtime";
-        private const float PanelWidth = 300f;
-        private const float PanelHeight = 170f;
 
         private static readonly string[] TrackedBuildingTypes =
         {
@@ -39,6 +30,12 @@ namespace BeeKingdom.Playground
 
         private BuildingInteractionController subscribedController;
         private string openBuildingType;
+        private HiveMapPremiumBuildingWindow premiumWindow;
+        // One deterministic click sequence per producer, even when its
+        // server snapshot remains collectible during a pending request.
+        private readonly HashSet<string> showDetailsAfterSuccessfulHarvest =
+            new HashSet<string>(StringComparer.Ordinal);
+        private int lastProducerClickFrame = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -70,115 +67,198 @@ namespace BeeKingdom.Playground
             root.AddComponent<HiveMapProductionInfoBootstrap>();
         }
 
+        private bool producerCompetingOverlayNoted;
+
         private void Update()
         {
-            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
+            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost)
+            {
+                showDetailsAfterSuccessfulHarvest.Clear();
+                return;
+            }
+            if (OverlayOpenForExternalHost && premiumWindow != null)
+            {
+                // A producer info window already owns the modal gesture.
+                // Previously another temporary modal flag could instantly
+                // CLOSE this screen after ShowProductionInfo succeeded, which
+                // is why logs said shown=True but no window ever appeared.
+                // Other screens cannot silently revoke this user's choice;
+                // only Back/Upgrade/Escape may call ClosePremiumInfo().
+                bool competingOverlay =
+                    HiveMapOverlayInputGateBootstrap.IsAnotherOverlayBlockingProductionInfo();
+                if (competingOverlay && !producerCompetingOverlayNoted)
+                {
+#if UNITY_EDITOR
+                    Debug.LogWarning("[BK-ProducerInfo] Transient competing overlay; " +
+                        "keeping production panel in foreground");
+#endif
+                    producerCompetingOverlayNoted = true;
+                }
+                if (!competingOverlay) producerCompetingOverlayNoted = false;
+                premiumWindow.SetSuppressed(false);
+            }
             if (subscribedController != null) return;
             BuildingInteractionController controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller == null) return;
+            controller.Selection.BuildingClicked += OnBuildingClicked;
             subscribedController = controller;
+        }
+
+        private static bool IsProducerBuildingType(string type)
+        {
+            return type == BuildingTypes.HoneyReserve ||
+                   type == BuildingTypes.Warehouse ||
+                   type == BuildingTypes.Transformation;
+        }
+
+        public static bool ShouldHarvestOnFirstClickForProof(
+            bool collectable, bool detailsPending)
+        {
+            return collectable && !detailsPending;
+        }
+
+        private void OnBuildingClicked(BuildingDefinition building)
+        {
+            if (building == null || !IsProducerBuildingType(building.BuildingType))
+                return;
+            // Both the building collider and artwork fallback may observe
+            // the same frame. Never process one tap twice.
+            if (lastProducerClickFrame == Time.frameCount) return;
+            lastProducerClickFrame = Time.frameCount;
+            if (OverlayOpenForExternalHost) return;
+
+            string type = building.BuildingType;
+            if (showDetailsAfterSuccessfulHarvest.Contains(type))
+            {
+                OpenPremiumInfo(type);
+                if (OverlayOpenForExternalHost)
+                    showDetailsAfterSuccessfulHarvest.Remove(type);
+#if UNITY_EDITOR
+                Debug.Log("[BK-ProducerInfo] Follow-up click opens " + type +
+                    " shown=" + OverlayOpenForExternalHost);
+#endif
+                return;
+            }
+
+            string hotspotId=BuildingMappingTable.GetByBuildingType(type).LegacyKey;
+            bool ready=HiveViewProductUiPresenter.ManualProductionReadyForExternalHost(
+                hotspotId);
+            if (ShouldHarvestOnFirstClickForProof(ready, false))
+            {
+                // The existing collection bridge uses the official server
+                // when authenticated and the local preview only in demo.
+                // No second callback is allowed to start another mutation.
+                float accepted=HiveViewProductUiPresenter
+                    .CollectManualProductionForExternalHost(hotspotId);
+                if (accepted > 0f)
+                {
+                    showDetailsAfterSuccessfulHarvest.Add(type);
+#if UNITY_EDITOR
+                    Debug.Log("[BK-ProducerInfo] First click harvest dispatched: " +
+                        type + " (next click shows details)");
+#endif
+                    return;
+                }
+            }
+
+            // No authoritative harvest available (or it was rejected):
+            // one click opens the premium details, with honest server status.
+            OpenPremiumInfo(type);
+#if UNITY_EDITOR
+            Debug.Log("[BK-ProducerInfo] No harvest available, open details: " +
+                type + " shown=" + OverlayOpenForExternalHost);
+#endif
+        }
+        private void OnDestroy()
+        {
+            if (subscribedController != null)
+                subscribedController.Selection.BuildingClicked -= OnBuildingClicked;
+            if (premiumWindow != null) premiumWindow.Hide();
+            OverlayOpenForExternalHost = false;
+            openBuildingType = null;
+        }
+
+        private void OpenPremiumInfo(string buildingType)
+        {
+            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking())
+            {
+#if UNITY_EDITOR
+                Debug.Log("[BK-ProducerInfo] Open withheld by active modal for " +
+                    buildingType);
+#endif
+                return;
+            }
+            if (!BuildingCatalog.TryGetByBuildingType(buildingType, out BuildingDefinition building))
+                return;
+            var source = MobileAccountSessionRuntimeBootstrap.OfflineProductionControllerForHiveMap;
+            if (premiumWindow == null)
+            {
+                GameObject root = new GameObject("Production Info Premium Screen");
+                root.transform.SetParent(transform, false);
+                premiumWindow = root.AddComponent<HiveMapPremiumBuildingWindow>();
+            }
+            openBuildingType = buildingType;
+            OverlayOpenForExternalHost = true;
+            premiumWindow.ShowProductionInfo(building,
+                BuildingName(buildingType, true),
+                BuildingName(buildingType, false),
+                source, ClosePremiumInfo, UpgradeFromPremiumInfo);
+            if (source != null && source.IsConfigured && !source.IsBusy)
+                source.Refresh();
+#if UNITY_EDITOR
+            Canvas panelCanvas = premiumWindow.GetComponentInChildren<Canvas>(true);
+            Debug.Log("[BK-ProducerInfo] Premium canvas opened: " + buildingType +
+                " isOpen=" + premiumWindow.IsOpen +
+                " producerMode=" + premiumWindow.ProductionInfoModeForProof +
+                " canvasActive=" + (panelCanvas != null && panelCanvas.gameObject.activeInHierarchy));
+#endif
+        }
+
+        private static string BuildingName(string type, bool french)
+        {
+            if (type == BuildingTypes.HoneyReserve)
+                return french ? "Réserve de miel" : "Honey Reserve";
+            if (type == BuildingTypes.Warehouse)
+                return french ? "Entrepôt" : "Warehouse";
+            if (type == BuildingTypes.Transformation)
+                return french ? "Atelier de cire" : "Wax Workshop";
+            return french ? "Bâtiment" : "Building";
+        }
+
+        private void ClosePremiumInfo()
+        {
+            if (!OverlayOpenForExternalHost) return;
+            // A closing tap still belongs to this window, not the hive below.
+            HiveMapOverlayInputGateBootstrap.CaptureClosingGesture();
+            OverlayOpenForExternalHost = false;
+            openBuildingType = null;
+            producerCompetingOverlayNoted = false;
+            if (premiumWindow != null) premiumWindow.Hide();
+        }
+
+        private void UpgradeFromPremiumInfo()
+        {
+            string type = openBuildingType;
+            ClosePremiumInfo();
+            if (BuildingMappingTable.TryGetByBuildingType(type,
+                out LegacyMappingEntry mapped))
+                HiveViewProductUiPresenter.OpenConstructionOverlayForExternalHost(
+                    mapped.LegacyKey);
         }
 
         private void OnGUI()
         {
-            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost) return;
-            if (BeeKingdom.LivingHiveMenu.LivingHiveResearchRuntime.IsModalOpen || HiveViewProductUiPresenter.ResearchOverlayOpenForExternalHost ||
-                HiveMapActivitiesBootstrap.ModalOpenForExternalHost ||
-                HiveMapRoyalPalaceBootstrap.ModalOpenForExternalHost || HiveMapArmyBootstrap.ModalOpenForExternalHost) return;
-            // M084-CL : ce bootstrap listait ses propres exceptions au lieu de reutiliser le verrou
-            // partage - Chat Royal (et tout autre overlay plein ecran, ex. Alliance, Inventaire)
-            // n'y figurait pas, donc le petit bouton "i" (Reserve de miel/Entrepot/Transformation)
-            // restait dessine ET cliquable par-dessus, meme fenetre fermee au premier plan. Rapporte
-            // par le CEO : une "icone d'information" qui traverse Chat Royal, confirmee en cliquant
-            // dessus (fait apparaitre le panneau "Transformation"). Meme garde deja utilisee par
-            // HiveMapBuildingUpgradeProgressBootstrap pour la barre de construction.
-            if (HiveMapOverlayInputGateBootstrap.IsAnyOverlayBlocking()) return;
-            if (subscribedController == null) return;
-            Camera camera = Camera.main;
-            if (camera == null) return;
-
-            for (int i = 0; i < TrackedBuildingTypes.Length; i++)
+            if (!HiveViewProductUiPresenter.HasEnteredHiveForExternalHost ||
+                !OverlayOpenForExternalHost) return;
+            // The building itself is the only entry point; no floating "i"
+            // buttons. Only Escape remains handled by this legacy GUI path.
+            if (Event.current.type == EventType.KeyDown &&
+                Event.current.keyCode == KeyCode.Escape)
             {
-                string buildingType = TrackedBuildingTypes[i];
-                // M095-CL : la variante throwing spammait une KeyNotFoundException CHAQUE FRAME des
-                // qu'un des 3 batiments suivis n'etait pas (encore) enregistre - observe en build
-                // standalone reel pendant que le vrai bug (BuildingRuntimeViewBootstrap, lecture
-                // disque brute) empechait tout enregistrement. Le registre n'a de toute facon
-                // aucune garantie que ces 3 batiments soient places dans une scene donnee.
-                if (!subscribedController.Registry.TryGetGameObjectByBuildingType(buildingType, out GameObject go) || go == null) continue;
-
-                Rect rect = ScreenRectFor(go, camera);
-                if (rect.width <= 0f) continue;
-
-                // Small "i" button anchored to the building's own screen rect, offset to its
-                // top-right corner so it never sits on top of the collection badge (which is
-                // centered on the same rect by HiveMapProductionBootstrap).
-                Rect infoButton = new Rect(rect.xMax - 4f, rect.yMin - 4f, 26f, 26f);
-                if (GUI.Button(infoButton, "i"))
-                {
-                    OverlayOpenForExternalHost = true;
-                    openBuildingType = buildingType;
-                    MobileAccountSessionRuntimeBootstrap.OfflineProductionControllerForHiveMap.Refresh();
-                }
+                ClosePremiumInfo();
+                Event.current.Use();
             }
-
-            if (OverlayOpenForExternalHost) DrawInfoPanel();
         }
-
-        private void DrawInfoPanel()
-        {
-            IHiveOfflineProductionPanelController controller = MobileAccountSessionRuntimeBootstrap.OfflineProductionControllerForHiveMap;
-            HiveOfflineProductionScreenModel model = controller.Model;
-            string hotspotId = openBuildingType == null
-                ? null
-                : BuildingMappingTable.GetByBuildingType(openBuildingType).LegacyKey;
-            HiveOfflineProductionLineModel line = model == null || hotspotId == null ? null : model.FindLine(hotspotId);
-
-            Rect panel = new Rect(
-                (Screen.width - PanelWidth) * 0.5f,
-                (Screen.height - PanelHeight) * 0.5f,
-                PanelWidth,
-                PanelHeight);
-            GUI.Box(panel, string.Empty);
-
-            GUILayout.BeginArea(new Rect(panel.x + 12f, panel.y + 10f, PanelWidth - 24f, PanelHeight - 20f));
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(BuildingLabelFor(openBuildingType));
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("X", GUILayout.Width(28f))) OverlayOpenForExternalHost = false;
-            GUILayout.EndHorizontal();
-
-            if (!controller.IsConfigured || model == null || model.State == HiveOfflineProductionScreenState.NotConfigured)
-            {
-                GUILayout.Label("Session officielle requise.");
-            }
-            else if (line == null)
-            {
-                GUILayout.Label("Chargement...");
-            }
-            else
-            {
-                GUILayout.Space(6f);
-                GUILayout.Label("Ressource : " + line.ResourceKey);
-                GUILayout.Label("En attente : " + line.PendingAmount.ToString("0"));
-                GUILayout.Label("Taux : " + line.HourlyRate.ToString("0.0") + " / h");
-                GUILayout.Label("Reserve : " + line.BalanceAmount + " / " + line.BalanceCapacity);
-                if (line.IsResourceCapacityFull) GUILayout.Label("Capacite pleine.");
-                if (model.IsReadOnly) GUILayout.Label("Hors ligne - lecture seule.");
-            }
-
-            GUILayout.EndArea();
-        }
-
-        private static string BuildingLabelFor(string buildingType)
-        {
-            if (string.Equals(buildingType, BuildingTypes.HoneyReserve, StringComparison.Ordinal)) return "Reserve de miel";
-            if (string.Equals(buildingType, BuildingTypes.Warehouse, StringComparison.Ordinal)) return "Entrepot";
-            if (string.Equals(buildingType, BuildingTypes.Transformation, StringComparison.Ordinal)) return "Transformation";
-            return "Batiment";
-        }
-
-        // Same collider-bounds screen projection as HiveMapProductionBootstrap.ScreenRectFor.
         private static Rect ScreenRectFor(GameObject go, Camera camera)
         {
             Collider collider = go.GetComponent<Collider>();

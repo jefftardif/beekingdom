@@ -72,20 +72,14 @@ namespace BeeKingdom.Playground
             if (subscribedController != null) return;
             BuildingInteractionController controller = FindFirstObjectByType<BuildingInteractionController>();
             if (controller == null) return;
-            controller.Selection.BuildingClicked += OnBuildingClicked;
+            // The producer info bootstrap now exclusively routes building taps.
+            // This component only accrues production and paints ready effects.
             subscribedController = controller;
         }
 
         private void OnDestroy()
         {
-            if (subscribedController != null) subscribedController.Selection.BuildingClicked -= OnBuildingClicked;
-        }
-
-        private void OnBuildingClicked(BuildingDefinition building)
-        {
-            if (building == null || !IsTrackedBuildingType(building.BuildingType)) return;
-            string hotspotId = BuildingMappingTable.GetByBuildingType(building.BuildingType).LegacyKey;
-            HiveViewProductUiPresenter.CollectManualProductionForExternalHost(hotspotId);
+            // No click subscription: a producer tap must have one owner.
         }
 
         private static bool IsTrackedBuildingType(string buildingType)
