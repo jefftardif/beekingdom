@@ -50,3 +50,43 @@ pendant les tests.
 
 Le rendu visuel dans la GameView du projet principal reste à confirmer
 par le joueur, sur écran Full HD et sur une résolution compacte.
+
+## Correction de la source des icônes — 12 novembre 2026
+
+La validation visuelle de l'Entrepôt a démontré que la première correction
+ne suffisait pas. Les fichiers source `inventory.png`, `resources.png`
+et `book.png` comportaient eux-mêmes des bordures hexagonales
+incomplètes, et certains des caractères partiellement imprimés sous les
+symboles. Ce n'était pas un simple problème de taille du `RawImage`.
+
+Les trois cartes utilisent désormais uniquement des **illustrations de
+remplacement au cadre complet**, provenant d'œuvres existantes de
+BeeKingdom et normalisées sur une toile RGBA de **384 × 384 px** :
+`production-card-status.png` (symbole de la ruche),
+`production-card-capacity.png` (médaillon de capacité) et
+`production-card-journal.png` (livre de suivi).
+Elles comprennent chacune une marge transparente vérifiable, sans texte
+parasite ni bordure visiblement coupée.
+
+Leurs trois `.meta` possèdent des GUID distincts et sont importés par
+Unity en **TextureImporterType.Default**, non comme atlas de sprites
+découpés. Les nouvelles illustrations sont versionnées sur `main`
+avec le composant de carte; aucun ancien fichier image n'a été remplacé
+ni supprimé.
+
+### Résultat de validation
+
+- Unity 6000.5.3f1 : **48/48 tests EditMode réussis** sur la copie isolée.
+- Les tests lisent réellement les PNG en RGBA et vérifient la transparence
+  des 24 pixels de pourtour, l'importation Unity en texture complète, le
+  chargement des trois ressources ainsi que l'absence de découpe dans
+  les cartes de la Réserve de miel, de l'Entrepôt et de l'Atelier.
+- Rapport : `C:\BeeKingdom\qa\BK-ProductionIconFullSource-Unity-20261112.xml`.
+- Compilation jeu et tests sur PCJEFF : **0 erreur C#**.
+- Contrôle d'intégrité : 5 685 fichiers de référence valides, aucun GUID
+  dupliqué ni ressource absente.
+
+La GameView du projet principal reste à confirmer par le joueur; les
+tests prouvent l'importation, l'intégrité et la géométrie, pas un
+contrôle visuel humain à l'écran. Les calculs, appels de production et
+données serveur restent inchangés.
