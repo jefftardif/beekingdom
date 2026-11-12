@@ -372,6 +372,9 @@ namespace BeeKingdom.Playground
                 client,
                 gameTransport);
             strategicPathController = new StrategicPathPanelController(strategicPathClient, hiveId);
+            ConfigurePollinationForActiveSession(
+                client.Gate, client, gameTransport, hiveId,
+                configuration, authenticatedAuthority);
             var worldResourceCollectionClient = new WorldResourceCollectionClient(
                 client.Gate,
                 client,
@@ -691,6 +694,7 @@ namespace BeeKingdom.Playground
 
         public static void CloseGameplayForSignedOutSession()
         {
+            ClosePollinationForSignedOutSession();
             ResetStartupSession();
             ForgetChatLifecycle(chatCoordinator.SessionEndedAsync());
             cachedChatBinding = null;

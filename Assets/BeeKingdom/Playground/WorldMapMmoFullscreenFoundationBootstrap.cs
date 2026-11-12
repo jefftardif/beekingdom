@@ -301,6 +301,8 @@ namespace BeeKingdom.Playground
 
         private void OnGUI()
         {
+            // Keep pollination Canvas unobstructed by world-map IMGUI.
+            if (PollinationWorldMapOverlay.IsModalOpen) return;
             EnsurePixel();
             HandleGuidedWorldMapGuiInput();
             DrawBackground();
@@ -3272,6 +3274,10 @@ namespace BeeKingdom.Playground
 
         private void HandleInput()
         {
+            // Pollination owns pointer gestures while its button or window is active.
+            if (PollinationWorldMapOverlay.IsModalOpen ||
+                PollinationWorldMapOverlay.IsEntryHotspot(ScreenToGui(Input.mousePosition)))
+                return;
             if (HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime())
             {
                 HandleGuidedWorldMapInput();
@@ -3400,6 +3406,7 @@ namespace BeeKingdom.Playground
 
         private void HandleGuidedWorldMapGuiInput()
         {
+            if (PollinationWorldMapOverlay.IsModalOpen) return;
             if (!HiveViewProductUiPresenter.GuidedWorldMapTutorialActiveForRuntime()) return;
             Event current = Event.current;
             if (current == null || current.type != EventType.MouseUp) return;
