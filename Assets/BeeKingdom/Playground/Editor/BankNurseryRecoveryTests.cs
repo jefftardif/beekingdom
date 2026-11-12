@@ -75,6 +75,34 @@ namespace BeeKingdom.Playground.Editor
             CollectionAssert.AreEqual(new[] { 1, 3, 5, 10, 12, 15, 20, 23, 25, 29, 30 }, levels);
         }
 
+
+        [Test]
+        public void BankResourceAndMilestoneIconsAreCompletePremiumMedallions()
+        {
+            string[] resources = { "honey", "wax", "pollen" };
+            var milestones = ((IEnumerable)Presenter.GetField("BankMilestones", Static)
+                .GetValue(null)).Cast<object>().ToArray();
+            Assert.That(milestones.Length, Is.EqualTo(11));
+            string[] keys = resources.Select(x => "bank-premium-resource-" + x)
+                .Concat(milestones.Select(m => {
+                    var level = (int)m.GetType().GetField("Level").GetValue(m);
+                    string expected = "bank-premium-milestone-" + level;
+                    string actual = (string)m.GetType().GetField("IconId").GetValue(m);
+                    Assert.That(actual, Is.EqualTo(expected));
+                    return expected;
+                })).ToArray();
+            Assert.That(keys.Distinct().Count(), Is.EqualTo(14));
+            foreach (string key in keys)
+            {
+                Texture2D art = Resources.Load<Texture2D>("PremiumBeeIcons/" + key);
+                Assert.That(art, Is.Not.Null, key);
+                Assert.That(art.width, Is.EqualTo(384), key);
+                Assert.That(art.height, Is.EqualTo(384), key);
+            }
+            string code = Source("BeeKingdom/Playground/HiveViewProductUiPresenter.Bank.cs");
+            StringAssert.Contains("BankPremiumResourceIconKey(key)", code);
+        }
+
         [Test]
         public void BankOpenAndRead_DoNotInvokeTransfers()
         {

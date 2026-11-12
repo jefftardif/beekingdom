@@ -66,6 +66,9 @@ namespace BeeKingdom.Playground {
             GUI.color = saved;
         }
         private static string BankText(string key) => BeeLocalization.Text("bank.premium." + key);
+        private static string BankPremiumResourceIconKey(string resourceKey)
+            => "bank-premium-resource-" + resourceKey;
+
         private static string BankLocalizedFeedback(string message) =>
             !string.IsNullOrEmpty(message) && message.StartsWith("bank.premium.", StringComparison.Ordinal)
                 ? BeeLocalization.Text(message)
@@ -90,17 +93,17 @@ namespace BeeKingdom.Playground {
 
         private static readonly BankMilestone[] BankMilestones =
         {
-            new BankMilestone(1,  "milestone.1.title", "milestone.1.description", "royal-jelly"),
-            new BankMilestone(3,  "milestone.3.title", "milestone.3.description", "capacity"),
-            new BankMilestone(5,  "milestone.5.title", "milestone.5.description", "wax"),
-            new BankMilestone(10, "milestone.10.title", "milestone.10.description", "resources"),
-            new BankMilestone(12, "milestone.12.title", "milestone.12.description", "shield"),
-            new BankMilestone(15, "milestone.15.title", "milestone.15.description", "production"),
-            new BankMilestone(20, "milestone.20.title", "milestone.20.description", "queen-core"),
-            new BankMilestone(23, "milestone.23.title", "milestone.23.description", "alliance-center"),
-            new BankMilestone(25, "milestone.25.title", "milestone.25.description", "book"),
-            new BankMilestone(29, "milestone.29.title", "milestone.29.description", "events"),
-            new BankMilestone(30, "milestone.30.title", "milestone.30.description", "queen")
+            new BankMilestone(1,  "milestone.1.title", "milestone.1.description", "bank-premium-milestone-1"),
+            new BankMilestone(3,  "milestone.3.title", "milestone.3.description", "bank-premium-milestone-3"),
+            new BankMilestone(5,  "milestone.5.title", "milestone.5.description", "bank-premium-milestone-5"),
+            new BankMilestone(10, "milestone.10.title", "milestone.10.description", "bank-premium-milestone-10"),
+            new BankMilestone(12, "milestone.12.title", "milestone.12.description", "bank-premium-milestone-12"),
+            new BankMilestone(15, "milestone.15.title", "milestone.15.description", "bank-premium-milestone-15"),
+            new BankMilestone(20, "milestone.20.title", "milestone.20.description", "bank-premium-milestone-20"),
+            new BankMilestone(23, "milestone.23.title", "milestone.23.description", "bank-premium-milestone-23"),
+            new BankMilestone(25, "milestone.25.title", "milestone.25.description", "bank-premium-milestone-25"),
+            new BankMilestone(29, "milestone.29.title", "milestone.29.description", "bank-premium-milestone-29"),
+            new BankMilestone(30, "milestone.30.title", "milestone.30.description", "bank-premium-milestone-30")
         };
 
 
@@ -486,7 +489,7 @@ namespace BeeKingdom.Playground {
                     ? new Color(.20f, .13f, .055f, .99f)
                     : new Color(.095f, .063f, .033f, .96f));
 
-                DrawGameIcon(new Rect(card.x + 10f, card.y + 13f, compact ? 34f : 40f, compact ? 34f : 40f), key, Color.white);
+                DrawGameIcon(new Rect(card.x + 10f, card.y + 13f, compact ? 34f : 40f, compact ? 34f : 40f), BankPremiumResourceIconKey(key), Color.white);
 
                 GUI.Label(
                     new Rect(card.x + (compact ? 50f : 58f), card.y + 9f, card.width - (compact ? 60f : 68f), 20f),
