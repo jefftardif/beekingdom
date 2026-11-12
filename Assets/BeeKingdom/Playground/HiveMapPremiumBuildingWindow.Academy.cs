@@ -35,8 +35,10 @@ namespace BeeKingdom.Playground
 
         public static int AcademyProgramColumnsForProof(float cardWidth)
             => cardWidth >= 920f ? 2 : 1;
+        private const float AcademyPremiumHeaderGrowth = ProductionPremiumHeaderHeight - 62f;
+
         public static float AcademyProgramHeightForProof(float cardWidth)
-            => cardWidth < 540f ? 349f : 260f;
+            => (cardWidth < 540f ? 349f : 260f) + AcademyPremiumHeaderGrowth;
 
         private static string AcademyText(string key)
             => BeeLocalization.Text("academy.premium." + key);
@@ -96,6 +98,7 @@ namespace BeeKingdom.Playground
             float left, out float cursor, float viewportHeight)
         {
             cursor = 14f;
+            float headerGrowth = AcademyPremiumHeaderGrowth;
             academyCourseStatusLabels.Clear();
             academyCourseButtons.Clear();
             academyRecordsLabel = null;
@@ -104,62 +107,63 @@ namespace BeeKingdom.Playground
             float gap = 16f;
             float inner = Mathf.Max(1f, width - 36f);
 
-            float stateHeight = compact ? 241f : 185f;
+            float stateHeight = (compact ? 241f : 185f) + headerGrowth;
             RectTransform state = CardAt(parent,
                 new Rect(left, cursor, width, stateHeight),
-                AcademyText("card.state"), "research");
+                AcademyText("card.state"), "academy-card-state", true);
             academyLevelLabel = Label(state,
-                new Rect(18f, 73f, inner, compact ? 45f : 35f),
+                new Rect(18f, 73f + headerGrowth, inner, compact ? 45f : 35f),
                 AcademyText("level.awaiting"),
                 compact ? 19f : 23f, Gold, true);
             academySyncLabel = Label(state,
-                new Rect(18f, compact ? 123f : 117f, inner,
+                new Rect(18f, (compact ? 123f : 117f) + headerGrowth, inner,
                     compact ? 47f : 26f),
                 AcademyText("sync.loading"), 14f, Paper);
             Label(state,
-                new Rect(18f, compact ? 182f : 149f, inner,
+                new Rect(18f, (compact ? 182f : 149f) + headerGrowth, inner,
                     compact ? 53f : 27f),
                 AcademyText("state.note"), 13f, Muted);
             cursor += stateHeight + 19f;
 
-            float buildHeight = compact ? 234f : 188f;
+            float buildHeight = (compact ? 234f : 188f) + headerGrowth;
             RectTransform construction = CardAt(parent,
                 new Rect(left, cursor, width, buildHeight),
-                AcademyText("card.construction"), "upgrade");
+                AcademyText("card.construction"), "academy-card-construction", true);
             academyUpgradeLabel = Label(construction,
-                new Rect(18f, 75f, inner, compact ? 64f : 40f),
+                new Rect(18f, 75f + headerGrowth, inner, compact ? 64f : 40f),
                 AcademyText("upgrade.awaiting"), 17f, Gold, true);
             academyUpgradeCostLabel = Label(construction,
-                new Rect(18f, compact ? 145f : 119f, inner,
+                new Rect(18f, (compact ? 145f : 119f) + headerGrowth, inner,
                     compact ? 81f : 62f),
                 AcademyText("upgrade.construction_link"), 14f, Paper);
             cursor += buildHeight + 19f;
 
-            float palaceHeight = compact ? 225f : 179f;
+            float palaceHeight = (compact ? 225f : 179f) + headerGrowth;
             RectTransform palace = CardAt(parent,
                 new Rect(left, cursor, width, palaceHeight),
-                AcademyText("card.palace"), "queen-core");
+                AcademyText("card.palace"), "academy-card-palace", true);
             academyPalaceLabel = Label(palace,
-                new Rect(18f, 74f, inner, compact ? 83f : 47f),
+                new Rect(18f, 74f + headerGrowth, inner, compact ? 83f : 47f),
                 AcademyText("palace.awaiting"), 15f, Gold, true);
             academyPalaceNoteLabel = Label(palace,
-                new Rect(18f, compact ? 164f : 128f, inner,
+                new Rect(18f, (compact ? 164f : 128f) + headerGrowth, inner,
                     compact ? 53f : 44f),
                 AcademyText("palace.note"), 13f, Muted);
             cursor += palaceHeight + 19f;
 
-            float overviewHeight = compact ? 217f : 144f;
+            float overviewHeight = (compact ? 217f : 144f) + headerGrowth;
             RectTransform introduction = CardAt(parent,
                 new Rect(left, cursor, width, overviewHeight),
-                AcademyText("card.mission"), "bee");
+                AcademyText("card.mission"), "academy-card-mission", true);
             Label(introduction,
-                new Rect(18f, 75f, inner, compact ? 129f : 62f),
+                new Rect(18f, 75f + headerGrowth, inner, compact ? 129f : 62f),
                 AcademyText("mission"), 15f, Paper);
             cursor += overviewHeight + 19f;
 
             string[] programmes =
                 { "tactics", "logistics", "exploration", "mentorship" };
-            string[] icons = { "shield", "hive", "flower", "queen-bee" };
+            string[] icons = { "academy-card-tactics", "academy-card-logistics",
+                "academy-card-exploration", "academy-card-mentorship" };
             float courseHeight = AcademyProgramHeightForProof(width);
             float courseWidth = twoColumns ? (width - gap) * .5f : width;
             for (int i = 0; i < programmes.Length; i++)
@@ -171,14 +175,14 @@ namespace BeeKingdom.Playground
                     new Rect(left + column * (courseWidth + gap),
                         cursor + row * (courseHeight + gap),
                         courseWidth, courseHeight),
-                    AcademyText("course." + kind + ".title"), icons[i]);
+                    AcademyText("course." + kind + ".title"), icons[i], true);
                 Label(programme,
-                    new Rect(18f, 77f, courseWidth - 36f,
+                    new Rect(18f, 77f + headerGrowth, courseWidth - 36f,
                         compact ? 94f : 62f),
                     AcademyText("course." + kind + ".description"),
                     14f, Paper);
                 academyCourseStatusLabels[kind] = Label(programme,
-                    new Rect(18f, compact ? 177f : 140f, courseWidth - 36f,
+                    new Rect(18f, (compact ? 177f : 140f) + headerGrowth, courseWidth - 36f,
                         compact ? 100f : 62f),
                     AcademyText("course.awaiting"), 13f, Gold, true);
                 float courseButtonWidth = Mathf.Min(221f,courseWidth - 36f);
@@ -194,17 +198,17 @@ namespace BeeKingdom.Playground
 
             // These are ONLY observable real operations in OTHER buildings.
             // Their buttons navigate to the authoritative owners of mutations.
-            float activityHeight = compact ? 295f : 239f;
+            float activityHeight = (compact ? 295f : 239f) + headerGrowth;
             float activityWidth = twoColumns ? (width - gap) * .5f : width;
             RectTransform training = CardAt(parent,
                 new Rect(left, cursor, activityWidth, activityHeight),
-                AcademyText("card.training"), "guard");
+                AcademyText("card.training"), "academy-card-training", true);
             academyBarracksLabel = Label(training,
-                new Rect(18f, 76f, activityWidth - 36f,
+                new Rect(18f, 76f + headerGrowth, activityWidth - 36f,
                     compact ? 78f : 58f),
                 AcademyText("training.awaiting"), 15f, Paper, true);
             Label(training,
-                new Rect(18f, compact ? 164f : 138f,
+                new Rect(18f, (compact ? 164f : 138f) + headerGrowth,
                     activityWidth - 36f, compact ? 59f : 41f),
                 AcademyText("training.owner"), 13f, Muted);
             float buttonWidth = Mathf.Min(229f, activityWidth - 36f);
@@ -217,13 +221,13 @@ namespace BeeKingdom.Playground
                 new Rect(twoColumns ? left + activityWidth + gap : left,
                     twoColumns ? cursor : cursor + activityHeight + 19f,
                     activityWidth, activityHeight),
-                AcademyText("card.research"), "research");
+                AcademyText("card.research"), "academy-card-research", true);
             academyResearchLabel = Label(studies,
-                new Rect(18f, 76f, activityWidth - 36f,
+                new Rect(18f, 76f + headerGrowth, activityWidth - 36f,
                     compact ? 78f : 58f),
                 AcademyText("research.awaiting"), 15f, Paper, true);
             Label(studies,
-                new Rect(18f, compact ? 164f : 138f,
+                new Rect(18f, (compact ? 164f : 138f) + headerGrowth,
                     activityWidth - 36f, compact ? 59f : 41f),
                 AcademyText("research.owner"), 13f, Muted);
             ButtonAt(studies,
@@ -234,12 +238,12 @@ namespace BeeKingdom.Playground
 
             // Reserve enough space for the four durable diploma entries, each
             // with its real server timestamp, also on portrait phone screens.
-            float journalHeight = compact ? 334f : 260f;
+            float journalHeight = (compact ? 334f : 260f) + headerGrowth;
             RectTransform journal = CardAt(parent,
                 new Rect(left, cursor, width, journalHeight),
-                AcademyText("card.records"), "research");
+                AcademyText("card.records"), "academy-card-records", true);
             academyRecordsLabel = Label(journal,
-                new Rect(18f, 74f, inner, journalHeight - 84f),
+                new Rect(18f, 74f + headerGrowth, inner, journalHeight - headerGrowth - 84f),
                 AcademyText("records.no_academy_history"), 14f, Muted);
             cursor += journalHeight + 19f;
 
