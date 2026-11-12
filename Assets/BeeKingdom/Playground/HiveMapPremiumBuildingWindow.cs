@@ -1405,6 +1405,10 @@ namespace BeeKingdom.Playground
             RefreshNurseryLabels();
         }
 
+        // Production cards grow together: artwork and all fields below the header.
+        private const float ProductionPremiumHeaderHeight = 126f;
+        private const float ProductionPremiumHeaderGrowth = ProductionPremiumHeaderHeight - 84f;
+
         // Shared premium card header geometry. A contained image never crops
         // the gilded frame of a real resource icon, even for non-square art.
         public static Rect PremiumCardIconContainRectForProof(
@@ -1431,7 +1435,7 @@ namespace BeeKingdom.Playground
         private RectTransform CardAt(Transform parent, Rect rect,
             string title, string icon, bool spaciousPremiumHeader = false)
         {
-            float headerHeight = spaciousPremiumHeader ? 84f : 62f;
+            float headerHeight = spaciousPremiumHeader ? ProductionPremiumHeaderHeight : 62f;
             RectTransform card = Plate(parent, "Card", rect, Card, "panel-fill");
             Plate(card, "HeaderSheen",
                 new Rect(1f, 1f, rect.width - 2f, headerHeight),
@@ -1444,7 +1448,7 @@ namespace BeeKingdom.Playground
                 if (artwork != null)
                 {
                     Rect fitted = PremiumCardIconContainRectForProof(
-                        new Rect(12f, 6f, 72f, 72f), 6f,
+                        new Rect(10f, 9f, 108f, 108f), 4f,
                         artwork.width, artwork.height);
                     RawImage image = Node(card, "PremiumCardIcon", fitted)
                         .gameObject.AddComponent<RawImage>();
@@ -1454,11 +1458,12 @@ namespace BeeKingdom.Playground
                     image.raycastTarget = false;
                 }
                 TextMeshProUGUI heading = Label(card,
-                    new Rect(98f, 12f, Mathf.Max(92f, rect.width - 114f), 62f),
+                    new Rect(140f, 13f, Mathf.Max(90f, rect.width - 158f), 102f),
                     title, rect.width < 480f ? 17f : 19f, Gold, true);
                 heading.enableAutoSizing = true;
-                heading.fontSizeMin = 13f;
+                heading.fontSizeMin = 12f;
                 heading.fontSizeMax = rect.width < 480f ? 17f : 19f;
+                heading.alignment = TextAlignmentOptions.MidlineLeft;
             }
             else
             {

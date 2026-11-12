@@ -71,14 +71,14 @@ namespace BeeKingdom.Playground.Editor
         public void SharedPremiumIconContainFillsItsInsetWithoutCropping(
             float sourceWidth, float sourceHeight)
         {
-            Rect frame = new Rect(12f, 6f, 72f, 72f);
+            Rect frame = new Rect(10f, 9f, 108f, 108f);
             Rect fitted = HiveMapPremiumBuildingWindow
                 .PremiumCardIconContainRectForProof(
-                    frame, 6f, sourceWidth, sourceHeight);
-            Assert.That(fitted.xMin, Is.GreaterThanOrEqualTo(frame.xMin + 5.99f));
-            Assert.That(fitted.yMin, Is.GreaterThanOrEqualTo(frame.yMin + 5.99f));
-            Assert.That(fitted.xMax, Is.LessThanOrEqualTo(frame.xMax - 5.99f));
-            Assert.That(fitted.yMax, Is.LessThanOrEqualTo(frame.yMax - 5.99f));
+                    frame, 4f, sourceWidth, sourceHeight);
+            Assert.That(fitted.xMin, Is.GreaterThanOrEqualTo(frame.xMin + 3.99f));
+            Assert.That(fitted.yMin, Is.GreaterThanOrEqualTo(frame.yMin + 3.99f));
+            Assert.That(fitted.xMax, Is.LessThanOrEqualTo(frame.xMax - 3.99f));
+            Assert.That(fitted.yMax, Is.LessThanOrEqualTo(frame.yMax - 3.99f));
             Assert.That(fitted.width / fitted.height,
                 Is.EqualTo(sourceWidth / sourceHeight).Within(0.001f));
         }
@@ -115,11 +115,15 @@ namespace BeeKingdom.Playground.Editor
                 foreach (RawImage icon in icons)
                 {
                     Rect rect = icon.rectTransform.rect;
-                    Assert.That(rect.width, Is.GreaterThan(0f));
-                    Assert.That(rect.height, Is.GreaterThan(0f));
-                    Assert.That(rect.width, Is.LessThanOrEqualTo(60.01f));
-                    Assert.That(rect.height, Is.LessThanOrEqualTo(60.01f));
+                    Assert.That(rect.width, Is.GreaterThanOrEqualTo(99.99f));
+                    Assert.That(rect.height, Is.GreaterThanOrEqualTo(99.99f));
+                    Assert.That(rect.width, Is.LessThanOrEqualTo(100.01f));
+                    Assert.That(rect.height, Is.LessThanOrEqualTo(100.01f));
                     Assert.That(icon.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                    float top = -icon.rectTransform.anchoredPosition.y;
+                    Assert.That(top, Is.GreaterThanOrEqualTo(9f));
+                    Assert.That(top + rect.height, Is.LessThanOrEqualTo(126f),
+                        "No production medal may escape its 126-unit header");
                     Assert.That(icon.raycastTarget, Is.False);
                     Assert.That(icon.texture, Is.Not.Null);
                 }
