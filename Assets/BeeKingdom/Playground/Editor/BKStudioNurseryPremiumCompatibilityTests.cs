@@ -1,6 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
+using System.Linq;
+using BeeKingdom.Buildings.Interaction;
+using UnityEngine.UI;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -99,5 +102,53 @@ namespace BeeKingdom.Playground.Editor
             }
             finally{set.Invoke(null,new object[]{previous});}
         }
+        [Test]
+        public void NurseryAllSixCardsUseCompletePremiumMedallionsAndKeepCareActions()
+        {
+            string[] sections = { "vitality", "nutrition", "stability",
+                "operations", "cohorts", "management" };
+            var root = new GameObject("Nursery Premium Card QA", typeof(RectTransform));
+            root.SetActive(false);
+            try
+            {
+                var view = root.AddComponent<HiveMapPremiumBuildingWindow>();
+                var nursery = BuildingCatalog.GetByBuildingType(BuildingTypes.Nursery);
+                view.Show(nursery, "Nurserie", "Nursery", "", "", view.Hide, () => {});
+                RawImage[] icons = root.GetComponentsInChildren<RawImage>(true)
+                    .Where(image => image.name == "PremiumCardIcon").ToArray();
+                Assert.That(icons.Length, Is.EqualTo(sections.Length));
+                foreach (string section in sections)
+                {
+                    Texture2D source = Resources.Load<Texture2D>(
+                        "PremiumBeeIcons/nursery-card-" + section);
+                    Assert.That(source, Is.Not.Null, section);
+                    Assert.That(source.width, Is.EqualTo(384), section);
+                    Assert.That(source.height, Is.EqualTo(384), section);
+                    RawImage icon = icons.Single(image => image.texture == source);
+                    Assert.That(icon.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)), section);
+                    Assert.That(icon.raycastTarget, Is.False, section);
+                    Rect rect = icon.rectTransform.rect;
+                    Assert.That(rect.width, Is.EqualTo(100f).Within(.01f), section);
+                    Assert.That(rect.height, Is.EqualTo(100f).Within(.01f), section);
+                    var card = icon.transform.parent as RectTransform;
+                    Assert.That(card, Is.Not.Null, section);
+                    var separator = card.Find("Separator") as RectTransform;
+                    Assert.That(separator, Is.Not.Null, section);
+                    Assert.That(-separator.anchoredPosition.y,
+                        Is.EqualTo(128f).Within(.01f), section);
+                }
+                // Existing feeding, stabilization, completion and verification
+                // remain the same server-gated actions.
+                Button[] buttons = root.GetComponentsInChildren<Button>(true);
+                Assert.That(buttons.Length, Is.GreaterThanOrEqualTo(5));
+                var fills = root.GetComponentsInChildren<Image>(true)
+                    .Where(image => image.name == "ProgressFill").ToArray();
+                Assert.That(fills.Length, Is.EqualTo(3));
+                Assert.That(fills.All(image => image.type == Image.Type.Filled),
+                    Is.True);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
     }
 }

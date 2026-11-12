@@ -1326,85 +1326,92 @@ namespace BeeKingdom.Playground
             nurseryStatusLabel = null;
             nurseryFeedButton = nurseryStabilizeButton = nurseryCompleteButton = nurseryRetryButton = null;
             cursor = 14f;
-            RectTransform summary = CardAt(parent, new Rect(left, cursor, width, 178f),
-                fr ? "VITALITÉ DE LA NURSERIE" : "NURSERY VITALITY", "bees");
-            nurserySummaryLabel = Label(summary, new Rect(18f, 76f, width - 36f, 35f),
+            const float headerGrowth = ProductionPremiumHeaderHeight - 62f;
+            RectTransform summary = CardAt(parent, new Rect(left, cursor, width, 178f + headerGrowth),
+                fr ? "VITALITÉ DE LA NURSERIE" : "NURSERY VITALITY",
+                "nursery-card-vitality", true);
+            nurserySummaryLabel = Label(summary, new Rect(18f, 76f + headerGrowth, width - 36f, 35f),
                 "--", 24f, Gold, true);
-            nurseryStatusLabel = Label(summary, new Rect(18f, 119f, width - 36f, 50f),
+            nurseryStatusLabel = Label(summary, new Rect(18f, 119f + headerGrowth, width - 36f, 50f),
                 string.Empty, 13f, Muted);
-            cursor += 197f;
+            cursor += 197f + headerGrowth;
 
             RectTransform nutrition = CardAt(parent,
-                new Rect(left, cursor, width, 150f),
-                fr ? "NUTRITION DES LARVES" : "BROOD NUTRITION", "bees");
+                new Rect(left, cursor, width, 150f + headerGrowth),
+                fr ? "NUTRITION DES LARVES" : "BROOD NUTRITION",
+                "nursery-card-nutrition", true);
             nurseryNutritionLabel = Label(nutrition,
-                new Rect(18f, 75f, width - 36f, 35f), "-- / 100", 22f, Paper, true);
+                new Rect(18f, 75f + headerGrowth, width - 36f, 35f), "-- / 100", 22f, Paper, true);
             nurseryNutritionFill = NurseryProgressBar(nutrition,
-                new Rect(18f, 121f, Mathf.Max(1f, width - 36f), 14f));
-            cursor += 169f;
+                new Rect(18f, 121f + headerGrowth, Mathf.Max(1f, width - 36f), 14f));
+            cursor += 169f + headerGrowth;
 
             RectTransform stability = CardAt(parent,
-                new Rect(left, cursor, width, 150f),
-                fr ? "STABILITÉ DE LA COLONIE" : "COLONY STABILITY", "bees");
+                new Rect(left, cursor, width, 150f + headerGrowth),
+                fr ? "STABILITÉ DE LA COLONIE" : "COLONY STABILITY",
+                "nursery-card-stability", true);
             nurseryStabilityLabel = Label(stability,
-                new Rect(18f, 75f, width - 36f, 35f), "-- / 100", 22f, Paper, true);
+                new Rect(18f, 75f + headerGrowth, width - 36f, 35f), "-- / 100", 22f, Paper, true);
             nurseryStabilityFill = NurseryProgressBar(stability,
-                new Rect(18f, 121f, Mathf.Max(1f, width - 36f), 14f));
-            cursor += 169f;
+                new Rect(18f, 121f + headerGrowth, Mathf.Max(1f, width - 36f), 14f));
+            cursor += 169f + headerGrowth;
 
             RectTransform operations = CardAt(parent,
-                new Rect(left, cursor, width, 271f),
-                fr ? "SOINS ET OPÉRATIONS" : "CARE OPERATIONS", "research");
+                new Rect(left, cursor, width, 271f + headerGrowth),
+                fr ? "SOINS ET OPÉRATIONS" : "CARE OPERATIONS",
+                "nursery-card-operations", true);
             nurseryOperationLabel = Label(operations,
-                new Rect(18f, 77f, width - 36f, 45f),
+                new Rect(18f, 77f + headerGrowth, width - 36f, 45f),
                 string.Empty, 16f, Paper, true);
             nurseryOperationFill = NurseryProgressBar(operations,
-                new Rect(18f, 129f, Mathf.Max(1f, width - 36f), 12f));
+                new Rect(18f, 129f + headerGrowth, Mathf.Max(1f, width - 36f), 12f));
             float btnW = Mathf.Max(92f, (width - 50f) / 2f);
             nurseryFeedButton = ButtonAt(operations,
-                new Rect(18f, 154f, btnW, 43f),
+                new Rect(18f, 154f + headerGrowth, btnW, 43f),
                 (fr ? "Nourrir (" : "Feed (") +
                     HiveBroodVitalityClient.FeedingHoneyCost +
                     (fr ? " miel)" : " honey)"), true,
                 () => NurseryStart(HiveBroodVitalityClient.FeedingType));
             nurseryStabilizeButton = ButtonAt(operations,
-                new Rect(width - btnW - 18f, 154f, btnW, 43f),
+                new Rect(width - btnW - 18f, 154f + headerGrowth, btnW, 43f),
                 (fr ? "Stabiliser (" : "Stabilize (") +
                     HiveBroodVitalityClient.StabilizationWaxCost +
                     (fr ? " cire)" : " wax)"), true,
                 () => NurseryStart(HiveBroodVitalityClient.StabilizationType));
             nurseryCompleteButton = ButtonAt(operations,
-                new Rect(18f, 210f, btnW, 43f),
+                new Rect(18f, 210f + headerGrowth, btnW, 43f),
                 fr ? "Terminer" : "Complete", false, NurseryComplete);
             nurseryRetryButton = ButtonAt(operations,
-                new Rect(width - btnW - 18f, 210f, btnW, 43f),
+                new Rect(width - btnW - 18f, 210f + headerGrowth, btnW, 43f),
                 fr ? "Vérifier" : "Verify", false, NurseryRetry);
-            cursor += 290f;
+            cursor += 290f + headerGrowth;
 
             RectTransform cohorts = CardAt(parent,
-                new Rect(left, cursor, width, 174f),
-                fr ? "COUVÉES ROYALES" : "ROYAL BROOD COHORTS", "nursery");
-            Label(cohorts, new Rect(18f, 76f, width - 36f, 43f),
+                new Rect(left, cursor, width, 174f + headerGrowth),
+                fr ? "COUVÉES ROYALES" : "ROYAL BROOD COHORTS",
+                "nursery-card-cohorts", true);
+            Label(cohorts, new Rect(18f, 76f + headerGrowth, width - 36f, 43f),
                 fr ? "Incubation et réserve de recrues"
                     : "Incubation and recruit reserve",
                 17f, Paper, true);
-            Label(cohorts, new Rect(18f, 120f, width - 36f, 45f),
+            Label(cohorts, new Rect(18f, 120f + headerGrowth, width - 36f, 45f),
                 fr ? "Prototype serveur désactivé : aucune couvée ne peut encore être lancée."
                     : "Server prototype disabled: cohorts cannot yet be started.",
                 13f, Muted);
-            cursor += 193f;
+            cursor += 193f + headerGrowth;
 
             RectTransform management = CardAt(parent,
-                new Rect(left, cursor, width, 156f),
-                fr ? "GESTION DE LA NURSERIE" : "NURSERY MANAGEMENT", "build");
-            Label(management, new Rect(18f, 76f, width - 36f, 37f),
+                new Rect(left, cursor, width, 156f + headerGrowth),
+                fr ? "GESTION DE LA NURSERIE" : "NURSERY MANAGEMENT",
+                "nursery-card-management", true);
+            Label(management, new Rect(18f, 76f + headerGrowth, width - 36f, 37f),
                 fr ? "Les soins sont validés et enregistrés par le serveur."
                     : "Care is authorized and saved by the server.", 14f, Muted);
-            Label(management, new Rect(18f, 121f, width - 36f, 28f),
+            Label(management, new Rect(18f, 121f + headerGrowth, width - 36f, 28f),
                 fr ? "●  Synchronisation automatique des soins"
                     : "●  Care synchronizes automatically",
                 14f, Gold, true);
-            cursor += 175f;
+            cursor += 175f + headerGrowth;
 
             RectTransform content = parent as RectTransform;
             if (content != null)
