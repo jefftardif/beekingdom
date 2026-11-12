@@ -83,7 +83,7 @@ namespace BeeKingdom.Playground
             RectTransform overview=CardAt(parent,
                 new Rect(left,cursor,width,216f),
                 ProductionText("card.status","ETAT DE PRODUCTION"),
-                selected != null ? selected.IconId : "honey", true);
+                "production-card-status", true);
             productionInfoStatus=Label(overview,
                 new Rect(18f,100f,width-36f,46f),"--",20f,Gold,true);
             productionInfoResource=Label(overview,
@@ -92,7 +92,7 @@ namespace BeeKingdom.Playground
 
             RectTransform stock=CardAt(parent,
                 new Rect(left,cursor,width,270f),
-                ProductionText("card.resources","RESSOURCES ET CAPACITE"),"resources",true);
+                ProductionText("card.resources","RESSOURCES ET CAPACITE"),"production-card-capacity",true);
             productionInfoStock=Label(stock,
                 new Rect(18f,97f,width-36f,32f),"--",19f,Gold,true);
             productionInfoRate=Label(stock,
@@ -105,7 +105,7 @@ namespace BeeKingdom.Playground
 
             RectTransform action=CardAt(parent,
                 new Rect(left,cursor,width,232f),
-                ProductionText("card.management","SUIVI DE PRODUCTION"),"book",true);
+                ProductionText("card.management","SUIVI DE PRODUCTION"),"production-card-journal",true);
             productionInfoHint=Label(action,
                 new Rect(18f,94f,width-36f,61f),
                 ProductionText("note.no_server",
