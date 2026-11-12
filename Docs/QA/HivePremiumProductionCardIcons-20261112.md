@@ -30,3 +30,23 @@ L'ancien `CardAt` affichait toutes les icônes par `RawImage` dans un rectangle 
 ## Vérification joueur
 
 Dans Unity sur le projet principal : arrêter Play, laisser Unity recompiler, puis relancer. Ouvrir la Réserve de miel, l'Entrepôt et l'Atelier de cire. Les trois icônes de section doivent être entières, visuellement uniformes, et les montants/rates de production doivent rester lisibles. Tester aussi un format portrait de téléphone.
+## Validation Unity Test Runner
+
+Le 12 novembre 2026, une copie Unity d'intégration sur PCJEFF a exécuté
+`HivePremiumProductionCardIconTests`, `PremiumBuildingPolishTests`,
+`AllHiveBuildingsPremiumCoverageTests` et `HiveAllBuildingsPremiumAuditTests`
+avec Unity 6000.5.3f1 en EditMode.
+
+**Résultat final : 45 tests réussis sur 45, aucun échec.**
+
+Rapport : `C:\BeeKingdom\qa\BK-PremiumProductionCards-Unity-Retest-20261112.xml`.
+
+Le seul échec initial provenait d'une ancienne assertion disant qu'aucune
+récolte ne pouvait être déclenchée par le gestionnaire de bâtiment; ce test
+a été mis en conformité avec la règle validée « premier clic récolte,
+deuxième clic ouvre ». Le panneau d'information premium lui-même reste
+strictement en lecture seule. Aucune donnée serveur n'a été modifiée
+pendant les tests.
+
+Le rendu visuel dans la GameView du projet principal reste à confirmer
+par le joueur, sur écran Full HD et sur une résolution compacte.

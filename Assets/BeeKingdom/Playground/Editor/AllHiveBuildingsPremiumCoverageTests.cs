@@ -128,10 +128,12 @@ namespace BeeKingdom.Playground.Editor
 
             string original=Source("HiveMapProductionBootstrap.cs");
             StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",original);
-            StringAssert.Contains("CollectManualProductionForExternalHost(", Source("HiveMapProductionInfoBootstrap.cs"));
+
             string info=Source("HiveMapProductionInfoBootstrap.cs");
             StringAssert.Contains("ShowProductionInfo(",info);
-            StringAssert.DoesNotContain("CollectManualProductionForExternalHost(",info);
+            StringAssert.Contains("CollectManualProductionForExternalHost(hotspotId);",info);
+            StringAssert.Contains("ShouldHarvestOnFirstClickForProof",info);
+            StringAssert.Contains("showDetailsAfterSuccessfulHarvest",info);
             StringAssert.Contains("CaptureClosingGesture(",info);
         }
 
