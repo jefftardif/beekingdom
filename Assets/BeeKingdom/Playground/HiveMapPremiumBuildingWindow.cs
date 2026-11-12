@@ -1236,46 +1236,54 @@ namespace BeeKingdom.Playground
             infirmaryCountLabels.Clear();
             infirmaryTimerLabels.Clear();
             cursor = 14f;
-            RectTransform summary = CardAt(parent, new Rect(left, cursor, cardWidth, 158f),
-                french ? "CENTRE DE CONVALESCENCE" : "RECOVERY WARD", "help");
-            infirmaryTotalLabel = Label(summary, new Rect(18f, 76f, cardWidth - 36f, 33f),
+            const float headerGrowth = ProductionPremiumHeaderHeight - 62f;
+            RectTransform summary = CardAt(parent, new Rect(left, cursor, cardWidth, 158f + headerGrowth),
+                french ? "CENTRE DE CONVALESCENCE" : "RECOVERY WARD",
+                "infirmary-card-recovery", true);
+            infirmaryTotalLabel = Label(summary, new Rect(18f, 76f + headerGrowth, cardWidth - 36f, 33f),
                 "--", 24f, Gold, true);
-            infirmaryStatusLabel = Label(summary, new Rect(18f, 113f, cardWidth - 36f, 40f),
+            infirmaryStatusLabel = Label(summary, new Rect(18f, 113f + headerGrowth, cardWidth - 36f, 40f),
                 string.Empty, 13f, Muted);
-            cursor += 178f;
+            cursor += 178f + headerGrowth;
 
             string[] families = {
                 InfirmaryRecoveryOverview.Guardians,
                 InfirmaryRecoveryOverview.Wingrunners,
                 InfirmaryRecoveryOverview.Darters
             };
+            string[] familyIcons = {
+                "infirmary-card-guardians",
+                "infirmary-card-wingrunners",
+                "infirmary-card-darters"
+            };
             for (int i = 0; i < families.Length; i++)
             {
                 string family = families[i];
                 RectTransform ward = CardAt(parent,
-                    new Rect(left, cursor, cardWidth, 124f),
+                    new Rect(left, cursor, cardWidth, 124f + headerGrowth),
                     InfirmaryRecoveryOverview.FamilyName(family, french).ToUpperInvariant(),
-                    "bees");
+                    familyIcons[i], true);
                 infirmaryCountLabels[family] = Label(ward,
-                    new Rect(18f, 73f, 110f, 37f), "--", 28f, Paper, true);
+                    new Rect(18f, 73f + headerGrowth, 110f, 37f), "--", 28f, Paper, true);
                 infirmaryTimerLabels[family] = Label(ward,
-                    new Rect(130f, 77f, Mathf.Max(90f, cardWidth - 148f), 38f),
+                    new Rect(130f, 77f + headerGrowth, Mathf.Max(90f, cardWidth - 148f), 38f),
                     string.Empty, 14f, Muted);
-                cursor += 142f;
+                cursor += 142f + headerGrowth;
             }
 
             RectTransform actions = CardAt(parent,
-                new Rect(left, cursor, cardWidth, 156f),
-                french ? "SUIVI DES SOINS" : "RECOVERY MANAGEMENT", "help");
-            Label(actions, new Rect(18f, 77f, cardWidth - 36f, 37f),
+                new Rect(left, cursor, cardWidth, 156f + headerGrowth),
+                french ? "SUIVI DES SOINS" : "RECOVERY MANAGEMENT",
+                "infirmary-card-management", true);
+            Label(actions, new Rect(18f, 77f + headerGrowth, cardWidth - 36f, 37f),
                 french ? "Les blessées reviennent automatiquement après leur convalescence."
                     : "Wounded bees return automatically once their recovery finishes.",
                 14f, Muted);
-            Label(actions, new Rect(18f, 122f, cardWidth - 36f, 26f),
+            Label(actions, new Rect(18f, 122f + headerGrowth, cardWidth - 36f, 26f),
                 french ? "●  Mise à jour automatique des soins"
                     : "●  Recovery updates automatically",
                 14f, Gold, true);
-            cursor += 175f;
+            cursor += 175f + headerGrowth;
             float contentHeight = Mathf.Max(cursor + 24f, viewportHeight + 1f);
             RectTransform parentRect = parent as RectTransform;
             if (parentRect != null)

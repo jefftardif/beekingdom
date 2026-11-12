@@ -22,7 +22,7 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
-        public void InfirmaryUsesTheApprovedEmblemForItsTwoCareCards()
+        public void InfirmaryFiveCareCardsUseCompletePremiumMedallionsWithoutClipping()
         {
             GameObject host = new GameObject("Infirmary Premium Icon QA");
             host.SetActive(false);
@@ -32,29 +32,37 @@ namespace BeeKingdom.Playground.Editor
                 var building = BuildingCatalog.GetByBuildingType(BuildingTypes.Infirmary);
                 view.Show(building, "Infirmerie", "Infirmary", "", "",
                     () => { }, () => { });
-
-                Texture2D asset = Resources.Load<Texture2D>(
-                    HiveMapPremiumBuildingWindow.InfirmaryPremiumIconResourcePath);
-                Assert.That(asset, Is.Not.Null);
-                RawImage[] all = host.GetComponentsInChildren<RawImage>(true);
-                RawImage[] premium = all.Where(image => image.texture == asset).ToArray();
-                Assert.That(premium.Length, Is.EqualTo(2),
-                    "Only Centre de convalescence and Suivi des soins receive the new emblem.");
-                foreach (var image in premium)
+                string[] names = { "recovery", "guardians",
+                    "wingrunners", "darters", "management" };
+                RawImage[] premium = host.GetComponentsInChildren<RawImage>(true)
+                    .Where(image => image.name == "PremiumCardIcon").ToArray();
+                Assert.That(premium.Length, Is.EqualTo(names.Length));
+                foreach (string section in names)
                 {
-                    Assert.That(image.raycastTarget, Is.False);
-                    Assert.That(image.rectTransform.rect.width,
-                        Is.GreaterThanOrEqualTo(48f));
-                    Assert.That(image.rectTransform.rect.height,
-                        Is.GreaterThanOrEqualTo(48f));
+                    Texture2D expected = Resources.Load<Texture2D>(
+                        "PremiumBeeIcons/infirmary-card-" + section);
+                    Assert.That(expected, Is.Not.Null, section);
+                    Assert.That(expected.width, Is.EqualTo(384), section);
+                    Assert.That(expected.height, Is.EqualTo(384), section);
+                    RawImage icon = premium.Single(x => x.texture == expected);
+                    Assert.That(icon.raycastTarget, Is.False);
+                    Assert.That(icon.uvRect, Is.EqualTo(new Rect(0, 0, 1, 1)));
+                    Rect rect = icon.rectTransform.rect;
+                    Assert.That(rect.width, Is.InRange(99.99f, 100.01f), section);
+                    Assert.That(rect.height, Is.InRange(99.99f, 100.01f), section);
+                    float y = -icon.rectTransform.anchoredPosition.y;
+                    Assert.That(y, Is.GreaterThanOrEqualTo(9f), section);
+                    Assert.That(y + rect.height, Is.LessThan(126f), section);
+                    RectTransform card = icon.transform.parent as RectTransform;
+                    Assert.That(card, Is.Not.Null);
+                    RectTransform separator = card.Find("Separator") as RectTransform;
+                    Assert.That(separator, Is.Not.Null);
+                    Assert.That(-separator.anchoredPosition.y,
+                        Is.EqualTo(128f).Within(.01f), section);
                 }
-
                 Assert.That(view.InfirmaryActiveForProof, Is.True);
             }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(host);
-            }
+            finally { UnityEngine.Object.DestroyImmediate(host); }
         }
 
         [Test]
