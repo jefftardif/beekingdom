@@ -74,6 +74,18 @@ namespace BeeKingdom.Playground
 
         public static Rect HeaderForProof(float safeWidth,float safeHeight) =>
             HiveMapPremiumBuildingWindow.HeaderRectForProof(safeWidth,safeHeight);
+        public const string PollinationBannerResourceForProof =
+            "PremiumBeeReference/BuildingBanners/genetics_garden";
+
+        public static Rect PollinationBannerRectForProof(float width,float headerHeight)
+        {
+            // Same contained header-art envelope as the other premium buildings.
+            float artHeight = Mathf.Max(1f,headerHeight - 8f);
+            float artWidth = Mathf.Min(width * .34f,artHeight * 2.4f);
+            float artX = Mathf.Max(width * .54f,width - 164f - artWidth);
+            return new Rect(artX,4f,artWidth,artHeight);
+        }
+
         public static Rect ViewportForProof(float safeWidth,float safeHeight) =>
             HiveMapPremiumBuildingWindow.ScrollViewportForProof(safeWidth,safeHeight);
 
@@ -254,20 +266,22 @@ namespace BeeKingdom.Playground
             RectTransform rootArea = Node(canvas.transform,"SafeArea",safe);
             Rect headerRect = HeaderForProof(w,h);
             RectTransform header = Plate(rootArea,"Header",headerRect,Ink,"panel-fill");
-            Texture2D art = Resources.Load<Texture2D>(
-                "PremiumBeeReference/BuildingBanners/alliance_future_hall");
-            if (art != null)
+            bool landscape = w > h && w >= 600f;
+            // A floral conservatory, not the Alliance hall. Keep the image
+            // proportions and never stretch it across a full-width strip.
+            Texture2D art = Resources.Load<Texture2D>(PollinationBannerResourceForProof);
+            if (art != null && landscape)
             {
-                var artwork = Node(header,"Artwork",new Rect(
-                    w*.40f,0f,w*.60f,headerRect.height));
+                Rect frame = PollinationBannerRectForProof(w,headerRect.height);
+                var artwork = Node(header,"PollinationBannerArtwork",frame);
                 RawImage banner = artwork.gameObject.AddComponent<RawImage>();
                 banner.texture = art;
-                banner.color = new Color(1f,1f,1f,.30f);
+                banner.uvRect = HiveMapPremiumBuildingWindow.HeaderArtworkCropForProof(
+                    art.width,art.height,frame.width,frame.height);
+                banner.color = new Color(1f,1f,1f,.66f);
                 banner.raycastTarget = false;
             }
-            bool landscape = w > h && w >= 600f;
-            WorldMapHudLayout.StyleReturnButton(ButtonAt(header,new Rect(16f,12f,52f,52f),
-                T("Retour","Back"),false,RequestClose));
+            PremiumBackButton(header,RequestClose);
             ButtonAt(header,new Rect(Mathf.Max(108f,w-145f),12f,
                     Mathf.Min(128f,w-124f),44f),
                 T("Actualiser","Refresh"),false,()=>controller?.Refresh(),
@@ -393,6 +407,20 @@ namespace BeeKingdom.Playground
             label.textWrappingMode=TextWrappingModes.Normal;
             label.overflowMode=TextOverflowModes.Ellipsis;
             return label;
+        }
+
+        private void PremiumBackButton(Transform header,Action callback)
+        {
+            // The canonical royal return sprite requires an Image target,
+            // unlike the RawImage target of ordinary command buttons.
+            RectTransform node=Node(header,"PremiumBack",
+                new Rect(16f,12f,52f,52f));
+            Image background=node.gameObject.AddComponent<Image>();
+            background.raycastTarget=true;
+            Button button=node.gameObject.AddComponent<Button>();
+            button.targetGraphic=background;
+            button.onClick.AddListener(()=>callback?.Invoke());
+            WorldMapHudLayout.StyleReturnButton(button);
         }
 
         private Button ButtonAt(Transform parent,Rect rect,string text,

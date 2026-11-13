@@ -78,6 +78,44 @@ namespace BeeKingdom.Playground.Editor
         }
 
         [Test]
+        public void PollinationHeaderUsesContainedFloralArtworkInsteadOfStretchedAllianceHall()
+        {
+            var source=Resources.Load<Texture2D>(
+                PollinationPremiumWindow.PollinationBannerResourceForProof);
+            Assert.That(source,Is.Not.Null);
+            Rect frame=PollinationPremiumWindow.PollinationBannerRectForProof(1920f,116f);
+            Assert.That(frame.width,Is.LessThan(1920f*.35f));
+            Assert.That(frame.width/frame.height,Is.LessThanOrEqualTo(2.41f));
+            Rect uv=HiveMapPremiumBuildingWindow.HeaderArtworkCropForProof(
+                source.width,source.height,frame.width,frame.height);
+            Assert.That(source.width*uv.width/(source.height*uv.height),
+                Is.EqualTo(frame.width/frame.height).Within(.01f),
+                "Banner crop must preserve source aspect ratio.");
+
+            var host=new GameObject("Pollination Banner QA");
+            try
+            {
+                var window=host.AddComponent<PollinationPremiumWindow>();
+                window.Show(new FakeController(),()=>{});
+                var artwork=host.GetComponentsInChildren<RawImage>(true)
+                    .FirstOrDefault(raw=>raw.name=="PollinationBannerArtwork");
+                if(artwork!=null)
+                {
+                    Assert.That(artwork.texture,Is.SameAs(source));
+                    var expected=HiveMapPremiumBuildingWindow.HeaderArtworkCropForProof(
+                        source.width,source.height,
+                        artwork.rectTransform.rect.width,
+                        artwork.rectTransform.rect.height);
+                    Assert.That(artwork.uvRect,Is.EqualTo(expected));
+                    Assert.That(artwork.raycastTarget,Is.False);
+                }
+                Assert.That(host.GetComponentsInChildren<Button>(true)
+                    .Count(b=>b.name=="PremiumBack"),Is.EqualTo(1));
+            }
+            finally {UnityEngine.Object.DestroyImmediate(host);}
+        }
+
+        [Test]
         public void TabsKeepSameScrollRectAndCloseDisablesInputBlocker()
         {
             var host = new GameObject("Pollination Royal Tabs QA");
@@ -102,8 +140,14 @@ namespace BeeKingdom.Playground.Editor
                 Assert.That(refresh,Is.Not.Null);
                 refresh.onClick.Invoke();
                 Assert.That(controller.RefreshCalls,Is.EqualTo(1));
-                Button back=FindButton(host,"Retour","Back");
+                Button back=host.GetComponentsInChildren<Button>(true)
+                    .SingleOrDefault(button=>button.name=="PremiumBack");
                 Assert.That(back,Is.Not.Null);
+                Assert.That(back.targetGraphic,Is.InstanceOf<Image>());
+                Assert.That(back.transform.Find("PremiumReturnGlyph"),Is.Not.Null);
+                Assert.That(back.GetComponentsInChildren<TextMeshProUGUI>(true)
+                    .Any(label=>label.enabled && !string.IsNullOrEmpty(label.text)),
+                    Is.False,"The canonical arrow-only back button has no label.");
                 back.onClick.Invoke();
                 Assert.That(closed,Is.True);
                 Assert.That(window.IsOpen,Is.False);
