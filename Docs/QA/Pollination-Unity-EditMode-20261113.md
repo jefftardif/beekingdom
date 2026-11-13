@@ -38,3 +38,31 @@ Unity editor, but did not reach its scene/screenshot assertions. It was
 interrupted after getting stuck at the Test Runner SandboxPlayground
 transition. No passing PlayMode result is claimed. The EditMode 15/15
 result above is complete and independent.
+## Real WorldMap runtime observation (2026-11-13)
+The existing Unity Editor was safely restored to the official
+WorldMapMmoFullscreenFoundation scene (no scene save). A one-time
+runtime observer started from the actual configured SandboxPlayground
+PlayMode start scene, then loaded the official WorldMap in memory.
+
+The resulting non-mutating observation was:
+- SCENE=WorldMapMmoFullscreenFoundation
+- MAP_COMPONENT=True
+- POLLINATION_OVERLAY=True
+- PREMIUM_WINDOW_COMPONENT=True
+- BUTTON_RECT_INSIDE_SCREEN=True
+- SESSION_CONFIGURED=False
+- FEATURE_READY=False
+- SITE_COUNT=0
+- PRESENTATION_STATE=NotConfigured
+- VISIBLE_BUTTON_EXPECTED=False
+
+The pollination components ARE created when the world map is loaded,
+but no signed-in player/hive session was available in this QA run.
+The button is deliberately hidden while unauthenticated. This is not
+a verified authenticated gameplay test.
+
+A 1920x1080 screenshot was saved at:
+C:\projets\beekingdomgame-master\Temp\BKPollinationRuntimeProbeMap.png
+
+The observer stopped Play and restored the official map in the Editor.
+No fake player, server mutation, SQL write or test rewards were used.
