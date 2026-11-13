@@ -10,6 +10,13 @@ namespace BeeKingdom.Playground.Editor
     public static class PlaygroundPlayModeStartScene
     {
         private const string MainDemoScenePath = "Assets/Scenes/SandboxPlayground.unity";
+        // The official player path starts at login, regardless of which
+        // development scene is open in the editor. Preview routes are opt-in
+        // via the explicit Bee Kingdom/Playground menu commands.
+        private const string ExplicitDevelopmentStartKey =
+            "BeeKingdom.Editor.ExplicitPreviewOnPlay";
+        public const string OfficialLoginStartSceneForProof =
+            MainDemoScenePath;
         // LivingHive is permanently retired (CEO decision, 2026-09-03): never a Play Mode
         // target, never a test reference. This constant and UseLivingHiveOnPlay()/
         // OpenLivingHiveScene() below are kept ONLY because ~26 legacy one-off
@@ -39,6 +46,7 @@ namespace BeeKingdom.Playground.Editor
         {
             EditorApplication.delayCall += ConfigurePlayModeStartScene;
             EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChangedInEditMode;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         [MenuItem("Bee Kingdom/Playground/Open Main Demo Scene")]
@@ -326,6 +334,13 @@ namespace BeeKingdom.Playground.Editor
 
         public static void ConfigurePlayModeStartScene()
         {
+            // Opening a map scene for editing must never silently make it the
+            // next startup route. Only a deliberately selected QA route may do so.
+            if (!SessionState.GetBool(ExplicitDevelopmentStartKey, false))
+            {
+                ConfigurePlayModeStartScene(MainDemoScenePath);
+                return;
+            }
             string activeScenePath = SceneManager.GetActiveScene().path;
             if (IsEnvironment2D5DScene(activeScenePath))
             {
@@ -426,8 +441,20 @@ namespace BeeKingdom.Playground.Editor
             ConfigurePlayModeStartScene(activeSceneIsWave5 || currentStartSceneIsWave5 || wave5Mode ? Wave5Premium25x25ScenePath : MainDemoScenePath);
         }
 
+        private static void OnPlayModeStateChanged(PlayModeStateChange change)
+        {
+            if (change == PlayModeStateChange.ExitingEditMode &&
+                !SessionState.GetBool(ExplicitDevelopmentStartKey, false))
+                ConfigurePlayModeStartScene(MainDemoScenePath);
+        }
+
         private static void OnActiveSceneChangedInEditMode(Scene previousScene, Scene nextScene)
         {
+            if (!SessionState.GetBool(ExplicitDevelopmentStartKey, false))
+            {
+                ConfigurePlayModeStartScene(MainDemoScenePath);
+                return;
+            }
             if (IsEnvironment2D5DScene(nextScene.path))
             {
                 ClearPlayModeStartScene();
@@ -465,6 +492,11 @@ namespace BeeKingdom.Playground.Editor
 
         private static void ConfigurePlayModeStartScene(string scenePath)
         {
+            // Normal login is the default; the explicitly invoked preview
+            // commands still work and survive assembly/domain reloads.
+            SessionState.SetBool(ExplicitDevelopmentStartKey,
+                !string.Equals(scenePath, MainDemoScenePath,
+                    System.StringComparison.OrdinalIgnoreCase));
             SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
             if (sceneAsset != null && EditorSceneManager.playModeStartScene != sceneAsset)
             {

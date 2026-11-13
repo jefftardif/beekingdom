@@ -1425,7 +1425,7 @@ private static string courierToast = string.Empty;
 
 		private static RuntimeBridgePlayerMode runtimeBridgeModeForProof = RuntimeBridgePlayerMode.LocalPreview;
 
-		private static SplashAuthGateState splashAuthGateState = SplashAuthGateState.Splash;
+		private static SplashAuthGateState splashAuthGateState = SplashAuthGateState.Login;
 
 		private static string splashAuthUserName = "Apiculteur";
 
@@ -6112,6 +6112,30 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
             await sessionClient.LogoutAsync();
         }
 
+        // A verified login enters the player's HiveMap automatically. Reuse
+        // the existing startup synchronization barrier, and never open the
+        // hive on an offline/partial authentication or a rejected authority.
+        public static bool OfficialLoginGrantsHiveEntryForProof(
+            MobileAccountSessionState state, bool hasServerGameplayAuthority)
+        {
+            return state == MobileAccountSessionState.Authenticated &&
+                hasServerGameplayAuthority;
+        }
+        private static void CompleteOfficialLoginIntoHive(string route)
+        {
+            MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
+            if (mobileAccountSessionClient != null &&
+                OfficialLoginGrantsHiveEntryForProof(
+                    mobileAccountSessionClient.State,
+                    mobileAccountSessionClient.ServerGameplayAuthorityGranted))
+            {
+                EnterHiveFromSplash(route);
+                return;
+            }
+            // Local/offline accounts keep the existing explicit Continue
+            // button; no local preview is silently treated as live gameplay.
+            SetSplashAuthMessage("splash.login.connected", false);
+        }
         private static void PumpMobileAccountSessionOperations()
         {
             if (mobileGoogleOAuthFlowTask != null && mobileGoogleOAuthFlowTask.IsCompleted)
@@ -6151,8 +6175,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                     }
                     else
                     {
-                        MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
-                        SetSplashAuthMessage("splash.login.connected", false);
+                        CompleteOfficialLoginIntoHive("official_google_login");
                     }
                 }
                 catch (MobileAccountSessionException exception)
@@ -6204,8 +6227,7 @@ private static string ConnectionTruthShortLabel(ConnectionTruthState state)
                     completed.GetAwaiter().GetResult();
                     mobileAccountEmail = string.Empty;
                     mobileAccountPassword = string.Empty;
-                    MobileAccountSessionRuntimeBootstrap.TryConfigureGameplayForActiveSession();
-                    SetSplashAuthMessage("splash.login.connected", false);
+                    CompleteOfficialLoginIntoHive("official_email_login");
                 }
                 catch (MobileAccountSessionException exception)
                 {
