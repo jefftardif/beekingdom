@@ -5,44 +5,33 @@ permissions:
   contents: read
 jobs:
   inspect:
-    if: github.ref == 'refs/heads/diag/server-readonly-20261114'
     runs-on: [self-hosted, beekingdom-deploy]
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
-      - name: Read existing monitoring counters without SQL calls
+      - name: Read allowlisted deployment metadata only
         shell: powershell
         run: |
           $ErrorActionPreference='Stop'
-          $result=@{utc=[DateTime]::UtcNow.ToString('o');status='not_attempted'}
-          $key=$null;$headers=$null;$m=$null
-          try{
-          Import-Module WebAdministration
-          foreach($f in @('appsettings.json','appsettings.Production.json')){
-          $j=Get-Content (Join-Path 'C:\inetpub\BeeKingdomApi' $f) -Raw|ConvertFrom-Json
-          if($j.Ops.AdminKey){$key=[string]$j.Ops.AdminKey}}
-          foreach($scope in @('Machine','Process')){$v=[Environment]::GetEnvironmentVariable('Ops__AdminKey',$scope);if($v){$key=$v}}
-          [xml]$w=Get-Content 'C:\inetpub\BeeKingdomApi\web.config' -Raw
-          foreach($v in $w.SelectNodes('//environmentVariable')){if($v.name -eq 'Ops__AdminKey'){$key=$v.value}}
-          foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -eq 'Ops__AdminKey'){$key=$v.value}}
-          if(-not $key){$result.status='no_plaintext_ops_key_available'}
-          else{
-          [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
-          $health=Invoke-RestMethod -Method Get -Uri 'https://api-ops.beekingdomgame.com/health' -MaximumRedirection 0 -TimeoutSec 10
-          if($health.service -ne 'BeeKingdom.Server'){throw 'service_mismatch'}
-          $headers=@{'X-BeeKingdom-Admin-Key'=$key}
-          $m=Invoke-RestMethod -Method Get -Uri 'https://api-ops.beekingdomgame.com/ops/monitoring' -Headers $headers -MaximumRedirection 0 -TimeoutSec 10
-          $result.status='read_memory_diagnostics_only'
-          $result.serverTimeUtc=$m.serverTimeUtc
-          $result.processUptimeSeconds=$m.processUptimeSeconds
-          $result.pendingChecks=$m.migrations.pendingChecks
-          $result.applyAttempts=$m.migrations.applyAttempts
-          $result.appliedScripts=$m.migrations.appliedScripts
-          $result.failures=$m.migrations.failures
-          $result.lastSuccessUtc=$m.migrations.lastSuccessUtc
-          $result.lastFailureUtc=$m.migrations.lastFailureUtc
-          if($m.migrations.lastScript -match '^[0-9]{3}_[a-zA-Z0-9_]+\.sql$'){$result.lastScript=$m.migrations.lastScript}
+          $root='C:\inetpub\BeeKingdomApi'
+          $r=[ordered]@{utc=[DateTime]::UtcNow.ToString('o'); machine=$env:COMPUTERNAME; files=@(); flags=@(); iis=@(); backupEvidence='not_verified'; sqlSchema='not_queried'}
+          foreach($name in @('BeeKingdom.Server.dll','BeeKingdom.HiveOperations.dll','appsettings.json','appsettings.Production.json','web.config')){
+          $p=Join-Path $root $name
+          if(Test-Path -LiteralPath $p){$f=Get-Item -LiteralPath $p; $r.files+=@{name=$name;length=$f.Length;modifiedUtc=$f.LastWriteTimeUtc.ToString('o');sha256=(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash}}
           }
-          }catch{$result.status='unavailable';if($_.Exception.Response){$result.httpStatus=[int]$_.Exception.Response.StatusCode}}
-          finally{$key=$null;$headers=$null;$j=$null;$w=$null;$v=$null;$m=$null}
-          $result|ConvertTo-Json -Depth 4 -Compress
-          
+          $sections=@('BroodVitality','NurseryCohorts','AcademyTraining','CivilPopulation','CivilExpeditions','Pollination','WorldResourceCollection','CombatPatrol','WorldMapReadiness')
+          foreach($name in @('appsettings.json','appsettings.Production.json')){
+          try{$j=Get-Content -LiteralPath (Join-Path $root $name) -Raw|ConvertFrom-Json
+          foreach($s in $sections){$o=$j.$s;if($null-ne $o){foreach($p in $o.PSObject.Properties){if($p.Value -is [bool]){$r.flags+=@{source=$name;section=$s;key=$p.Name;value=$p.Value}}}}}
+          }catch{$r.flags+=@{source=$name;readStatus='failed'}}
+          }
+          try{
+          [xml]$xml=Get-Content -LiteralPath (Join-Path $root 'web.config') -Raw
+          foreach($v in $xml.SelectNodes('//environmentVariable')){if($v.name -match '^(BroodVitality|NurseryCohorts|AcademyTraining|CivilPopulation|CivilExpeditions|Pollination|WorldResourceCollection|CombatPatrol|WorldMapReadiness)__[A-Za-z]+$' -and $v.value -match '^(true|false)$'){$r.flags+=@{source='web.config';key=$v.name;value=[bool]::Parse($v.value)}}}
+          }catch{}
+          try{Import-Module WebAdministration
+          $r.iis=@{appPoolState=(Get-WebAppPoolState -Name 'BeeKingdomApi').Value;siteStates=@(Get-Website|Where-Object{$_.physicalPath -eq $root}|Select-Object Name,State)}
+          }catch{$r.iis=@{readStatus='unavailable'}}
+          $r | ConvertTo-Json -Depth 7 -Compress
+          $backups=@()
+          foreach($root in @('C:\inetpub\BeeKingdomApi','C:\Program Files\Microsoft SQL Server')){Get-ChildItem $root -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)backup|sauvegarde'}|Select-Object -First 20|ForEach-Object{Get-ChildItem $_.FullName -File -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)bee' -and $_.Extension -match '^\.(bak|zip|7z)$'}|Select-Object -First 15|ForEach-Object{$backups+=@{name=$_.Name;bytes=$_.Length;modifiedUtc=$_.LastWriteTimeUtc.ToString('o')}}}}
+          @{backups=$backups;utc=[DateTime]::UtcNow.ToString('o');scope='metadata only; no credential lookup or SQL'}|ConvertTo-Json -Depth 4 -Compress
