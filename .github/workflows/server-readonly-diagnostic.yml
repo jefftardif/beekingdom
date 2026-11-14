@@ -9,35 +9,40 @@ jobs:
     runs-on: [self-hosted, beekingdom-deploy]
     timeout-minutes: 3
     steps:
-      - name: Read connection source and identity metadata only
+      - name: Read existing monitoring counters without SQL calls
         shell: powershell
         run: |
           $ErrorActionPreference='Stop'
+          $result=@{utc=[DateTime]::UtcNow.ToString('o');status='not_attempted'}
+          $key=$null;$headers=$null;$m=$null
+          try{
           Import-Module WebAdministration
-          $config=@{}
-          foreach($file in @('appsettings.json','appsettings.Production.json')){
-          try{$j=Get-Content (Join-Path 'C:\inetpub\BeeKingdomApi' $file) -Raw|ConvertFrom-Json
-          foreach($sec in @('SqlServer','ConnectionStrings')){foreach($p in $j.$sec.PSObject.Properties){if($p.Value -is [string]){$config[$sec+':'+$p.Name]=$p.Value}}}
-          }catch{}}
-          foreach($scope in @('Machine','Process')){foreach($v in [Environment]::GetEnvironmentVariables($scope).GetEnumerator()){if($v.Key -match '^(SqlServer|ConnectionStrings)__'){$config[$v.Key.Replace('__',':')]=$v.Value}}}
-          try{[xml]$web=Get-Content 'C:\inetpub\BeeKingdomApi\web.config' -Raw
-          foreach($v in $web.SelectNodes('//environmentVariable')){if($v.name -match '^(SqlServer|ConnectionStrings)__'){$config[$v.name.Replace('__',':')]=$v.value}}
-          foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -match '^(SqlServer|ConnectionStrings)__'){$config[$v.name.Replace('__',':')]=$v.value}}
-          }catch{}
-          $key=$null
-          $dedicated=$config['SqlServer:RuntimeConnectionStringName']
-          if($dedicated){$key=$config['ConnectionStrings:'+$dedicated]}
-          if(-not $key){$key=$config['SqlServer:RuntimeConnectionString']}
-          if(-not $key){$normal=$config['SqlServer:ConnectionStringName'];if(-not $normal){$normal='BeeKingdomDb'};$key=$config['ConnectionStrings:'+$normal]}
-          if(-not $key){$key=$config['SqlServer:ConnectionString']}
-          
-          
-          $hive=$config['SqlServer:RuntimeConnectionString']
-          if(-not $hive -and $dedicated){$hive=$config['ConnectionStrings:'+$dedicated]}
-          if(-not $hive){$hive=$config['SqlServer:ConnectionString']}
-          if(-not $hive){$hive=$config['ConnectionStrings:'+$normal]}
-          $pool=Get-Item 'IIS:\AppPools\BeeKingdomApi'
-          $summary=@{utc=[DateTime]::UtcNow.ToString('o');factoryIntegrated=($key -match '(?i)(Integrated Security|Trusted_Connection)\s*=\s*(true|yes|sspi)');hiveIntegrated=($hive -match '(?i)(Integrated Security|Trusted_Connection)\s*=\s*(true|yes|sspi)');hiveEqualsFactory=($hive -eq $key);poolIdentityType=[string]$pool.processModel.identityType;runnerIsSystem=[Security.Principal.WindowsIdentity]::GetCurrent().IsSystem;runtimeInlineConfigured=[bool]$config['SqlServer:RuntimeConnectionString'];genericInlineConfigured=[bool]$config['SqlServer:ConnectionString'];dedicatedNameConfigured=[bool]$dedicated}
-          $summary|ConvertTo-Json -Compress
-          $key=$null;$hive=$null;$config.Clear()
+          foreach($f in @('appsettings.json','appsettings.Production.json')){
+          $j=Get-Content (Join-Path 'C:\inetpub\BeeKingdomApi' $f) -Raw|ConvertFrom-Json
+          if($j.Ops.AdminKey){$key=[string]$j.Ops.AdminKey}}
+          foreach($scope in @('Machine','Process')){$v=[Environment]::GetEnvironmentVariable('Ops__AdminKey',$scope);if($v){$key=$v}}
+          [xml]$w=Get-Content 'C:\inetpub\BeeKingdomApi\web.config' -Raw
+          foreach($v in $w.SelectNodes('//environmentVariable')){if($v.name -eq 'Ops__AdminKey'){$key=$v.value}}
+          foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -eq 'Ops__AdminKey'){$key=$v.value}}
+          if(-not $key){$result.status='no_plaintext_ops_key_available'}
+          else{
+          [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
+          $health=Invoke-RestMethod -Method Get -Uri 'https://api-ops.beekingdomgame.com/health' -MaximumRedirection 0 -TimeoutSec 10
+          if($health.service -ne 'BeeKingdom.Server'){throw 'service_mismatch'}
+          $headers=@{'X-BeeKingdom-Admin-Key'=$key}
+          $m=Invoke-RestMethod -Method Get -Uri 'https://api-ops.beekingdomgame.com/ops/monitoring' -Headers $headers -MaximumRedirection 0 -TimeoutSec 10
+          $result.status='read_memory_diagnostics_only'
+          $result.serverTimeUtc=$m.serverTimeUtc
+          $result.processUptimeSeconds=$m.processUptimeSeconds
+          $result.pendingChecks=$m.migrations.pendingChecks
+          $result.applyAttempts=$m.migrations.applyAttempts
+          $result.appliedScripts=$m.migrations.appliedScripts
+          $result.failures=$m.migrations.failures
+          $result.lastSuccessUtc=$m.migrations.lastSuccessUtc
+          $result.lastFailureUtc=$m.migrations.lastFailureUtc
+          if($m.migrations.lastScript -match '^[0-9]{3}_[a-zA-Z0-9_]+\.sql$'){$result.lastScript=$m.migrations.lastScript}
+          }
+          }catch{$result.status='unavailable';if($_.Exception.Response){$result.httpStatus=[int]$_.Exception.Response.StatusCode}}
+          finally{$key=$null;$headers=$null;$j=$null;$w=$null;$v=$null;$m=$null}
+          $result|ConvertTo-Json -Depth 4 -Compress
           
