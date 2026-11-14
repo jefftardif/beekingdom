@@ -103,10 +103,10 @@ jobs:
           Copy-Item (Join-Path $env:RUNNER_TEMP 'bee-diag-artifact\*') $temp -Recurse -Force
           $deps=Get-Content 'C:\inetpub\BeeKingdomApi\BeeKingdom.Server.deps.json' -Raw|ConvertFrom-Json
           if($deps.libraries.PSObject.Properties.Name -notcontains 'Microsoft.Data.SqlClient/6.1.1'){throw 'Deployed SQL package changed'}
-          $liveVersion=[Reflection.AssemblyName]::GetAssemblyName('C:\inetpub\BeeKingdomApi\Microsoft.Data.SqlClient.dll').Version
+          $liveVersion=[Reflection.AssemblyName]::GetAssemblyName('C:\inetpub\BeeKingdomApi\runtimes\win\lib\net8.0\Microsoft.Data.SqlClient.dll').Version
           $builtVersion=[Reflection.AssemblyName]::GetAssemblyName((Join-Path $temp 'Microsoft.Data.SqlClient.dll')).Version
           if($liveVersion -ne $builtVersion){Write-Output ('SQLCLIENT_VERSION_MISMATCH live='+$liveVersion+' built='+$builtVersion);exit 0}
-          Copy-Item 'C:\inetpub\BeeKingdomApi\Microsoft.Data.SqlClient.dll' (Join-Path $temp 'Microsoft.Data.SqlClient.dll') -Force
+          Copy-Item 'C:\inetpub\BeeKingdomApi\runtimes\win\lib\net8.0\Microsoft.Data.SqlClient.dll' (Join-Path $temp 'Microsoft.Data.SqlClient.dll') -Force
           $env:BK_DIAG_CONNECTION=$key
           & dotnet (Join-Path $temp 'ReadOnlyDiag.dll')
           }finally{
