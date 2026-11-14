@@ -1,3 +1,4 @@
+# Syntax validated via PowerShell parser on PCJEFF; read-only diagnostic retry.
 name: BeeKingdom read-only server diagnostic
 on:
   push:
