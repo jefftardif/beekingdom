@@ -1,76 +1,84 @@
 name: BeeKingdom read-only server diagnostic
 on:
   workflow_dispatch:
-  push:
-    branches: [diag/server-readonly-20261114]
-    paths: ['.github/workflows/server-readonly-diagnostic.yml']
 permissions:
   contents: read
 jobs:
+  build:
+    if: github.ref == 'refs/heads/diag/server-readonly-20261114'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build bounded SELECT-only helper
+        shell: bash
+        run: |
+          mkdir helper && cd helper
+          cat > ReadOnlyDiag.csproj <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" /></ItemGroup></Project>
+          EOF
+          cat > Program.cs <<'EOF'
+          using System;
+          using System.Collections.Generic;
+          using System.IO;
+          using System.Text.Json;
+          using Microsoft.Data.SqlClient;
+          class Program {
+          static void Main(){
+          var output=new Dictionary<string,object?> {["utc"]=DateTime.UtcNow.ToString("o"),["stage"]="builder"};
+          var connectionString=Environment.GetEnvironmentVariable("BK_DIAG_CONNECTION");
+          Environment.SetEnvironmentVariable("BK_DIAG_CONNECTION",null);
+          try{
+          if(string.IsNullOrWhiteSpace(connectionString)) throw new InvalidOperationException("missing");
+          var builder=new SqlConnectionStringBuilder(connectionString);
+          if(!builder.InitialCatalog.Contains("BeeKingdom",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("scope");
+          builder.ConnectTimeout=5;
+          using var c=new SqlConnection(builder.ConnectionString);
+          connectionString=null; output["stage"]="connect";c.Open();
+          output["sqlClientVersion"]=typeof(SqlConnection).Assembly.GetName().Version?.ToString();
+          output["stage"]="migrations";
+          using var cmd=c.CreateCommand();cmd.CommandTimeout=8;
+          cmd.CommandText="SELECT ScriptName,AppliedAtUtc FROM dbo.SchemaVersion WHERE ScriptName LIKE '096[_]%' OR ScriptName LIKE '097[_]%' OR ScriptName LIKE '098[_]%' ORDER BY ScriptName";
+          var migrations=new List<object>();
+          using(var rd=cmd.ExecuteReader()){while(rd.Read())migrations.Add(new {script=rd.GetString(0),appliedAt=rd.GetDateTime(1).ToString("o")});}
+          output["migrations"]=migrations;
+          output["stage"]="tables";
+          cmd.CommandText="SELECT TABLE_SCHEMA,TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND (TABLE_NAME LIKE '%Floral%' OR TABLE_NAME LIKE '%Civil%')";
+          var tables=new List<string>();using(var rd=cmd.ExecuteReader()){while(rd.Read())tables.Add(rd.GetString(0)+"."+rd.GetString(1));}output["tables"]=tables;
+          try{
+          cmd.CommandText="SELECT TOP(5) bs.backup_finish_date,bs.type,bs.backup_size,bmf.physical_device_name FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily bmf ON bs.media_set_id=bmf.media_set_id WHERE bs.database_name=DB_NAME() ORDER BY bs.backup_finish_date DESC";
+          var backups=new List<object>();using(var rd=cmd.ExecuteReader()){while(rd.Read()){var path=rd.GetString(3);bool? exists=path.Length>2&&path[1]==':'?File.Exists(path):null;backups.Add(new {finished=rd.GetDateTime(0).ToString("o"),type=rd.GetString(1),bytes=rd.GetDecimal(2),localFileExists=exists});}}output["backupHistory"]=backups;
+          }catch(SqlException ex){output["backupErrorNumber"]=ex.Number;}
+          output["stage"]="complete";
+          }catch(SqlException ex){output["error"]="sql";output["sqlErrorNumber"]=ex.Number;}
+          catch(Exception ex){output["errorType"]=ex.GetType().Name;}
+          Console.WriteLine(JsonSerializer.Serialize(output));
+          }}
+          
+          EOF
+          dotnet publish ReadOnlyDiag.csproj -c Release -r win-x64 --self-contained false -o output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bee-readonly-helper
+          path: helper/output/
+          retention-days: 1
   inspect:
+    needs: build
     if: github.ref == 'refs/heads/diag/server-readonly-20261114'
     runs-on: [self-hosted, beekingdom-deploy]
     timeout-minutes: 5
     steps:
-      - name: Read allowlisted deployment metadata only
+      - uses: actions/download-artifact@v4
+        with:
+          name: bee-readonly-helper
+          path: ${{ runner.temp }}/bee-diag-artifact
+      - name: Query existing application database with SELECT only
         shell: powershell
         run: |
           $ErrorActionPreference='Stop'
-          $root='C:\inetpub\BeeKingdomApi'
-          $r=[ordered]@{utc=[DateTime]::UtcNow.ToString('o'); machine=$env:COMPUTERNAME; files=@(); flags=@(); iis=@(); backupEvidence='not_verified'; sqlSchema='not_queried'}
-          foreach($name in @('BeeKingdom.Server.dll','BeeKingdom.HiveOperations.dll','appsettings.json','appsettings.Production.json','web.config')){
-          $p=Join-Path $root $name
-          if(Test-Path -LiteralPath $p){$f=Get-Item -LiteralPath $p; $r.files+=@{name=$name;length=$f.Length;modifiedUtc=$f.LastWriteTimeUtc.ToString('o');sha256=(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash}}
-          }
-          $sections=@('BroodVitality','NurseryCohorts','AcademyTraining','CivilPopulation','CivilExpeditions','Pollination','WorldResourceCollection','CombatPatrol','WorldMapReadiness')
-          foreach($name in @('appsettings.json','appsettings.Production.json')){
-          try{$j=Get-Content -LiteralPath (Join-Path $root $name) -Raw|ConvertFrom-Json
-          foreach($s in $sections){$o=$j.$s;if($null-ne $o){foreach($p in $o.PSObject.Properties){if($p.Value -is [bool]){$r.flags+=@{source=$name;section=$s;key=$p.Name;value=$p.Value}}}}}
-          }catch{$r.flags+=@{source=$name;readStatus='failed'}}
-          }
-          try{
-          [xml]$xml=Get-Content -LiteralPath (Join-Path $root 'web.config') -Raw
-          foreach($v in $xml.SelectNodes('//environmentVariable')){if($v.name -match '^(BroodVitality|NurseryCohorts|AcademyTraining|CivilPopulation|CivilExpeditions|Pollination|WorldResourceCollection|CombatPatrol|WorldMapReadiness)__[A-Za-z]+$' -and $v.value -match '^(true|false)$'){$r.flags+=@{source='web.config';key=$v.name;value=[bool]::Parse($v.value)}}}
-          }catch{}
-          try{Import-Module WebAdministration
-          $r.iis=@{appPoolState=(Get-WebAppPoolState -Name 'BeeKingdomApi').Value;siteStates=@(Get-Website|Where-Object{$_.physicalPath -eq $root}|Select-Object Name,State)}
-          }catch{$r.iis=@{readStatus='unavailable'}}
-          $r | ConvertTo-Json -Depth 7 -Compress
-          $r2=[ordered]@{utc=[DateTime]::UtcNow.ToString('o'); booleanOverrides=@(); binaryMarkers=@(); backupFiles=@(); sqlInstances=@(); sqlChecks=@()}
-          $sections='BroodVitality|NurseryCohorts|AcademyTraining|CivilPopulation|CivilExpeditions|Pollination|CombatPatrol|WorldMapReadiness'
-          foreach($scope in @('Machine','User','Process')){
-          $vars=[Environment]::GetEnvironmentVariables($scope)
-          foreach($key in $vars.Keys){if($key -match "^($sections)__[A-Za-z]+$" -and $vars[$key] -match '^(true|false)$'){$r2.booleanOverrides+=@{source=$scope;key=$key;value=[bool]::Parse($vars[$key])}}}}
-          try{
           Import-Module WebAdministration
-          foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -match "^($sections)__[A-Za-z]+$" -and $v.value -match '^(true|false)$'){$r2.booleanOverrides+=@{source='AppPool';key=$v.name;value=[bool]::Parse($v.value)}}}
-          }catch{}
-          foreach($name in @('BeeKingdom.Server.dll','BeeKingdom.HiveOperations.dll')){
-          $p=Join-Path 'C:\inetpub\BeeKingdomApi' $name
-          try{$bytes=[IO.File]::ReadAllBytes($p);$ascii=[Text.Encoding]::ASCII.GetString($bytes);$unicode=[Text.Encoding]::Unicode.GetString($bytes)
-          $r2.binaryMarkers+=@{name=$name;ReadOnlyPilot=($ascii.Contains('ReadOnlyPilot') -or $unicode.Contains('ReadOnlyPilot'));fileVersion=[Diagnostics.FileVersionInfo]::GetVersionInfo($p).FileVersion}
-          }catch{}}
-          $dirs=@(Get-ChildItem C:\ -Directory -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)backup|sauvegarde'})
-          $dirs+=@(Get-ChildItem C:\inetpub -Directory -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)backup|sauvegarde'})
-          foreach($d in $dirs){Get-ChildItem $d.FullName -File -Recurse -Depth 2 -ErrorAction SilentlyContinue|Where-Object{$_.FullName -match '(?i)bee' -and $_.Extension -match '^\.(bak|zip|7z)$'}|Select-Object -First 15|ForEach-Object{$r2.backupFiles+=@{name=$_.Name;bytes=$_.Length;modifiedUtc=$_.LastWriteTimeUtc.ToString('o');exists=$true}}}
-          try{$reg=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL' -ErrorAction Stop
-          foreach($p in $reg.PSObject.Properties){if($p.Name -notmatch '^PS'){$r2.sqlInstances+=$p.Name}}
-          }catch{}
-          foreach($instance in $r2.sqlInstances){
-          $hostName=if($instance -eq 'MSSQLSERVER'){'.'}else{'.\'+$instance}
-          $conn=New-Object System.Data.SqlClient.SqlConnection
-          $conn.ConnectionString="Server=$hostName;Database=master;Integrated Security=True;Encrypt=True;TrustServerCertificate=False;Connect Timeout=3;Application Name=BeeKingdomReadOnlyDiagnostic"
-          try{$conn.Open();$cmd=$conn.CreateCommand();$cmd.CommandTimeout=5;$cmd.CommandText="SELECT name FROM sys.databases WHERE name LIKE '%BeeKingdom%'";$reader=$cmd.ExecuteReader();$dbs=@();while($reader.Read()){$dbs+=$reader.GetString(0)};$reader.Close()
-          foreach($db in $dbs){$conn.ChangeDatabase($db);$cmd.CommandText="SELECT TABLE_SCHEMA,TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND (TABLE_NAME LIKE '%Migration%' OR TABLE_NAME LIKE '%Floral%' OR TABLE_NAME LIKE '%Civil%')";$reader=$cmd.ExecuteReader();$tables=@();while($reader.Read()){$tables+=($reader.GetString(0)+'.'+$reader.GetString(1))};$reader.Close();$r2.sqlChecks+=@{instance=$instance;database=$db;tables=$tables;status='read_only_ok'}}}
-          catch{$r2.sqlChecks+=@{instance=$instance;status='integrated_auth_or_tls_unavailable';errorType=$_.Exception.GetType().Name;reason=$(if($_.Exception.ToString() -match '(?i)certificate|certificat|SSL|TLS'){'tls_validation'}elseif($_.Exception.ToString() -match '(?i)login failed|authentication|connexion a echoue'){'authentication'}elseif($_.Exception.ToString() -match '(?i)network|instance|timeout|time-out|server was not found'){'connection_or_instance'}else{'unclassified'})}}
-          finally{$conn.Dispose()}
-          }
-          $r2|ConvertTo-Json -Depth 7 -Compress
-          $backupRoots=@('C:\inetpub\BeeKingdomApi','C:\Program Files\Microsoft SQL Server')
-          $backupMetadata=@()
-          foreach($br in $backupRoots){Get-ChildItem $br -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)backup|sauvegarde'}|Select-Object -First 20|ForEach-Object{Get-ChildItem $_.FullName -File -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)bee' -and $_.Extension -match '^\.(bak|zip|7z)$'}|Select-Object -First 10|ForEach-Object{$backupMetadata+=@{name=$_.Name;bytes=$_.Length;modifiedUtc=$_.LastWriteTimeUtc.ToString('o')}}}}
-          @{backupMetadata=$backupMetadata;scope='app and SQL backup subdirectories depth3';utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Depth 5 -Compress
-          $diag=[ordered]@{utc=[DateTime]::UtcNow.ToString('o');applicationSql='not_attempted';migrations=@();tables=@();backupHistory=@()}
           $config=@{}
           foreach($file in @('appsettings.json','appsettings.Production.json')){
           try{$j=Get-Content (Join-Path 'C:\inetpub\BeeKingdomApi' $file) -Raw|ConvertFrom-Json
@@ -87,26 +95,20 @@ jobs:
           if(-not $key){$key=$config['SqlServer:RuntimeConnectionString']}
           if(-not $key){$normal=$config['SqlServer:ConnectionStringName'];if(-not $normal){$normal='BeeKingdomDb'};$key=$config['ConnectionStrings:'+$normal]}
           if(-not $key){$key=$config['SqlServer:ConnectionString']}
-          $conn=$null
+          
           try{
-          if(-not $key){throw 'missing_connection'}
-          $diag.stage='builder';$b=New-Object System.Data.SqlClient.SqlConnectionStringBuilder($key)
-          if($b.InitialCatalog -notmatch '(?i)bee.*kingdom'){throw 'unexpected_database'}
-          if(-not $b.ContainsKey('Encrypt')){$b.Encrypt=$true}
-          $b.ConnectTimeout=5
-          $conn=New-Object System.Data.SqlClient.SqlConnection($b.ConnectionString)
-          $diag.stage='connect';$conn.Open();$diag.applicationSql='connected_read_only_queries'
-          $cmd=$conn.CreateCommand();$cmd.CommandTimeout=8
-          $diag.stage='schema_version_query';$cmd.CommandText="SELECT ScriptName,AppliedAtUtc FROM dbo.SchemaVersion WHERE ScriptName LIKE '096[_]%' OR ScriptName LIKE '097[_]%' OR ScriptName LIKE '098[_]%' ORDER BY ScriptName"
-          $reader=$cmd.ExecuteReader();while($reader.Read()){$diag.migrations+=@{script=$reader.GetString(0);appliedAtUtc=$reader.GetDateTime(1).ToString('o')}};$reader.Close()
-          $cmd.CommandText="SELECT TABLE_SCHEMA,TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND (TABLE_NAME LIKE '%Floral%' OR TABLE_NAME LIKE '%Civil%')"
-          $reader=$cmd.ExecuteReader();while($reader.Read()){$diag.tables+=($reader.GetString(0)+'.'+$reader.GetString(1))};$reader.Close()
-          try{
-          $cmd.CommandText="SELECT TOP(5) bs.backup_finish_date,bs.type,bs.backup_size,bmf.physical_device_name FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily bmf ON bs.media_set_id=bmf.media_set_id WHERE bs.database_name=DB_NAME() ORDER BY bs.backup_finish_date DESC"
-          $reader=$cmd.ExecuteReader();while($reader.Read()){$path=$reader.GetString(3);$local=($path -match '^[A-Za-z]:\\');$exists=if($local){Test-Path -LiteralPath $path}else{$null};$diag.backupHistory+=@{finished=$reader.GetDateTime(0).ToString('o');type=$reader.GetString(1);bytes=$reader.GetDecimal(2);localFileExists=$exists}};$reader.Close()
-          }catch{$diag.backupHistoryStatus='permission_or_query_unavailable'}
-          }catch{
-          $diag.applicationSql='unavailable';$diag.errorType=$_.Exception.GetType().Name;$inner=$_.Exception.InnerException;if($inner){$diag.innerType=$inner.GetType().Name;if($null-ne $inner.Number){$diag.sqlErrorNumber=$inner.Number}}
-          $diag.reason=if($_.Exception.ToString() -match '(?i)certificate|SSL|TLS'){'tls_validation'}elseif($_.Exception.ToString() -match '(?i)login failed|authentication'){'authentication'}elseif($_.Exception.ToString() -match 'missing_connection'){'connection_not_configured'}elseif($_.Exception.ToString() -match 'unexpected_database'){'database_not_allowlisted'}else{'connection_or_query_unavailable'}
-          }finally{if($conn){$conn.Dispose()};$key=$null;$b=$null;$config.Clear();$j=$null;$web=$null}
-          $diag|ConvertTo-Json -Depth 6 -Compress
+          if(-not $key){throw 'Runtime connection not available'}
+          $temp=Join-Path $env:RUNNER_TEMP ('bee-sql-readonly-'+$env:GITHUB_RUN_ID)
+          New-Item -ItemType Directory -Force -Path $temp|Out-Null
+          Copy-Item (Join-Path $env:RUNNER_TEMP 'bee-diag-artifact\*') $temp -Recurse -Force
+          $liveVersion=[Reflection.AssemblyName]::GetAssemblyName('C:\inetpub\BeeKingdomApi\Microsoft.Data.SqlClient.dll').Version
+          $builtVersion=[Reflection.AssemblyName]::GetAssemblyName((Join-Path $temp 'Microsoft.Data.SqlClient.dll')).Version
+          if($liveVersion -ne $builtVersion){Write-Output ('SQLCLIENT_VERSION_MISMATCH live='+$liveVersion+' built='+$builtVersion);exit 0}
+          Copy-Item 'C:\inetpub\BeeKingdomApi\Microsoft.Data.SqlClient.dll' (Join-Path $temp 'Microsoft.Data.SqlClient.dll') -Force
+          $env:BK_DIAG_CONNECTION=$key
+          & dotnet (Join-Path $temp 'ReadOnlyDiag.dll')
+          }finally{
+          Remove-Item Env:BK_DIAG_CONNECTION -ErrorAction SilentlyContinue
+          $key=$null;$config.Clear();$j=$null;$web=$null
+          }
+          
