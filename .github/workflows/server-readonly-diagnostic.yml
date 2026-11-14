@@ -1,6 +1,6 @@
-# Syntax validated via PowerShell parser on PCJEFF; read-only diagnostic retry.
 name: BeeKingdom read-only server diagnostic
 on:
+  workflow_dispatch:
   push:
     branches: [diag/server-readonly-20261114]
     paths: ['.github/workflows/server-readonly-diagnostic.yml']
@@ -8,6 +8,7 @@ permissions:
   contents: read
 jobs:
   inspect:
+    if: github.ref == 'refs/heads/diag/server-readonly-20261114'
     runs-on: [self-hosted, beekingdom-deploy]
     timeout-minutes: 5
     steps:
