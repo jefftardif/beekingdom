@@ -38,7 +38,7 @@ jobs:
           $sections='BroodVitality|NurseryCohorts|AcademyTraining|CivilPopulation|CivilExpeditions|Pollination|CombatPatrol|WorldMapReadiness'
           foreach($scope in @('Machine','User','Process')){
           $vars=[Environment]::GetEnvironmentVariables($scope)
-          foreach($key in $vars.Keys){if($key -match "^($sections)__[A-Za-z]+$" -and $vars[$key] -match '^(true|false)$'){$r2.booleanOverrides+=@{source=$scope;key=$key;value=[bool]::Parse($vars[$key])}}}
+          foreach($key in $vars.Keys){if($key -match "^($sections)__[A-Za-z]+$" -and $vars[$key] -match '^(true|false)$'){$r2.booleanOverrides+=@{source=$scope;key=$key;value=[bool]::Parse($vars[$key])}}}}
           try{
           Import-Module WebAdministration
           foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -match "^($sections)__[A-Za-z]+$" -and $v.value -match '^(true|false)$'){$r2.booleanOverrides+=@{source='AppPool';key=$v.name;value=[bool]::Parse($v.value)}}}
