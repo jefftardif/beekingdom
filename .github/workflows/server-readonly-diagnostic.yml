@@ -90,14 +90,14 @@ jobs:
           $conn=$null
           try{
           if(-not $key){throw 'missing_connection'}
-          $b=New-Object System.Data.SqlClient.SqlConnectionStringBuilder($key)
+          $diag.stage='builder';$b=New-Object System.Data.SqlClient.SqlConnectionStringBuilder($key)
           if($b.InitialCatalog -notmatch '(?i)bee.*kingdom'){throw 'unexpected_database'}
           if(-not $b.ContainsKey('Encrypt')){$b.Encrypt=$true}
           $b.ConnectTimeout=5
           $conn=New-Object System.Data.SqlClient.SqlConnection($b.ConnectionString)
-          $conn.Open();$diag.applicationSql='connected_read_only_queries'
+          $diag.stage='connect';$conn.Open();$diag.applicationSql='connected_read_only_queries'
           $cmd=$conn.CreateCommand();$cmd.CommandTimeout=8
-          $cmd.CommandText="SELECT ScriptName,AppliedAtUtc FROM dbo.SchemaVersion WHERE ScriptName LIKE '096[_]%' OR ScriptName LIKE '097[_]%' OR ScriptName LIKE '098[_]%' ORDER BY ScriptName"
+          $diag.stage='schema_version_query';$cmd.CommandText="SELECT ScriptName,AppliedAtUtc FROM dbo.SchemaVersion WHERE ScriptName LIKE '096[_]%' OR ScriptName LIKE '097[_]%' OR ScriptName LIKE '098[_]%' ORDER BY ScriptName"
           $reader=$cmd.ExecuteReader();while($reader.Read()){$diag.migrations+=@{script=$reader.GetString(0);appliedAtUtc=$reader.GetDateTime(1).ToString('o')}};$reader.Close()
           $cmd.CommandText="SELECT TABLE_SCHEMA,TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND (TABLE_NAME LIKE '%Floral%' OR TABLE_NAME LIKE '%Civil%')"
           $reader=$cmd.ExecuteReader();while($reader.Read()){$diag.tables+=($reader.GetString(0)+'.'+$reader.GetString(1))};$reader.Close()
@@ -106,7 +106,7 @@ jobs:
           $reader=$cmd.ExecuteReader();while($reader.Read()){$path=$reader.GetString(3);$local=($path -match '^[A-Za-z]:\\');$exists=if($local){Test-Path -LiteralPath $path}else{$null};$diag.backupHistory+=@{finished=$reader.GetDateTime(0).ToString('o');type=$reader.GetString(1);bytes=$reader.GetDecimal(2);localFileExists=$exists}};$reader.Close()
           }catch{$diag.backupHistoryStatus='permission_or_query_unavailable'}
           }catch{
-          $diag.applicationSql='unavailable'
+          $diag.applicationSql='unavailable';$diag.errorType=$_.Exception.GetType().Name;$inner=$_.Exception.InnerException;if($inner){$diag.innerType=$inner.GetType().Name;if($null-ne $inner.Number){$diag.sqlErrorNumber=$inner.Number}}
           $diag.reason=if($_.Exception.ToString() -match '(?i)certificate|SSL|TLS'){'tls_validation'}elseif($_.Exception.ToString() -match '(?i)login failed|authentication'){'authentication'}elseif($_.Exception.ToString() -match 'missing_connection'){'connection_not_configured'}elseif($_.Exception.ToString() -match 'unexpected_database'){'database_not_allowlisted'}else{'connection_or_query_unavailable'}
           }finally{if($conn){$conn.Dispose()};$key=$null;$b=$null;$config.Clear();$j=$null;$web=$null}
           $diag|ConvertTo-Json -Depth 6 -Compress
