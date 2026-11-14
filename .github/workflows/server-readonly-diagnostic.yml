@@ -4,111 +4,14 @@ on:
 permissions:
   contents: read
 jobs:
-  build:
-    if: github.ref == 'refs/heads/diag/server-readonly-20261114'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-      - name: Build bounded SELECT-only helper
-        shell: bash
-        run: |
-          mkdir helper && cd helper
-          cat > ReadOnlyDiag.csproj <<'EOF'
-          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" /></ItemGroup></Project>
-          EOF
-          cat > Program.cs <<'EOF'
-          using System;
-          using System.Collections.Generic;
-          using System.IO;
-          using System.Text.Json;
-          using Microsoft.Data.SqlClient;
-          class Program {
-          static void Main(){
-          var output=new Dictionary<string,object?> {["utc"]=DateTime.UtcNow.ToString("o"),["stage"]="builder"};
-          var connectionString=Environment.GetEnvironmentVariable("BK_DIAG_CONNECTION");
-          Environment.SetEnvironmentVariable("BK_DIAG_CONNECTION",null);
-          try{
-          if(string.IsNullOrWhiteSpace(connectionString)) throw new InvalidOperationException("missing");
-          var builder=new SqlConnectionStringBuilder(connectionString);
-          if(!builder.InitialCatalog.Contains("BeeKingdom",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("scope");
-          builder.ConnectTimeout=5;
-          using var c=new SqlConnection(builder.ConnectionString);
-          connectionString=null; output["stage"]="connect";c.Open();
-          output["sqlClientVersion"]=typeof(SqlConnection).Assembly.GetName().Version?.ToString();
-          output["stage"]="migrations";
-          using var cmd=c.CreateCommand();cmd.CommandTimeout=8;
-          cmd.CommandText="SELECT ScriptName,AppliedAtUtc FROM dbo.SchemaVersion WHERE ScriptName LIKE '096[_]%' OR ScriptName LIKE '097[_]%' OR ScriptName LIKE '098[_]%' ORDER BY ScriptName";
-          var migrations=new List<object>();
-          using(var rd=cmd.ExecuteReader()){while(rd.Read())migrations.Add(new {script=rd.GetString(0),appliedAt=rd.GetDateTime(1).ToString("o")});}
-          output["migrations"]=migrations;
-          output["stage"]="tables";
-          cmd.CommandText="SELECT TABLE_SCHEMA,TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND (TABLE_NAME LIKE '%Floral%' OR TABLE_NAME LIKE '%Civil%')";
-          var tables=new List<string>();using(var rd=cmd.ExecuteReader()){while(rd.Read())tables.Add(rd.GetString(0)+"."+rd.GetString(1));}output["tables"]=tables;
-          try{
-          cmd.CommandText="SELECT TOP(5) bs.backup_finish_date,bs.type,bs.backup_size,bmf.physical_device_name FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily bmf ON bs.media_set_id=bmf.media_set_id WHERE bs.database_name=DB_NAME() ORDER BY bs.backup_finish_date DESC";
-          var backups=new List<object>();using(var rd=cmd.ExecuteReader()){while(rd.Read()){var path=rd.GetString(3);bool? exists=path.Length>2&&path[1]==':'?File.Exists(path):null;backups.Add(new {finished=rd.GetDateTime(0).ToString("o"),type=rd.GetString(1),bytes=rd.GetDecimal(2),localFileExists=exists});}}output["backupHistory"]=backups;
-          }catch(SqlException ex){output["backupErrorNumber"]=ex.Number;}
-          output["stage"]="complete";
-          }catch(SqlException ex){output["error"]="sql";output["sqlErrorNumber"]=ex.Number;}
-          catch(Exception ex){output["errorType"]=ex.GetType().Name;}
-          Console.WriteLine(JsonSerializer.Serialize(output));
-          }}
-          
-          EOF
-          dotnet publish ReadOnlyDiag.csproj -c Release -r win-x64 --self-contained false -o output
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bee-readonly-helper
-          path: helper/output/
-          retention-days: 1
   inspect:
-    needs: build
     if: github.ref == 'refs/heads/diag/server-readonly-20261114'
     runs-on: [self-hosted, beekingdom-deploy]
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: bee-readonly-helper
-          path: ${{ runner.temp }}/bee-diag-artifact
-      - name: Query existing application database with SELECT only
+      - name: Read SQL client package metadata only
         shell: powershell
         run: |
-          $ErrorActionPreference='Stop'
-          Import-Module WebAdministration
-          $config=@{}
-          foreach($file in @('appsettings.json','appsettings.Production.json')){
-          try{$j=Get-Content (Join-Path 'C:\inetpub\BeeKingdomApi' $file) -Raw|ConvertFrom-Json
-          foreach($sec in @('SqlServer','ConnectionStrings')){foreach($p in $j.$sec.PSObject.Properties){if($p.Value -is [string]){$config[$sec+':'+$p.Name]=$p.Value}}}
-          }catch{}}
-          foreach($scope in @('Machine','Process')){foreach($v in [Environment]::GetEnvironmentVariables($scope).GetEnumerator()){if($v.Key -match '^(SqlServer|ConnectionStrings)__'){$config[$v.Key.Replace('__',':')]=$v.Value}}}
-          try{[xml]$web=Get-Content 'C:\inetpub\BeeKingdomApi\web.config' -Raw
-          foreach($v in $web.SelectNodes('//environmentVariable')){if($v.name -match '^(SqlServer|ConnectionStrings)__'){$config[$v.name.Replace('__',':')]=$v.value}}
-          foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -match '^(SqlServer|ConnectionStrings)__'){$config[$v.name.Replace('__',':')]=$v.value}}
-          }catch{}
-          $key=$null
-          $dedicated=$config['SqlServer:RuntimeConnectionStringName']
-          if($dedicated){$key=$config['ConnectionStrings:'+$dedicated]}
-          if(-not $key){$key=$config['SqlServer:RuntimeConnectionString']}
-          if(-not $key){$normal=$config['SqlServer:ConnectionStringName'];if(-not $normal){$normal='BeeKingdomDb'};$key=$config['ConnectionStrings:'+$normal]}
-          if(-not $key){$key=$config['SqlServer:ConnectionString']}
-          
-          try{
-          if(-not $key){throw 'Runtime connection not available'}
-          $temp=Join-Path $env:RUNNER_TEMP ('bee-sql-readonly-'+$env:GITHUB_RUN_ID)
-          New-Item -ItemType Directory -Force -Path $temp|Out-Null
-          Copy-Item (Join-Path $env:RUNNER_TEMP 'bee-diag-artifact\*') $temp -Recurse -Force
-          $liveVersion=[Reflection.AssemblyName]::GetAssemblyName('C:\inetpub\BeeKingdomApi\Microsoft.Data.SqlClient.dll').Version
-          $builtVersion=[Reflection.AssemblyName]::GetAssemblyName((Join-Path $temp 'Microsoft.Data.SqlClient.dll')).Version
-          if($liveVersion -ne $builtVersion){Write-Output ('SQLCLIENT_VERSION_MISMATCH live='+$liveVersion+' built='+$builtVersion);exit 0}
-          Copy-Item 'C:\inetpub\BeeKingdomApi\Microsoft.Data.SqlClient.dll' (Join-Path $temp 'Microsoft.Data.SqlClient.dll') -Force
-          $env:BK_DIAG_CONNECTION=$key
-          & dotnet (Join-Path $temp 'ReadOnlyDiag.dll')
-          }finally{
-          Remove-Item Env:BK_DIAG_CONNECTION -ErrorAction SilentlyContinue
-          $key=$null;$config.Clear();$j=$null;$web=$null
-          }
-          
+          $d=Get-Content 'C:\inetpub\BeeKingdomApi\BeeKingdom.Server.deps.json' -Raw|ConvertFrom-Json
+          $p=@($d.libraries.PSObject.Properties.Name|Where-Object {$_ -match '^Microsoft.Data.SqlClient/'})
+          @{package=$p;runtime=$d.runtimeTarget.name;utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress
