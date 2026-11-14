@@ -34,3 +34,33 @@ jobs:
           $r.iis=@{appPoolState=(Get-WebAppPoolState -Name 'BeeKingdomApi').Value;siteStates=@(Get-Website|Where-Object{$_.physicalPath -eq $root}|Select-Object Name,State)}
           }catch{$r.iis=@{readStatus='unavailable'}}
           $r | ConvertTo-Json -Depth 7 -Compress
+          $r2=[ordered]@{utc=[DateTime]::UtcNow.ToString('o'); booleanOverrides=@(); binaryMarkers=@(); backupFiles=@(); sqlInstances=@(); sqlChecks=@()}
+          $sections='BroodVitality|NurseryCohorts|AcademyTraining|CivilPopulation|CivilExpeditions|Pollination|CombatPatrol|WorldMapReadiness'
+          foreach($scope in @('Machine','User','Process')){
+          $vars=[Environment]::GetEnvironmentVariables($scope)
+          foreach($key in $vars.Keys){if($key -match "^($sections)__[A-Za-z]+$" -and $vars[$key] -match '^(true|false)$'){$r2.booleanOverrides+=@{source=$scope;key=$key;value=[bool]::Parse($vars[$key])}}}
+          try{
+          Import-Module WebAdministration
+          foreach($v in (Get-Item 'IIS:\AppPools\BeeKingdomApi').environmentVariables.Collection){if($v.name -match "^($sections)__[A-Za-z]+$" -and $v.value -match '^(true|false)$'){$r2.booleanOverrides+=@{source='AppPool';key=$v.name;value=[bool]::Parse($v.value)}}}
+          }catch{}
+          foreach($name in @('BeeKingdom.Server.dll','BeeKingdom.HiveOperations.dll')){
+          $p=Join-Path 'C:\inetpub\BeeKingdomApi' $name
+          try{$bytes=[IO.File]::ReadAllBytes($p);$ascii=[Text.Encoding]::ASCII.GetString($bytes);$unicode=[Text.Encoding]::Unicode.GetString($bytes)
+          $r2.binaryMarkers+=@{name=$name;ReadOnlyPilot=($ascii.Contains('ReadOnlyPilot') -or $unicode.Contains('ReadOnlyPilot'));fileVersion=[Diagnostics.FileVersionInfo]::GetVersionInfo($p).FileVersion}
+          }catch{}}
+          $dirs=@(Get-ChildItem C:\ -Directory -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)backup|sauvegarde'})
+          $dirs+=@(Get-ChildItem C:\inetpub -Directory -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '(?i)backup|sauvegarde'})
+          foreach($d in $dirs){Get-ChildItem $d.FullName -File -Recurse -Depth 2 -ErrorAction SilentlyContinue|Where-Object{$_.FullName -match '(?i)bee' -and $_.Extension -match '^\.(bak|zip|7z)$'}|Select-Object -First 15|ForEach-Object{$r2.backupFiles+=@{name=$_.Name;bytes=$_.Length;modifiedUtc=$_.LastWriteTimeUtc.ToString('o');exists=$true}}}
+          try{$reg=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL' -ErrorAction Stop
+          foreach($p in $reg.PSObject.Properties){if($p.Name -notmatch '^PS'){$r2.sqlInstances+=$p.Name}}
+          }catch{}
+          foreach($instance in $r2.sqlInstances){
+          $hostName=if($instance -eq 'MSSQLSERVER'){'.'}else{'.\'+$instance}
+          $conn=New-Object System.Data.SqlClient.SqlConnection
+          $conn.ConnectionString="Server=$hostName;Database=master;Integrated Security=True;Encrypt=True;TrustServerCertificate=False;Connect Timeout=3;Application Name=BeeKingdomReadOnlyDiagnostic"
+          try{$conn.Open();$cmd=$conn.CreateCommand();$cmd.CommandTimeout=5;$cmd.CommandText="SELECT name FROM sys.databases WHERE name LIKE '%BeeKingdom%'";$reader=$cmd.ExecuteReader();$dbs=@();while($reader.Read()){$dbs+=$reader.GetString(0)};$reader.Close()
+          foreach($db in $dbs){$conn.ChangeDatabase($db);$cmd.CommandText="SELECT TABLE_SCHEMA,TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND (TABLE_NAME LIKE '%Migration%' OR TABLE_NAME LIKE '%Floral%' OR TABLE_NAME LIKE '%Civil%')";$reader=$cmd.ExecuteReader();$tables=@();while($reader.Read()){$tables+=($reader.GetString(0)+'.'+$reader.GetString(1))};$reader.Close();$r2.sqlChecks+=@{instance=$instance;database=$db;tables=$tables;status='read_only_ok'}}}
+          catch{$r2.sqlChecks+=@{instance=$instance;status='integrated_auth_or_tls_unavailable';errorType=$_.Exception.GetType().Name}}
+          finally{$conn.Dispose()}
+          }
+          $r2|ConvertTo-Json -Depth 7 -Compress
