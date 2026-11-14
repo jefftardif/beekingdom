@@ -1,0 +1,36 @@
+name: BeeKingdom read-only server diagnostic
+on:
+  push:
+    branches: [diag/server-readonly-20261114]
+    paths: ['.github/workflows/server-readonly-diagnostic.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: [self-hosted, beekingdom-deploy]
+    timeout-minutes: 5
+    steps:
+      - name: Read allowlisted deployment metadata only
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $root='C:\inetpub\BeeKingdomApi'
+          $r=[ordered]@{utc=[DateTime]::UtcNow.ToString('o'); machine=$env:COMPUTERNAME; files=@(); flags=@(); iis=@(); backupEvidence='not_verified'; sqlSchema='not_queried'}
+          foreach($name in @('BeeKingdom.Server.dll','BeeKingdom.HiveOperations.dll','appsettings.json','appsettings.Production.json','web.config')){
+          $p=Join-Path $root $name
+          if(Test-Path -LiteralPath $p){$f=Get-Item -LiteralPath $p; $r.files+=@{name=$name;length=$f.Length;modifiedUtc=$f.LastWriteTimeUtc.ToString('o');sha256=(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash}}
+          }
+          $sections=@('BroodVitality','NurseryCohorts','AcademyTraining','CivilPopulation','CivilExpeditions','Pollination','WorldResourceCollection','CombatPatrol','WorldMapReadiness')
+          foreach($name in @('appsettings.json','appsettings.Production.json')){
+          try{$j=Get-Content -LiteralPath (Join-Path $root $name) -Raw|ConvertFrom-Json
+          foreach($s in $sections){$o=$j.$s;if($null-ne $o){foreach($p in $o.PSObject.Properties){if($p.Value -is [bool]){$r.flags+=@{source=$name;section=$s;key=$p.Name;value=$p.Value}}}}}
+          }catch{$r.flags+=@{source=$name;readStatus='failed'}}
+          }
+          try{
+          [xml]$xml=Get-Content -LiteralPath (Join-Path $root 'web.config') -Raw
+          foreach($v in $xml.SelectNodes('//environmentVariable')){if($v.name -match '^(BroodVitality|NurseryCohorts|AcademyTraining|CivilPopulation|CivilExpeditions|Pollination|WorldResourceCollection|CombatPatrol|WorldMapReadiness)__[A-Za-z]+$' -and $v.value -match '^(true|false)$'){$r.flags+=@{source='web.config';key=$v.name;value=[bool]::Parse($v.value)}}}
+          }catch{}
+          try{Import-Module WebAdministration
+          $r.iis=@{appPoolState=(Get-WebAppPoolState -Name 'BeeKingdomApi').Value;siteStates=@(Get-Website|Where-Object{$_.physicalPath -eq $root}|Select-Object Name,State)}
+          }catch{$r.iis=@{readStatus='unavailable'}}
+          $r | ConvertTo-Json -Depth 7 -Compress
